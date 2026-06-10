@@ -1,0 +1,38 @@
+# Qoder AI assistant config
+.qoder/
+
+# Database backup files
+database/backups/*.bak
+database/backups/*.zip
+database/backups/V8/
+database/sqldata/
+
+# Debug log files
+*.log
+debug_checkout.log
+admin/purchase/price_debug.log
+
+# Temporary backup directories
+backup_*/
+
+# Debug/temp SQL
+db_check.sql
+
+# Diff files
+product_review_diff.txt
+
+# Debug HTML
+ingredients_feature_guide.html
+
+# Root-level screenshots (keep images/ folder intact)
+/*.png
+
+# Test scripts only (keep backup_database.ps1 and auto_fix_backup.bat)
+test_*.ps1
+debug_*.ps1
+check_*.ps1
+kill_*.ps1
+
+# OS files
+Thumbs.db
+Desktop.ini

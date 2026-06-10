@@ -1,0 +1,278 @@
+<%@ Language="VBScript" CodePage="65001" %>
+
+<%
+Response.Charset = "UTF-8"
+Response.ContentType = "text/html"
+
+' 检查是否已登录
+If Not IsEmpty(Session("AdminID")) And Session("AdminID") <> "" Then
+    Response.Redirect "portal.asp"
+End If
+
+' 包含必要的文件
+%>
+<!--#include file="../includes/config.asp"-->
+<!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/password_utils.asp"-->
+<%
+
+' === 打开数据库连接 ===
+' 注意：直接调用，不带括号
+On Error Resume Next
+OpenConnection
+If Err.Number <> 0 Then
+    Response.Write "<div class='error'>数据库连接错误: " & Err.Description & " 错误号: " & Err.Number & "</div>"
+    
+    Response.End
+End If
+On Error GoTo 0
+
+Dim username, password, rememberMe, errorMessage
+errorMessage = ""
+
+If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
+    ' CSRF验证
+    If Not ValidateCSRFToken() Then
+        errorMessage = "安全验证失败，请刷新页面重试"
+    Else
+        username = Trim(Request.Form("username"))
+        password = Request.Form("password")
+        rememberMe = Request.Form("remember_me")
+        
+        ' 速率限制检查
+        If IsLoginLocked("Admin") Then
+            errorMessage = "登录失败次数过多，请15分钟后再试"
+        ElseIf username = "" Or password = "" Then
+            errorMessage = "请输入用户名和密码"
+        Else
+        ' 检查AdminUsers表是否存在（简化检测）
+        Dim tableExists
+        tableExists = False
+        
+        On Error Resume Next
+        Dim rsCheck
+        Set rsCheck = ExecuteQuery("SELECT COUNT(*) AS cnt FROM AdminUsers")
+        If Err.Number = 0 And Not rsCheck Is Nothing Then
+            tableExists = True
+            rsCheck.Close
+            Set rsCheck = Nothing
+        Else
+            Err.Clear
+        End If
+        On Error GoTo 0
+        
+        If Not tableExists Then
+            errorMessage = "错误：管理员表 AdminUsers 不存在，请先运行初始化脚本 admin/init_admin_table.asp 创建表。"
+        Else
+            ' 从数据库查找用户
+            Dim rsUser
+            Set rsUser = ExecuteQuery("SELECT AdminID, Username, PasswordHash, IsActive FROM AdminUsers WHERE Username = '" & SafeSQL(username) & "' AND ISNULL(IsActive, 0) <> 0")
+                        
+            If Not rsUser Is Nothing And IsObject(rsUser) Then
+                If Not rsUser.EOF And Not rsUser.BOF Then
+                    ' 验证密码
+                    Dim storedHash, adminId, adminUsername
+                    ' 安全地获取字段值
+                    If IsNull(rsUser.Fields("PasswordHash").Value) Then
+                        storedHash = ""
+                    Else
+                        storedHash = rsUser.Fields("PasswordHash").Value
+                    End If
+                                
+                    If IsNull(rsUser.Fields("AdminID").Value) Then
+                        adminId = ""
+                    Else
+                        adminId = rsUser.Fields("AdminID").Value
+                    End If
+                                
+                    If IsNull(rsUser.Fields("Username").Value) Then
+                        adminUsername = ""
+                    Else
+                        adminUsername = rsUser.Fields("Username").Value
+                    End If
+                    
+                    ' 使用增强型密码验证 (支持V1/V2自动升级)
+                    If AdminVerifyAndUpgrade(password, storedHash, adminId) Then
+                        ' 登录成功
+                        Session("AdminID") = adminId
+                        Session("AdminUsername") = adminUsername
+                        Session("AdminName") = adminUsername
+                        Session("AdminRealName") = adminUsername
+                        
+                        ' 重置登录失败计数
+                        Call ResetLoginFailure("Admin")
+                        
+                        ' 如果选择了记住我，设置加密Cookie
+                        If rememberMe <> "" Then
+                            Response.Cookies("AdminRememberMe") = GenerateSecureToken(adminId)
+                            Response.Cookies("AdminRememberMe").Expires = DateAdd("d", 30, Now()) ' 30天后过期
+                        End If
+                        
+                        Response.Redirect "portal.asp"
+                    Else
+                        ' 记录登录失败
+                        Call RecordLoginFailure("Admin")
+                        errorMessage = "用户名或密码错误"
+                    End If
+                Else
+                    ' 记录登录失败
+                    Call RecordLoginFailure("Admin")
+                    errorMessage = "用户名或密码错误"
+                End If
+                                
+                If Not rsUser Is Nothing Then
+                    rsUser.Close
+                    Set rsUser = Nothing
+                End If
+            Else
+                errorMessage = "数据库查询失败: " & Session("LastDBError")
+            End If
+                        
+            ' rsUser已经在上面关闭过了，不需要再次关闭
+        End If
+        End If
+    End If
+End If
+
+' 确保页面有CSRF令牌
+Call EnsureCSRFToken()
+%>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员登录 - 香氛定制电商网站</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .admin-login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 30px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .admin-login-container h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .remember-forgot-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .remember-me {
+            display: flex;
+            align-items: center;
+        }
+        
+        .remember-me input {
+            width: auto;
+            margin-right: 5px;
+        }
+        
+        .forgot-password {
+            text-align: right;
+        }
+        
+        .forgot-password a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+        
+
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+        }
+        
+        .login-info {
+            color: #007bff;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-login-container">
+        <h2>管理员登录</h2>
+        
+        
+        <div class="login-info">
+            请输入管理员账户信息登录<br>
+        </div>
+        
+        <% If errorMessage <> "" Then %>
+        <div class="error-message"><%= errorMessage %></div>
+        <% End If %>
+        
+        <form method="post">
+            <%= GetCSRFTokenField() %>
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" value="<%= username %>" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="remember-forgot-container">
+                <div class="remember-me">
+                    <input type="checkbox" id="remember_me" name="remember_me" value="1">
+                    <label for="remember_me">记住我</label>
+                </div>
+                
+                <div class="forgot-password">
+                    <a href="forgot_password.asp">忘记密码？</a>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn">登录</button>
+        </form>
+    </div>
+</body>
+</html>
+<%
+' === 关闭数据库连接 ===
+On Error Resume Next
+CloseConnection
+On Error GoTo 0
+%>

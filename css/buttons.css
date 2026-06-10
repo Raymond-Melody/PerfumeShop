@@ -1,0 +1,620 @@
+/* ============================================
+   统一按钮系统 (Unified Button System) — V1.0
+   全站唯一按钮样式来源，通过DT Token驱动
+   所有区域按钮行为一致性保障
+   ============================================ */
+
+/* ==========================================
+   1. BASE RESET — 覆盖所有按钮元素
+   ========================================== */
+button,
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+.btn,
+.admin-btn,
+.action-btn,
+.btn-small {
+  box-sizing: border-box;
+  font-family: var(--dt-font-family, inherit);
+}
+
+/* ==========================================
+   2. CORE .btn CLASS — 统一基类
+   ========================================== */
+.btn,
+a.btn,
+button.btn,
+input[type="submit"].btn,
+input[type="button"].btn {
+  /* 布局 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btn-gap, 6px);
+  vertical-align: middle;
+  text-align: center;
+  white-space: nowrap;
+
+  /* 外观 */
+  padding: 0 var(--btn-padding-x-md, 18px);
+  height: var(--btn-height-md, 38px);
+  line-height: 1;
+  font-size: var(--btn-font-size-md, 13px);
+  font-weight: var(--dt-font-weight-medium, 500);
+  border: 1px solid transparent;
+  border-radius: var(--dt-radius-md, 6px);
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+
+  /* 过渡 */
+  transition:
+    background-color var(--dt-transition-fast, 150ms ease),
+    color var(--dt-transition-fast, 150ms ease),
+    border-color var(--dt-transition-fast, 150ms ease),
+    box-shadow var(--dt-transition-fast, 150ms ease),
+    transform var(--dt-transition-fast, 150ms ease),
+    opacity var(--dt-transition-fast, 150ms ease);
+
+  /* 默认颜色(由主题token覆盖) */
+  color: var(--btn-color, var(--dt-color-text, #333));
+  background: var(--btn-bg, var(--dt-color-bg, #fff));
+  border-color: var(--btn-border, var(--dt-color-border, #ddd));
+}
+
+/* Flex对齐确保<a>标签也能正常居中 */
+a.btn {
+  /* 保持 inline-flex 的对齐行为 */
+}
+
+/* 按钮内图标 */
+.btn i,
+.btn .fa,
+.btn .fas,
+.btn .far,
+.btn .fab {
+  font-size: var(--btn-icon-size, 14px);
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   3. INTERACTION STATES — 统一交互行为
+   ========================================== */
+
+/* Hover */
+.btn:hover {
+  color: var(--btn-hover-color, var(--btn-color));
+  background: var(--btn-hover-bg, var(--btn-bg));
+  border-color: var(--btn-hover-border, var(--btn-border));
+  box-shadow: var(--btn-hover-shadow, none);
+  transform: translateY(-1px);
+}
+
+/* Active (按下态) */
+.btn:active,
+.btn.active {
+  transform: translateY(0);
+  box-shadow: var(--btn-active-shadow, none);
+}
+
+/* Focus — 键盘可访问性 */
+.btn:focus-visible {
+  outline: 2px solid var(--btn-focus-ring, var(--dt-color-primary, #8B4513));
+  outline-offset: 2px;
+}
+
+/* Disabled */
+.btn:disabled,
+.btn.disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ==========================================
+   4. COLOR VARIANTS — 语义色变体
+   通过CSS自定义属性驱动，主题切换时自动适配
+   ========================================== */
+
+/* Primary (主操作) */
+.btn--primary,
+.btn-primary,
+.btn-accent,
+.btn-orange,
+.btn-save,
+.admin-btn-primary {
+  --btn-bg: var(--dt-color-primary);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-primary);
+  --btn-hover-bg: var(--dt-color-primary-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-primary-hover);
+  --btn-hover-shadow: var(--dt-shadow-glow-primary);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-primary);
+}
+
+/* Secondary (次要操作) */
+.btn--secondary,
+.btn-secondary {
+  --btn-bg: var(--dt-color-secondary);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-secondary);
+  --btn-hover-bg: var(--dt-color-secondary);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-shadow: var(--dt-shadow-glow-primary);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-secondary);
+}
+
+/* Success (成功/确认) */
+.btn--success,
+.btn-success,
+.btn-review {
+  --btn-bg: var(--dt-color-success);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-success);
+  --btn-hover-bg: var(--dt-color-success-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-success-hover);
+  --btn-hover-shadow: var(--dt-shadow-glow-success);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-success);
+}
+
+/* Danger (危险/删除) */
+.btn--danger,
+.btn-danger,
+.admin-btn-danger {
+  --btn-bg: var(--dt-color-danger);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-danger);
+  --btn-hover-bg: var(--dt-color-danger-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-danger-hover);
+  --btn-hover-shadow: var(--dt-shadow-glow-danger);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-danger);
+}
+
+/* Warning (警告) */
+.btn--warning {
+  --btn-bg: var(--dt-color-warning);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-warning);
+  --btn-hover-bg: var(--dt-color-warning-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-warning-hover);
+  --btn-hover-shadow: var(--dt-shadow-glow-warning);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-warning);
+}
+
+/* Info (信息) */
+.btn--info {
+  --btn-bg: var(--dt-color-info);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-info);
+  --btn-hover-bg: var(--dt-color-info-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-info-hover);
+  --btn-hover-shadow: var(--dt-shadow-glow-info);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-info);
+}
+
+/* Outline (线框) */
+.btn--outline,
+.btn-outline,
+.admin-btn-outline,
+.admin-btn-secondary {
+  --btn-bg: transparent;
+  --btn-color: var(--dt-color-primary);
+  --btn-border: var(--dt-color-primary);
+  --btn-hover-bg: var(--dt-color-primary);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-primary);
+  --btn-hover-shadow: var(--dt-shadow-none);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-primary);
+}
+
+/* Neutral (中性/取消) */
+.btn--neutral,
+.filter-btn {
+  --btn-bg: var(--dt-color-neutral);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-neutral);
+  --btn-hover-bg: var(--dt-color-neutral-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-neutral-hover);
+  --btn-hover-shadow: 0 4px 15px rgba(108,117,125,0.3);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-neutral);
+}
+
+/* Ghost (幽灵/文本按钮) */
+.btn--ghost,
+.btn-text,
+.btn-white {
+  --btn-bg: transparent;
+  --btn-color: var(--dt-color-text-light);
+  --btn-border: transparent;
+  --btn-hover-bg: transparent;
+  --btn-hover-color: var(--dt-color-primary);
+  --btn-hover-border: transparent;
+  --btn-hover-shadow: none;
+  --btn-active-shadow: none;
+  --btn-focus-ring: var(--dt-color-primary);
+}
+
+/* Purple (紫色) */
+.btn--purple,
+.btn-purple {
+  --btn-bg: var(--dt-color-purple);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-purple);
+  --btn-hover-bg: var(--dt-color-purple-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-purple-hover);
+  --btn-hover-shadow: 0 4px 15px rgba(156,39,176,0.3);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-purple);
+}
+
+/* Cyan (青色) */
+.btn--cyan,
+.btn-cyan {
+  --btn-bg: var(--dt-color-cyan);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-cyan);
+  --btn-hover-bg: var(--dt-color-cyan-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-cyan-hover);
+  --btn-hover-shadow: 0 4px 15px rgba(0,188,212,0.3);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-cyan);
+}
+
+/* Pink (粉色) */
+.btn--pink,
+.btn-pink {
+  --btn-bg: var(--dt-color-pink);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-pink);
+  --btn-hover-bg: var(--dt-color-pink-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-pink-hover);
+  --btn-hover-shadow: 0 4px 15px rgba(233,30,99,0.3);
+  --btn-active-shadow: var(--dt-shadow-none);
+  --btn-focus-ring: var(--dt-color-pink);
+}
+
+/* Social (微信社交登录) */
+.btn--social,
+.btn-social {
+  --btn-bg: var(--dt-color-white);
+  --btn-color: #07C160;
+  --btn-border: var(--dt-color-border);
+  --btn-hover-bg: #07C160;
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: #07C160;
+  --btn-hover-shadow: none;
+  --btn-active-shadow: none;
+  --btn-focus-ring: #07C160;
+  width: 100%;
+  height: var(--btn-height-lg, 46px);
+  font-size: var(--btn-font-size-lg, 15px);
+}
+
+/* ==========================================
+   5. SIZE VARIANTS — 统一尺寸体系
+   ========================================== */
+
+/* XS (超小) */
+.btn--xs,
+.btn-xs {
+  height: var(--btn-height-xs, 24px);
+  padding: 0 var(--btn-padding-x-xs, 8px);
+  font-size: var(--btn-font-size-xs, 11px);
+  border-radius: var(--dt-radius-sm, 4px);
+}
+
+/* SM (小) */
+.btn--sm,
+.btn-sm,
+.btn-small {
+  height: var(--btn-height-sm, 30px);
+  padding: 0 var(--btn-padding-x-sm, 12px);
+  font-size: var(--btn-font-size-sm, 12px);
+  border-radius: var(--dt-radius-sm, 4px);
+}
+
+/* MD (中，默认) */
+.btn--md {
+  height: var(--btn-height-md, 38px);
+  padding: 0 var(--btn-padding-x-md, 18px);
+  font-size: var(--btn-font-size-md, 13px);
+  border-radius: var(--dt-radius-md, 6px);
+}
+
+/* LG (大) */
+.btn--lg,
+.btn-lg {
+  height: var(--btn-height-lg, 46px);
+  padding: 0 var(--btn-padding-x-lg, 24px);
+  font-size: var(--btn-font-size-lg, 15px);
+  border-radius: var(--dt-radius-md, 6px);
+}
+
+/* XL (超大) */
+.btn--xl {
+  height: var(--btn-height-xl, 54px);
+  padding: 0 var(--btn-padding-x-xl, 32px);
+  font-size: var(--btn-font-size-xl, 17px);
+  border-radius: var(--dt-radius-lg, 8px);
+}
+
+/* Block (全宽) */
+.btn--block,
+.btn-block {
+  display: flex;
+  width: 100%;
+}
+
+/* ==========================================
+   6. ICON-ONLY BUTTON — 纯图标按钮
+   ========================================== */
+.btn--icon,
+.btn-icon {
+  width: var(--btn-height-md, 38px);
+  padding: 0;
+  gap: 0;
+  border-radius: var(--dt-radius-full, 9999px);
+}
+
+.btn--icon.btn--sm,
+.btn--icon.btn-sm {
+  width: var(--btn-height-sm, 30px);
+}
+
+.btn--icon.btn--lg,
+.btn--icon.btn-lg {
+  width: var(--btn-height-lg, 46px);
+}
+
+/* ==========================================
+   7. LOADING STATE — 加载态
+   ========================================== */
+.btn--loading,
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn--loading::after,
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid;
+  border-color: currentColor transparent currentColor transparent;
+  border-radius: 50%;
+  animation: btn-spinner 0.6s linear infinite;
+}
+
+@keyframes btn-spinner {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================
+   8. BUTTON GROUPS — 按钮组
+   ========================================== */
+.btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.btn-group .btn {
+  border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+  border-radius: var(--dt-radius-md, 6px) 0 0 var(--dt-radius-md, 6px);
+}
+
+.btn-group .btn:last-child {
+  border-radius: 0 var(--dt-radius-md, 6px) var(--dt-radius-md, 6px) 0;
+}
+
+.btn-group .btn + .btn {
+  margin-left: -1px;
+}
+
+/* ==========================================
+   9. COMPATIBILITY — 历史类名全部兼容
+   以下旧类名已通过上述选择器映射到统一体系
+   记录在此处便于查找：
+   
+   前台旧类名 → 新映射:
+   .btn-primary    → .btn--primary (Section 4)
+   .btn-secondary  → .btn--secondary
+   .btn-outline    → .btn--outline
+   .btn-text       → .btn--ghost
+   .btn-white      → .btn--ghost
+   .btn-danger     → .btn--danger
+   .btn-review     → .btn--success
+   .btn-social     → .btn--social (Section 4)
+   .btn-wechat     → (removed, use .btn--social)
+   .btn-sm/.btn-lg/.btn-block → Size Variants (Section 5)
+   
+   采购中心旧类名 → 新映射:
+   .btn, .btn-sm, .btn-xs      → Sections 2 & 5
+   .btn-accent / .btn-orange   → .btn--primary
+   .btn-primary                → .btn--info (was blue in purchase)
+   .btn-success                → .btn--success
+   .btn-danger                 → .btn--danger
+   .btn-purple / .btn-cyan / .btn-pink → respective (Section 4)
+   .btn-outline                → .btn--outline
+   
+   营运中心旧类名 → 新映射:
+   .admin-btn                  → .btn (Section 2)
+   .admin-btn-primary/.btn-save→ .btn--primary
+   .admin-btn-secondary        → .btn--outline
+   .admin-btn-danger           → .btn--danger
+   .admin-btn-outline          → .btn--outline
+   .admin-btn-sm               → .btn--sm
+   .action-btn                 → (handled per individual color)
+   .btn-small                  → .btn--sm
+   ========================================== */
+
+/* ==========================================
+   10. SPECIAL OVERRIDES — 特定场景
+   ========================================== */
+
+/* 采购中心暗色主题下 btn-primary 实际映射到蓝色(info) */
+[data-theme="purchase-dark"] .btn-primary:not([class*="btn--"]) {
+  --btn-bg: var(--dt-color-info);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-info);
+  --btn-hover-bg: var(--dt-color-info-hover);
+  --btn-hover-shadow: var(--dt-shadow-glow-info);
+}
+
+/* 暗色主题下 filter-btn 使用主题主色 */
+[data-theme="purchase-dark"] .filter-btn:not([class*="btn--"]),
+[data-theme="operation-dark"] .filter-btn:not([class*="btn--"]) {
+  --btn-bg: var(--dt-color-primary);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-primary);
+  --btn-hover-bg: var(--dt-color-primary-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-primary-hover);
+  --btn-hover-shadow: var(--dt-shadow-glow-primary);
+  --btn-focus-ring: var(--dt-color-primary);
+}
+
+/* filter-btn.secondary = 成功色(新增) */
+.filter-btn.secondary {
+  --btn-bg: var(--dt-color-success);
+  --btn-color: var(--dt-color-white);
+  --btn-border: var(--dt-color-success);
+  --btn-hover-bg: var(--dt-color-success-hover);
+  --btn-hover-color: var(--dt-color-white);
+  --btn-hover-border: var(--dt-color-success-hover);
+  --btn-hover-shadow: var(--dt-shadow-glow-success);
+  --btn-focus-ring: var(--dt-color-success);
+}
+
+/* 购物车删除按钮 */
+.btn-remove {
+  --btn-bg: transparent;
+  --btn-color: var(--dt-color-text-muted);
+  --btn-border: transparent;
+  --btn-hover-bg: #fee;
+  --btn-hover-color: var(--dt-color-danger);
+  --btn-hover-shadow: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: var(--dt-radius-md);
+  transition: var(--dt-transition-fast);
+}
+
+.btn-remove:hover {
+  background: #fee;
+  color: var(--dt-color-danger);
+}
+
+/* 操作列小按钮(采购/营运中心表内操作) */
+.action-btn {
+  padding: var(--dt-space-xs, 4px) var(--dt-space-md, 12px);
+  border-radius: var(--dt-radius-md, 6px);
+  font-size: var(--dt-font-size-sm, 12px);
+  text-decoration: none;
+  transition: var(--dt-transition-fast);
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.action-btn.view  { background: rgba(25,118,210,0.2); color: #42a5f5; }
+.action-btn.view:hover  { background: #1976d2; color: white; }
+.action-btn.edit  { background: rgba(230,81,0,0.2); color: #ff9800; }
+.action-btn.edit:hover  { background: #e65100; color: white; }
+.action-btn.approve  { background: rgba(46,125,50,0.2); color: #66bb6a; }
+.action-btn.approve:hover  { background: #2e7d32; color: white; }
+.action-btn.reject  { background: rgba(198,40,40,0.2); color: #ef5350; }
+.action-btn.reject:hover  { background: #c62828; color: white; }
+
+.btn-edit { background: var(--dt-color-primary); color: var(--dt-color-white); }
+.btn-edit:hover { opacity: 0.9; }
+.btn-delete { background: var(--dt-color-danger); color: var(--dt-color-white); }
+.btn-delete:hover { background: var(--dt-color-danger-hover); }
+.btn-print { 
+  background: var(--dt-color-success); 
+  color: var(--dt-color-white); 
+  border: none; 
+  padding: 8px 15px; 
+  border-radius: var(--dt-radius-sm, 4px); 
+  cursor: pointer; 
+  text-decoration: none; 
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--dt-font-size-sm);
+  transition: var(--dt-transition-fast);
+}
+.btn-print:hover { background: var(--dt-color-success-hover); }
+
+/* ==========================================
+   11. SPECIAL COMPONENT BUTTONS — 组件按钮
+   ========================================== */
+
+/* Tab 按钮 (标签切换) */
+.tab-btn {
+  padding: var(--btn-tab-padding-y, 15px) var(--btn-tab-padding-x, 30px);
+  background: none;
+  border: none;
+  font-size: var(--dt-font-size-lg, 15px);
+  cursor: pointer;
+  transition: var(--dt-transition-fast);
+  border-bottom: 3px solid transparent;
+  color: var(--dt-color-text, #333);
+}
+.tab-btn:hover {
+  background: var(--dt-color-bg-light);
+}
+.tab-btn.active {
+  border-bottom-color: var(--dt-color-primary);
+  color: var(--dt-color-primary);
+  font-weight: var(--dt-font-weight-semibold, 600);
+}
+
+/* 数量选择器按钮 */
+.qty-btn {
+  width: var(--btn-qty-size, 40px);
+  height: var(--btn-qty-size, 40px);
+  background: var(--dt-color-bg-light);
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  transition: var(--dt-transition-fast);
+  color: var(--dt-color-text, #333);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.qty-btn:hover {
+  background: var(--dt-color-primary);
+  color: var(--dt-color-white);
+}
