@@ -1,47 +1,71 @@
 # Qoder AI assistant config
 .qoder/
 
-# Database backup files
-database/backups/**/*.bak
-database/backups/**/*.zip
-database/backups/V8/
+# === Classic ASP 项目排除规则 ===
+
+# Access 数据库文件（不应进入版本控制）
+*.mdb
+*.accdb
+*.ldb
+
+# 数据库备份目录（全部排除）
+database/backups/
 database/sqldata/
 
-# SSL certificates (security)
+# SSL 证书（安全）
 *.pfx
+*.pem
+*.key
+*.crt
 
-# Debug log files
+# 日志文件
 *.log
 debug_checkout.log
 admin/purchase/price_debug.log
 
-# Temporary backup directories
+# 临时备份目录
 backup_*/
+*_backup/
 
-# Debug/temp SQL
+# 调试/临时 SQL
 db_check.sql
+*.tmp.sql
 
-# Diff files
+# Diff 文件
 product_review_diff.txt
 
-# Debug HTML
+# 调试 HTML
 ingredients_feature_guide.html
 
-# Root-level screenshots (keep images/ folder intact)
+# 根目录截图（保留 images/ 目录）
 /*.png
 
-# Test scripts only (keep backup_database.ps1 and auto_fix_backup.bat)
+# 错误报告文件
+/*.txt
+
+# 测试脚本（保留 backup_database.ps1 等正式脚本）
 test_*.ps1
 debug_*.ps1
 check_*.ps1
 kill_*.ps1
 
-# Debug ASP files
+# 调试 ASP 文件
 setup/debug_token.asp
 includes/test_*.asp
 includes/config_*.asp
 includes/cfg_*.asp
 
-# OS files
+# 临时/缓存文件
+*.tmp
+*.temp
+~*
+*.~*asp
+
+# 上传目录中的用户文件（保留目录结构）
+images/uploads/*
+!images/uploads/.gitkeep
+
+# 操作系统文件
 Thumbs.db
 Desktop.ini
+[Dd]esktop.ini
