@@ -287,9 +287,15 @@ Set rsNotes = ExecuteQuery("SELECT * FROM FragranceNotes WHERE IsActive <> 0 ORD
                                         Dim rStatus, rClass
                                         rStatus = rsMyProducts("ReviewStatus") & ""
                                         Select Case rStatus
-                                            Case "Pending": rClass = "background:#f39c12; color:white; padding:2px 8px; border-radius:10px; font-size:12px;"; rStatus = "待审核"
-                                            Case "Approved": rClass = "background:#27ae60; color:white; padding:2px 8px; border-radius:10px; font-size:12px;"; rStatus = "通过"
-                                            Case "Rejected": rClass = "background:#e74c3c; color:white; padding:2px 8px; border-radius:10px; font-size:12px;"; rStatus = "驳回"
+                                            Case "Pending"
+                                                rClass = "background:#f39c12; color:white; padding:2px 8px; border-radius:10px; font-size:12px;"
+                                                rStatus = "待审核"
+                                            Case "Approved"
+                                                rClass = "background:#27ae60; color:white; padding:2px 8px; border-radius:10px; font-size:12px;"
+                                                rStatus = "通过"
+                                            Case "Rejected"
+                                                rClass = "background:#e74c3c; color:white; padding:2px 8px; border-radius:10px; font-size:12px;"
+                                                rStatus = "驳回"
                                         End Select
                                         %>
                                         <span style="<%= rClass %>"><%= rStatus %></span>

@@ -1,4 +1,4 @@
-$file = 'f:\网站制作\网站\网站二\admin\purchase\purchase_orders.asp'
+$file = Join-Path (Get-Location) 'admin\purchase\purchase_orders.asp'
 $content = [System.IO.File]::ReadAllText($file, [System.Text.Encoding]::UTF8)
 
 # Edit 1: Add copyOrderFromView JS function before </script>

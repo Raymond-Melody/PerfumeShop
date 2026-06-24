@@ -682,8 +682,21 @@ input, button, textarea, select {
     bottom: 0;
     background-size: cover;
     background-position: center;
-    background-color: var(--primary-color);
     transition: var(--transition);
+}
+
+/* 分类背景渐变（替代缺失的图片） */
+.category-bg-floral {
+    background: linear-gradient(135deg, #f8c8d4 0%, #e91e63 50%, #c2185b 100%);
+}
+.category-bg-oriental {
+    background: linear-gradient(135deg, #ffcc80 0%, #ff8f00 50%, #e65100 100%);
+}
+.category-bg-woody {
+    background: linear-gradient(135deg, #a1887f 0%, #6d4c41 50%, #3e2723 100%);
+}
+.category-bg-oceanic {
+    background: linear-gradient(135deg, #80deea 0%, #0097a7 50%, #006064 100%);
 }
 
 .category-card:hover .category-bg {
@@ -737,6 +750,44 @@ input, button, textarea, select {
 
 .story-image img {
     border-radius: var(--radius-lg);
+}
+
+/* 品牌故事图片占位（替代缺失的 story.jpg） */
+.story-image-placeholder {
+    width: 100%;
+    height: 400px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, #f5e6d3 0%, #d4a574 40%, #8b6914 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.story-image-placeholder::after {
+    content: '\f004';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 80px;
+    color: rgba(255,255,255,0.3);
+}
+
+/* 关于我们图片占位（替代缺失的 about/story.jpg） */
+.about-image-placeholder {
+    width: 100%;
+    height: 350px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, #e8d5b7 0%, #c9a96e 40%, #8b6914 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.about-image-placeholder::after {
+    content: '\f200';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 60px;
+    color: rgba(255,255,255,0.3);
 }
 
 /* 客户评价 */

@@ -1,0 +1,17 @@
+V13.3 数据库备份验证记录
+=========================
+日期: 2026-06-17
+备份文件: PerfumeShop_V133_Full_20260617.bak
+路径: database/backups/V13/PerfumeShop_V133_Full_20260617.bak
+
+数据库: PerfumeShop (localhost\YOURPERFUME)
+类型: 完整备份 (SQL Server Express)
+大小: 1793 页
+
+RESTORE VERIFYONLY: ✅ 通过（备份集有效）
+
+更新内容:
+- 修复产品"最新上架"排序（CreatedAt NULL修复 + ISNULL兜底）
+- 修复采购模块品牌定香 INSERT 缺少 CreatedAt 字段
+- 修复分页URL参数丢失（type/sort参数保留）
+- 清理调试截图和诊断文件

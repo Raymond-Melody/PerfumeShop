@@ -17,6 +17,11 @@ Dim errorMsg, successMsg
 errorMsg = ""
 successMsg = ""
 
+' 检查URL参数消息（如注册成功后跳转）
+If Request.QueryString("msg") = "registered" Then
+    successMsg = "注册成功！请使用您的账号和密码登录"
+End If
+
 ' 处理登录
 If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     ' CSRF验证
@@ -93,6 +98,12 @@ Call EnsureCSRFToken()
             </div>
             <% End If %>
             
+            <% If successMsg <> "" Then %>
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i> <%= HTMLEncode(successMsg) %>
+            </div>
+            <% End If %>
+            
             <form method="post" class="auth-form" id="loginForm">
                 <%= GetCSRFTokenField() %>
                 <div class="form-group">
@@ -134,6 +145,7 @@ Call EnsureCSRFToken()
             
             <div class="auth-footer">
                 <p>还没有账户？ <a href="/user/register.asp">立即注册</a></p>
+                <p class="auth-notice"><i class="fas fa-info-circle"></i> 本平台采用会员推荐制，需通过现有会员推荐链接注册</p>
             </div>
         </div>
         

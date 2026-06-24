@@ -1,3 +1,5 @@
+<%@ Language="VBScript" CodePage="65001" %>
+<!--#include file="../includes/connection.asp"-->
 <%
 ' ============================================
 ' 风控校验API - Risk Check API

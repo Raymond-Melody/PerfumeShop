@@ -1,7 +1,7 @@
 # PowerShell Migration Script: Access -> SQL Server
 $ErrorActionPreference = "Continue"
 
-$accessPath = "f:\网站制作\网站\网站二\database\PerfumeShop.mdb"
+$accessPath = Join-Path (Get-Location) "database\PerfumeShop.mdb"
 $sqlServer = "localhost\YOURPERFUME"
 $database = "PerfumeShop"
 

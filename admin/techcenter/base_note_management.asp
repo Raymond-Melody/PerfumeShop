@@ -41,6 +41,11 @@ Function SafeCount(val)
     End If
 End Function
 
+' ========== IIF 函数 ==========
+Function IIF(cond, tVal, fVal)
+    If cond Then IIF = tVal Else IIF = fVal
+End Function
+
 ' ========== 处理表单提交 ==========
 Dim action, msg
 action = Request.Form("action")

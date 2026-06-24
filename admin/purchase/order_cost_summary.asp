@@ -8,12 +8,10 @@ Response.ContentType = "text/html"
 <%
 Call OpenConnection()
 
-' 自动创建 OrderCostAllocation 表（如果不存在）
-On Error Resume Next
-conn.Execute "SELECT TOP 1 1 FROM OrderCostAllocation"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "CREATE TABLE OrderCostAllocation (AllocationID INT IDENTITY(1,1) PRIMARY KEY, OrderID INT, OrderNo NVARCHAR(100), CostType NVARCHAR(30), ItemCode NVARCHAR(50), ItemName NVARCHAR(200), UnitCost DECIMAL(19,4) DEFAULT 0, Quantity FLOAT DEFAULT 0, TotalCost DECIMAL(19,4) DEFAULT 0, BatchID INT, AllocatedAt DATETIME DEFAULT GETDATE(), CreatedAt DATETIME DEFAULT GETDATE())"
-If Err.Number <> 0 Then Err.Clear
-On Error GoTo 0
+' 确保 OrderCostAllocation 表存在
+If Not TableExists_OCA("OrderCostAllocation") Then
+    Call CreateTable_OCA()
+End If
 
 Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
@@ -311,5 +309,52 @@ End Function
 </body>
 </html>
 <%
+' ============================================
+' 数据库辅助函数（建表/检查表）
+' ============================================
+
+Function TableExists_OCA(tblName)
+    Dim rs, exists
+    exists = False
+    On Error Resume Next
+    Set rs = conn.Execute("SELECT 1 FROM sys.tables WHERE name=N'" & tblName & "'")
+    If Err.Number = 0 Then
+        If Not rs Is Nothing Then
+            If Not rs.EOF Then exists = True
+            rs.Close
+            Set rs = Nothing
+        End If
+    Else
+        Err.Clear
+        conn.Execute "SELECT TOP 1 1 FROM [" & tblName & "]"
+        If Err.Number = 0 Then
+            exists = True
+        Else
+            Err.Clear
+        End If
+    End If
+    On Error GoTo 0
+    TableExists_OCA = exists
+End Function
+
+Sub CreateTable_OCA()
+    On Error Resume Next
+    conn.Execute "CREATE TABLE [OrderCostAllocation] (" & _
+        "[AllocationID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, " & _
+        "[OrderID] INT NULL, [OrderNo] NVARCHAR(100) NULL, " & _
+        "[CostType] NVARCHAR(30) DEFAULT 'Material', " & _
+        "[ItemCode] NVARCHAR(50) NULL, [ItemName] NVARCHAR(200) NULL, " & _
+        "[BatchID] INT NULL, [InvBatchID] INT NULL, " & _
+        "[UnitCost] DECIMAL(19,4) DEFAULT 0, [Quantity] FLOAT DEFAULT 0, " & _
+        "[TotalCost] DECIMAL(19,4) DEFAULT 0, " & _
+        "[AllocatedAt] DATETIME DEFAULT GETDATE(), " & _
+        "[CreatedAt] DATETIME DEFAULT GETDATE())"
+    If Err.Number <> 0 Then
+        Session("DBSetupError") = Session("DBSetupError") & "[OCA] Failed to create OrderCostAllocation: " & Err.Description & "<br>"
+        Err.Clear
+    End If
+    On Error GoTo 0
+End Sub
+
 Call CloseConnection()
 %>

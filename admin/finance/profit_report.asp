@@ -132,19 +132,19 @@ If IsNull(otherCost) Or otherCost = "" Then otherCost = 0
 
 ' 9. 毛利润 = 净销售额 - 商品成本
 Dim grossProfit
-grossProfit = netSales - productCost
+grossProfit = SafeNum(netSales) - SafeNum(productCost)
 
 ' 10. 边际贡献 = 净销售额 - 商品成本 - 运费 - 平台扣点 - 推广费
 Dim contributionMargin
-contributionMargin = netSales - productCost - shippingCost - platformFee - promotionCost
+contributionMargin = SafeNum(netSales) - SafeNum(productCost) - SafeNum(shippingCost) - SafeNum(platformFee) - SafeNum(promotionCost)
 
 ' 11. 毛利率 = 毛利润 / 净销售额 x 100%
 Dim grossProfitRate
-If netSales > 0 Then grossProfitRate = (grossProfit / netSales) * 100 Else grossProfitRate = 0
+If SafeNum(netSales) > 0 Then grossProfitRate = (SafeNum(grossProfit) / SafeNum(netSales)) * 100 Else grossProfitRate = 0
 
 ' 12. 费用率 = 推广费 / 净销售额 x 100%
 Dim expenseRate
-If netSales > 0 Then expenseRate = (promotionCost / netSales) * 100 Else expenseRate = 0
+If SafeNum(netSales) > 0 Then expenseRate = (SafeNum(promotionCost) / SafeNum(netSales)) * 100 Else expenseRate = 0
 
 ' ============================================
 ' 月度利润趋势数据（最近6个月）

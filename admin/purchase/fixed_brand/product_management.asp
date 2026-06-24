@@ -63,7 +63,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                                 Call ExecuteNonQuery("UPDATE Products SET ProductName='" & pName & "', BasePrice=" & sPrice & ", Description='" & pSpec & "', UpdatedAt=GETDATE() WHERE ProductID=" & refProdID)
                             Else
                                 ' 创建新的 Products 记录
-                                Dim insProdSQL : insProdSQL = "INSERT INTO Products (ProductType, ProductName, Description, BasePrice, IsActive) VALUES ('Fixed', '" & pName & "', '" & pSpec & "', " & sPrice & ", 1)"
+                                Dim insProdSQL : insProdSQL = "INSERT INTO Products (ProductType, ProductName, Description, BasePrice, IsActive, CreatedAt) VALUES ('standard', '" & pName & "', '" & pSpec & "', " & sPrice & ", 1, GETDATE())"
                                 If ExecuteNonQuery(insProdSQL) Then
                                     Dim newProdID : newProdID = SafeNum(GetScalar("SELECT MAX(ProductID) FROM Products"))
                                     If newProdID > 0 Then
@@ -99,7 +99,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                                 If existPID > 0 Then
                                     Call ExecuteNonQuery("UPDATE Products SET ProductName='" & pName & "', BasePrice=" & sPrice & ", Description='" & pSpec & "', UpdatedAt=GETDATE() WHERE ProductID=" & existPID)
                                 Else
-                                    Dim insProdEditSQL : insProdEditSQL = "INSERT INTO Products (ProductType, ProductName, Description, BasePrice, IsActive) VALUES ('Fixed', '" & pName & "', '" & pSpec & "', " & sPrice & ", 1)"
+                                    Dim insProdEditSQL : insProdEditSQL = "INSERT INTO Products (ProductType, ProductName, Description, BasePrice, IsActive, CreatedAt) VALUES ('standard', '" & pName & "', '" & pSpec & "', " & sPrice & ", 1, GETDATE())"
                                     If ExecuteNonQuery(insProdEditSQL) Then
                                         Dim newProdEditID : newProdEditID = SafeNum(GetScalar("SELECT MAX(ProductID) FROM Products"))
                                         If newProdEditID > 0 Then
@@ -161,7 +161,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                 msgType = "error"
             Else
             Dim impCount : impCount = 0
-            Dim rsImp : Set rsImp = conn.Execute("SELECT ProductID, ProductName, BasePrice FROM Products WHERE ProductType='Fixed' AND IsActive=1")
+            Dim rsImp : Set rsImp = conn.Execute("SELECT ProductID, ProductName, BasePrice FROM Products WHERE ProductType='standard' AND IsActive=1")
             If Not rsImp Is Nothing Then
                 Do While Not rsImp.EOF
                     Dim impPID : impPID = SafeNum(rsImp("ProductID"))
@@ -575,7 +575,7 @@ Dim rsSuppliers : Set rsSuppliers = conn.Execute("SELECT SupplierID, SupplierNam
         }
         
         function importProducts() {
-            if (confirm('将从产品库(Products表)导入所有ProductType="Fixed"的产品。已存在的不会重复导入。')) {
+            if (confirm('将从产品库(Products表)导入所有ProductType="standard"的产品。已存在的不会重复导入。')) {
                 var f = document.createElement('form');
                 f.method = 'post';
                 f.innerHTML = '<input type="hidden" name="csrf_token" value="<%= Session("CSRFToken") %>"><input type="hidden" name="action" value="import_products">';

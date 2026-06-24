@@ -240,4 +240,414 @@ Sub MU_RenderLevelBadge(userId)
 </style>
 <%
 End Sub
+
+' ============================================
+' V14 会员推荐制 - Referral System
+' ============================================
+
+' 推荐Token签名密钥 - 已移至 config.asp (Const REFERRAL_SECRET)
+' 注意：确保 config.asp 在此文件之前被 include
+
+' ============================================
+' 生成推荐Token
+' 输入: referrerUserId - 推荐人用户ID
+'       daysValid - 有效天数（默认30天）
+'       maxUses - 最大使用次数（默认1次）
+'       referrerType - 推荐人类型 user/admin（默认user）
+' 输出: 加密的Token字符串（格式: userId|timestamp|expiry|maxUses|nonce|signature）
+' ============================================
+Function MU_GenerateReferralToken(referrerUserId, daysValid, maxUses, referrerType)
+    If IsNull(referrerUserId) Or referrerUserId = "" Then
+        MU_GenerateReferralToken = ""
+        Exit Function
+    End If
+    
+    If IsNull(daysValid) Or daysValid = "" Or daysValid <= 0 Then daysValid = 30
+    If IsNull(maxUses) Or maxUses = "" Or maxUses <= 0 Then maxUses = 1
+    If IsNull(referrerType) Or referrerType = "" Then referrerType = "user"
+    
+    ' 生成时间戳（Unix秒）
+    Dim timestamp, expiry, nonce, dataToSign, signature
+    timestamp = CLng(DateDiff("s", "1970-01-01 00:00:00", Now()))
+    expiry = timestamp + (daysValid * 86400)
+    
+    ' 生成随机nonce（防重放）
+    Randomize
+    nonce = Right("00000000" & Hex(Int(Rnd * &H7FFFFFFF)), 8) & _
+            Right("00000000" & Hex(Int(Rnd * &H7FFFFFFF)), 8)
+    
+    ' 构建签名数据
+    dataToSign = referrerUserId & "|" & timestamp & "|" & expiry & "|" & maxUses & "|" & nonce & "|" & REFERRAL_SECRET
+    signature = SafeSHA256Hash(dataToSign)
+    
+    ' Token格式: userId|timestamp|expiry|maxUses|nonce|signature
+    MU_GenerateReferralToken = referrerUserId & "|" & timestamp & "|" & expiry & "|" & maxUses & "|" & nonce & "|" & signature
+End Function
+
+' ============================================
+' 存储推荐Token到数据库
+' ============================================
+Function MU_StoreReferralToken(tokenStr, referrerType)
+    Dim parts, tokenHash
+    parts = Split(tokenStr, "|")
+    If UBound(parts) < 5 Then
+        MU_StoreReferralToken = False
+        Exit Function
+    End If
+    
+    ' Token哈希用于数据库存储（只存签名部分验证，不存完整Token）
+    tokenHash = Left(SafeSHA256Hash(tokenStr), 64)
+    
+    Dim referrerUserId, expiry, maxUses
+    referrerUserId = CLng(parts(0))
+    expiry = CLng(parts(2))
+    maxUses = CLng(parts(3))
+    
+    ' 将Unix时间戳转换为SQL Server DATETIME2
+    Dim expiryDate
+    expiryDate = DateAdd("s", expiry, "1970-01-01 00:00:00")
+    Dim expiryStr
+    expiryStr = Year(expiryDate) & "-" & Right("0" & Month(expiryDate), 2) & "-" & Right("0" & Day(expiryDate), 2) & " " & _
+                Right("0" & Hour(expiryDate), 2) & ":" & Right("0" & Minute(expiryDate), 2) & ":" & Right("0" & Second(expiryDate), 2)
+    
+    Dim sql
+    sql = "INSERT INTO ReferralTokens (TokenHash, OriginalToken, ReferrerUserID, ReferrerType, ExpiresAt, MaxUses, UsedCount, IsActive) VALUES (" & _
+        "'" & SafeSQL(tokenHash) & "', '" & SafeSQL(tokenStr) & "', " & referrerUserId & ", '" & SafeSQL(referrerType) & "', '" & expiryStr & "', " & maxUses & ", 0, 1)"
+    
+    MU_StoreReferralToken = ExecuteNonQuery(sql)
+End Function
+
+' ============================================
+' 验证推荐Token
+' 输入: token - URL传递的Token字符串
+' 输出: Dictionary对象，包含 success, referrerUserId, message, tokenHash
+' ============================================
+Function MU_ValidateReferralToken(token)
+    Dim result
+    Set result = Server.CreateObject("Scripting.Dictionary")
+    result.Add "success", False
+    result.Add "referrerUserId", 0
+    result.Add "referrerName", ""
+    result.Add "message", ""
+    result.Add "expiryDate", ""
+    result.Add "maxUses", 0
+    result.Add "tokenHash", ""
+    
+    If IsNull(token) Or token = "" Then
+        result("message") = "缺少推荐Token"
+        Set MU_ValidateReferralToken = result
+        Exit Function
+    End If
+    
+    Dim parts, userId, timestamp, expiry, maxUses, nonce, signature
+    parts = Split(token, "|")
+    If UBound(parts) < 5 Then
+        result("message") = "Token格式无效"
+        Set MU_ValidateReferralToken = result
+        Exit Function
+    End If
+    
+    userId = parts(0)
+    timestamp = parts(1)
+    expiry = parts(2)
+    maxUses = parts(3)
+    nonce = parts(4)
+    signature = parts(5)
+    
+    ' 验证各部分为数字
+    If Not IsNumeric(userId) Or Not IsNumeric(timestamp) Or Not IsNumeric(expiry) Or Not IsNumeric(maxUses) Then
+        result("message") = "Token数据格式无效"
+        Set MU_ValidateReferralToken = result
+        Exit Function
+    End If
+    
+    ' 验证签名
+    Dim dataToSign, expectedSignature
+    dataToSign = userId & "|" & timestamp & "|" & expiry & "|" & maxUses & "|" & nonce & "|" & REFERRAL_SECRET
+    expectedSignature = SafeSHA256Hash(dataToSign)
+    
+    If signature <> expectedSignature Then
+        result("message") = "Token签名验证失败"
+        ' 记录可疑尝试
+        Dim attemptIP
+        attemptIP = Request.ServerVariables("REMOTE_ADDR")
+        ExecuteNonQuery "INSERT INTO RegistrationAttempts (IPAddress, DeviceFingerprint, Success, TokenHash) VALUES ('" & SafeSQL(attemptIP) & "', 'invalid_signature', 0, '" & SafeSQL(Left(token, 64)) & "')"
+        Set MU_ValidateReferralToken = result
+        Exit Function
+    End If
+    
+    ' 验证是否过期
+    Dim currentTime
+    currentTime = CLng(DateDiff("s", "1970-01-01 00:00:00", Now()))
+    If currentTime > CLng(expiry) Then
+        result("message") = "推荐链接已过期"
+        Set MU_ValidateReferralToken = result
+        Exit Function
+    End If
+    
+    If currentTime < CLng(timestamp) Then
+        result("message") = "Token时间异常"
+        Set MU_ValidateReferralToken = result
+        Exit Function
+    End If
+    
+    ' 计算Token哈希用于数据库查询
+    Dim tokenHash
+    tokenHash = Left(SafeSHA256Hash(token), 64)
+    
+    ' 检查数据库中Token是否有效
+    Dim rsToken
+    Set rsToken = ExecuteQuery("SELECT * FROM ReferralTokens WHERE TokenHash = '" & SafeSQL(tokenHash) & "' AND IsActive = 1")
+    If rsToken Is Nothing Or rsToken.EOF Then
+        result("message") = "推荐链接不存在或已失效"
+        If Not rsToken Is Nothing Then rsToken.Close : Set rsToken = Nothing
+        Set MU_ValidateReferralToken = result
+        Exit Function
+    End If
+    
+    ' 检查是否超过使用次数
+    If CLng(rsToken("UsedCount")) >= CLng(rsToken("MaxUses")) Then
+        result("message") = "推荐链接已达到使用上限"
+        rsToken.Close : Set rsToken = Nothing
+        Set MU_ValidateReferralToken = result
+        Exit Function
+    End If
+    
+    ' 检查数据库中的过期时间
+    If Not IsNull(rsToken("ExpiresAt")) Then
+        ' Handle DATETIME2(7) - must strip fractional seconds entirely (VBScript IsDate/CDate rejects .NNN)
+        Dim dbExpiryStr, dbDotPos
+        dbExpiryStr = CStr(rsToken("ExpiresAt") & "")
+        dbDotPos = InStr(dbExpiryStr, ".")
+        If dbDotPos > 0 Then dbExpiryStr = Left(dbExpiryStr, dbDotPos - 1)
+        If IsDate(dbExpiryStr) Then
+            If CDate(dbExpiryStr) < Now() Then
+                result("message") = "推荐链接已过期"
+                rsToken.Close : Set rsToken = Nothing
+                Set MU_ValidateReferralToken = result
+                Exit Function
+            End If
+        End If
+    End If
+    
+    ' 获取推荐人信息
+    Dim rsReferrer
+    Set rsReferrer = ExecuteQuery("SELECT Username, FullName FROM Users WHERE UserID = " & CLng(userId) & " AND IsActive <> 0")
+    Dim referrerName
+    referrerName = ""
+    If Not rsReferrer Is Nothing And Not rsReferrer.EOF Then
+        If Not IsNull(rsReferrer("FullName")) And rsReferrer("FullName") <> "" Then
+            referrerName = rsReferrer("FullName")
+        Else
+            referrerName = rsReferrer("Username")
+        End If
+        rsReferrer.Close
+    End If
+    Set rsReferrer = Nothing
+    
+    ' 格式化过期日期
+    Dim expiryDateObj, expiryStr
+    expiryDateObj = DateAdd("s", CLng(expiry), "1970-01-01 00:00:00")
+    expiryStr = Year(expiryDateObj) & "年" & Month(expiryDateObj) & "月" & Day(expiryDateObj) & "日"
+    
+    ' 成功
+    result("success") = True
+    result("referrerUserId") = CLng(userId)
+    result("referrerName") = referrerName
+    result("expiryDate") = expiryStr
+    result("maxUses") = CLng(maxUses)
+    result("tokenHash") = tokenHash
+    
+    rsToken.Close : Set rsToken = Nothing
+    Set MU_ValidateReferralToken = result
+End Function
+
+' ============================================
+' 标记Token已被使用（注册成功后调用）
+' ============================================
+Sub MU_MarkTokenUsed(tokenHash)
+    If tokenHash <> "" Then
+        ExecuteNonQuery "UPDATE ReferralTokens SET UsedCount = ISNULL(UsedCount, 0) + 1 WHERE TokenHash = '" & SafeSQL(tokenHash) & "' AND IsActive = 1"
+    End If
+End Sub
+
+' ============================================
+' 一次性写入推荐祖先链条
+' 例如: A推荐了B, B推荐了C
+' 当C注册时，写入 (A, C, 2), (B, C, 1)
+' ============================================
+Sub MU_RecordReferralChain(newUserId, referrerUserId)
+    On Error Resume Next
+    
+    If newUserId <= 0 Or referrerUserId <= 0 Then Exit Sub
+    
+    ' 写入直接推荐关系（Depth=1）
+    ExecuteNonQuery "INSERT INTO ReferralRelations (AncestorUserID, DescendantUserID, Depth) VALUES (" & referrerUserId & ", " & newUserId & ", 1)"
+    
+    ' 查询推荐人的所有祖先
+    Dim rsAncestors
+    Set rsAncestors = ExecuteQuery("SELECT AncestorUserID, Depth FROM ReferralRelations WHERE DescendantUserID = " & referrerUserId & " ORDER BY Depth ASC")
+    
+    If Not rsAncestors Is Nothing Then
+        Do While Not rsAncestors.EOF
+            Dim ancestorId, ancestorDepth
+            ancestorId = rsAncestors("AncestorUserID")
+            ancestorDepth = rsAncestors("Depth")
+            ' 写入祖先关系：祖先 -> 新用户，Depth = 祖先到推荐人的深度 + 1
+            ExecuteNonQuery "INSERT INTO ReferralRelations (AncestorUserID, DescendantUserID, Depth) VALUES (" & ancestorId & ", " & newUserId & ", " & (ancestorDepth + 1) & ")"
+            rsAncestors.MoveNext
+        Loop
+        rsAncestors.Close
+    End If
+    Set rsAncestors = Nothing
+    
+    On Error GoTo 0
+End Sub
+
+' ============================================
+' 检查会员每日生成推荐链接数量
+' 限制: 会员每日最多生成5个推荐链接
+' ============================================
+Function MU_CheckDailyReferralLimit(userId)
+    MU_CheckDailyReferralLimit = True ' 默认允许
+    
+    Dim todayCount
+    todayCount = GetScalar("SELECT COUNT(*) FROM ReferralTokens WHERE ReferrerUserID = " & userId & " AND ReferrerType = 'user' AND CAST(CreatedAt AS DATE) = CAST(GETDATE() AS DATE)")
+    If IsNull(todayCount) Then todayCount = 0
+    
+    If CLng(todayCount) >= 5 Then
+        MU_CheckDailyReferralLimit = False
+    End If
+End Function
+
+' ============================================
+' 检查注册速率限制
+' 输入: ip - 客户端IP地址
+'       fingerprint - 设备指纹（来自前端JS）
+' 输出: Dictionary，包含 allowed, message
+' 规则:
+'   - 同一IP每24小时最多3次成功注册
+'   - 同一设备指纹每24小时最多2次成功注册
+'   - 同一IP每小时内最多5次注册尝试（含失败）
+' ============================================
+Function MU_CheckRegistrationRateLimit(ip, fingerprint)
+    Dim result
+    Set result = Server.CreateObject("Scripting.Dictionary")
+    result.Add "allowed", True
+    result.Add "message", ""
+    
+    If IsNull(ip) Or ip = "" Then ip = Request.ServerVariables("REMOTE_ADDR")
+    
+    Dim ipSuccessCount, fpSuccessCount, ipHourlyAttempts
+    
+    On Error Resume Next
+    
+    ' 检查IP最近24小时成功注册次数
+    ipSuccessCount = GetScalar("SELECT COUNT(*) FROM RegistrationAttempts WHERE IPAddress = '" & SafeSQL(ip) & "' AND Success = 1 AND AttemptedAt >= DATEADD(hour, -24, GETDATE())")
+    If IsNull(ipSuccessCount) Then ipSuccessCount = 0
+    
+    ' 检查设备指纹最近24小时成功注册次数
+    If fingerprint <> "" Then
+        fpSuccessCount = GetScalar("SELECT COUNT(*) FROM RegistrationAttempts WHERE DeviceFingerprint = '" & SafeSQL(fingerprint) & "' AND Success = 1 AND AttemptedAt >= DATEADD(hour, -24, GETDATE())")
+        If IsNull(fpSuccessCount) Then fpSuccessCount = 0
+    Else
+        fpSuccessCount = 0
+    End If
+    
+    ' 检查IP最近1小时尝试次数（含失败）
+    ipHourlyAttempts = GetScalar("SELECT COUNT(*) FROM RegistrationAttempts WHERE IPAddress = '" & SafeSQL(ip) & "' AND AttemptedAt >= DATEADD(hour, -1, GETDATE())")
+    If IsNull(ipHourlyAttempts) Then ipHourlyAttempts = 0
+    
+    On Error GoTo 0
+    
+    If CLng(ipHourlyAttempts) >= 5 Then
+        result("allowed") = False
+        result("message") = "注册尝试过于频繁，请1小时后再试"
+    ElseIf CLng(ipSuccessCount) >= 3 Then
+        result("allowed") = False
+        result("message") = "该IP已超过注册次数限制，请24小时后再试"
+    ElseIf CLng(fpSuccessCount) >= 2 And fingerprint <> "" Then
+        result("allowed") = False
+        result("message") = "该设备已超过注册次数限制，请24小时后再试"
+    End If
+    
+    Set MU_CheckRegistrationRateLimit = result
+End Function
+
+' ============================================
+' 记录注册尝试
+' ============================================
+Sub MU_RecordRegistrationAttempt(ip, fingerprint, success, tokenHash)
+    If IsNull(ip) Or ip = "" Then ip = Request.ServerVariables("REMOTE_ADDR")
+    If IsNull(fingerprint) Then fingerprint = ""
+    If IsNull(tokenHash) Then tokenHash = ""
+    
+    Dim successVal
+    If success Then successVal = 1 Else successVal = 0
+    
+    ExecuteNonQuery "INSERT INTO RegistrationAttempts (IPAddress, DeviceFingerprint, Success, TokenHash) VALUES ('" & SafeSQL(ip) & "', '" & SafeSQL(fingerprint) & "', " & successVal & ", '" & SafeSQL(tokenHash) & "')"
+End Sub
+
+' ============================================
+' 获取用户的推荐统计
+' ============================================
+Function MU_GetReferralStats(userId)
+    Dim stats
+    Set stats = Server.CreateObject("Scripting.Dictionary")
+    stats.Add "todayLinks", 0
+    stats.Add "totalLinks", 0
+    stats.Add "activeLinks", 0
+    stats.Add "totalInvitees", 0
+    
+    On Error Resume Next
+    
+    ' 今日生成链接数
+    Dim todayLinks
+    todayLinks = GetScalar("SELECT COUNT(*) FROM ReferralTokens WHERE ReferrerUserID = " & userId & " AND CAST(CreatedAt AS DATE) = CAST(GETDATE() AS DATE)")
+    If Not IsNull(todayLinks) Then stats("todayLinks") = CLng(todayLinks)
+    
+    ' 累计生成链接数
+    Dim totalLinks
+    totalLinks = GetScalar("SELECT COUNT(*) FROM ReferralTokens WHERE ReferrerUserID = " & userId)
+    If Not IsNull(totalLinks) Then stats("totalLinks") = CLng(totalLinks)
+    
+    ' 有效链接数
+    Dim activeLinks
+    activeLinks = GetScalar("SELECT COUNT(*) FROM ReferralTokens WHERE ReferrerUserID = " & userId & " AND IsActive = 1 AND ExpiresAt > GETDATE() AND UsedCount < MaxUses")
+    If Not IsNull(activeLinks) Then stats("activeLinks") = CLng(activeLinks)
+    
+    ' 已邀请人数
+    Dim totalInvitees
+    totalInvitees = GetScalar("SELECT COUNT(*) FROM ReferralRelations WHERE AncestorUserID = " & userId & " AND Depth = 1")
+    If Not IsNull(totalInvitees) Then stats("totalInvitees") = CLng(totalInvitees)
+    
+    On Error GoTo 0
+    
+    Set MU_GetReferralStats = stats
+End Function
+
+' ============================================
+' 获取用户的有效推荐链接列表
+' ============================================
+Function MU_GetActiveReferralLinks(userId)
+    Dim sql
+    sql = "SELECT rt.TokenHash, rt.OriginalToken, rt.MaxUses, rt.UsedCount, rt.ExpiresAt, rt.CreatedAt, rt.IsActive, " & _
+          "u.Username AS ReferrerName FROM ReferralTokens rt " & _
+          "LEFT JOIN Users u ON rt.ReferrerUserID = u.UserID " & _
+          "WHERE rt.ReferrerUserID = " & userId & " AND rt.IsActive = 1 AND rt.ExpiresAt > GETDATE() AND rt.OriginalToken IS NOT NULL " & _
+          "ORDER BY rt.CreatedAt DESC"
+    Set MU_GetActiveReferralLinks = ExecuteQuery(sql)
+End Function
+
+' ============================================
+' 从Token字符串重建完整Token（用于生成注册URL）
+' Token已包含所有信息，直接URL编码即可
+' ============================================
+Function MU_GetTokenURL(tokenStr)
+    If tokenStr = "" Then
+        MU_GetTokenURL = ""
+        Exit Function
+    End If
+    MU_GetTokenURL = Server.URLEncode(tokenStr)
+End Function
 %>

@@ -9,6 +9,12 @@ Response.ContentType = "text/html"
 <%
 Call OpenConnection()
 
+' V14: 会员登录检查
+If Session("UserID") = "" Or IsNull(Session("UserID")) Then
+    Response.Redirect "/user/login.asp?return=" & Server.URLEncode(Request.ServerVariables("SCRIPT_NAME") & "?" & Request.ServerVariables("QUERY_STRING"))
+    Response.End
+End If
+
 Dim orderId
 orderId = Request.QueryString("order_id")
 

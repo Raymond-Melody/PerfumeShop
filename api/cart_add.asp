@@ -105,8 +105,8 @@ If rsP Is Nothing Or rsP.EOF Then
     Response.End
 End If
 basePrice = CDbl(rsP("BasePrice"))
-productType = rsP("ProductType")
-If IsNull(productType) Then productType = "Custom"
+productType = LCase(rsP("ProductType") & "")
+If productType = "" Then productType = "custom"
 Dim productEngravable, productEngravingPrice
 productEngravable = False
 productEngravingPrice = 0
@@ -165,19 +165,56 @@ Function ProcessNotes(notesList, noteTypeLabel)
     ProcessNotes = currentNotesPrice
 End Function
 
-If productType = "Fixed" Then
-    ' 固定规格价格
+' 获取容量系数（提前获取，standard产品需要用到）
+multiplier = 1
+If volumeId <> "" And IsNumeric(volumeId) Then
+    Dim volMulti
+    volMulti = GetScalar("SELECT PriceMultiplier FROM Volumes WHERE VolumeID = " & CInt(volumeId))
+    If Not IsNull(volMulti) And volMulti <> "" Then multiplier = CDbl(volMulti)
+End If
+
+If productType = "standard" Then
+    ' 固定规格价格 - 优先从ProductVolumePrices获取，回退到BasePrice×VolumeMultiplier
     unitPrice = GetScalar("SELECT Price FROM ProductVolumePrices WHERE ProductID = " & CInt(productId) & " AND VolumeID = " & CInt(volumeId))
-    If IsNull(unitPrice) Or unitPrice = "" Then
-        Response.Write "<html><body><script>alert('该规格未设定价格'); window.history.back();</script></body></html>"
-        Response.End
+    If IsNull(unitPrice) Or unitPrice = "" Or CDbl(unitPrice) <= 0 Then
+        ' 回退：使用基础价格×容量系数
+        unitPrice = basePrice * multiplier
+    Else
+        unitPrice = CDbl(unitPrice)
     End If
-    unitPrice = CDbl(unitPrice)
     ' 刻字费用在购物车和结算时单独计算，不加入unitPrice
     totalPercent = 100
-ElseIf productType = "KOL" Then
+    ' 品牌定香产品 - 配比已在后台预设，从数据库读取
+    ' 重置表单值，完全从数据库获取
+    topNote = ""
+    middleNote = ""
+    baseNote = ""
+    Dim rsSTDNotes
+    Set rsSTDNotes = ExecuteQuery("SELECT pn.NoteID, n.NoteType FROM ProductNotes pn LEFT JOIN FragranceNotes n ON pn.NoteID = n.NoteID WHERE pn.ProductID = " & CInt(productId))
+    If Not rsSTDNotes Is Nothing Then
+        Do While Not rsSTDNotes.EOF
+            Dim stdNoteId, stdNoteType
+            stdNoteId = rsSTDNotes("NoteID")
+            stdNoteType = rsSTDNotes("NoteType") & ""
+            If stdNoteType = "前调" Then
+                If topNote = "" Then topNote = stdNoteId Else topNote = topNote & "," & stdNoteId
+            ElseIf stdNoteType = "中调" Then
+                If middleNote = "" Then middleNote = stdNoteId Else middleNote = middleNote & "," & stdNoteId
+            ElseIf stdNoteType = "后调" Then
+                If baseNote = "" Then baseNote = stdNoteId Else baseNote = baseNote & "," & stdNoteId
+            End If
+            rsSTDNotes.MoveNext
+        Loop
+        rsSTDNotes.Close
+    End If
+    Set rsSTDNotes = Nothing
+ElseIf productType = "kol" Then
     ' KOL商品 - 配比已在后台预设，从数据库读取
     totalPercent = 100
+    ' 重置表单值，完全从数据库获取（防止表单提交值与DB查询结果重复）
+    topNote = ""
+    middleNote = ""
+    baseNote = ""
     ' 从数据库获取KOL商品的香调配比（通过FragranceNotes获取NoteType）
     Dim rsKOLNotes
     Set rsKOLNotes = ExecuteQuery("SELECT pn.NoteID, n.NoteType FROM ProductNotes pn LEFT JOIN FragranceNotes n ON pn.NoteID = n.NoteID WHERE pn.ProductID = " & CInt(productId))
@@ -205,23 +242,23 @@ Else
     notesPrice = notesPrice + ProcessNotes(middleNote, "中调")
     notesPrice = notesPrice + ProcessNotes(baseNote, "后调")
     
-    ' 后端再次验证总百分比
-    If totalPercent <> 100 Then
-        Response.Write "<html><body><script>alert('配比总和必须等于100% (当前: " & totalPercent & "%)'); window.history.back();</script></body></html>"
+    ' 后端再次验证总百分比（使用容差0.01避免浮点数精度问题）
+    If Abs(totalPercent - 100) > 0.01 Then
+        Response.Write "<html><body><script>alert('配比总和必须等于100% (当前: " & FormatNumber(totalPercent, 1) & "%)'); window.history.back();</script></body></html>"
         Response.End
     End If
     
-    ' 验证每种调性最小比例
-    If topPercent < minTopPercent Then
-        Response.Write "<html><body><script>alert('前调比例不能低于" & minTopPercent & "%，当前为" & topPercent & "%'); window.history.back();</script></body></html>"
+    ' 验证每种调性最小比例（使用容差0.01避免浮点数精度问题）
+    If topPercent < (minTopPercent - 0.01) Then
+        Response.Write "<html><body><script>alert('前调比例不能低于" & minTopPercent & "%，当前为" & FormatNumber(topPercent, 1) & "%'); window.history.back();</script></body></html>"
         Response.End
     End If
-    If middlePercent < minMiddlePercent Then
-        Response.Write "<html><body><script>alert('中调比例不能低于" & minMiddlePercent & "%，当前为" & middlePercent & "%'); window.history.back();</script></body></html>"
+    If middlePercent < (minMiddlePercent - 0.01) Then
+        Response.Write "<html><body><script>alert('中调比例不能低于" & minMiddlePercent & "%，当前为" & FormatNumber(middlePercent, 1) & "%'); window.history.back();</script></body></html>"
         Response.End
     End If
-    If basePercent < minBasePercent Then
-        Response.Write "<html><body><script>alert('后调比例不能低于" & minBasePercent & "%，当前为" & basePercent & "%'); window.history.back();</script></body></html>"
+    If basePercent < (minBasePercent - 0.01) Then
+        Response.Write "<html><body><script>alert('后调比例不能低于" & minBasePercent & "%，当前为" & FormatNumber(basePercent, 1) & "%'); window.history.back();</script></body></html>"
         Response.End
     End If
     
@@ -313,14 +350,6 @@ If bottleId <> "" And IsNumeric(bottleId) Then
     If Not IsNull(btlPrice) And btlPrice <> "" Then bottlePrice = CDbl(btlPrice)
 End If
 
-' 获取容量系数
-multiplier = 1
-If volumeId <> "" And IsNumeric(volumeId) Then
-    Dim volMulti
-    volMulti = GetScalar("SELECT PriceMultiplier FROM Volumes WHERE VolumeID = " & CInt(volumeId))
-    If Not IsNull(volMulti) And volMulti <> "" Then multiplier = CDbl(volMulti)
-End If
-
 ' 计算刻字费用（单独记录，不加入unitPrice）
 Dim engravingPrice
 engravingPrice = 0
@@ -330,7 +359,7 @@ End If
 
 ' 计算单价（不包含刻字费用，刻字费用在购物车和结算时单独计算）
 ' 品牌定香价格已在上方从ProductVolumePrices获取，不要覆盖
-If productType <> "Fixed" Then
+If productType <> "standard" Then
     unitPrice = (basePrice + notesPrice + bottlePrice) * multiplier
 End If
 
@@ -362,16 +391,34 @@ sql = "INSERT INTO Cart (UserID, SessionID, ProductID, TopNoteID, MiddleNoteID, 
 
     If ExecuteNonQuery(sql) Then
         ' 获取新插入的 CartID
-        Dim cartId
-        cartId = GetScalar("SELECT SCOPE_IDENTITY()")
-                
-        ' 如果 SCOPE_IDENTITY() 失败，尝试通过 SessionID 和 ProductID 获取最新的 CartID
-        If IsNull(cartId) Or cartId = "" Or cartId = 0 Then
-            cartId = GetScalar("SELECT MAX(CartID) FROM Cart WHERE SessionID = '" & SafeSQL(sessionId) & "' AND ProductID = " & CInt(productId))
+        Dim cartId, rawCartId
+        cartId = 0
+        rawCartId = GetScalar("SELECT SCOPE_IDENTITY()")
+        If Not IsNull(rawCartId) And rawCartId <> "" Then
+            On Error Resume Next
+            cartId = CLng(rawCartId)
+            If Err.Number <> 0 Then
+                Err.Clear
+                cartId = 0
+            End If
+            On Error GoTo 0
         End If
         
-        If IsNumeric(cartId) And cartId <> "" Then
-            cartId = CLng(cartId)
+        ' 如果 SCOPE_IDENTITY() 失败，尝试通过 SessionID 和 ProductID 获取最新的 CartID
+        If cartId = 0 Then
+            rawCartId = GetScalar("SELECT MAX(CartID) FROM Cart WHERE SessionID = '" & SafeSQL(sessionId) & "' AND ProductID = " & CInt(productId))
+            If Not IsNull(rawCartId) And rawCartId <> "" Then
+                On Error Resume Next
+                cartId = CLng(rawCartId)
+                If Err.Number <> 0 Then
+                    Err.Clear
+                    cartId = 0
+                End If
+                On Error GoTo 0
+            End If
+        End If
+        
+        If cartId > 0 Then
             Call SaveNoteSelections(cartId, topNote, "前调")
             Call SaveNoteSelections(cartId, middleNote, "中调")
             Call SaveNoteSelections(cartId, baseNote, "后调")

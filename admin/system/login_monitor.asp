@@ -30,27 +30,59 @@ Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
 End Function
 
-' 自动创建 LoginAlerts 表
-On Error Resume Next
-conn.Execute "SELECT TOP 1 * FROM LoginAlerts WHERE 1=0"
-If Err.Number <> 0 Then
+' V10.4: LoginAlerts 表已迁至 deploy.asp，此处做存在性检查
+Function TableExists_LA()
+    On Error Resume Next
+    Dim rs : Set rs = conn.Execute("SELECT TOP 1 1 FROM sys.tables WHERE name='LoginAlerts'")
+    TableExists_LA = (Err.Number = 0 And Not rs Is Nothing And Not rs.EOF)
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
     Err.Clear
-    conn.Execute "CREATE TABLE LoginAlerts (" & _
-        "AlertID INT IDENTITY(1,1) PRIMARY KEY," & _
-        "AlertType NVARCHAR(50)," & _
-        "AlertLevel NVARCHAR(20) DEFAULT 'info'," & _
-        "AlertMessage NVARCHAR(500)," & _
-        "IPAddress NVARCHAR(50)," & _
-        "AdminID INT NULL," & _
-        "IsRead BIT DEFAULT 0," & _
-        "CreatedAt DATETIME DEFAULT GETDATE()" & _
-        ")"
+End Function
+
+If Not TableExists_LA() Then
+    Response.Write "<div style='padding:40px;text-align:center;color:#EF9A9A;'><i class='fas fa-exclamation-triangle'></i> LoginAlerts 表不存在，请先运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>deploy.asp</a> 初始化数据库</div>"
+    Response.End
 End If
-On Error GoTo 0
 
 ' 生成告警
 Dim msg : msg = ""
 If Request.QueryString("action") = "check" Then
+    ' V10.4: 修复 AdminLogs/LoginAlerts/IPBlacklist 的 IPAddress 列（处理缺失/重复）
+    On Error Resume Next
+    Dim fixTables : fixTables = Array("AdminLogs", "LoginAlerts", "IPBlacklist")
+    Dim fixI, fixTbl, fixRS, fixCnt
+    For fixI = 0 To 2
+        fixTbl = fixTables(fixI)
+        Set fixRS = conn.Execute("SELECT COUNT(*) FROM sys.columns WHERE object_id=OBJECT_ID('" & fixTbl & "') AND name='IPAddress'")
+        fixCnt = 0
+        If Not fixRS Is Nothing Then
+            If Not fixRS.EOF Then fixCnt = CLng(fixRS(0))
+            fixRS.Close
+        End If
+        Set fixRS = Nothing
+        If fixCnt = 0 Then
+            conn.Execute "ALTER TABLE " & fixTbl & " ADD IPAddress NVARCHAR(50) NULL"
+            Err.Clear
+        ElseIf fixCnt > 1 Then
+            ' 存在重复列（sys.columns 可检测）→ 删除多余列
+            Dim fixRS2, fixColId
+            Set fixRS2 = conn.Execute("SELECT TOP 1 column_id FROM sys.columns WHERE object_id=OBJECT_ID('" & fixTbl & "') AND name='IPAddress' ORDER BY column_id")
+            If Not fixRS2 Is Nothing And Not fixRS2.EOF Then
+                fixColId = fixRS2(0)
+                conn.Execute "ALTER TABLE " & fixTbl & " DROP COLUMN IPAddress"
+                Err.Clear
+                If Err.Number = 0 Then
+                    conn.Execute "ALTER TABLE " & fixTbl & " ADD IPAddress NVARCHAR(50) NULL"
+                    Err.Clear
+                End If
+            End If
+            If Not fixRS2 Is Nothing Then fixRS2.Close
+            Set fixRS2 = Nothing
+        End If
+    Next
+    On Error GoTo 0
+    
     ' 检查24小时内连续失败登录
     Dim failedIPs
     Set failedIPs = conn.Execute("SELECT IPAddress, COUNT(*) AS Cnt FROM AdminLogs " & _

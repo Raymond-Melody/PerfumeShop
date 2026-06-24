@@ -5,9 +5,15 @@
 Sub SendPasswordResetEmail(toEmail, fullName, resetToken)
     Dim subject, body, resetLink
     
-    resetLink = "http://" & Request.ServerVariables("SERVER_NAME") & ":" & Request.ServerVariables("SERVER_PORT") & "/admin/reset_password.asp?token=" & resetToken
+    Dim emailProtocol
+    If Request.ServerVariables("HTTPS") = "on" Then
+        emailProtocol = "https://"
+    Else
+        emailProtocol = "http://"
+    End If
+    resetLink = emailProtocol & Request.ServerVariables("SERVER_NAME") & ":" & Request.ServerVariables("SERVER_PORT") & "/admin/reset_password.asp?token=" & resetToken
     
-    subject = "管理员密码重置 - 香氛定制电商网站"
+    subject = "管理员密码重置 - " & SITE_NAME
     
     body = "<html><body>"
     body = body & "<h2>密码重置请求</h2>"
@@ -26,7 +32,7 @@ Sub SendPasswordResetEmail(toEmail, fullName, resetToken)
     Set objMail = Server.CreateObject("CDONTS.NewMail")
     
     If Err.Number = 0 Then
-        objMail.From = "noreply@perfumeshop.com"
+        objMail.From = SITE_NOREPLY
         objMail.To = toEmail
         objMail.Subject = subject
         objMail.BodyFormat = 0  ' HTML格式
@@ -49,7 +55,7 @@ Sub SendEmail(toEmail, subject, body, isHtml)
     Set objMail = Server.CreateObject("CDONTS.NewMail")
     
     If Err.Number = 0 Then
-        objMail.From = "noreply@perfumeshop.com"
+        objMail.From = SITE_NOREPLY
         objMail.To = toEmail
         objMail.Subject = subject
         If isHtml Then

@@ -38,42 +38,15 @@ ElseIf Session("AdminRoleCode") = "PURCHASE_MANAGER" Then
     canModify = True
 End If
 
-' V8：自动创建 SupplierPrices 表（如果不存在）
-On Error Resume Next
-conn.Execute "SELECT TOP 1 1 FROM SupplierPrices"
-If Err.Number <> 0 Then
-    Err.Clear
-    conn.Execute "CREATE TABLE SupplierPrices (PriceID INT IDENTITY(1,1) PRIMARY KEY, SupplierID INT, ItemName NVARCHAR(200), ItemCode NVARCHAR(100), UnitPrice DECIMAL(19,4) DEFAULT 0, MinOrderQty INT DEFAULT 1, EffectiveDate DATE, ExpiryDate DATE, IsActive BIT DEFAULT 1, CreatedAt DATETIME DEFAULT GETDATE(), PriceType NVARCHAR(30) DEFAULT 'RawMaterial', ValidFrom DATE, ValidTo DATE, DiscountType NVARCHAR(20) DEFAULT 'None', DiscountRule NVARCHAR(500), ApprovalStatus NVARCHAR(20) DEFAULT 'Approved', ApprovedBy NVARCHAR(100), ApprovedAt DATETIME)"
-    If Err.Number <> 0 Then Err.Clear
+' V8/V11：检查 SupplierPrices 和 PriceChangeLog 表是否存在
+' 注意：IIS 应用池无 DDL 权限，表结构需通过 sqlcmd 预建
+Dim spExists, pclExists
+spExists = (GetScalar("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='SupplierPrices'") > 0)
+pclExists = (GetScalar("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='PriceChangeLog'") > 0)
+If Not spExists Or Not pclExists Then
+    Response.Write "<div class='error'>系统配置错误：SupplierPrices 或 PriceChangeLog 表不存在，请联系管理员执行 database/v11_schema_all.sql</div>"
+    Response.End
 End If
-Err.Clear
-' V8：自动添加 PriceType 字段
-conn.Execute "SELECT PriceType FROM SupplierPrices WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE SupplierPrices ADD PriceType NVARCHAR(30) DEFAULT 'RawMaterial'"
-conn.Execute "SELECT ValidFrom FROM SupplierPrices WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE SupplierPrices ADD ValidFrom DATE"
-conn.Execute "SELECT ValidTo FROM SupplierPrices WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE SupplierPrices ADD ValidTo DATE"
-' V11: 折扣与审批字段
-conn.Execute "SELECT DiscountType FROM SupplierPrices WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE SupplierPrices ADD DiscountType NVARCHAR(20) DEFAULT 'None'"
-conn.Execute "SELECT DiscountRule FROM SupplierPrices WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE SupplierPrices ADD DiscountRule NVARCHAR(500)"
-conn.Execute "SELECT ApprovalStatus FROM SupplierPrices WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE SupplierPrices ADD ApprovalStatus NVARCHAR(20) DEFAULT 'Approved'"
-conn.Execute "SELECT ApprovedBy FROM SupplierPrices WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE SupplierPrices ADD ApprovedBy NVARCHAR(100)"
-conn.Execute "SELECT ApprovedAt FROM SupplierPrices WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE SupplierPrices ADD ApprovedAt DATETIME"
-' 价格变更日志表
-conn.Execute "SELECT TOP 1 1 FROM PriceChangeLog"
-If Err.Number <> 0 Then
-    Err.Clear
-    conn.Execute "CREATE TABLE PriceChangeLog (LogID INT IDENTITY(1,1) PRIMARY KEY, PriceID INT, FieldChanged NVARCHAR(50), OldValue NVARCHAR(200), NewValue NVARCHAR(200), ChangedBy NVARCHAR(100), ChangedAt DATETIME DEFAULT GETDATE())"
-    If Err.Number <> 0 Then Err.Clear
-End If
-Err.Clear
-On Error GoTo 0
 
 ' ==================== POST 处理：CRUD ====================
 Dim action

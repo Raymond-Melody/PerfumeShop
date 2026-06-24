@@ -9,6 +9,18 @@ Response.ContentType = "text/html"
 <%
 Call OpenConnection()
 
+' 自动创建 BottleInventory 表（如不存在）- 使用 IF OBJECT_ID 确保可靠创建
+On Error Resume Next
+conn.Execute "IF OBJECT_ID('BottleInventory','U') IS NULL CREATE TABLE BottleInventory (BottleID INT IDENTITY(1,1) PRIMARY KEY, BottleName NVARCHAR(100), StockQty DECIMAL(19,4) DEFAULT 0, SafetyStock DECIMAL(19,4) DEFAULT 0, UnitCost DECIMAL(19,4) DEFAULT 0, IsActive BIT DEFAULT 1, UpdatedAt DATETIME DEFAULT GETDATE())"
+If Err.Number <> 0 Then Err.Clear
+On Error GoTo 0
+
+' 自动检查 PackagingInventory 表
+On Error Resume Next
+conn.Execute "IF OBJECT_ID('PackagingInventory','U') IS NULL CREATE TABLE PackagingInventory (PackagingID INT IDENTITY(1,1) PRIMARY KEY, ItemName NVARCHAR(100), StockQty INT DEFAULT 0, SafetyStock INT DEFAULT 0, UnitCost DECIMAL(19,4) DEFAULT 0, IsActive BIT DEFAULT 1, UpdatedAt DATETIME DEFAULT GETDATE())"
+If Err.Number <> 0 Then Err.Clear
+On Error GoTo 0
+
 Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
 End Function
@@ -41,7 +53,13 @@ piCritical = SafeNum(GetScalar("SELECT COUNT(*) FROM ProductInventory WHERE Stoc
 piWarning = piAlerts - piCritical
 
 Dim rsPIAlerts
+On Error Resume Next
 Set rsPIAlerts = conn.Execute("SELECT pi.*, p.ProductName FROM ProductInventory pi LEFT JOIN Products p ON pi.ProductID=p.ProductID WHERE pi.StockQty <= pi.SafetyStock AND pi.SafetyStock > 0 ORDER BY CASE WHEN pi.StockQty<=0 THEN 0 ELSE 1 END, pi.StockQty ASC")
+If Err.Number <> 0 Then
+	Err.Clear
+	Set rsPIAlerts = Nothing
+End If
+On Error GoTo 0
 
 ' ========== 瓶子预警 ==========
 Dim btAlerts, btCritical, btWarning
@@ -50,7 +68,13 @@ btCritical = SafeNum(GetScalar("SELECT COUNT(*) FROM BottleInventory WHERE Stock
 btWarning = btAlerts - btCritical
 
 Dim rsBTAlerts
+On Error Resume Next
 Set rsBTAlerts = conn.Execute("SELECT * FROM BottleInventory WHERE StockQty <= SafetyStock AND SafetyStock > 0 ORDER BY CASE WHEN StockQty<=0 THEN 0 ELSE 1 END, StockQty ASC")
+If Err.Number <> 0 Then
+	Err.Clear
+	Set rsBTAlerts = Nothing
+End If
+On Error GoTo 0
 
 ' ========== 包装物预警 ==========
 Dim pkAlerts, pkCritical, pkWarning
@@ -59,7 +83,13 @@ pkCritical = SafeNum(GetScalar("SELECT COUNT(*) FROM PackagingInventory WHERE St
 pkWarning = pkAlerts - pkCritical
 
 Dim rsPKAlerts
+On Error Resume Next
 Set rsPKAlerts = conn.Execute("SELECT * FROM PackagingInventory WHERE StockQty <= SafetyStock AND SafetyStock > 0 ORDER BY CASE WHEN StockQty<=0 THEN 0 ELSE 1 END, StockQty ASC")
+If Err.Number <> 0 Then
+	Err.Clear
+	Set rsPKAlerts = Nothing
+End If
+On Error GoTo 0
 
 ' ========== 原料预警 ==========
 Dim rmAlerts, rmCritical, rmWarning
@@ -68,7 +98,13 @@ rmCritical = SafeNum(GetScalar("SELECT COUNT(*) FROM RawMaterialInventory WHERE 
 rmWarning = rmAlerts - rmCritical
 
 Dim rsRMAlerts
+On Error Resume Next
 Set rsRMAlerts = conn.Execute("SELECT * FROM RawMaterialInventory WHERE StockQty <= SafetyStock AND SafetyStock > 0 ORDER BY CASE WHEN StockQty<=0 THEN 0 ELSE 1 END, StockQty ASC")
+If Err.Number <> 0 Then
+	Err.Clear
+	Set rsRMAlerts = Nothing
+End If
+On Error GoTo 0
 
 ' ========== 香调预警 ==========
 Dim ntAlerts, ntCritical, ntWarning
@@ -77,7 +113,13 @@ ntCritical = SafeNum(GetScalar("SELECT COUNT(*) FROM NoteInventory WHERE StockQu
 ntWarning = ntAlerts - ntCritical
 
 Dim rsNTAlerts
+On Error Resume Next
 Set rsNTAlerts = conn.Execute("SELECT ni.*, fn.NoteName, fn.NoteType FROM NoteInventory ni INNER JOIN FragranceNotes fn ON ni.NoteID=fn.NoteID WHERE ni.StockQuantity <= ni.MinStockLevel AND ni.MinStockLevel > 0 ORDER BY CASE WHEN ni.StockQuantity<=0 THEN 0 ELSE 1 END, ni.StockQuantity ASC")
+If Err.Number <> 0 Then
+	Err.Clear
+	Set rsNTAlerts = Nothing
+End If
+On Error GoTo 0
 
 ' ========== 总计 ==========
 Dim totalAlerts, totalCritical, totalWarning

@@ -8,7 +8,7 @@ try {
     $result = $wc.UploadString("http://localhost/setup/data_migrate.asp", "action=migrate")
     
     # Save result
-    $result | Out-File -FilePath "f:\网站制作\网站\网站二\setup\migrate_result.html" -Encoding UTF8
+    $result | Out-File -FilePath (Join-Path (Get-Location) "setup\migrate_result.html") -Encoding UTF8
     Write-Host "Migration request completed. Result length: $($result.Length)"
     
     # Show summary lines

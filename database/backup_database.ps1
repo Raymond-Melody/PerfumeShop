@@ -2,9 +2,9 @@
 # 用法: .\backup_database.ps1 [-BackupDir <路径>] [-RetentionDays <天数>] [-ServerInstance <实例>] [-DatabaseName <库名>]
 
 param(
-    [string]$BackupDir = "f:\网站制作\网站\网站二\database\backups",
+    [string]$BackupDir = (Join-Path (Get-Location) "database\backups"),
     [int]$RetentionDays = 30,
-    [string]$ServerInstance = "localhost\SQLEXPRESS",
+    [string]$ServerInstance = "localhost\YOURPERFUME",
     [string]$DatabaseName = "PerfumeShop"
 )
 

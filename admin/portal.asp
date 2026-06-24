@@ -248,7 +248,7 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-cubes"></i> <span>管理中心</span></h1>
-            <p>V8 全模块统一入口 · 请选择要进入的管理后台</p>
+            <p>V9.0 全模块统一入口 · 请选择要进入的管理后台</p>
         </div>
         
         <div class="user-info">
@@ -441,7 +441,7 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
         </div>
 
         <div class="footer-info">
-            香氛电商系统 <span>V8</span> · 全模块统一管理平台
+            香氛电商系统 <span>V9.0</span> · 全模块统一管理平台
         </div>
     </div>
 </body>

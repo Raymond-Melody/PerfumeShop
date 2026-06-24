@@ -860,7 +860,7 @@ Function CE_CalculateProductUnitCost(productId)
     Set rsPType = Nothing
     On Error GoTo 0
     
-    If productType = "Fixed" Then
+    If productType = "standard" Then
         Dim fbCost : fbCost = CE_GetCachedFixedBrandCost(productId)
         If fbCost > 0 Then
             CE_CalculateProductUnitCost = fbCost

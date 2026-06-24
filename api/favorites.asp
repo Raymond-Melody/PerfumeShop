@@ -139,25 +139,39 @@ Select Case action
         End If
         
     Case "check"
+        ' V10.3: ETag 支持 — 基于 SYS_VERSION + 用户 + 产品ID
+        Dim checkETag, clientCheckETag, isFavorite
+        isFavorite = False
+        
         ' 检查是否已收藏
         Dim rsCheck2
         Set rsCheck2 = SafeExecuteQuery("SELECT FavoriteID FROM UserFavorites WHERE UserID = " & userId & " AND ProductID = " & productId)
         
         If Not rsCheck2 Is Nothing Then
             If Not rsCheck2.EOF Then
-                Response.Write "{""success"": true, ""isFavorite"": true}"
-            Else
-                Response.Write "{""success"": true, ""isFavorite"": false}"
+                isFavorite = True
             End If
             rsCheck2.Close
             Set rsCheck2 = Nothing
+        End If
+        
+        ' 生成 ETag 并检查 If-None-Match
+        checkETag = """" & SafeSHA256Hash(SYS_VERSION & "|fav|" & userId & "|" & productId & "|" & isFavorite) & """"
+        clientCheckETag = Request.ServerVariables("HTTP_IF_NONE_MATCH")
+        
+        If clientCheckETag <> "" And clientCheckETag = checkETag Then
+            Response.Status = "304 Not Modified"
+            Call CloseConnection()
+            Response.End
+        End If
+        
+        Response.AddHeader "ETag", checkETag
+        Response.AddHeader "Cache-Control", "no-cache"
+        
+        If isFavorite Then
+            Response.Write "{""success"": true, ""isFavorite"": true}"
         Else
-            Dim checkError
-            checkError = ""
-            If Session("LastDBError") <> "" Then
-                checkError = " (" & Session("LastDBError") & ")"
-            End If
-            Response.Write "{""success"": false, ""message"": ""数据库查询失败" & checkError & """}"
+            Response.Write "{""success"": true, ""isFavorite"": false}"
         End If
         
     Case Else

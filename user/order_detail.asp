@@ -2,6 +2,35 @@
 <%
 Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
+
+' ============================================
+' 通用成分分割函数 - 支持所有类型的分隔符
+' ============================================
+Function SplitIngredients(rawStr)
+    Dim result, arr, item, idx
+    Set result = CreateObject("Scripting.Dictionary")
+    If rawStr = "" Then
+        Set SplitIngredients = result
+        Exit Function
+    End If
+    rawStr = Replace(rawStr, "，", ",")
+    rawStr = Replace(rawStr, vbCrLf, ",")
+    rawStr = Replace(rawStr, vbLf, ",")
+    rawStr = Replace(rawStr, vbCr, ",")
+    rawStr = Replace(rawStr, Chr(160), ",")
+    rawStr = Replace(rawStr, " ", ",")
+    Do While InStr(rawStr, ",,") > 0
+        rawStr = Replace(rawStr, ",,", ",")
+    Loop
+    arr = Split(rawStr, ",")
+    For idx = 0 To UBound(arr)
+        item = Trim(arr(idx))
+        If item <> "" And Not result.Exists(item) Then
+            result.Add item, True
+        End If
+    Next
+    Set SplitIngredients = result
+End Function
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
@@ -274,94 +303,145 @@ End If
                     <div class="order-products">
                         <h3>订单商品</h3>
                         <div class="products-list">
-                            <!-- 
-                            注意：这里需要从订单关联的购物车记录中获取商品信息
-                            由于订单表中没有直接存储商品信息，这里仅作为示例
-                            实际应用中需要在订单创建时同时保存商品快照信息
-                            -->
-                            <div class="order-item">
-                                <div class="item-info">
-                                    <p>订单创建时的商品信息已保存</p>
-                                    <p>如有疑问请联系客服</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 订单商品列表 -->
-                    <div class="order-products">
-                        <h3>订单商品</h3>
-                        <div class="products-list">
                             <%
-                            ' 解析订单Notes中的商品信息
-                            Dim productInfo, productItems, item, i
-                            productInfo = notes
+                            ' 从OrderDetails和OrderDetailNoteSelections查询订单商品详情
+                            Dim rsOrderDetails, odDetailId, odProductId, odProductName, odQuantity, odUnitPrice, odSubtotal
+                            Dim odVolumeName, odVolumeML, odBottleName, odCustomLabel
                             
-                            ' 如果Notes包含支付流水号信息，先提取商品详情部分
-                            If InStr(productInfo, " | 支付流水号:") > 0 Then
-                                ' 分离商品信息和支付信息
-                                Dim notesParts
-                                notesParts = Split(productInfo, " | 支付流水号:")
-                                productInfo = Trim(notesParts(0))  ' 只取商品信息部分
-                            End If
+                            Set rsOrderDetails = ExecuteQuery("SELECT od.*, p.ProductType FROM OrderDetails od LEFT JOIN Products p ON od.ProductID = p.ProductID WHERE od.OrderID = " & orderId)
                             
-                            If InStr(productInfo, "商品详情: ") > 0 Then
-                                ' 提取商品详情部分
-                                productInfo = Mid(productInfo, InStr(productInfo, "商品详情: ") + 5)
-                                
-                                ' 按分隔符拆分商品
-                                productItems = Split(productInfo, "|")
-                                
-                                For i = 0 To UBound(productItems)
-                                    item = Trim(productItems(i))
-                                    If item <> "" Then
+                            If Not rsOrderDetails Is Nothing Then
+                                Do While Not rsOrderDetails.EOF
+                                    odDetailId = rsOrderDetails("DetailID")
+                                    odProductId = rsOrderDetails("ProductID")
+                                    odProductName = rsOrderDetails("ProductName") & ""
+                                    odQuantity = rsOrderDetails("Quantity")
+                                    odUnitPrice = rsOrderDetails("UnitPrice")
+                                    odSubtotal = rsOrderDetails("Subtotal")
+                                    odVolumeName = rsOrderDetails("VolumeName") & ""
+                                    odVolumeML = rsOrderDetails("VolumeML") & ""
+                                    odBottleName = rsOrderDetails("BottleName") & ""
+                                    odCustomLabel = rsOrderDetails("CustomLabel") & ""
+                                    Dim odProductType, odProductTypeLC
+                                    odProductType = rsOrderDetails("ProductType") & ""
+                                    odProductTypeLC = LCase(odProductType)
                             %>
                             <div class="order-item">
                                 <div class="item-info">
+                                    <div class="base-info"><strong><%= HTMLEncode(odProductName) %></strong> ×<%= odQuantity %> | 单价: <%= FormatMoney(odUnitPrice) %> | 小计: <%= FormatMoney(odSubtotal) %></div>
                                     <%
-                                    ' 解析并格式化商品信息
-                                    Dim formattedItem, customInfoStart
-                                    formattedItem = item
-                                    
-                                    ' 查找定制信息部分（在方括号中）
-                                    customInfoStart = InStr(formattedItem, " [")
-                                    If customInfoStart > 0 Then
-                                        ' 分离基本商品信息和定制信息
-                                        Dim baseInfo, customInfo
-                                        baseInfo = Left(formattedItem, customInfoStart - 1)
-                                        customInfo = Mid(formattedItem, customInfoStart + 2)  ' 跳过" ["
-                                        customInfo = Left(customInfo, Len(customInfo) - 1)   ' 去掉最后的"]"
-                                        
-                                        ' 显示基本商品信息
-                                        Response.Write "<div class=""base-info""><strong>" & HTMLEncode(baseInfo) & "</strong></div>"
-                                        
-                                        ' 显示定制信息
-                                        If customInfo <> "" Then
-                                            Response.Write "<div class=""custom-info"">定制信息: " & HTMLEncode(customInfo) & "</div>"
+                                    ' KOL推荐产品与品牌定香产品不显示香调配比信息
+                                    Dim rsOrderNotes, odTopList, odMidList, odBaseList, odNoteType, odNoteName, odPercent
+                                    odTopList = "": odMidList = "": odBaseList = ""
+                                    If odProductTypeLC = "custom" Then
+                                        Set rsOrderNotes = ExecuteQuery("SELECT s.*, n.NoteName FROM OrderDetailNoteSelections s LEFT JOIN FragranceNotes n ON s.NoteID = n.NoteID WHERE s.DetailID = " & odDetailId & " ORDER BY s.NoteType")
+                                        If Not rsOrderNotes Is Nothing Then
+                                            Do While Not rsOrderNotes.EOF
+                                                odNoteType = Trim(rsOrderNotes("NoteType") & "")
+                                                odNoteName = HTMLEncode(rsOrderNotes("NoteName") & "")
+                                                odPercent = rsOrderNotes("Percentage")
+                                                If odNoteType = "前调" Then
+                                                    If odTopList <> "" Then odTopList = odTopList & ", "
+                                                    odTopList = odTopList & odNoteName & " (" & odPercent & "%)"
+                                                ElseIf odNoteType = "中调" Then
+                                                    If odMidList <> "" Then odMidList = odMidList & ", "
+                                                    odMidList = odMidList & odNoteName & " (" & odPercent & "%)"
+                                                ElseIf odNoteType = "后调" Then
+                                                    If odBaseList <> "" Then odBaseList = odBaseList & ", "
+                                                    odBaseList = odBaseList & odNoteName & " (" & odPercent & "%)"
+                                                End If
+                                                rsOrderNotes.MoveNext
+                                            Loop
+                                            rsOrderNotes.Close
+                                            Set rsOrderNotes = Nothing
                                         End If
-                                    Else
-                                        ' 没有定制信息，直接显示
-                                        Response.Write HTMLEncode(formattedItem)
                                     End If
+                                    
+                                    If odProductTypeLC = "custom" And odTopList <> "" Then
+                                        Response.Write "<div class='custom-info'>前调: " & odTopList & "</div>"
+                                    End If
+                                    If odProductTypeLC = "custom" And odMidList <> "" Then
+                                        Response.Write "<div class='custom-info'>中调: " & odMidList & "</div>"
+                                    End If
+                                    If odProductTypeLC = "custom" And odBaseList <> "" Then
+                                        Response.Write "<div class='custom-info'>后调: " & odBaseList & "</div>"
+                                    End If
+                                    
+                                    If odVolumeName <> "" Then
+                                        Response.Write "<div class='custom-info'>容量: " & odVolumeML & "ml (" & HTMLEncode(odVolumeName) & ")</div>"
+                                    End If
+                                    If odBottleName <> "" Then
+                                        Response.Write "<div class='custom-info'>瓶身: " & HTMLEncode(odBottleName) & "</div>"
+                                    End If
+                                    If odCustomLabel <> "" Then
+                                        Response.Write "<div class='custom-info'>刻字: " & HTMLEncode(odCustomLabel) & "</div>"
+                                    End If
+                                    
+                                    ' 显示成分/过敏原信息（仅对定制和KOL产品可见，品牌定香产品随包装附成分说明书）
+                                    If odProductTypeLC = "custom" Or odProductTypeLC = "kol" Then
+                                    ' 使用Dictionary去重 + SplitIngredients分割复合成分
+                                    Dim rsOrderIngr, odUniqueIngr, odRawIngr, odSplitResult, odSplitKey
+                                    Set odUniqueIngr = CreateObject("Scripting.Dictionary")
+                                    Set rsOrderIngr = ExecuteQuery("SELECT IngredientName FROM OrderIngredients WHERE DetailID = " & odDetailId & " ORDER BY IngredientID")
+                                    If Not rsOrderIngr Is Nothing Then
+                                        Do While Not rsOrderIngr.EOF
+                                            odRawIngr = rsOrderIngr("IngredientName") & ""
+                                            Set odSplitResult = SplitIngredients(odRawIngr)
+                                            For Each odSplitKey In odSplitResult.Keys
+                                                If Not odUniqueIngr.Exists(odSplitKey) Then
+                                                    odUniqueIngr.Add odSplitKey, True
+                                                End If
+                                            Next
+                                            Set odSplitResult = Nothing
+                                            rsOrderIngr.MoveNext
+                                        Loop
+                                        rsOrderIngr.Close
+                                        Set rsOrderIngr = Nothing
+                                    End If
+                                    
+                                    ' 排序后显示
+                                    If odUniqueIngr.Count > 0 Then
+                                        Dim odIngrArr(), odI, odJ, odTempKey, odIngrList
+                                        ReDim odIngrArr(odUniqueIngr.Count - 1)
+                                        odI = 0
+                                        For Each odSplitKey In odUniqueIngr.Keys
+                                            odIngrArr(odI) = odSplitKey
+                                            odI = odI + 1
+                                        Next
+                                        For odI = 0 To UBound(odIngrArr) - 1
+                                            For odJ = odI + 1 To UBound(odIngrArr)
+                                                If odIngrArr(odI) > odIngrArr(odJ) Then
+                                                    odTempKey = odIngrArr(odI)
+                                                    odIngrArr(odI) = odIngrArr(odJ)
+                                                    odIngrArr(odJ) = odTempKey
+                                                End If
+                                            Next
+                                        Next
+                                        odIngrList = ""
+                                        For odI = 0 To UBound(odIngrArr)
+                                            If odIngrList <> "" Then odIngrList = odIngrList & ", "
+                                            odIngrList = odIngrList & HTMLEncode(odIngrArr(odI))
+                                        Next
+                                        Response.Write "<div class='custom-info' style='color:#888;font-size:12px;margin-top:4px;'><i class='fas fa-flask'></i> 成分: " & odIngrList & "</div>"
+                                    End If
+                                    End If
+                                    Set odUniqueIngr = Nothing
                                     %>
                                 </div>
                             </div>
                             <%
-                                    End If
-                                Next
+                                    rsOrderDetails.MoveNext
+                                Loop
+                                rsOrderDetails.Close
+                                Set rsOrderDetails = Nothing
                             Else
-                                ' 如果没有解析到商品详情，显示原始Notes内容
-                                If Len(productInfo) > 0 Then
                             %>
                             <div class="order-item">
                                 <div class="item-info">
-                                    <span class="product-name"><%= HTMLEncode(productInfo) %></span>
+                                    <p>暂无订单商品详情</p>
                                 </div>
                             </div>
-                            <%
-                                End If
-                            End If
-                            %>
+                            <% End If %>
                         </div>
                     </div>
                     

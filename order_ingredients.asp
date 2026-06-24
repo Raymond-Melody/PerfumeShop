@@ -46,6 +46,12 @@ End Function
 <%
 Call OpenConnection()
 
+' V14: 会员登录检查
+If Session("UserID") = "" Or IsNull(Session("UserID")) Then
+    Response.Redirect "/user/login.asp?return=" & Server.URLEncode(Request.ServerVariables("SCRIPT_NAME") & "?" & Request.ServerVariables("QUERY_STRING"))
+    Response.End
+End If
+
 ' 获取订单ID
 Dim orderId
 orderId = Request.QueryString("order_id")
@@ -84,9 +90,12 @@ Set rsIngredients = ExecuteQuery("SELECT IngredientName FROM OrderIngredients WH
 Dim uniqueIngredients, rawIngredient, splitResult, splitKey
 Set uniqueIngredients = CreateObject("Scripting.Dictionary")
 
+Dim hasOrderIngredients : hasOrderIngredients = False
+
 If Not rsIngredients Is Nothing Then
     Do While Not rsIngredients.EOF
         rawIngredient = rsIngredients("IngredientName") & ""
+        hasOrderIngredients = True
         
         ' 使用通用分割函数处理成分
         Set splitResult = SplitIngredients(rawIngredient)
@@ -101,6 +110,88 @@ If Not rsIngredients Is Nothing Then
     Loop
     rsIngredients.Close
     Set rsIngredients = Nothing
+End If
+
+' ========== 回退机制：当OrderIngredients无数据时，从香调链路重新计算成分 ==========
+If Not hasOrderIngredients Then
+    Dim rsDetailItems, fbDetailId, fbProductId, fbProductType, fbRecipeId
+    Set rsDetailItems = ExecuteQuery("SELECT od.DetailID, od.ProductID, p.ProductType, p.RecipeID, p.BaseIngredients FROM OrderDetails od LEFT JOIN Products p ON od.ProductID=p.ProductID WHERE od.OrderID=" & CLng(orderId))
+    If Not rsDetailItems Is Nothing Then
+        Do While Not rsDetailItems.EOF
+            fbDetailId = rsDetailItems("DetailID")
+            fbProductId = rsDetailItems("ProductID")
+            fbProductType = LCase(rsDetailItems("ProductType") & "")
+            fbRecipeId = 0
+            On Error Resume Next
+            If Not IsNull(rsDetailItems("RecipeID")) Then fbRecipeId = CLng(rsDetailItems("RecipeID"))
+            On Error GoTo 0
+            
+            ' 路径1: 从配方获取成分
+            If fbRecipeId > 0 Then
+                Dim rsRecipeIngr
+                Set rsRecipeIngr = ExecuteQuery("SELECT IngredientName FROM RecipeIngredients WHERE RecipeID=" & fbRecipeId)
+                If Not rsRecipeIngr Is Nothing Then
+                    Do While Not rsRecipeIngr.EOF
+                        rawIngredient = Trim(rsRecipeIngr("IngredientName") & "")
+                        If rawIngredient <> "" And Not uniqueIngredients.Exists(rawIngredient) Then
+                            uniqueIngredients.Add rawIngredient, True
+                        End If
+                        rsRecipeIngr.MoveNext
+                    Loop
+                    rsRecipeIngr.Close
+                End If
+                Set rsRecipeIngr = Nothing
+            End If
+            
+            ' 路径2: 从香调选择→基香→成分
+            Dim rsNoteSels, fbNoteId
+            Set rsNoteSels = ExecuteQuery("SELECT NoteID FROM OrderDetailNoteSelections WHERE DetailID=" & fbDetailId)
+            If Not rsNoteSels Is Nothing Then
+                Do While Not rsNoteSels.EOF
+                    fbNoteId = rsNoteSels("NoteID")
+                    Dim rsBaseIngr
+                    Set rsBaseIngr = ExecuteQuery("SELECT b.Ingredients FROM NoteIngredients ni LEFT JOIN BaseNotes b ON ni.BaseNoteID=b.BaseNoteID WHERE ni.NoteID=" & fbNoteId & " AND b.Ingredients IS NOT NULL AND b.Ingredients <> ''")
+                    If Not rsBaseIngr Is Nothing Then
+                        Do While Not rsBaseIngr.EOF
+                            Set splitResult = SplitIngredients(rsBaseIngr("Ingredients") & "")
+                            For Each splitKey In splitResult.Keys
+                                If Not uniqueIngredients.Exists(splitKey) Then
+                                    uniqueIngredients.Add splitKey, True
+                                End If
+                            Next
+                            Set splitResult = Nothing
+                            rsBaseIngr.MoveNext
+                        Loop
+                        rsBaseIngr.Close
+                    End If
+                    Set rsBaseIngr = Nothing
+                    rsNoteSels.MoveNext
+                Loop
+                rsNoteSels.Close
+            End If
+            Set rsNoteSels = Nothing
+            
+            ' 路径3: 品牌定香产品的BaseIngredients
+            Dim fbBaseIngr
+            fbBaseIngr = ""
+            On Error Resume Next
+            fbBaseIngr = Trim(rsDetailItems("BaseIngredients") & "")
+            On Error GoTo 0
+            If fbBaseIngr <> "" Then
+                Set splitResult = SplitIngredients(fbBaseIngr)
+                For Each splitKey In splitResult.Keys
+                    If Not uniqueIngredients.Exists(splitKey) Then
+                        uniqueIngredients.Add splitKey, True
+                    End If
+                Next
+                Set splitResult = Nothing
+            End If
+            
+            rsDetailItems.MoveNext
+        Loop
+        rsDetailItems.Close
+    End If
+    Set rsDetailItems = Nothing
 End If
 %>
 <!DOCTYPE html>
@@ -275,10 +366,20 @@ End If
             %>
         </div>
         <%
+        ' 显示数据来源提示
+        If Not hasOrderIngredients And uniqueIngredients.Count > 0 Then
+        %>
+        <div style="font-size: 12px; color: #999; margin-top: 8px; font-style: italic;">
+            * 成分数据从基香配置链路实时计算生成
+        </div>
+        <%
+        End If
+        %>
+        <%
             Else
         %>
         <div style="padding: 20px; background: #fff3cd; border: 1px solid #ffc107; color: #856404; text-align: center;">
-            ⚠️ 此订单暂无成分信息记录
+            ⚠️ 此订单暂无成分信息记录。可能原因：基香成分尚未配置，或产品未关联配方。请联系技术人员完善基香数据。
         </div>
         <%
             End If

@@ -1,5 +1,9 @@
-<%@ Language="VBScript" %>
-<% Option Explicit %>
+<%@ Language="VBScript" CodePage="65001" %>
+<%
+Option Explicit
+Response.CodePage = 65001
+Response.Charset = "UTF-8"
+%>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -29,9 +33,9 @@ Sub RunSetup()
     Call LogStep("info", "Step 1: 连接到 SQL Server (master)...")
     
     Set connAdmin = Server.CreateObject("ADODB.Connection")
-    connAdmin.Open "Provider=SQLOLEDB;Server=localhost;Database=master;Integrated Security=SSPI;"
+    connAdmin.Open "Provider=SQLOLEDB;Server=localhost\YOURPERFUME;Database=master;Integrated Security=SSPI;"
     
-    Call LogStep("success", "成功连接到 SQL Server 默认实例 (localhost)")
+    Call LogStep("success", "成功连接到 SQL Server 命名实例 (localhost\YOURPERFUME)")
 
     ' Step 2: 创建 PerfumeShop 数据库
     Call LogStep("info", "Step 2: 检查并创建 PerfumeShop 数据库...")
@@ -138,7 +142,35 @@ Sub ExecuteTableScript()
         "[RecordID] NVARCHAR(50) NULL, " & _
         "[ModuleCode] NVARCHAR(50) NULL, " & _
         "[Notes] NVARCHAR(MAX) NULL, " & _
+        "[CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE(), " & _
+        "[IPAddress] NVARCHAR(50) NULL" & _
+        ")") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+
+    If CreateTableIfNotExists("LoginAlerts", _
+        "CREATE TABLE [LoginAlerts] (" & _
+        "[AlertID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, " & _
+        "[AlertType] NVARCHAR(50) NULL, " & _
+        "[AlertLevel] NVARCHAR(20) NULL DEFAULT 'info', " & _
+        "[AlertMessage] NVARCHAR(500) NULL, " & _
+        "[IPAddress] NVARCHAR(50) NULL, " & _
+        "[AdminID] INT NULL, " & _
+        "[IsRead] BIT NULL DEFAULT 0, " & _
         "[CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE()" & _
+        ")") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+
+    If CreateTableIfNotExists("IPBlacklist", _
+        "CREATE TABLE [IPBlacklist] (" & _
+        "[IPID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, " & _
+        "[IPAddress] NVARCHAR(50) NOT NULL, " & _
+        "[Reason] NVARCHAR(255) NULL, " & _
+        "[BlockedAt] DATETIME2(7) NULL DEFAULT GETDATE(), " & _
+        "[BlockedBy] INT NULL, " & _
+        "[IsActive] BIT NULL DEFAULT 1, " & _
+        "[ExpiresAt] DATETIME2(7) NULL, " & _
+        "[HitCount] INT NULL DEFAULT 0, " & _
+        "[LastHitAt] DATETIME2(7) NULL" & _
         ")") Then successTables = successTables + 1
     totalTables = totalTables + 1
 
@@ -1170,7 +1202,56 @@ Sub ExecuteTableScript()
         "[UpdatedAt] DATETIME2(7) NULL" & _
         ")") Then successTables = successTables + 1
     totalTables = totalTables + 1
-
+    
+    ' === V14: 推荐制相关表 ===
+    ' 为 Users 表添加推荐相关字段（如果表已存在但缺少字段）
+    On Error Resume Next
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Users]') AND name = 'ReferrerUserID') ALTER TABLE [Users] ADD [ReferrerUserID] INT NULL"
+    If Err.Number = 0 Then Call LogStep("success", "Users 表字段 [ReferrerUserID] 已添加") Else Call LogStep("warning", "Users 表字段 [ReferrerUserID] 添加失败: " & Err.Description) : Err.Clear
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Users]') AND name = 'DeviceFingerprint') ALTER TABLE [Users] ADD [DeviceFingerprint] NVARCHAR(100) NULL"
+    If Err.Number = 0 Then Call LogStep("success", "Users 表字段 [DeviceFingerprint] 已添加") Else Call LogStep("warning", "Users 表字段 [DeviceFingerprint] 添加失败: " & Err.Description) : Err.Clear
+    
+    ' V14.1: 添加 OriginalToken 列（存储原始推荐Token字符串）
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[ReferralTokens]') AND name = 'OriginalToken') ALTER TABLE [ReferralTokens] ADD [OriginalToken] NVARCHAR(1000) NULL"
+    If Err.Number = 0 Then Call LogStep("success", "ReferralTokens 表字段 [OriginalToken] 已添加") Else Call LogStep("warning", "ReferralTokens 表字段 [OriginalToken] 添加失败: " & Err.Description) : Err.Clear
+    On Error GoTo 0
+    
+    If CreateTableIfNotExists("ReferralTokens", _
+        "CREATE TABLE [ReferralTokens] (" & _
+        "[TokenID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, " & _
+        "[ReferrerUserID] INT NOT NULL, " & _
+        "[ReferrerType] NVARCHAR(20) NULL DEFAULT 'user', " & _
+        "[TokenHash] NVARCHAR(255) NOT NULL, " & _
+        "[OriginalToken] NVARCHAR(1000) NULL, " & _
+        "[ExpiresAt] DATETIME2(7) NOT NULL, " & _
+        "[MaxUses] INT NULL DEFAULT 1, " & _
+        "[UsedCount] INT NULL DEFAULT 0, " & _
+        "[IsActive] BIT NULL DEFAULT 1, " & _
+        "[CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE()" & _
+        ")") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+    
+    If CreateTableIfNotExists("ReferralRelations", _
+        "CREATE TABLE [ReferralRelations] (" & _
+        "[RelationID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, " & _
+        "[AncestorUserID] INT NOT NULL, " & _
+        "[DescendantUserID] INT NOT NULL, " & _
+        "[Depth] INT NOT NULL, " & _
+        "[CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE()" & _
+        ")") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+    
+    If CreateTableIfNotExists("RegistrationAttempts", _
+        "CREATE TABLE [RegistrationAttempts] (" & _
+        "[AttemptID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, " & _
+        "[IPAddress] NVARCHAR(50) NOT NULL, " & _
+        "[DeviceFingerprint] NVARCHAR(100) NULL, " & _
+        "[Success] BIT NULL DEFAULT 0, " & _
+        "[TokenHash] NVARCHAR(255) NULL, " & _
+        "[AttemptedAt] DATETIME2(7) NULL DEFAULT GETDATE()" & _
+        ")") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+    
     Call LogStep("success", "建表完成: " & successTables & "/" & totalTables & " 个表创建成功")
 
     ' === 创建索引 ===
@@ -1193,6 +1274,20 @@ Sub ExecuteTableScript()
     connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Users_Email') CREATE NONCLUSTERED INDEX [IX_Users_Email] ON [Users]([Email])"
     If Err.Number = 0 Then indexCount = indexCount + 1 Else Err.Clear
     connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_FragranceNotes_NoteType') CREATE NONCLUSTERED INDEX [IX_FragranceNotes_NoteType] ON [FragranceNotes]([NoteType]) INCLUDE ([NoteID],[NoteName],[PriceAddition])"
+    If Err.Number = 0 Then indexCount = indexCount + 1 Else Err.Clear
+    
+    ' V14: 推荐制索引
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ReferralTokens_TokenHash') CREATE NONCLUSTERED INDEX [IX_ReferralTokens_TokenHash] ON [ReferralTokens]([TokenHash]) INCLUDE ([ReferrerUserID],[ExpiresAt],[UsedCount],[MaxUses],[IsActive])"
+    If Err.Number = 0 Then indexCount = indexCount + 1 Else Err.Clear
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ReferralTokens_ReferrerUserID') CREATE NONCLUSTERED INDEX [IX_ReferralTokens_ReferrerUserID] ON [ReferralTokens]([ReferrerUserID]) INCLUDE ([TokenID],[ExpiresAt],[IsActive])"
+    If Err.Number = 0 Then indexCount = indexCount + 1 Else Err.Clear
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ReferralRelations_Ancestor') CREATE NONCLUSTERED INDEX [IX_ReferralRelations_Ancestor] ON [ReferralRelations]([AncestorUserID]) INCLUDE ([DescendantUserID],[Depth])"
+    If Err.Number = 0 Then indexCount = indexCount + 1 Else Err.Clear
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ReferralRelations_Descendant') CREATE NONCLUSTERED INDEX [IX_ReferralRelations_Descendant] ON [ReferralRelations]([DescendantUserID])"
+    If Err.Number = 0 Then indexCount = indexCount + 1 Else Err.Clear
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_RegistrationAttempts_IP') CREATE NONCLUSTERED INDEX [IX_RegistrationAttempts_IP] ON [RegistrationAttempts]([IPAddress],[AttemptedAt])"
+    If Err.Number = 0 Then indexCount = indexCount + 1 Else Err.Clear
+    connAdmin.Execute "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_RegistrationAttempts_Fingerprint') CREATE NONCLUSTERED INDEX [IX_RegistrationAttempts_Fingerprint] ON [RegistrationAttempts]([DeviceFingerprint],[AttemptedAt])"
     If Err.Number = 0 Then indexCount = indexCount + 1 Else Err.Clear
     
     Call LogStep("success", "索引创建完成: " & indexCount & " 个")

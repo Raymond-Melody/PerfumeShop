@@ -1,4 +1,4 @@
-<%@ Language="VBScript" %>
+<%@ Language="VBScript" CodePage="65001" %>
 <%
 Response.ContentType = "text/plain"
 Response.Charset = "UTF-8"

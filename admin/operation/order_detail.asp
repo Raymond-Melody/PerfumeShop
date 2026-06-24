@@ -250,13 +250,13 @@ Set rsDetails = ExecuteQuery("SELECT od.*, p.ProductType FROM OrderDetails od LE
                             ' 如果没有香调配比数据，尝试显示成分信息
                             If Not hasNotes Then
                                 Dim rsDetailIngredients
-                                Set rsDetailIngredients = ExecuteQuery("SELECT * FROM OrderIngredients WHERE OrderID = " & orderId & " ORDER BY IngredientID")
+                                Set rsDetailIngredients = ExecuteQuery("SELECT IngredientName FROM OrderIngredients WHERE DetailID = " & detailId & " ORDER BY IngredientID")
                                 If Not rsDetailIngredients Is Nothing Then
                                     If Not rsDetailIngredients.EOF Then
                                         Do While Not rsDetailIngredients.EOF
                             %>
                             <div class="note-item">
-                                <span>• <%= rsDetailIngredients("IngredientName") %></span>
+                                <span>• <%= Server.HTMLEncode(rsDetailIngredients("IngredientName") & "") %></span>
                                 <strong>原料</strong>
                             </div>
                             <%
@@ -324,7 +324,12 @@ Set rsDetails = ExecuteQuery("SELECT od.*, p.ProductType FROM OrderDetails od LE
                             </div>
                         </div>
                         
-                        <!-- 成分信息 -->
+                        <!-- 成分信息（仅对定制和KOL产品显示，品牌定香产品随包装附成分说明书） -->
+                        <%
+                        Dim productTypeLC_ingredient
+                        productTypeLC_ingredient = LCase(productTypeAdmin & "")
+                        If productTypeLC_ingredient = "custom" Or productTypeLC_ingredient = "kol" Then
+                        %>
                         <div class="note-section">
                             <h4>成分列表</h4>
                             <%
@@ -394,6 +399,7 @@ Set rsDetails = ExecuteQuery("SELECT od.*, p.ProductType FROM OrderDetails od LE
                             Set detailUniqueIngr = Nothing
                             %>
                         </div>
+                        <% End If %>
                     </div>
                 </div>
                 <%

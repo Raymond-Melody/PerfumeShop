@@ -34,6 +34,11 @@ Function SafeCount(val)
     End If
 End Function
 
+' ========== IIF 函数 ==========
+Function IIF(cond, tVal, fVal)
+    If cond Then IIF = tVal Else IIF = fVal
+End Function
+
 ' ========== 获取SiteSettings中的最小比例配置 ==========
 Dim minTopPercent, minMiddlePercent, minBasePercent
 minTopPercent = 10
@@ -134,73 +139,86 @@ If action = "add_formula" Then
     Dim selectedNotes, notePercent
     selectedNotes = Request.Form("selectedNotes")
     
-    ' 校验配比
+    ' 产品类型验证：品牌定香(Fixed)不允许通过配方管理创建
+    If newProductType = "standard" Then
+        msg = "品牌定香(standard)类型不使用配方管理，请通过【采购管理 → 品牌定香】模块创建"
+    ElseIf newProductType = "" Then
+        msg = "请选择产品类型"
+    End If
+    
+    ' 校验配比（品牌定香Fixed类型跳过配比验证，成品香水配比已预设）
     Dim ratioValid, ratioErrorMsg
     ratioValid = True
     ratioErrorMsg = ""
     
-    If selectedNotes = "" Then
-        ratioValid = False
-        ratioErrorMsg = "请至少选择一个香调"
-    Else
-        Dim noteArr, noteItem, totalPercent, totalTopPercent, totalMiddlePercent, totalBasePercent
-        totalPercent = 0
-        totalTopPercent = 0
-        totalMiddlePercent = 0
-        totalBasePercent = 0
-        
-        noteArr = Split(selectedNotes, ",")
-        For Each noteItem In noteArr
-            noteItem = Trim(noteItem)
-            If noteItem <> "" And IsNumeric(noteItem) Then
-                notePercent = Request.Form("notePercent_" & noteItem)
-                If notePercent = "" Or Not IsNumeric(notePercent) Then notePercent = 0
-                notePercent = SafeNum(notePercent)
-                totalPercent = totalPercent + notePercent
-                
-                ' 获取香调类型
-                Dim rsNoteTypeCheck
-                Set rsNoteTypeCheck = ExecuteQuery("SELECT NoteType FROM FragranceNotes WHERE NoteID = " & CLng(noteItem))
-                If Not rsNoteTypeCheck Is Nothing Then
-                    If Not rsNoteTypeCheck.EOF Then
-                        If rsNoteTypeCheck("NoteType") = "前调" Then
-                            totalTopPercent = totalTopPercent + notePercent
-                        ElseIf rsNoteTypeCheck("NoteType") = "中调" Then
-                            totalMiddlePercent = totalMiddlePercent + notePercent
-                        ElseIf rsNoteTypeCheck("NoteType") = "后调" Then
-                            totalBasePercent = totalBasePercent + notePercent
+    If msg = "" And newProductType <> "standard" Then
+        If selectedNotes = "" Then
+            ratioValid = False
+            ratioErrorMsg = "请至少选择一个香调"
+        Else
+            Dim noteArr, noteItem, totalPercent, totalTopPercent, totalMiddlePercent, totalBasePercent
+            totalPercent = 0
+            totalTopPercent = 0
+            totalMiddlePercent = 0
+            totalBasePercent = 0
+            
+            noteArr = Split(selectedNotes, ",")
+            For Each noteItem In noteArr
+                noteItem = Trim(noteItem)
+                If noteItem <> "" And IsNumeric(noteItem) Then
+                    notePercent = Request.Form("notePercent_" & noteItem)
+                    If notePercent = "" Or Not IsNumeric(notePercent) Then notePercent = 0
+                    notePercent = SafeNum(notePercent)
+                    totalPercent = totalPercent + notePercent
+                    
+                    ' 获取香调类型
+                    Dim rsNoteTypeCheck
+                    Set rsNoteTypeCheck = ExecuteQuery("SELECT NoteType FROM FragranceNotes WHERE NoteID = " & CLng(noteItem))
+                    If Not rsNoteTypeCheck Is Nothing Then
+                        If Not rsNoteTypeCheck.EOF Then
+                            If rsNoteTypeCheck("NoteType") = "前调" Then
+                                totalTopPercent = totalTopPercent + notePercent
+                            ElseIf rsNoteTypeCheck("NoteType") = "中调" Then
+                                totalMiddlePercent = totalMiddlePercent + notePercent
+                            ElseIf rsNoteTypeCheck("NoteType") = "后调" Then
+                                totalBasePercent = totalBasePercent + notePercent
+                            End If
                         End If
+                        rsNoteTypeCheck.Close
                     End If
-                    rsNoteTypeCheck.Close
+                    Set rsNoteTypeCheck = Nothing
                 End If
-                Set rsNoteTypeCheck = Nothing
+            Next
+            
+            ' 校验规则（使用容差0.01避免浮点数精度问题）
+            If totalTopPercent < (minTopPercent - 0.01) Then
+                ratioValid = False
+                ratioErrorMsg = "前调比例不能低于" & minTopPercent & "%，当前为" & FormatNumber(totalTopPercent, 1) & "%"
+            ElseIf totalMiddlePercent < (minMiddlePercent - 0.01) Then
+                ratioValid = False
+                ratioErrorMsg = "中调比例不能低于" & minMiddlePercent & "%，当前为" & FormatNumber(totalMiddlePercent, 1) & "%"
+            ElseIf totalBasePercent < (minBasePercent - 0.01) Then
+                ratioValid = False
+                ratioErrorMsg = "后调比例不能低于" & minBasePercent & "%，当前为" & FormatNumber(totalBasePercent, 1) & "%"
+            ElseIf Abs(totalPercent - 100) > 0.01 Then
+                ratioValid = False
+                ratioErrorMsg = "香调配比总和必须等于100%，当前为" & FormatNumber(totalPercent, 1) & "%"
             End If
-        Next
-        
-        ' 校验规则
-        If totalTopPercent < minTopPercent Then
-            ratioValid = False
-            ratioErrorMsg = "前调比例不能低于" & minTopPercent & "%，当前为" & totalTopPercent & "%"
-        ElseIf totalMiddlePercent < minMiddlePercent Then
-            ratioValid = False
-            ratioErrorMsg = "中调比例不能低于" & minMiddlePercent & "%，当前为" & totalMiddlePercent & "%"
-        ElseIf totalBasePercent < minBasePercent Then
-            ratioValid = False
-            ratioErrorMsg = "后调比例不能低于" & minBasePercent & "%，当前为" & totalBasePercent & "%"
-        ElseIf totalPercent <> 100 Then
-            ratioValid = False
-            ratioErrorMsg = "香调配比总和必须等于100%，当前为" & totalPercent & "%"
         End If
     End If
     
-    If newRecipeName = "" Then
-        msg = "配方名称不能为空"
-    ElseIf newRecipeCode = "" Then
-        msg = "配方编号不能为空"
-    ElseIf newProductType = "" Then
-        msg = "请选择产品类型"
-    ElseIf Not ratioValid Then
-        msg = ratioErrorMsg
+    If msg = "" Then
+        If newRecipeName = "" Then
+            msg = "配方名称不能为空"
+        ElseIf newRecipeCode = "" Then
+            msg = "配方编号不能为空"
+        ElseIf Not ratioValid Then
+            msg = ratioErrorMsg
+        End If
+    End If
+    
+    If msg <> "" Then
+        ' 跳过保存，msg已设置
     Else
         ' 确定审核状态
         Dim reviewStatusVal
@@ -283,72 +301,85 @@ ElseIf action = "edit_formula" Then
     ' 获取选中的香调和百分比
     selectedNotes = Request.Form("selectedNotes")
     
-    ' 校验配比
-    ratioValid = True
-    ratioErrorMsg = ""
-    
-    If selectedNotes = "" Then
-        ratioValid = False
-        ratioErrorMsg = "请至少选择一个香调"
-    Else
-        totalPercent = 0
-        totalTopPercent = 0
-        totalMiddlePercent = 0
-        totalBasePercent = 0
-        
-        noteArr = Split(selectedNotes, ",")
-        For Each noteItem In noteArr
-            noteItem = Trim(noteItem)
-            If noteItem <> "" And IsNumeric(noteItem) Then
-                notePercent = Request.Form("notePercent_" & noteItem)
-                If notePercent = "" Or Not IsNumeric(notePercent) Then notePercent = 0
-                notePercent = SafeNum(notePercent)
-                totalPercent = totalPercent + notePercent
-                
-                ' 获取香调类型
-                Set rsNoteTypeCheck = ExecuteQuery("SELECT NoteType FROM FragranceNotes WHERE NoteID = " & CLng(noteItem))
-                If Not rsNoteTypeCheck Is Nothing Then
-                    If Not rsNoteTypeCheck.EOF Then
-                        If rsNoteTypeCheck("NoteType") = "前调" Then
-                            totalTopPercent = totalTopPercent + notePercent
-                        ElseIf rsNoteTypeCheck("NoteType") = "中调" Then
-                            totalMiddlePercent = totalMiddlePercent + notePercent
-                        ElseIf rsNoteTypeCheck("NoteType") = "后调" Then
-                            totalBasePercent = totalBasePercent + notePercent
-                        End If
-                    End If
-                    rsNoteTypeCheck.Close
-                End If
-                Set rsNoteTypeCheck = Nothing
-            End If
-        Next
-        
-        ' 校验规则
-        If totalTopPercent < minTopPercent Then
-            ratioValid = False
-            ratioErrorMsg = "前调比例不能低于" & minTopPercent & "%，当前为" & totalTopPercent & "%"
-        ElseIf totalMiddlePercent < minMiddlePercent Then
-            ratioValid = False
-            ratioErrorMsg = "中调比例不能低于" & minMiddlePercent & "%，当前为" & totalMiddlePercent & "%"
-        ElseIf totalBasePercent < minBasePercent Then
-            ratioValid = False
-            ratioErrorMsg = "后调比例不能低于" & minBasePercent & "%，当前为" & totalBasePercent & "%"
-        ElseIf totalPercent <> 100 Then
-            ratioValid = False
-            ratioErrorMsg = "香调配比总和必须等于100%，当前为" & totalPercent & "%"
-        End If
-    End If
-    
-    If editRecipeName = "" Then
-        msg = "配方名称不能为空"
-    ElseIf editRecipeCode = "" Then
-        msg = "配方编号不能为空"
+    ' 产品类型验证：品牌定香(Fixed)不允许通过配方管理编辑
+    If editProductType = "standard" Then
+        msg = "品牌定香(standard)类型不使用配方管理，请通过【采购管理 → 品牌定香】模块编辑"
     ElseIf editProductType = "" Then
         msg = "请选择产品类型"
     ElseIf Not IsNumeric(editRecipeId) Then
         msg = "无效的配方ID"
-    ElseIf Not ratioValid Then
-        msg = ratioErrorMsg
+    End If
+    
+    ' 校验配比（品牌定香Fixed类型跳过配比验证，成品香水配比已预设）
+    ratioValid = True
+    ratioErrorMsg = ""
+    
+    If msg = "" And editProductType <> "standard" Then
+        If selectedNotes = "" Then
+            ratioValid = False
+            ratioErrorMsg = "请至少选择一个香调"
+        Else
+            totalPercent = 0
+            totalTopPercent = 0
+            totalMiddlePercent = 0
+            totalBasePercent = 0
+            
+            noteArr = Split(selectedNotes, ",")
+            For Each noteItem In noteArr
+                noteItem = Trim(noteItem)
+                If noteItem <> "" And IsNumeric(noteItem) Then
+                    notePercent = Request.Form("notePercent_" & noteItem)
+                    If notePercent = "" Or Not IsNumeric(notePercent) Then notePercent = 0
+                    notePercent = SafeNum(notePercent)
+                    totalPercent = totalPercent + notePercent
+                    
+                    ' 获取香调类型
+                    Set rsNoteTypeCheck = ExecuteQuery("SELECT NoteType FROM FragranceNotes WHERE NoteID = " & CLng(noteItem))
+                    If Not rsNoteTypeCheck Is Nothing Then
+                        If Not rsNoteTypeCheck.EOF Then
+                            If rsNoteTypeCheck("NoteType") = "前调" Then
+                                totalTopPercent = totalTopPercent + notePercent
+                            ElseIf rsNoteTypeCheck("NoteType") = "中调" Then
+                                totalMiddlePercent = totalMiddlePercent + notePercent
+                            ElseIf rsNoteTypeCheck("NoteType") = "后调" Then
+                                totalBasePercent = totalBasePercent + notePercent
+                            End If
+                        End If
+                        rsNoteTypeCheck.Close
+                    End If
+                    Set rsNoteTypeCheck = Nothing
+                End If
+            Next
+            
+            ' 校验规则（使用容差0.01避免浮点数精度问题）
+            If totalTopPercent < (minTopPercent - 0.01) Then
+                ratioValid = False
+                ratioErrorMsg = "前调比例不能低于" & minTopPercent & "%，当前为" & FormatNumber(totalTopPercent, 1) & "%"
+            ElseIf totalMiddlePercent < (minMiddlePercent - 0.01) Then
+                ratioValid = False
+                ratioErrorMsg = "中调比例不能低于" & minMiddlePercent & "%，当前为" & FormatNumber(totalMiddlePercent, 1) & "%"
+            ElseIf totalBasePercent < (minBasePercent - 0.01) Then
+                ratioValid = False
+                ratioErrorMsg = "后调比例不能低于" & minBasePercent & "%，当前为" & FormatNumber(totalBasePercent, 1) & "%"
+            ElseIf Abs(totalPercent - 100) > 0.01 Then
+                ratioValid = False
+                ratioErrorMsg = "香调配比总和必须等于100%，当前为" & FormatNumber(totalPercent, 1) & "%"
+            End If
+        End If
+    End If
+    
+    If msg = "" Then
+        If editRecipeName = "" Then
+            msg = "配方名称不能为空"
+        ElseIf editRecipeCode = "" Then
+            msg = "配方编号不能为空"
+        ElseIf Not ratioValid Then
+            msg = ratioErrorMsg
+        End If
+    End If
+    
+    If msg <> "" Then
+        ' 跳过保存，msg已设置
     Else
         BeginTransaction
         On Error Resume Next
@@ -1206,7 +1237,7 @@ End Function
                 
                 <div style="margin-bottom: 10px;">
                     <% Select Case rsRecipes("ProductType")
-                        Case "Fixed" %>
+                        Case "standard" %>
                         <span class="product-type-badge fixed"><i class="fas fa-box"></i> 品牌定香</span>
                     <%  Case "Custom" %>
                         <span class="product-type-badge custom"><i class="fas fa-paint-brush"></i> 用户定制</span>
@@ -1375,7 +1406,7 @@ End Function
                         </div>
                         <div class="form-group">
                             <label class="form-label">产品类型 <span class="required">*</span></label>
-                            <select name="productType" id="productType" class="form-control" required>
+                            <select name="productType" id="productType" class="form-control" required onchange="toggleFormulaSections()">
                                 <option value="">请选择</option>
                                 <option value="Custom">用户定制</option>
                                 <option value="KOL">KOL推荐</option>
@@ -1396,8 +1427,8 @@ End Function
                         </select>
                     </div>
                     
-                    <!-- 香调选择区域 -->
-                    <div class="notes-selection">
+                    <!-- 香调选择区域（品牌定香Fixed类型隐藏，配比已预设） -->
+                    <div class="notes-selection" id="notesSelection">
                         <div class="form-label"><i class="fas fa-list"></i> 选择香调并设置配比 <span class="required">*</span></div>
                         
                         <!-- 前调 -->
@@ -1464,8 +1495,8 @@ End Function
                         </div>
                     </div>
                     
-                    <!-- 配比统计 -->
-                    <div class="ratio-summary">
+                    <!-- 配比统计（品牌定香Fixed类型隐藏，配比已预设） -->
+                    <div class="ratio-summary" id="ratioSummary">
                         <div class="ratio-summary-title"><i class="fas fa-chart-pie"></i> 配比统计</div>
                         <div class="ratio-bars">
                             <div class="ratio-bar-item">
@@ -1583,6 +1614,7 @@ End Function
             });
             
             calculateRatio();
+            toggleFormulaSections();
             document.getElementById('formulaModal').style.display = 'block';
         }
         
@@ -1637,6 +1669,7 @@ End Function
             }
             
             calculateRatio();
+            toggleFormulaSections();
             document.getElementById('formulaModal').style.display = 'block';
         }
         
@@ -1704,12 +1737,19 @@ End Function
             baseDisplay.className = 'ratio-bar-value ' + (totalBase >= minBasePercent ? 'valid' : 'invalid');
             
             totalDisplay.textContent = total + '%';
-            totalDisplay.className = 'ratio-total-value ' + (total === 100 ? 'valid' : 'invalid');
+            totalDisplay.className = 'ratio-total-value ' + (Math.abs(total - 100) < 0.01 ? 'valid' : 'invalid');
         }
         
         // 表单验证
         function validateForm() {
             updateSelectedNotes();
+            
+            var productType = document.getElementById('productType').value;
+            
+            // 品牌定香Fixed类型跳过香调配比验证（成品香水配比已预设）
+            if (productType === 'standard') {
+                return true;
+            }
             
             var selectedNotes = document.getElementById('selectedNotes').value;
             if (!selectedNotes) {
@@ -1736,24 +1776,40 @@ End Function
                 }
             });
             
-            if (totalTop < minTopPercent) {
-                alert('前调比例不能低于' + minTopPercent + '%，当前为' + totalTop + '%');
+            if (totalTop < minTopPercent - 0.01) {
+                alert('前调比例不能低于' + minTopPercent + '%，当前为' + totalTop.toFixed(1) + '%');
                 return false;
             }
-            if (totalMiddle < minMiddlePercent) {
-                alert('中调比例不能低于' + minMiddlePercent + '%，当前为' + totalMiddle + '%');
+            if (totalMiddle < minMiddlePercent - 0.01) {
+                alert('中调比例不能低于' + minMiddlePercent + '%，当前为' + totalMiddle.toFixed(1) + '%');
                 return false;
             }
-            if (totalBase < minBasePercent) {
-                alert('后调比例不能低于' + minBasePercent + '%，当前为' + totalBase + '%');
+            if (totalBase < minBasePercent - 0.01) {
+                alert('后调比例不能低于' + minBasePercent + '%，当前为' + totalBase.toFixed(1) + '%');
                 return false;
             }
-            if (total !== 100) {
-                alert('香调配比总和必须等于100%，当前为' + total + '%');
+            if (Math.abs(total - 100) > 0.01) {
+                alert('香调配比总和必须等于100%，当前为' + total.toFixed(1) + '%');
                 return false;
             }
             
             return true;
+        }
+        
+        // 根据产品类型显示/隐藏香调选择和配比统计
+        // 品牌定香(Fixed)成品香水配比已预设，无需用户配置
+        function toggleFormulaSections() {
+            var productType = document.getElementById('productType').value;
+            var notesSection = document.getElementById('notesSelection');
+            var ratioSection = document.getElementById('ratioSummary');
+            
+            if (productType === 'standard') {
+                if (notesSection) notesSection.style.display = 'none';
+                if (ratioSection) ratioSection.style.display = 'none';
+            } else {
+                if (notesSection) notesSection.style.display = '';
+                if (ratioSection) ratioSection.style.display = '';
+            }
         }
         
         // 关闭模态框

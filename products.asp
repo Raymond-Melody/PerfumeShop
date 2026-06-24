@@ -9,6 +9,12 @@ Response.ContentType = "text/html"
 <%
 Call OpenConnection()
 
+' V14: 会员登录检查
+If Session("UserID") = "" Or IsNull(Session("UserID")) Then
+    Response.Redirect "/user/login.asp?return=" & Server.URLEncode(Request.ServerVariables("SCRIPT_NAME") & "?" & Request.ServerVariables("QUERY_STRING"))
+    Response.End
+End If
+
 ' 获取所有已启用的商品类型
 Dim activeTypes, activeTypeCodes
 activeTypes = GetActiveProductTypes()
@@ -59,7 +65,7 @@ Select Case sortBy
     Case "name"
         orderClause = " ORDER BY ProductName ASC"
     Case Else
-        orderClause = " ORDER BY CreatedAt DESC"
+        orderClause = " ORDER BY ISNULL(CreatedAt, '2099-12-31') DESC, ProductID DESC"
 End Select
 
 ' 获取总数
@@ -92,6 +98,9 @@ If page > totalPages Then page = totalPages
 
 <div class="container">
     <div class="products-page">
+        <!-- V11 移动端侧边栏切换 -->
+        <!--#include file="includes/mobile_filter.asp"-->
+        
         <!-- 侧边栏筛选 -->
         <aside class="sidebar">
             <div class="filter-section">
@@ -191,8 +200,8 @@ If page > totalPages Then page = totalPages
                             pPrice = CDbl(rsProducts("BasePrice"))
                         End If
                         
-                        If pType = "Fixed" Then
-                            ' Fixed类型产品：从ProductVolumePrices获取最低价格，如果没有则使用BasePrice
+                        If pType = "standard" Then
+                            ' standard类型产品：从ProductVolumePrices获取最低价格，如果没有则使用BasePrice
                             Dim rsFixedPrice
                             Set rsFixedPrice = ExecuteQuery("SELECT MIN(Price) AS MinPrice FROM ProductVolumePrices WHERE ProductID = " & pId)
                             If Not rsFixedPrice Is Nothing Then
@@ -208,9 +217,9 @@ If page > totalPages Then page = totalPages
                 %>
                 <div class="product-card">
                     <div class="product-image">
-                        <img src="<%= rsProducts("ImageURL") %>" alt="<%= HTMLEncode(rsProducts("ProductName")) %>" onerror="this.src='<%= DEFAULT_PRODUCT_IMAGE %>'">
+                        <img data-src="<%= rsProducts("ImageURL") %>" src="<%= DEFAULT_PRODUCT_IMAGE %>" alt="<%= HTMLEncode(rsProducts("ProductName")) %>" class="lazy-placeholder" onerror="this.src='<%= DEFAULT_PRODUCT_IMAGE %>'">
                         <div class="product-badges">
-                            <% If pType = "Fixed" Then %>
+                            <% If pType = "standard" Then %>
                             <span class="badge badge-fixed">品牌定香</span>
                             <% ElseIf pType = "KOL" Then %>
                             <span class="badge badge-kol">KOL推荐</span>
@@ -236,7 +245,7 @@ If page > totalPages Then page = totalPages
                                 <span class="price-label">起</span>
                             </div>
                             <a href="/product.asp?id=<%= pId %>" class="btn btn-sm btn-outline">
-                                <% If pType = "Fixed" Then %>选购<% Else %>定制<% End If %>
+                                <% If pType = "standard" Then %>选购<% Else %>定制<% End If %>
                             </a>
                         </div>
                     </div>
@@ -271,6 +280,7 @@ If page > totalPages Then page = totalPages
                 pageUrl = "products.asp?"
                 If keyword <> "" Then pageUrl = pageUrl & "keyword=" & Server.URLEncode(keyword) & "&"
                 If sortBy <> "" Then pageUrl = pageUrl & "sort=" & sortBy & "&"
+                If productType <> "" Then pageUrl = pageUrl & "type=" & Server.URLEncode(productType) & "&"
                 
                 If page > 1 Then
                 %>

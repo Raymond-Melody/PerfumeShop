@@ -237,7 +237,7 @@ Sub RE_RenderRecommendations(rs, className, showPrice)
         ' 产品类型标签
         Dim typeLabel
         Select Case ptype
-            Case "Fixed": typeLabel = "品牌"
+            Case "standard": typeLabel = "品牌"
             Case "Custom": typeLabel = "定制"
             Case "KOL": typeLabel = "KOL推荐"
             Case Else: typeLabel = ""

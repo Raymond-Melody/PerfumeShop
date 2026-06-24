@@ -28,16 +28,26 @@ Function GetScalar(sql)
     Set rs = Nothing : GetScalar = val
 End Function
 
-On Error Resume Next
-conn.Execute "SELECT TOP 1 1 FROM AccountsPayable"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "CREATE TABLE AccountsPayable (PayableID INT IDENTITY(1,1) PRIMARY KEY, PurchaseID INT NULL, SupplierID INT NOT NULL, SupplierName NVARCHAR(200), PayableNo NVARCHAR(50), Amount DECIMAL(19,4) DEFAULT 0, PaidAmount DECIMAL(19,4) DEFAULT 0, Status NVARCHAR(20) DEFAULT 'Pending', DueDate DATE, InvoiceNo NVARCHAR(100), Notes NVARCHAR(MAX), CreatedAt DATETIME2 DEFAULT GETDATE(), UpdatedAt DATETIME2 DEFAULT GETDATE())"
-On Error GoTo 0
+' V10.1: 移除运行时DDL，表应由 deploy.asp 预先创建
+Function TableExists_AP(tblName)
+    Dim rs, exists : exists = False
+    On Error Resume Next
+    Set rs = conn.Execute("SELECT 1 FROM sys.tables WHERE name='" & Replace(tblName,"'","''") & "'")
+    If Err.Number = 0 Then
+        If Not rs Is Nothing Then
+            If Not rs.EOF Then exists = True
+            rs.Close
+        End If
+    End If
+    Err.Clear : Set rs = Nothing
+    On Error GoTo 0
+    TableExists_AP = exists
+End Function
 
-' 确保 AccountsPayable 表有 Status 列（兼容旧表）
-On Error Resume Next
-conn.Execute "SELECT Status FROM AccountsPayable WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE AccountsPayable ADD Status NVARCHAR(20) DEFAULT ''Pending''"
-On Error GoTo 0
+If Not TableExists_AP("AccountsPayable") Then
+    Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>表缺失</h2><p>AccountsPayable 表不存在，请先运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 创建数据库表。</p></div>"
+    Response.End
+End If
 
 Dim filterStatus : filterStatus = Request.QueryString("status")
 
@@ -53,7 +63,11 @@ If filterStatus <> "" Then whereSQL = "Status='" & Replace(filterStatus,"'","''"
 
 Dim rsAP, apCount : apCount = 0
 On Error Resume Next
-Set rsAP = conn.Execute("SELECT ap.*, po.PurchaseNo FROM AccountsPayable ap LEFT JOIN PurchaseOrders po ON ap.PurchaseID=po.PurchaseID WHERE " & whereSQL & " ORDER BY ap.DueDate ASC, ap.CreatedAt DESC")
+Set rsAP = Server.CreateObject("ADODB.Recordset")
+If Err.Number = 0 Then
+    rsAP.CursorLocation = 3 ' adUseClient - 支持 MoveLast/RecordCount
+    rsAP.Open "SELECT ap.*, po.PurchaseNo FROM AccountsPayable ap LEFT JOIN PurchaseOrders po ON ap.PurchaseID=po.PurchaseID WHERE " & whereSQL & " ORDER BY ap.DueDate ASC, ap.CreatedAt DESC", conn, 1, 1
+End If
 If Err.Number <> 0 Then Set rsAP = Nothing : Err.Clear
 On Error GoTo 0
 Dim apList() : ReDim apList(0, 10)

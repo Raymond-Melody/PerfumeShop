@@ -36,6 +36,11 @@ Function SafeDiv(numerator, denominator)
     On Error GoTo 0
 End Function
 
+' ========== IIF 函数 ==========
+Function IIF(cond, tVal, fVal)
+    If cond Then IIF = tVal Else IIF = fVal
+End Function
+
 ' ========== 处理表单提交 ==========
 Dim action, noteId, noteName, noteType, priceAddition, recommendedPercentage, isActive, imageURL, isBaseNote, baseNoteIDs
 action = Request.Form("action")
@@ -55,6 +60,26 @@ If action = "add" Or action = "edit" Then
     If isBaseNote = "" Then isBaseNote = 0
     ' 获取多选的基香ID数组
     baseNoteIDs = Request.Form("baseNoteSelect")
+    
+    ' ===== 基香关联必选验证 + 配比100%验证 =====
+    If baseNoteIDs = "" Then
+        Response.Redirect "note_management.asp?msg=" & Server.URLEncode("错误：必须关联至少一个基香") & "&msgtype=error"
+        Response.End
+    End If
+    
+    Dim valBaseArr, valTotalPct, valBId
+    valTotalPct = 0
+    valBaseArr = Split(baseNoteIDs, ",")
+    For Each valBId In valBaseArr
+        If IsNumeric(Trim(valBId)) Then
+            valTotalPct = valTotalPct + SafeNum(Request.Form("baseNotePct_" & Trim(valBId)))
+        End If
+    Next
+    If Abs(valTotalPct - 100) > 0.01 Then
+        Response.Redirect "note_management.asp?msg=" & Server.URLEncode("错误：基香配比总和必须为100%，当前为" & FormatNumber(valTotalPct, 2) & "%") & "&msgtype=error"
+        Response.End
+    End If
+    ' ===== 验证结束 =====
     
     If action = "add" Then
         Dim addSql, newNoteId
@@ -498,6 +523,11 @@ totalCount = topCount + middleCount + baseCount
             color: #4caf50;
             border-left: 4px solid #4caf50;
         }
+        .alert-error {
+            background: rgba(244,67,54,0.1);
+            color: #f44336;
+            border-left: 4px solid #f44336;
+        }
         
         /* 模态框样式 */
         .admin-modal {
@@ -842,9 +872,18 @@ totalCount = topCount + middleCount + baseCount
             </div>
         </div>
         
-        <% If Request.QueryString("msg") <> "" Then %>
-        <div class="alert alert-success">
-            <i class="fas fa-check-circle"></i>
+        <% If Request.QueryString("msg") <> "" Then 
+            Dim alertType, alertIcon
+            If Request.QueryString("msgtype") = "error" Then
+                alertType = "alert-error"
+                alertIcon = "fa-exclamation-circle"
+            Else
+                alertType = "alert-success"
+                alertIcon = "fa-check-circle"
+            End If
+        %>
+        <div class="alert <%= alertType %>">
+            <i class="fas <%= alertIcon %>"></i>
             <%= Server.HTMLEncode(Request.QueryString("msg")) %>
         </div>
         <% End If %>
@@ -993,14 +1032,14 @@ totalCount = topCount + middleCount + baseCount
                     <div class="note-ingredients-list">
                         <% 
                         Dim rsNoteBaseNames
-                        Set rsNoteBaseNames = ExecuteQuery("SELECT bn.BaseNoteName FROM NoteIngredients ni INNER JOIN BaseNotes bn ON ni.BaseNoteID = bn.BaseNoteID WHERE ni.NoteID = " & rsNotes("NoteID"))
+                        Set rsNoteBaseNames = ExecuteQuery("SELECT bn.BaseNoteName, ni.Percentage FROM NoteIngredients ni INNER JOIN BaseNotes bn ON ni.BaseNoteID = bn.BaseNoteID WHERE ni.NoteID = " & rsNotes("NoteID"))
                         If Not rsNoteBaseNames Is Nothing Then
                             Dim hasIngredients
                             hasIngredients = False
                             Do While Not rsNoteBaseNames.EOF
                                 hasIngredients = True
                         %>
-                        <span class="note-ingredient-tag"><%= HTMLEncode(rsNoteBaseNames("BaseNoteName")) %></span>
+                        <span class="note-ingredient-tag"><%= HTMLEncode(rsNoteBaseNames("BaseNoteName")) %> (<%= SafeNum(rsNoteBaseNames("Percentage")) %>%)</span>
                         <% 
                                 rsNoteBaseNames.MoveNext
                             Loop
@@ -1124,7 +1163,7 @@ totalCount = topCount + middleCount + baseCount
                 <h3 id="modalTitle" class="admin-modal-title">新增香调</h3>
                 <button class="admin-modal-close" onclick="closeModal()">&times;</button>
             </div>
-            <form id="noteForm" method="post">
+            <form id="noteForm" method="post" onsubmit="return validateBaseNotes()">
                 <div class="admin-modal-body">
                     <input type="hidden" id="formAction" name="action" value="add">
                     <input type="hidden" id="noteId" name="noteId" value="">
@@ -1184,7 +1223,7 @@ totalCount = topCount + middleCount + baseCount
                         </div>
                         <div class="admin-form-col">
                             <div class="admin-form-group" id="baseNoteField">
-                                <label class="admin-form-label">关联基香 <small style="color:#bbb;">(可多选)</small></label>
+                                <label class="admin-form-label">关联基香 <small style="color:#f44336;">(必选，配比总和需100%)</small></label>
                                 <div class="base-note-checkbox-group">
                                     <%
                                     Dim rsBaseNotesForNote
@@ -1195,7 +1234,7 @@ totalCount = topCount + middleCount + baseCount
                                     <label class="base-note-checkbox-item">
                                         <input type="checkbox" name="baseNoteSelect" value="<%= rsBaseNotesForNote("BaseNoteID") %>" onclick="togglePctInput(this)">
                                         <span><%= HTMLEncode(rsBaseNotesForNote("BaseNoteName")) %></span>
-                                        <input type="number" name="baseNotePct_<%= rsBaseNotesForNote("BaseNoteID") %>" class="base-note-pct" min="0" max="100" step="0.01" placeholder="%" disabled value="0" style="width:60px;margin-left:6px;padding:3px 6px;background:#252538;border:1px solid #3a3a3a;color:#e0e0e0;border-radius:4px;font-size:12px;">
+                                        <input type="number" name="baseNotePct_<%= rsBaseNotesForNote("BaseNoteID") %>" class="base-note-pct" min="0" max="100" step="0.01" placeholder="%" disabled value="0" oninput="updatePctSummary()" style="width:60px;margin-left:6px;padding:3px 6px;background:#252538;border:1px solid #3a3a3a;color:#e0e0e0;border-radius:4px;font-size:12px;">
                                     </label>
                                     <%
                                             rsBaseNotesForNote.MoveNext
@@ -1205,7 +1244,8 @@ totalCount = topCount + middleCount + baseCount
                                     End If
                                     %>
                                 </div>
-                                <small style="color: #bbb; display: block; margin-top: 5px;">选择该香调包含的基香成分</small>
+                                <small style="color: #bbb; display: block; margin-top: 5px;">选择该香调包含的基香成分（必选，配比总和必须等于100%）</small>
+                                <div class="base-note-pct-summary" id="baseNotePctSummary" style="margin-top:8px;padding:8px 12px;border-radius:6px;font-size:13px;display:none;"></div>
                             </div>
                         </div>
                     </div>
@@ -1334,6 +1374,7 @@ totalCount = topCount + middleCount + baseCount
                 pi.disabled = true;
             });
             document.getElementById('noteModal').style.display = 'block';
+            updatePctSummary();
         }
         
         function showEditForm(button) {
@@ -1405,6 +1446,7 @@ totalCount = topCount + middleCount + baseCount
             }
             
             document.getElementById('noteModal').style.display = 'block';
+            updatePctSummary();
         }
         
         function closeModal() {
@@ -1419,6 +1461,54 @@ totalCount = topCount + middleCount + baseCount
                 pctInput.disabled = !checkbox.checked;
                 if (!checkbox.checked) pctInput.value = '0';
             }
+            updatePctSummary();
+        }
+        
+        // 实时更新配比总和
+        function updatePctSummary() {
+            var total = 0;
+            var checkboxes = document.querySelectorAll('input[name="baseNoteSelect"]:checked');
+            checkboxes.forEach(function(cb) {
+                var pctInput = document.querySelector('input[name="baseNotePct_' + cb.value + '"]');
+                if (pctInput) total += parseFloat(pctInput.value) || 0;
+            });
+            var summary = document.getElementById('baseNotePctSummary');
+            if (summary) {
+                summary.style.display = 'block';
+                var checkedCount = checkboxes.length;
+                if (checkedCount === 0) {
+                    summary.innerHTML = '<span style="color:#f44336;">⚠ 必须关联至少一个基香</span>';
+                    summary.style.background = 'rgba(244,67,54,0.1)';
+                    summary.style.border = '1px solid rgba(244,67,54,0.3)';
+                } else if (Math.abs(total - 100) > 0.01) {
+                    summary.innerHTML = '基香配比总和: <strong style="color:#f44336;">' + total.toFixed(2) + '%</strong> (需等于100%)';
+                    summary.style.background = 'rgba(244,67,54,0.1)';
+                    summary.style.border = '1px solid rgba(244,67,54,0.3)';
+                } else {
+                    summary.innerHTML = '基香配比总和: <strong style="color:#4caf50;">100%</strong> ✓';
+                    summary.style.background = 'rgba(76,175,80,0.1)';
+                    summary.style.border = '1px solid rgba(76,175,80,0.3)';
+                }
+            }
+        }
+        
+        // 表单提交验证
+        function validateBaseNotes() {
+            var checkboxes = document.querySelectorAll('input[name="baseNoteSelect"]:checked');
+            if (checkboxes.length === 0) {
+                alert('必须关联至少一个基香，基香配比总和必须为100%');
+                return false;
+            }
+            var total = 0;
+            checkboxes.forEach(function(cb) {
+                var pctInput = document.querySelector('input[name="baseNotePct_' + cb.value + '"]');
+                if (pctInput) total += parseFloat(pctInput.value) || 0;
+            });
+            if (Math.abs(total - 100) > 0.01) {
+                alert('基香配比总和必须为100%，当前为' + total.toFixed(2) + '%');
+                return false;
+            }
+            return true;
         }
         
         window.onclick = function(event) {

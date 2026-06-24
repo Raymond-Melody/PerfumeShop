@@ -1,4 +1,4 @@
-<!-- V8 全局管理中心导航 -->
+<!-- V9.0 全局管理中心导航 -->
 <link rel="stylesheet" href="/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <div class="admin-dashboard">
@@ -6,7 +6,7 @@
         <div class="admin-nav-container">
             <a href="portal.asp" class="admin-nav-brand">
                 <i class="fas fa-cubes"></i>
-                <span>V8 管理中心</span>
+                <span>V9.0 管理中心</span>
             </a>
             <ul class="admin-nav-menu">
                 <li><a href="javascript:void(0)" onclick="location.reload()"><i class="fas fa-sync-alt"></i> 刷新</a></li>

@@ -7,8 +7,8 @@ Response.ContentType = "text/html"
 <!--#include file="../../includes/config.asp"-->
 <%
 Call OpenConnection()
-Server.ScriptTimeout = 60
-conn.CommandTimeout = 15
+Server.ScriptTimeout = 120
+conn.CommandTimeout = 30
 
 Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
@@ -34,61 +34,25 @@ Function GetScalar(sql)
     GetScalar = val
 End Function
 
-' ========== V11: 智能补货字段迁移（优化版）==========
-' 策略：Session缓存 → 单条canary SQL → 批量IF NOT EXISTS迁移
-' 常规请求：0次SQL；首次Session：1次SQL（canary通过）或2次SQL（canary+批量迁移）
+' ========== V11: Schema迁移已独立为setup脚本 ==========
+' 首次访问提示而非阻塞执行，避免页面超时
+' 运维人员请先执行: database/v11_replenishment_perf_indexes.sql
+' 以及确保 v8_iter2_purchase_upgrade.sql 已执行
 If Session("ReplenishSchemaReady") <> "1" Then
-    Dim needsMigrate
-    needsMigrate = False
+    ' 快速检查：只需确认 PurchaseHistoryStats 表存在
+    Dim schemaOK
+    schemaOK = False
     On Error Resume Next
     conn.Execute "SELECT TOP 1 StatID FROM PurchaseHistoryStats WHERE 1=0"
-    If Err.Number <> 0 Then needsMigrate = True
+    If Err.Number = 0 Then schemaOK = True
     Err.Clear
     On Error GoTo 0
-
-    If needsMigrate Then
-        ' 需要迁移 - 用单条批量SQL完成全部schema变更
-        ' 使用 IF NOT EXISTS 模式，幂等安全，无错误级联风险
-        Dim migSQL
-        migSQL = ""
-        ' --- RawMaterialInventory 字段 ---
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('RawMaterialInventory') AND name='AvgDailyUsage') ALTER TABLE RawMaterialInventory ADD AvgDailyUsage DECIMAL(19,6) DEFAULT 0; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('RawMaterialInventory') AND name='LeadTimeDays') ALTER TABLE RawMaterialInventory ADD LeadTimeDays INT DEFAULT 7; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('RawMaterialInventory') AND name='LastReplenishDate') ALTER TABLE RawMaterialInventory ADD LastReplenishDate DATETIME; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('RawMaterialInventory') AND name='ReorderPoint') ALTER TABLE RawMaterialInventory ADD ReorderPoint DECIMAL(19,4) DEFAULT 0; "
-        ' --- PackagingInventory 字段 ---
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('PackagingInventory') AND name='AvgDailyUsage') ALTER TABLE PackagingInventory ADD AvgDailyUsage DECIMAL(19,6) DEFAULT 0; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('PackagingInventory') AND name='LeadTimeDays') ALTER TABLE PackagingInventory ADD LeadTimeDays INT DEFAULT 7; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('PackagingInventory') AND name='LastReplenishDate') ALTER TABLE PackagingInventory ADD LastReplenishDate DATETIME; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('PackagingInventory') AND name='ReorderPoint') ALTER TABLE PackagingInventory ADD ReorderPoint DECIMAL(19,4) DEFAULT 0; "
-        ' --- BottleStyles 字段 ---
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('BottleStyles') AND name='AvgDailyUsage') ALTER TABLE BottleStyles ADD AvgDailyUsage DECIMAL(19,6) DEFAULT 0; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('BottleStyles') AND name='LeadTimeDays') ALTER TABLE BottleStyles ADD LeadTimeDays INT DEFAULT 7; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('BottleStyles') AND name='LastReplenishDate') ALTER TABLE BottleStyles ADD LastReplenishDate DATETIME; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('BottleStyles') AND name='ReorderPoint') ALTER TABLE BottleStyles ADD ReorderPoint DECIMAL(19,4) DEFAULT 0; "
-        ' --- PrintingInventory 建表+字段 ---
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name='PrintingInventory') CREATE TABLE PrintingInventory (PrintingID INT IDENTITY(1,1) PRIMARY KEY, ItemName NVARCHAR(100), ItemCode NVARCHAR(50), StockQty DECIMAL(10,2) DEFAULT 0, SafetyStock DECIMAL(10,2) DEFAULT 0, Unit NVARCHAR(20) DEFAULT N'张', UnitPrice DECIMAL(10,2) DEFAULT 0, UpdatedAt DATETIME DEFAULT GETDATE()); "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('PrintingInventory') AND name='AvgDailyUsage') ALTER TABLE PrintingInventory ADD AvgDailyUsage DECIMAL(19,6) DEFAULT 0; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('PrintingInventory') AND name='LeadTimeDays') ALTER TABLE PrintingInventory ADD LeadTimeDays INT DEFAULT 7; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('PrintingInventory') AND name='LastReplenishDate') ALTER TABLE PrintingInventory ADD LastReplenishDate DATETIME; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('PrintingInventory') AND name='ReorderPoint') ALTER TABLE PrintingInventory ADD ReorderPoint DECIMAL(19,4) DEFAULT 0; "
-        ' --- SprayHeadInventory 建表+字段 ---
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name='SprayHeadInventory') CREATE TABLE SprayHeadInventory (SprayHeadID INT IDENTITY(1,1) PRIMARY KEY, ItemName NVARCHAR(100), ItemCode NVARCHAR(50), StockQty DECIMAL(10,2) DEFAULT 0, SafetyStock DECIMAL(10,2) DEFAULT 0, Unit NVARCHAR(20) DEFAULT N'个', UnitPrice DECIMAL(10,2) DEFAULT 0, UpdatedAt DATETIME DEFAULT GETDATE()); "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('SprayHeadInventory') AND name='AvgDailyUsage') ALTER TABLE SprayHeadInventory ADD AvgDailyUsage DECIMAL(19,6) DEFAULT 0; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('SprayHeadInventory') AND name='LeadTimeDays') ALTER TABLE SprayHeadInventory ADD LeadTimeDays INT DEFAULT 7; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('SprayHeadInventory') AND name='LastReplenishDate') ALTER TABLE SprayHeadInventory ADD LastReplenishDate DATETIME; "
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('SprayHeadInventory') AND name='ReorderPoint') ALTER TABLE SprayHeadInventory ADD ReorderPoint DECIMAL(19,4) DEFAULT 0; "
-        ' --- PurchaseHistoryStats 建表 ---
-        migSQL = migSQL & "IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name='PurchaseHistoryStats') CREATE TABLE PurchaseHistoryStats (StatID INT IDENTITY(1,1) PRIMARY KEY, ItemType NVARCHAR(30) NOT NULL, ItemCode NVARCHAR(100), ItemName NVARCHAR(200), Avg30DayUsage DECIMAL(19,6) DEFAULT 0, Avg90DayUsage DECIMAL(19,6) DEFAULT 0, LastOrderDate DATETIME, TotalOrders90Days INT DEFAULT 0, PreferredSupplierID INT, PreferredUnitPrice DECIMAL(19,4) DEFAULT 0, UpdatedAt DATETIME DEFAULT GETDATE()); "
-
-        On Error Resume Next
-        conn.CommandTimeout = 30  ' 给批量迁移足够时间
-        conn.Execute migSQL
-        If Err.Number <> 0 Then Err.Clear
-        On Error GoTo 0
-        conn.CommandTimeout = 15  ' 恢复正常超时
+    
+    If schemaOK Then
+        Session("ReplenishSchemaReady") = "1"
     End If
-    Session("ReplenishSchemaReady") = "1"
+    ' 注意：如果 schema 未就绪，低库存查询中 ISNULL 会返回默认值，
+    ' 页面仍可正常展示，只是补货算法字段（AvgDailyUsage等）会使用默认值
 End If
 
 ' ========== 生成补货采购单号（与 purchase_orders.asp 格式统一）==========

@@ -1,0 +1,170 @@
+/* ============================================
+   PerfumeShop V14.6 - 暗黑模式主题
+   使用CSS变量实现主题切换
+   ============================================ */
+
+/* 暗黑模式变量定义 */
+[data-theme="dark"] {
+    /* 主色 */
+    --primary-color: #A0522D;
+    --primary-hover: #8B4513;
+    --secondary-color: #D4AF37;
+    --accent-color: #4A3728;
+    
+    /* 文本色 */
+    --text-color: #E0E0E0;
+    --text-light: #B0B0B0;
+    --text-muted: #808080;
+    
+    /* 背景色 */
+    --bg-color: #1A1A1A;
+    --bg-light: #2D2D2D;
+    --bg-dark: #0D0D0D;
+    --border-color: #404040;
+    
+    /* 阴影 */
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 5px 25px rgba(0, 0, 0, 0.5);
+    
+    /* 组件色 */
+    --card-bg: #2D2D2D;
+    --input-bg: #333333;
+    --modal-bg: #2D2D2D;
+}
+
+[data-theme="dark"] .product-info h3 {
+    color: #F0F0F0;
+}
+
+[data-theme="dark"] .product-info h3 a {
+    color: #F0F0F0;
+}
+
+[data-theme="dark"] .product-info h3 a:hover {
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] .product-desc {
+    color: #B0B0B0;
+}
+
+[data-theme="dark"] .product-price .price {
+    color: #FFD700;
+}
+
+[data-theme="dark"] .product-price .price-label {
+    color: #B0B0B0;
+}
+
+[data-theme="dark"] .product-category {
+    color: #D4AF37;
+    background: rgba(212, 175, 55, 0.2);
+}
+
+/* 暗黑模式全局样式 */
+[data-theme="dark"] body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .top-bar {
+    background: var(--bg-dark);
+    color: var(--text-light);
+}
+
+[data-theme="dark"] .main-header {
+    background: var(--bg-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .card {
+    background: var(--card-bg);
+}
+
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select,
+[data-theme="dark"] .form-group textarea {
+    background: var(--input-bg);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .mobile-nav,
+[data-theme="dark"] .bottom-nav {
+    background: var(--bg-color);
+    border-top: 1px solid var(--border-color);
+}
+
+[data-theme="dark"] .mobile-menu {
+    background: var(--bg-color);
+}
+
+[data-theme="dark"] .mobile-menu-list li a {
+    border-bottom-color: var(--border-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .mobile-menu-list li a:hover {
+    background: var(--bg-light);
+}
+
+/* 暗黑模式切换按钮 */
+.theme-toggle {
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    z-index: 997;
+    background: var(--bg-color);
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: var(--shadow);
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-lg);
+}
+
+.theme-toggle i {
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+/* 移动端适配 */
+@media (max-width: 991px) {
+    .theme-toggle {
+        bottom: 70px;
+        right: 16px;
+    }
+}
+
+/* 平滑过渡 */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 系统偏好检测 */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --primary-color: #A0522D;
+        --primary-hover: #8B4513;
+        --secondary-color: #D4AF37;
+        --accent-color: #4A3728;
+        --text-color: #E0E0E0;
+        --text-light: #B0B0B0;
+        --text-muted: #808080;
+        --bg-color: #1A1A1A;
+        --bg-light: #2D2D2D;
+        --bg-dark: #0D0D0D;
+        --border-color: #404040;
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 5px 25px rgba(0, 0, 0, 0.5);
+    }
+}

@@ -88,6 +88,10 @@ If IsArray(activeTypes) Then
         secIcon = activeTypes(secIdx, 4)
         secRequiresReview = activeTypes(secIdx, 5)
         
+        ' V12.0修复：处理Null值
+        If IsNull(secIcon) Or secIcon = "" Then secIcon = "fas fa-box"
+        If IsNull(secDisplayName) Or secDisplayName = "" Then secDisplayName = secNavName
+        
         ' 构建查询SQL
         secWhere = "WHERE IsActive <> 0 AND ProductType='" & SafeSQL(secTypeCode) & "'"
         If secRequiresReview Then
@@ -116,7 +120,7 @@ If IsArray(activeTypes) Then
                     pPrice = rsSection("BasePrice")
                     
                     ' 品牌定香类型需要获取最低价格
-                    If secTypeCode = "Fixed" Then
+                    If secTypeCode = "standard" Then
                         minP = GetScalar("SELECT MIN(Price) FROM ProductVolumePrices WHERE ProductID = " & pId)
                         If IsNumeric(minP) And minP <> "" Then pPrice = minP
                     End If
@@ -124,7 +128,7 @@ If IsArray(activeTypes) Then
             <div class="product-card">
                 <div class="product-image">
                     <img src="<%= rsSection("ImageURL") %>" alt="<%= HTMLEncode(rsSection("ProductName")) %>" onerror="this.src='<%= DEFAULT_PRODUCT_IMAGE %>'">
-                    <% If secTypeCode = "Fixed" Then %>
+                    <% If secTypeCode = "standard" Then %>
                     <div class="product-badges">
                         <span class="badge badge-fixed">品牌定香</span>
                     </div>
@@ -217,28 +221,28 @@ End If
         </div>
         <div class="categories-grid">
             <a href="/products.asp?category=花香调" class="category-card">
-                <div class="category-bg" style="background-image: url('/images/categories/floral.jpg')"></div>
+                <div class="category-bg category-bg-floral"></div>
                 <div class="category-content">
                     <h3>花香调</h3>
                     <p>浪漫优雅，女性魅力</p>
                 </div>
             </a>
             <a href="/products.asp?category=东方调" class="category-card">
-                <div class="category-bg" style="background-image: url('/images/categories/oriental.jpg')"></div>
+                <div class="category-bg category-bg-oriental"></div>
                 <div class="category-content">
                     <h3>东方调</h3>
                     <p>神秘深邃，异域风情</p>
                 </div>
             </a>
             <a href="/products.asp?category=木质调" class="category-card">
-                <div class="category-bg" style="background-image: url('/images/categories/woody.jpg')"></div>
+                <div class="category-bg category-bg-woody"></div>
                 <div class="category-content">
                     <h3>木质调</h3>
                     <p>沉稳内敛，自然气息</p>
                 </div>
             </a>
             <a href="/products.asp?category=海洋调" class="category-card">
-                <div class="category-bg" style="background-image: url('/images/categories/oceanic.jpg')"></div>
+                <div class="category-bg category-bg-oceanic"></div>
                 <div class="category-content">
                     <h3>海洋调</h3>
                     <p>清新自由，活力四射</p>
@@ -259,7 +263,7 @@ End If
                 <a href="/about.asp" class="btn btn-outline">了解更多</a>
             </div>
             <div class="story-image">
-                <img src="/images/story.jpg" alt="品牌故事" onerror="this.style.display='none'">
+                <div class="story-image-placeholder"></div>
             </div>
         </div>
     </div>

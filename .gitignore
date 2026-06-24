@@ -2,10 +2,13 @@
 .qoder/
 
 # Database backup files
-database/backups/*.bak
-database/backups/*.zip
+database/backups/**/*.bak
+database/backups/**/*.zip
 database/backups/V8/
 database/sqldata/
+
+# SSL certificates (security)
+*.pfx
 
 # Debug log files
 *.log
@@ -32,6 +35,12 @@ test_*.ps1
 debug_*.ps1
 check_*.ps1
 kill_*.ps1
+
+# Debug ASP files
+setup/debug_token.asp
+includes/test_*.asp
+includes/config_*.asp
+includes/cfg_*.asp
 
 # OS files
 Thumbs.db

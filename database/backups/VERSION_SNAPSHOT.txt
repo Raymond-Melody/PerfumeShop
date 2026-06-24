@@ -1,0 +1,59 @@
+# PerfumeShop - Version Snapshot
+# Generated: 2026-06-10
+# Last Updated: 2026-06-10 (V9 iteration start)
+# ========================================
+
+## System Info
+- Site Name: XiangFen DingZhi (Perfume Customization)
+- Version: V9.0
+- Database: SQL Server 2017 (localhost\YOURPERFUME\PerfumeShop)
+- Web Server: IIS (Classic ASP / VBScript)
+- DB Size: 72 MB (data) + 8 MB (log)
+- Tables: 97
+- Stored Procedures: usp_BackupDatabase (backup via EXECUTE AS OWNER)
+
+## Module Structure (admin/)
+- finance:      24 pages
+- operation:    22 pages  
+- purchase:     21 pages
+- system:       15 pages
+- prodcenter:   11 pages
+- techcenter:   11 pages
+- semifinished: 10 pages
+- logistics:     8 pages
+- includes:      4 pages
+- inventory:     3 pages
+Total: 163 admin pages + 60 user/api pages = 223 total .asp
+
+## Key Configuration
+- Free shipping: >= 299 yuan
+- Shipping fee: 15 yuan
+- Page size: 12 items
+- Session timeout: 60 min
+- Security headers: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+
+## Backup Files (V8/Final)
+- Database: PerfumeShop_full_20260610_145134.bak (13.11 MB, verified OK)
+- Code: PerfumeShop_code_20260610_145415.zip (13.25 MB, 392 files)
+
+## Backup Files (V9 Start - 2026-06-10)
+- Database: database/backups/V9/PerfumeShop_20260610_182233.bak (13.11 MB, verified OK)
+- Code: database/backups/V9/code_v9.zip (977 KB, source code only)
+
+## Key Tables Created/Fixed in V9.x
+- FixedBrandProducts, FixedBrandPurchaseOrders, FixedBrandPurchaseDetails
+- FixedBrandInventory, FixedBrandReceipts, FixedBrandReceiptDetails
+- FixedBrandCostAllocation, OrderCostAllocation
+- CostCenters, GLTransactions, AccountsPayable, AccountsReceivable
+- Added columns: VoucherNo, PaymentType, CenterID, PayableID, ReceivableID to PaymentRecords
+
+## V9 Iteration Start (2026-06-10)
+- deploy.asp: site_version seed data V7.0 => V9.0
+- config.asp: comment V7 => V9
+- backup_database.ps1: instance SQLEXPRESS => YOURPERFUME
+- All version markers unified to V9.0
+
+## Known Patterns (for future iterations)
+1. conn.Execute + MoveLast = use client cursor (CursorLocation=3)
+2. ASP cannot CREATE TABLE (IIS lacks DDL permission)
+3. Chinese paths in sqlcmd pipes = garbled (use C:\temp as intermediate)

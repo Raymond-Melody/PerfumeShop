@@ -39,6 +39,7 @@
             <li class="sidebar-section-title">营销与推广</li>
             <li><a href="order_reviews.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/order_reviews.asp", "active", "") %>"><i class="fas fa-star-half-alt"></i> <span>评价管理</span></a></li>
             <li><a href="marketing.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/marketing.asp", "active", "") %>"><i class="fas fa-bullhorn"></i> <span>营销活动</span></a></li>
+            <li><a href="referral_codes.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/referral_codes.asp", "active", "") %>"><i class="fas fa-user-friends"></i> <span>推荐码管理</span></a></li>
             <li><a href="payment_switch.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/payment_switch.asp", "active", "") %>"><i class="fas fa-toggle-on"></i> <span>支付开关</span></a></li>
         </ul>
     </aside>

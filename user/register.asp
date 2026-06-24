@@ -10,6 +10,7 @@ End If
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/member_utils.asp"-->
 <%
 Call OpenConnection()
 
@@ -17,58 +18,146 @@ Dim errorMsg, successMsg
 errorMsg = ""
 successMsg = ""
 
+' V14: 获取推荐Token参数
+Dim referralToken, tokenValidation, hasValidToken, referrerName, referrerUserId, expiryDate, tokenHash
+referralToken = Trim(Request.QueryString("token"))
+hasValidToken = False
+referrerName = ""
+referrerUserId = 0
+expiryDate = ""
+tokenHash = ""
+
+If referralToken <> "" Then
+    Set tokenValidation = MU_ValidateReferralToken(referralToken)
+    If tokenValidation("success") Then
+        hasValidToken = True
+        referrerName = tokenValidation("referrerName")
+        referrerUserId = tokenValidation("referrerUserId")
+        expiryDate = tokenValidation("expiryDate")
+        tokenHash = tokenValidation("tokenHash")
+    Else
+        errorMsg = tokenValidation("message")
+    End If
+    Set tokenValidation = Nothing
+End If
+
 ' 处理注册
 If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     ' CSRF验证
     If Not ValidateCSRFToken() Then
         errorMsg = "安全验证失败，请刷新页面重试"
     Else
-        Dim username, email, password, confirmPwd, fullName, phone
-        username = Trim(Request.Form("username"))
-        email = Trim(Request.Form("email"))
-        password = Trim(Request.Form("password"))
-        confirmPwd = Trim(Request.Form("confirmPassword"))
-        fullName = Trim(Request.Form("fullName"))
-        phone = Trim(Request.Form("phone"))
+        ' V14: 重新验证Token（防止篡改）
+        Dim postToken, postTokenValidation
+        postToken = Trim(Request.Form("referral_token"))
+        Dim postReferrerUserId, postTokenHash
+        postReferrerUserId = 0
+        postTokenHash = ""
         
-        ' 验证
-        If username = "" Or email = "" Or password = "" Then
-            errorMsg = "请填写所有必填项"
-        ElseIf Len(username) < 3 Or Len(username) > 20 Then
-            errorMsg = "用户名长度应为3-20个字符"
-        ElseIf Len(password) < 6 Then
-            errorMsg = "密码长度至少6个字符"
-        ElseIf password <> confirmPwd Then
-            errorMsg = "两次输入的密码不一致"
-        ElseIf InStr(email, "@") = 0 Then
-            errorMsg = "请输入有效的邮箱地址"
-        Else
-            ' 检查用户名是否已存在
-            Dim existCount
-            existCount = GetScalar("SELECT COUNT(*) FROM Users WHERE Username = '" & SafeSQL(username) & "'")
-            If existCount > 0 Then
-                errorMsg = "用户名已被使用"
+        If postToken <> "" Then
+            Set postTokenValidation = MU_ValidateReferralToken(postToken)
+            If postTokenValidation("success") Then
+                postReferrerUserId = postTokenValidation("referrerUserId")
+                postTokenHash = postTokenValidation("tokenHash")
             Else
-                existCount = GetScalar("SELECT COUNT(*) FROM Users WHERE Email = '" & SafeSQL(email) & "'")
+                errorMsg = "推荐Token已失效: " & postTokenValidation("message")
+                Set postTokenValidation = Nothing
+            End If
+        Else
+            errorMsg = "本平台采用会员推荐制，需要有效的推荐链接才能注册"
+        End If
+        
+        If errorMsg = "" Then
+            ' V14: 设备指纹
+            Dim deviceFingerprint
+            deviceFingerprint = Trim(Request.Form("device_fp"))
+            
+            ' V14: 速率限制检查
+            Dim clientIP, rateCheck
+            clientIP = Request.ServerVariables("REMOTE_ADDR")
+            Set rateCheck = MU_CheckRegistrationRateLimit(clientIP, deviceFingerprint)
+            If Not rateCheck("allowed") Then
+                errorMsg = rateCheck("message")
+            End If
+            Set rateCheck = Nothing
+        End If
+        
+        If errorMsg = "" Then
+            Dim username, email, password, confirmPwd, fullName, phone
+            username = Trim(Request.Form("username"))
+            email = Trim(Request.Form("email"))
+            password = Trim(Request.Form("password"))
+            confirmPwd = Trim(Request.Form("confirmPassword"))
+            fullName = Trim(Request.Form("fullName"))
+            phone = Trim(Request.Form("phone"))
+            
+            ' 验证
+            If username = "" Or email = "" Or password = "" Then
+                errorMsg = "请填写所有必填项"
+            ElseIf Len(username) < 3 Or Len(username) > 20 Then
+                errorMsg = "用户名长度应为3-20个字符"
+            ElseIf Len(password) < 6 Then
+                errorMsg = "密码长度至少6个字符"
+            ElseIf password <> confirmPwd Then
+                errorMsg = "两次输入的密码不一致"
+            ElseIf InStr(email, "@") = 0 Then
+                errorMsg = "请输入有效的邮箱地址"
+            Else
+                ' 检查用户名是否已存在
+                Dim existCount
+                existCount = GetScalar("SELECT COUNT(*) FROM Users WHERE Username = '" & SafeSQL(username) & "'")
                 If existCount > 0 Then
-                    errorMsg = "邮箱已被注册"
+                    errorMsg = "用户名已被使用"
                 Else
-                    ' 插入新用户
-                    Dim sql
-                    sql = "INSERT INTO Users (Username, [Password], Email, FullName, Phone, CreatedAt, IsActive) VALUES (" & _
-                        "'" & username & "', '" & SafeSQL(password) & "', '" & email & "', " & _
-                        "'" & fullName & "', '" & phone & "', GETDATE(), 1)"
-                    
-                    If ExecuteNonQuery(sql) Then
-                        successMsg = "注册成功！请登录"
-                        ' 可以选择自动登录
-                        Response.Redirect "/user/login.asp?msg=registered"
+                    existCount = GetScalar("SELECT COUNT(*) FROM Users WHERE Email = '" & SafeSQL(email) & "'")
+                    If existCount > 0 Then
+                        errorMsg = "邮箱已被注册"
                     Else
-                        errorMsg = "注册失败: " & Session("LastDBError")
+                        ' 插入新用户（含推荐人和设备指纹）
+                        Dim sql
+                        sql = "INSERT INTO Users (Username, [Password], Email, FullName, Phone, ReferrerUserID, DeviceFingerprint, CreatedAt, IsActive) VALUES (" & _
+                            "'" & SafeSQL(username) & "', '" & SafeSQL(password) & "', '" & SafeSQL(email) & "', " & _
+                            "'" & SafeSQL(fullName) & "', '" & SafeSQL(phone) & "', " & postReferrerUserId & ", " & _
+                            "'" & SafeSQL(deviceFingerprint) & "', GETDATE(), 1)"
+                        
+                        If ExecuteNonQuery(sql) Then
+                            ' 获取新用户ID
+                            Dim newUserId
+                            newUserId = GetLastInsertID("Users")
+                            
+                            ' V14: 写入推荐关系祖先链条
+                            If newUserId > 0 And postReferrerUserId > 0 Then
+                                Call MU_RecordReferralChain(newUserId, postReferrerUserId)
+                            End If
+                            
+                            ' V14: 标记Token已使用
+                            If postTokenHash <> "" Then
+                                Call MU_MarkTokenUsed(postTokenHash)
+                            End If
+                            
+                            ' V14: 记录成功注册（速率限制）
+                            Call MU_RecordRegistrationAttempt(clientIP, deviceFingerprint, True, postTokenHash)
+                            
+                            successMsg = "注册成功！请登录"
+                            Response.Redirect "/user/login.asp?msg=registered"
+                        Else
+                            ' 记录失败尝试
+                            Call MU_RecordRegistrationAttempt(clientIP, deviceFingerprint, False, postTokenHash)
+                            errorMsg = "注册失败: " & Session("LastDBError")
+                        End If
                     End If
                 End If
             End If
         End If
+        
+        ' V14: 保留验证通过的信息用于重新显示
+        If postReferrerUserId > 0 And errorMsg <> "" Then
+            hasValidToken = True
+            referrerUserId = postReferrerUserId
+            tokenHash = postTokenHash
+        End If
+        
+        Set postTokenValidation = Nothing
     End If
 End If
 
@@ -80,9 +169,26 @@ Call EnsureCSRFToken()
 <div class="auth-page">
     <div class="auth-container">
         <div class="auth-card register-card">
+            <% If hasValidToken Then %>
+            <!-- V14: 有效Token，显示注册表单 -->
             <div class="auth-header">
-                <h1>创建账户</h1>
-                <p>加入我们，开启专属香氛定制之旅</p>
+                <h1>会员推荐注册</h1>
+                <div style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border-radius:10px;padding:14px 18px;margin-top:12px;border:1px solid #c8e6c9;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:40px;height:40px;background:#4CAF50;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-user-check" style="color:#fff;font-size:18px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;color:#666;">推荐人</div>
+                            <div style="font-size:16px;font-weight:bold;color:#2e7d32;"><%= HTMLEncode(referrerName) %></div>
+                        </div>
+                    </div>
+                    <% If expiryDate <> "" Then %>
+                    <div style="margin-top:8px;font-size:12px;color:#689f38;">
+                        <i class="fas fa-clock"></i> 推荐链接有效期至 <%= expiryDate %>
+                    </div>
+                    <% End If %>
+                </div>
             </div>
             
             <% If errorMsg <> "" Then %>
@@ -99,6 +205,8 @@ Call EnsureCSRFToken()
             
             <form method="post" class="auth-form" id="registerForm">
                 <%= GetCSRFTokenField() %>
+                <input type="hidden" name="referral_token" value="<%= HTMLEncode(referralToken) %>">
+                <input type="hidden" name="device_fp" id="deviceFingerprint" value="">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="username"><i class="fas fa-user"></i> 用户名 *</label>
@@ -144,15 +252,37 @@ Call EnsureCSRFToken()
                 </button>
             </form>
             
-            <div class="auth-divider">
-                <span>或</span>
+            <% Else %>
+            <!-- V14: 无有效Token，显示推荐制说明 -->
+            <div class="auth-header">
+                <h1>会员推荐制</h1>
+                <p style="color:#888;">本平台采用会员推荐制注册</p>
             </div>
             
-            <div class="social-login">
-                <button type="button" class="btn btn-social btn-wechat">
-                    <i class="fab fa-weixin"></i> 微信快捷注册
-                </button>
+            <% If errorMsg <> "" Then %>
+            <div class="alert alert-error">
+                <i class="fas fa-exclamation-circle"></i> <%= HTMLEncode(errorMsg) %>
             </div>
+            <% End If %>
+            
+            <div class="referral-info-box" style="text-align:center;padding:30px 20px;">
+                <div style="width:80px;height:80px;background:linear-gradient(135deg,#fff8e1,#fff3e0);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <i class="fas fa-user-shield" style="font-size:36px;color:#e0a800;"></i>
+                </div>
+                <h3 style="color:#333;margin-bottom:10px;">仅限受邀注册</h3>
+                <p style="color:#666;line-height:1.8;">感谢您对香氛定制的关注！</p>
+                <p style="color:#666;line-height:1.8;">为确保社区品质，本平台采用<strong>会员邀请制</strong>，</p>
+                <p style="color:#666;line-height:1.8;">新用户需通过现有会员的专属推荐链接完成注册。</p>
+                <div style="margin-top:20px;padding:15px;background:#f8f9fa;border-radius:8px;text-align:left;">
+                    <p style="color:#333;font-weight:bold;margin-bottom:8px;"><i class="fas fa-info-circle"></i> 如何获得注册资格？</p>
+                    <ul style="color:#666;font-size:14px;line-height:2;padding-left:20px;">
+                        <li>请已经是我们会员的朋友发送推荐链接给您</li>
+                        <li>推荐链接将引导您进入专属注册页面</li>
+                        <li>链接有效期为30天，请在有效期内完成注册</li>
+                    </ul>
+                </div>
+            </div>
+            <% End If %>
             
             <div class="auth-footer">
                 <p>已有账户？ <a href="/user/login.asp">立即登录</a></p>
@@ -162,13 +292,13 @@ Call EnsureCSRFToken()
         <div class="auth-side">
             <div class="auth-promo">
                 <i class="fas fa-gift"></i>
-                <h2>新用户专享</h2>
-                <p>注册即享多重好礼</p>
+                <h2>会员专属权益</h2>
+                <p>成为会员即享多重特权</p>
                 <ul class="promo-features">
                     <li><i class="fas fa-check"></i> 首单立减50元</li>
                     <li><i class="fas fa-check"></i> 免费香水小样</li>
                     <li><i class="fas fa-check"></i> 生日专属优惠</li>
-                    <li><i class="fas fa-check"></i> 积分兑换好礼</li>
+                    <li><i class="fas fa-check"></i> 推荐新会员获积分</li>
                 </ul>
             </div>
         </div>
@@ -176,6 +306,16 @@ Call EnsureCSRFToken()
 </div>
 
 <script>
+// V14: 生成设备指纹
+(function() {
+    var fp = '';
+    fp += navigator.userAgent.substring(0, 50) + '|';
+    fp += screen.width + 'x' + screen.height + '|';
+    fp += navigator.language + '|';
+    fp += new Date().getTimezoneOffset();
+    document.getElementById('deviceFingerprint').value = fp;
+})();
+
 $('#registerForm').submit(function(e) {
     var pwd = $('#password').val();
     var confirmPwd = $('#confirmPassword').val();

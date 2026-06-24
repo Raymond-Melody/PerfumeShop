@@ -83,10 +83,16 @@ monthOutCount = SafeNum(GetScalar("SELECT COUNT(*) FROM StockMovements WHERE Mov
 ' ========== 分页查询 ==========
 Dim smOffset : smOffset = (smPage - 1) * smPageSize
 Dim rsSM
+On Error Resume Next
 Set rsSM = conn.Execute(_
     "SELECT * FROM StockMovements" & smWhere & _
     " ORDER BY CreatedAt DESC " & _
     "OFFSET " & smOffset & " ROWS FETCH NEXT " & smPageSize & " ROWS ONLY")
+If Err.Number <> 0 Then
+	Err.Clear
+	Set rsSM = Nothing
+End If
+On Error GoTo 0
 
 ' 总页数
 Dim smTotalPages : smTotalPages = 1

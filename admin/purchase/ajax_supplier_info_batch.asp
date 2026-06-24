@@ -6,6 +6,7 @@ Response.ContentType = "application/json"
 Response.Charset = "UTF-8"
 
 Call OpenConnection()
+conn.CommandTimeout = 15
 
 Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
@@ -15,7 +16,7 @@ Function SafeSQL(str)
     If IsNull(str) Or str = "" Then SafeSQL = "" Else SafeSQL = Replace(str, "'", "''")
 End Function
 
-Dim itemCodesStr, orderType, results, i
+Dim itemCodesStr, orderType, i
 itemCodesStr = Trim(Request.Form("itemcodes"))
 If itemCodesStr = "" Then itemCodesStr = Trim(Request.QueryString("itemcodes"))
 orderType = Trim(Request.Form("ordertype"))
@@ -31,15 +32,20 @@ End If
 Dim itemCodes : itemCodes = Split(itemCodesStr, ",")
 Dim codeCount : codeCount = UBound(itemCodes) + 1
 
+' V11: 限制批量查询数量，防止超长IN子句
+If codeCount > 100 Then codeCount = 100
+
 On Error Resume Next
 
 ' 构建 JSON 数组
-Dim jsonParts : jsonParts = ""
-Dim inClause : inClause = ""
+Dim rs, sql, jsonParts, inClause, code
+jsonParts = ""
+inClause = ""
 
-' 构建 IN 子句
-For i = 0 To UBound(itemCodes)
-    Dim code : code = Trim(itemCodes(i))
+' 构建 IN 子句（限制最多100个）
+For i = 0 To codeCount - 1
+    If i >= 100 Then Exit For
+    code = Trim(itemCodes(i))
     If code <> "" Then
         If inClause <> "" Then inClause = inClause & ","
         inClause = inClause & "'" & SafeSQL(code) & "'"
@@ -52,13 +58,14 @@ If inClause = "" Then
     Response.End
 End If
 
-' 批量查询 SupplierPrices
-Dim rs, sql
+' V11: 使用 ROW_NUMBER() 子查询，单次查询获取每个 ItemCode 的最新价格
+' 索引: IX_SupplierPrices_ItemCode_Active (ItemCode, IsActive) INCLUDE (SupplierID, UnitPrice, CreatedAt)
 sql = "SELECT sp.ItemCode, sp.SupplierID, s.SupplierName, sp.UnitPrice " & _
-      "FROM SupplierPrices sp " & _
+      "FROM (SELECT ItemCode, SupplierID, UnitPrice, " & _
+            "ROW_NUMBER() OVER (PARTITION BY ItemCode ORDER BY CreatedAt DESC) AS rn " & _
+            "FROM SupplierPrices WHERE ItemCode IN (" & inClause & ") AND IsActive = 1) sp " & _
       "LEFT JOIN Suppliers s ON sp.SupplierID = s.SupplierID " & _
-      "WHERE sp.ItemCode IN (" & inClause & ") AND sp.IsActive = 1 " & _
-      "ORDER BY sp.CreatedAt DESC"
+      "WHERE sp.rn = 1"
 
 Dim supplierMap : Set supplierMap = Server.CreateObject("Scripting.Dictionary")
 supplierMap.CompareMode = 1  ' TextCompare - case insensitive

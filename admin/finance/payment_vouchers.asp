@@ -28,19 +28,78 @@ Function GetScalar(sql)
     Set rs = Nothing : GetScalar = val
 End Function
 
-On Error Resume Next
-conn.Execute "SELECT TOP 1 1 FROM GLTransactions"
-If Err.Number <> 0 Then
-    Err.Clear
-    conn.Execute "CREATE TABLE GLTransactions (GLID INT IDENTITY(1,1) PRIMARY KEY, GLNo NVARCHAR(50), TransactionDate DATETIME, AccountCode NVARCHAR(50), AccountName NVARCHAR(100), DebitAmount DECIMAL(18,2) DEFAULT 0, CreditAmount DECIMAL(18,2) DEFAULT 0, CenterID INT, RefType NVARCHAR(50), RefID INT, RefNo NVARCHAR(50), Description NVARCHAR(500), CreatedBy NVARCHAR(50), CreatedAt DATETIME DEFAULT GETDATE())"
-End If
-Err.Clear
+' Robust table existence check
+Function TableExists_PV(tblName)
+    Dim rs, exists : exists = False
+    On Error Resume Next
+    Set rs = conn.Execute("SELECT 1 FROM sys.tables WHERE name='" & Replace(tblName,"'","''") & "'")
+    If Err.Number = 0 Then
+        If Not rs Is Nothing Then
+            If Not rs.EOF Then exists = True
+            rs.Close
+        End If
+    End If
+    Err.Clear : Set rs = Nothing
+    On Error GoTo 0
+    TableExists_PV = exists
+End Function
 
-conn.Execute "SELECT PaymentType FROM PaymentRecords WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE PaymentRecords ADD PaymentType NVARCHAR(30) DEFAULT 'Receipt'"
-conn.Execute "SELECT VoucherNo FROM PaymentRecords WHERE 1=0"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE PaymentRecords ADD VoucherNo NVARCHAR(50)"
-On Error GoTo 0
+' Robust column existence check
+Function ColumnExists_PV(tblName, colName)
+    Dim rs, exists : exists = False
+    On Error Resume Next
+    Set rs = conn.Execute("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='" & Replace(tblName,"'","''") & "' AND COLUMN_NAME='" & Replace(colName,"'","''") & "'")
+    If Err.Number = 0 Then
+        If Not rs Is Nothing Then
+            If Not rs.EOF Then exists = True
+            rs.Close
+        End If
+    End If
+    Err.Clear : Set rs = Nothing
+    On Error GoTo 0
+    ColumnExists_PV = exists
+End Function
+
+' V10.1: 移除运行时DDL - 所有表应由 deploy.asp 预先创建
+' GLTransactions 表必须预先存在
+If Not TableExists_PV("GLTransactions") Then
+    Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>表缺失</h2><p>GLTransactions 表不存在，请先运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 创建数据库表。</p></div>"
+    Response.End
+End If
+
+' V10.1: 检查必要表和列是否存在（不再自动创建/修改）
+If TableExists_PV("PaymentRecords") Then
+    If Not ColumnExists_PV("PaymentRecords", "PaymentType") Then
+        Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>列缺失</h2><p>PaymentRecords.PaymentType 列不存在，请运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 更新表结构。</p></div>"
+        Response.End
+    End If
+    If Not ColumnExists_PV("PaymentRecords", "VoucherNo") Then
+        Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>列缺失</h2><p>PaymentRecords.VoucherNo 列不存在，请运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 更新表结构。</p></div>"
+        Response.End
+    End If
+    If Not ColumnExists_PV("PaymentRecords", "CenterID") Then
+        Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>列缺失</h2><p>PaymentRecords.CenterID 列不存在，请运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 更新表结构。</p></div>"
+        Response.End
+    End If
+    If Not ColumnExists_PV("PaymentRecords", "PayableID") Then
+        Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>列缺失</h2><p>PaymentRecords.PayableID 列不存在，请运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 更新表结构。</p></div>"
+        Response.End
+    End If
+    If Not ColumnExists_PV("PaymentRecords", "ReceivableID") Then
+        Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>列缺失</h2><p>PaymentRecords.ReceivableID 列不存在，请运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 更新表结构。</p></div>"
+        Response.End
+    End If
+End If
+
+If Not TableExists_PV("AccountsPayable") Then
+    Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>表缺失</h2><p>AccountsPayable 表不存在，请先运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 创建数据库表。</p></div>"
+    Response.End
+End If
+
+If Not TableExists_PV("AccountsReceivable") Then
+    Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>表缺失</h2><p>AccountsReceivable 表不存在，请先运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 创建数据库表。</p></div>"
+    Response.End
+End If
 
 ' POST 处理
 Dim action : action = Request.Form("action")
@@ -87,7 +146,9 @@ Dim pvTotalOut : pvTotalOut = GetScalar("SELECT ISNULL(SUM(Amount),0) FROM Payme
 
 ' 凭证列表
 Dim rsPV, pvList(), pvPCount : pvPCount = 0
-Set rsPV = conn.Execute("SELECT * FROM PaymentRecords WHERE VoucherNo IS NOT NULL ORDER BY CreatedAt DESC")
+Set rsPV = Server.CreateObject("ADODB.Recordset")
+rsPV.CursorLocation = 3 ' adUseClient - 支持 MoveLast/RecordCount
+rsPV.Open "SELECT * FROM PaymentRecords WHERE VoucherNo IS NOT NULL ORDER BY CreatedAt DESC", conn, 1, 1
 If Not rsPV Is Nothing Then
     If Not rsPV.EOF Then
         rsPV.MoveLast : pvPCount = rsPV.RecordCount : rsPV.MoveFirst

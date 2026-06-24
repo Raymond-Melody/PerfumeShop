@@ -8,7 +8,8 @@
 ' --------------------------------------------
 ' 常量定义
 ' --------------------------------------------
-Const MAX_UPLOAD_SIZE = 5242880
+' 上传文件最大大小 - 已移至 config.asp (Const MAX_UPLOAD_SIZE)
+' Const MAX_UPLOAD_SIZE = 5242880
 Const ALLOWED_IMAGE_EXTENSIONS = ".jpg,.jpeg,.png,.gif,.webp,.svg"
 
 ' --------------------------------------------

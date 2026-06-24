@@ -31,15 +31,11 @@ Function GetScalar(sql)
     GetScalar = val
 End Function
 
-' 自动创建 CostCenters 表
-On Error Resume Next
-conn.Execute "SELECT TOP 1 1 FROM CostCenters"
-If Err.Number <> 0 Then
-    Err.Clear
-    conn.Execute "CREATE TABLE CostCenters (CenterID INT IDENTITY(1,1) PRIMARY KEY, CenterCode NVARCHAR(50) NOT NULL UNIQUE, CenterName NVARCHAR(200) NOT NULL, CenterType NVARCHAR(50) DEFAULT 'Department', ParentID INT NULL, BudgetAmount DECIMAL(19,4) DEFAULT 0, IsActive BIT DEFAULT 1, Notes NVARCHAR(MAX), CreatedAt DATETIME2 DEFAULT GETDATE(), UpdatedAt DATETIME2 DEFAULT GETDATE())"
-    conn.Execute "INSERT INTO CostCenters (CenterCode, CenterName, CenterType, BudgetAmount) VALUES ('RAW_MAT','原料采购','Procurement',0),('PACKAGING','包装物采购','Procurement',0),('BOTTLE','瓶子采购','Procurement',0),('PRODUCTION','生产制造','Production',0),('LOGISTICS','物流运输','Logistics',0),('MARKETING','市场营销','Marketing',0),('ADMIN','行政管理','Admin',0),('RND','研发设计','R&D',0)"
+' V10.1: 移除运行时DDL - CostCenters表应由 deploy.asp 预先创建
+If Not TableExists_CC("CostCenters") Then
+    Response.Write "<div style='padding:40px;color:#f44336;background:#1a1a2e;font-family:sans-serif;'><h2>表缺失</h2><p>CostCenters 表不存在，请先运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>系统部署工具</a> 创建数据库表并初始化种子数据。</p></div>"
+    Response.End
 End If
-On Error GoTo 0
 
 ' POST 处理
 Dim action : action = Request.Form("action")
@@ -67,7 +63,9 @@ End If
 
 ' 加载成本中心列表
 Dim rsCC, ccList(), ccCount : ccCount = 0
-Set rsCC = conn.Execute("SELECT * FROM CostCenters ORDER BY CenterType, CenterID")
+Set rsCC = Server.CreateObject("ADODB.Recordset")
+rsCC.CursorLocation = 3 ' adUseClient - 支持 MoveLast/RecordCount
+rsCC.Open "SELECT * FROM CostCenters ORDER BY CenterType, CenterID", conn, 1, 1
 If Not rsCC Is Nothing Then
     If Not rsCC.EOF Then
         rsCC.MoveLast : ccCount = rsCC.RecordCount : rsCC.MoveFirst
@@ -246,5 +244,21 @@ window.onclick=function(e){ if(e.target.classList.contains('modal')) e.target.st
 </body>
 </html>
 <%
+' 健壮的表存在检查（使用 sys.tables 而非 On Error Resume Next）
+Function TableExists_CC(tblName)
+    Dim rs, exists : exists = False
+    On Error Resume Next
+    Set rs = conn.Execute("SELECT 1 FROM sys.tables WHERE name='" & Replace(tblName,"'","''") & "'")
+    If Err.Number = 0 Then
+        If Not rs Is Nothing Then
+            If Not rs.EOF Then exists = True
+            rs.Close
+        End If
+    End If
+    Err.Clear : Set rs = Nothing
+    On Error GoTo 0
+    TableExists_CC = exists
+End Function
+
 Call CloseConnection()
 %>

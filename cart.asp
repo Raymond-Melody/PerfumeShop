@@ -17,6 +17,12 @@ End Function
 <%
 Call OpenConnection()
 
+' V14: 会员登录检查
+If Session("UserID") = "" Or IsNull(Session("UserID")) Then
+    Response.Redirect "/user/login.asp?return=" & Server.URLEncode(Request.ServerVariables("SCRIPT_NAME") & "?" & Request.ServerVariables("QUERY_STRING"))
+    Response.End
+End If
+
 ' 获取SessionID用于匿名购物车
 Dim sessionId, userId
 sessionId = Session.SessionID
@@ -51,7 +57,7 @@ userId = Session("UserID")
             whereClause = "SessionID = '" & SafeSQL(sessionId) & "'"
         End If
         
-        Set rsCart = ExecuteQuery("SELECT c.*, p.ProductName, p.ImageURL, p.EngravingPrice, " & _
+        Set rsCart = ExecuteQuery("SELECT c.*, p.ProductName, p.ImageURL, p.EngravingPrice, p.ProductType, " & _
             "tn.NoteName AS TopNoteName, mn.NoteName AS MiddleNoteName, bn.NoteName AS BaseNoteName, " & _
             "v.VolumeName, v.VolumeML, b.BottleName " & _
             "FROM ((((((Cart c " & _
@@ -134,36 +140,42 @@ userId = Session("UserID")
                                 <%
                                 ' 获取详细香调配比
                                 topList = "": midList = "": baseList = ""
-                                Set rsNoteSel = ExecuteQuery("SELECT n.NoteName, s.Percentage, s.NoteType FROM CartNoteSelections s INNER JOIN FragranceNotes n ON s.NoteID = n.NoteID WHERE s.CartID = " & rsCart("CartID"))
-                                If Not rsNoteSel Is Nothing Then
-                                    Do While Not rsNoteSel.EOF
-                                        currentNoteType = Trim(rsNoteSel("NoteType") & "")
-                                        currentNoteName = HTMLEncode(rsNoteSel("NoteName") & "")
-                                        currentPercent = rsNoteSel("Percentage")
-                                        
-                                        If currentNoteType = "前调" Then
-                                            If topList <> "" Then topList = topList & ", "
-                                            topList = topList & currentNoteName & " (" & currentPercent & "%)"
-                                        ElseIf currentNoteType = "中调" Then
-                                            If midList <> "" Then midList = midList & ", "
-                                            midList = midList & currentNoteName & " (" & currentPercent & "%)"
-                                        ElseIf currentNoteType = "后调" Then
-                                            If baseList <> "" Then baseList = baseList & ", "
-                                            baseList = baseList & currentNoteName & " (" & currentPercent & "%)"
-                                        End If
-                                        rsNoteSel.MoveNext
-                                    Loop
-                                    rsNoteSel.Close
-                                    Set rsNoteSel = Nothing
+                                Dim cartProductType, cartProductTypeLC
+                                cartProductType = rsCart("ProductType") & ""
+                                cartProductTypeLC = LCase(cartProductType)
+                                ' KOL推荐产品与品牌定香产品不显示香调配比信息
+                                If cartProductTypeLC = "custom" Then
+                                    Set rsNoteSel = ExecuteQuery("SELECT n.NoteName, s.Percentage, s.NoteType FROM CartNoteSelections s INNER JOIN FragranceNotes n ON s.NoteID = n.NoteID WHERE s.CartID = " & rsCart("CartID"))
+                                    If Not rsNoteSel Is Nothing Then
+                                        Do While Not rsNoteSel.EOF
+                                            currentNoteType = Trim(rsNoteSel("NoteType") & "")
+                                            currentNoteName = HTMLEncode(rsNoteSel("NoteName") & "")
+                                            currentPercent = rsNoteSel("Percentage")
+                                            
+                                            If currentNoteType = "前调" Then
+                                                If topList <> "" Then topList = topList & ", "
+                                                topList = topList & currentNoteName & " (" & currentPercent & "%)"
+                                            ElseIf currentNoteType = "中调" Then
+                                                If midList <> "" Then midList = midList & ", "
+                                                midList = midList & currentNoteName & " (" & currentPercent & "%)"
+                                            ElseIf currentNoteType = "后调" Then
+                                                If baseList <> "" Then baseList = baseList & ", "
+                                                baseList = baseList & currentNoteName & " (" & currentPercent & "%)"
+                                            End If
+                                            rsNoteSel.MoveNext
+                                        Loop
+                                        rsNoteSel.Close
+                                        Set rsNoteSel = Nothing
+                                    End If
                                 End If
                                 %>
-                                <% If topList <> "" Then %>
+                                <% If cartProductTypeLC = "custom" And topList <> "" Then %>
                                 <span><i class="fas fa-wind"></i> 前调: <%= topList %></span>
                                 <% End If %>
-                                <% If midList <> "" Then %>
+                                <% If cartProductTypeLC = "custom" And midList <> "" Then %>
                                 <span><i class="fas fa-heart"></i> 中调: <%= midList %></span>
                                 <% End If %>
-                                <% If baseList <> "" Then %>
+                                <% If cartProductTypeLC = "custom" And baseList <> "" Then %>
                                 <span><i class="fas fa-moon"></i> 后调: <%= baseList %></span>
                                 <% End If %>
                                 <% If Not IsNull(rsCart("VolumeName")) Then %>

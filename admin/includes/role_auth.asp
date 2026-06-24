@@ -192,14 +192,15 @@ Sub LogAdminAction(action, module, targetTable, targetId, description)
     End If
     
     Dim sql
-    sql = "INSERT INTO AdminLogs (AdminID, ActionType, ModuleCode, TableName, RecordID, Notes, CreatedAt) VALUES (" & _
+    sql = "INSERT INTO AdminLogs (AdminID, ActionType, ModuleCode, TableName, RecordID, Notes, CreatedAt, IPAddress) VALUES (" & _
         CLng(adminId) & ", " & _
         "'" & SafeSQL(action) & "', " & _
         "'" & SafeSQL(module) & "', " & _
         "'" & SafeSQL(targetTable) & "', " & _
         "'" & SafeSQL(targetId) & "', " & _
         "'" & SafeSQL(description) & "', " & _
-        "GETDATE())"
+        "GETDATE(), " & _
+        "'" & SafeSQL(Request.ServerVariables("REMOTE_ADDR")) & "')"
     
     ExecuteNonQuery(sql)
     

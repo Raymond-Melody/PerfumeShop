@@ -193,7 +193,7 @@ stageTimes(4) = GetScalar("SELECT TOP 1 CONVERT(NVARCHAR(10),MAX(ShippedOutAt),1
                     </div>
                     <div class="info-item">
                         <div class="label"><i class="fas fa-industry"></i> 生产阶段</div>
-                        <div class="value" style="color:<%=IIf(latestPOStatus="NoPO","#888","#2196F3")%>;"><%=IIf(latestPOStatus="NoPO","未排产","第 "&(currentStage+1)&"/5 阶段")%></div>
+                        <div class="value" style="color:<%=IIf(latestPOStatus="NoPO", "#888", "#2196F3")%>;"><%=IIf(latestPOStatus="NoPO","未排产","第 "&(currentStage+1)&"/5 阶段")%></div>
                     </div>
                 </div>
             </div>
@@ -292,6 +292,155 @@ stageTimes(4) = GetScalar("SELECT TOP 1 CONVERT(NVARCHAR(10),MAX(ShippedOutAt),1
             </div>
         </div>
 
+        <!-- 订单商品香调配比与成分信息 -->
+        <%
+        ' 查询订单商品详情（含产品类型）
+        Dim rsProdDetails
+        Set rsProdDetails = conn.Execute("SELECT od.DetailID, od.ProductID, od.ProductName, od.Quantity, od.VolumeName, od.VolumeML, od.BottleName, od.CustomLabel, p.ProductType FROM OrderDetails od LEFT JOIN Products p ON od.ProductID=p.ProductID WHERE od.OrderID=" & orderId & " ORDER BY od.DetailID")
+        
+        Dim hasPrintableIngredient : hasPrintableIngredient = False
+        If Not rsProdDetails Is Nothing Then
+            If Not rsProdDetails.EOF Then
+                ' 先检查是否有custom/kol产品（决定是否显示打印按钮）
+                Dim rsCheckPrint
+                Set rsCheckPrint = conn.Execute("SELECT COUNT(*) FROM OrderDetails od LEFT JOIN Products p ON od.ProductID=p.ProductID WHERE od.OrderID=" & orderId & " AND LOWER(p.ProductType) IN ('custom','kol')")
+                If Not rsCheckPrint Is Nothing Then
+                    If Not rsCheckPrint.EOF Then
+                        If rsCheckPrint(0) > 0 Then hasPrintableIngredient = True
+                    End If
+                    rsCheckPrint.Close
+                End If
+                Set rsCheckPrint = Nothing
+        %>
+        <div class="card" id="ingredientCard">
+            <div class="card-header" style="background:rgba(255,152,0,0.06);">
+                <i class="fas fa-flask" style="color:#FF9800;"></i> 商品配方信息（生产工单附件）
+                <% If hasPrintableIngredient Then %>
+                <button onclick="printIngredientCard()" class="btn btn--sm btn--outline" style="margin-left:auto;font-size:11px;"><i class="fas fa-print"></i> 打印成分卡</button>
+                <% End If %>
+            </div>
+            <div class="card-body" id="ingredientCardBody">
+                <%
+                Do While Not rsProdDetails.EOF
+                    Dim pdDetailId, pdProductName, pdProductType, pdQuantity, pdVolumeName, pdVolumeML, pdBottleName, pdCustomLabel
+                    pdDetailId = rsProdDetails("DetailID")
+                    pdProductName = Server.HTMLEncode(rsProdDetails("ProductName") & "")
+                    pdProductType = LCase(rsProdDetails("ProductType") & "")
+                    pdQuantity = rsProdDetails("Quantity")
+                    pdVolumeName = rsProdDetails("VolumeName") & ""
+                    pdVolumeML = rsProdDetails("VolumeML") & ""
+                    pdBottleName = rsProdDetails("BottleName") & ""
+                    pdCustomLabel = rsProdDetails("CustomLabel") & ""
+                    
+                    ' 产品类型显示名
+                    Dim pdTypeLabel, pdTypeClass
+                    Select Case pdProductType
+                        Case "custom"  : pdTypeLabel = "定制香水" : pdTypeClass = "badge-progress"
+                        Case "kol"     : pdTypeLabel = "KOL推荐" : pdTypeClass = "badge-shipped"
+                        Case "standard": pdTypeLabel = "品牌定香" : pdTypeClass = "badge-paid"
+                        Case Else      : pdTypeLabel = pdProductType : pdTypeClass = "badge-paid"
+                    End Select
+                %>
+                <div class="prod-item" style="border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:14px;margin-bottom:12px;background:rgba(0,0,0,0.15);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <strong style="color:#e0e0e0;font-size:14px;"><%=pdProductName%></strong>
+                        <span class="badge <%=pdTypeClass%>"><%=pdTypeLabel%></span>
+                    </div>
+                    <div style="font-size:12px;color:#888;margin-bottom:8px;">
+                        数量: <%=pdQuantity%>
+                        <% If pdVolumeName <> "" Then %> | 容量: <%=Server.HTMLEncode(pdVolumeML)%>ml (<%=Server.HTMLEncode(pdVolumeName)%>)<% End If %>
+                        <% If pdBottleName <> "" Then %> | 瓶身: <%=Server.HTMLEncode(pdBottleName)%><% End If %>
+                        <% If pdCustomLabel <> "" Then %> | 刻字: <%=Server.HTMLEncode(pdCustomLabel)%><% End If %>
+                    </div>
+                    
+                    <%
+                    ' === 香调配比（所有产品类型都显示）===
+                    Dim rsNotes, nTopList, nMidList, nBaseList
+                    nTopList = "" : nMidList = "" : nBaseList = ""
+                    Set rsNotes = conn.Execute("SELECT s.NoteType, n.NoteName, s.Percentage FROM OrderDetailNoteSelections s LEFT JOIN FragranceNotes n ON s.NoteID=n.NoteID WHERE s.DetailID=" & pdDetailId & " ORDER BY s.NoteType")
+                    If Not rsNotes Is Nothing Then
+                        Do While Not rsNotes.EOF
+                            Dim nType, nName, nPct
+                            nType = Trim(rsNotes("NoteType") & "")
+                            nName = Server.HTMLEncode(rsNotes("NoteName") & "")
+                            nPct = rsNotes("Percentage")
+                            If nType = "前调" Then
+                                If nTopList <> "" Then nTopList = nTopList & ", "
+                                nTopList = nTopList & nName & " (" & nPct & "%)"
+                            ElseIf nType = "中调" Then
+                                If nMidList <> "" Then nMidList = nMidList & ", "
+                                nMidList = nMidList & nName & " (" & nPct & "%)"
+                            ElseIf nType = "后调" Then
+                                If nBaseList <> "" Then nBaseList = nBaseList & ", "
+                                nBaseList = nBaseList & nName & " (" & nPct & "%)"
+                            End If
+                            rsNotes.MoveNext
+                        Loop
+                        rsNotes.Close
+                    End If
+                    Set rsNotes = Nothing
+                    
+                    If nTopList <> "" Or nMidList <> "" Or nBaseList <> "" Then
+                    %>
+                    <div style="margin-bottom:8px;padding:8px 10px;background:rgba(33,150,243,0.06);border-radius:6px;border-left:3px solid #2196F3;">
+                        <div style="font-size:11px;color:#64b5f6;margin-bottom:4px;"><i class="fas fa-chart-pie"></i> 香调配比</div>
+                        <% If nTopList <> "" Then %><div style="font-size:12px;color:#e0e0e0;">前调: <%=nTopList%></div><% End If %>
+                        <% If nMidList <> "" Then %><div style="font-size:12px;color:#e0e0e0;">中调: <%=nMidList%></div><% End If %>
+                        <% If nBaseList <> "" Then %><div style="font-size:12px;color:#e0e0e0;">后调: <%=nBaseList%></div><% End If %>
+                    </div>
+                    <% End If %>
+                    
+                    <%
+                    ' === 成分列表（仅custom和kol类型显示）===
+                    If pdProductType = "custom" Or pdProductType = "kol" Then
+                        Dim rsIngr, ingrList, ingrCount
+                        ingrList = "" : ingrCount = 0
+                        Set rsIngr = conn.Execute("SELECT IngredientName FROM OrderIngredients WHERE DetailID=" & pdDetailId & " ORDER BY IngredientName")
+                        If Not rsIngr Is Nothing Then
+                            Do While Not rsIngr.EOF
+                                ingrCount = ingrCount + 1
+                                If ingrList <> "" Then ingrList = ingrList & "、"
+                                ingrList = ingrList & Server.HTMLEncode(rsIngr("IngredientName") & "")
+                                rsIngr.MoveNext
+                            Loop
+                            rsIngr.Close
+                        End If
+                        Set rsIngr = Nothing
+                        
+                        If ingrCount > 0 Then
+                    %>
+                    <div style="padding:8px 10px;background:rgba(76,175,80,0.06);border-radius:6px;border-left:3px solid #4CAF50;">
+                        <div style="font-size:11px;color:#81c784;margin-bottom:4px;"><i class="fas fa-list-ul"></i> 成分清单（随产品附客户）</div>
+                        <div style="font-size:12px;color:#e0e0e0;line-height:1.6;"><%=ingrList%></div>
+                    </div>
+                    <%    Else %>
+                    <div style="padding:8px 10px;background:rgba(255,152,0,0.06);border-radius:6px;border-left:3px solid #FF9800;">
+                        <div style="font-size:12px;color:#ffb74d;"><i class="fas fa-exclamation-triangle"></i> 暂无成分数据（请检查基香配置或配方关联）</div>
+                    </div>
+                    <%    End If
+                    End If
+                    
+                    ' === 品牌定香产品提示 ===
+                    If pdProductType = "standard" Then
+                    %>
+                    <div style="padding:6px 10px;font-size:11px;color:#666;font-style:italic;">
+                        <i class="fas fa-info-circle"></i> 品牌定香产品已随包装附成分说明书，无需额外打印
+                    </div>
+                    <% End If %>
+                </div>
+                <%
+                    rsProdDetails.MoveNext
+                Loop
+                %>
+            </div>
+        </div>
+        <%
+            End If
+            rsProdDetails.Close
+        End If
+        Set rsProdDetails = Nothing
+        %>
+
         <!-- 生产日志时间线 -->
         <div class="card">
             <div class="card-header" style="background:rgba(156,39,176,0.06);">
@@ -331,6 +480,32 @@ stageTimes(4) = GetScalar("SELECT TOP 1 CONVERT(NVARCHAR(10),MAX(ShippedOutAt),1
             </div>
         </div>
     </div>
+
+    <script>
+    function printIngredientCard() {
+        var card = document.getElementById('ingredientCard');
+        if (!card) return;
+        var printWin = window.open('', '_blank', 'width=800,height=600');
+        var styles = '<style>'
+            + 'body{font-family:"Microsoft YaHei",Arial,sans-serif;padding:30px;color:#333;}'
+            + '.card-header{display:none;}'
+            + '.prod-item{border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:15px;page-break-inside:avoid;}'
+            + '.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:#eee;}'
+            + 'strong{font-size:14px;}'
+            + 'h2{text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:20px;}'
+            + '.no-print{display:none;}'
+            + '</style>';
+        printWin.document.write('<html><head><title>生产工单 - 商品配方信息</title>' + styles + '</head><body>');
+        printWin.document.write('<h2>生产工单附件 - 商品配方信息</h2>');
+        printWin.document.write('<div style="font-size:12px;color:#666;margin-bottom:15px;">订单号: #<%=Server.HTMLEncode(oNo)%> | 客户: <%=Server.HTMLEncode(oName)%> | 打印时间: ' + new Date().toLocaleString() + '</div>');
+        printWin.document.write(document.getElementById('ingredientCardBody').innerHTML);
+        printWin.document.write('<div style="margin-top:30px;padding-top:15px;border-top:1px solid #ddd;font-size:11px;color:#999;text-align:center;">本文档由系统自动生成，仅供生产使用</div>');
+        printWin.document.write('</body></html>');
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(function() { printWin.print(); }, 500);
+    }
+    </script>
 </body>
 </html>
 <%

@@ -8,16 +8,20 @@ Response.ContentType = "text/html"
 <%
 Call OpenConnection()
 
-' V10: 自动创建批次追溯所需表
-On Error Resume Next
-conn.Execute "SELECT TOP 1 1 FROM PurchaseReceipts"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "CREATE TABLE PurchaseReceipts (ReceiptID INT IDENTITY(1,1) PRIMARY KEY, PurchaseID INT, ReceiptNo NVARCHAR(100), SupplierID INT, ReceivedBy NVARCHAR(100), ReceiptDate DATETIME, Status NVARCHAR(30), TotalReceivedQty FLOAT DEFAULT 0, Notes NVARCHAR(500), CreatedAt DATETIME DEFAULT GETDATE())"
-conn.Execute "SELECT TOP 1 1 FROM PurchaseBatches"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "CREATE TABLE PurchaseBatches (BatchID INT IDENTITY(1,1) PRIMARY KEY, PurchaseDetailID INT, PurchaseID INT, BatchNo NVARCHAR(100), ItemType NVARCHAR(30), ItemCode NVARCHAR(50), ItemName NVARCHAR(200), UnitPrice DECIMAL(19,4) DEFAULT 0, Quantity FLOAT DEFAULT 0, ReceivedQty FLOAT DEFAULT 0, RemainingQty FLOAT DEFAULT 0, ReceivedDate DATETIME, SupplierID INT, CreatedAt DATETIME DEFAULT GETDATE())"
-conn.Execute "SELECT TOP 1 1 FROM OrderCostAllocation"
-If Err.Number <> 0 Then Err.Clear : conn.Execute "CREATE TABLE OrderCostAllocation (AllocationID INT IDENTITY(1,1) PRIMARY KEY, OrderID INT, OrderNo NVARCHAR(100), CostType NVARCHAR(30), ItemCode NVARCHAR(50), ItemName NVARCHAR(200), UnitCost DECIMAL(19,4) DEFAULT 0, Quantity FLOAT DEFAULT 0, TotalCost DECIMAL(19,4) DEFAULT 0, BatchID INT, AllocatedAt DATETIME DEFAULT GETDATE(), CreatedAt DATETIME DEFAULT GETDATE())"
-If Err.Number <> 0 Then Err.Clear
-On Error GoTo 0
+' V10: 确保批次追溯所需表存在
+If Not TableExists_BD("PurchaseReceipts") Then Call EnsureTable_BD("PurchaseReceipts", _
+    "ReceiptID INT IDENTITY(1,1) PRIMARY KEY, PurchaseID INT, ReceiptNo NVARCHAR(100), SupplierID INT, " & _
+    "ReceivedBy NVARCHAR(100), ReceiptDate DATETIME, Status NVARCHAR(30), TotalReceivedQty FLOAT DEFAULT 0, " & _
+    "Notes NVARCHAR(500), CreatedAt DATETIME DEFAULT GETDATE()")
+If Not TableExists_BD("PurchaseBatches") Then Call EnsureTable_BD("PurchaseBatches", _
+    "BatchID INT IDENTITY(1,1) PRIMARY KEY, PurchaseDetailID INT, PurchaseID INT, BatchNo NVARCHAR(100), " & _
+    "ItemType NVARCHAR(30), ItemCode NVARCHAR(50), ItemName NVARCHAR(200), UnitPrice DECIMAL(19,4) DEFAULT 0, " & _
+    "Quantity FLOAT DEFAULT 0, ReceivedQty FLOAT DEFAULT 0, RemainingQty FLOAT DEFAULT 0, " & _
+    "ReceivedDate DATETIME, SupplierID INT, CreatedAt DATETIME DEFAULT GETDATE()")
+If Not TableExists_BD("OrderCostAllocation") Then Call EnsureTable_BD("OrderCostAllocation", _
+    "AllocationID INT IDENTITY(1,1) PRIMARY KEY, OrderID INT, OrderNo NVARCHAR(100), CostType NVARCHAR(30), " & _
+    "ItemCode NVARCHAR(50), ItemName NVARCHAR(200), UnitCost DECIMAL(19,4) DEFAULT 0, Quantity FLOAT DEFAULT 0, " & _
+    "TotalCost DECIMAL(19,4) DEFAULT 0, BatchID INT, AllocatedAt DATETIME DEFAULT GETDATE(), CreatedAt DATETIME DEFAULT GETDATE()")
 
 Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
@@ -145,5 +149,43 @@ Set rsBatches = Nothing
 %>
 </div>
 <%
+' ============================================
+' 数据库辅助函数
+' ============================================
+
+Function TableExists_BD(tblName)
+    Dim rs, exists
+    exists = False
+    On Error Resume Next
+    Set rs = conn.Execute("SELECT 1 FROM sys.tables WHERE name=N'" & tblName & "'")
+    If Err.Number = 0 Then
+        If Not rs Is Nothing Then
+            If Not rs.EOF Then exists = True
+            rs.Close
+            Set rs = Nothing
+        End If
+    Else
+        Err.Clear
+        conn.Execute "SELECT TOP 1 1 FROM [" & tblName & "]"
+        If Err.Number = 0 Then
+            exists = True
+        Else
+            Err.Clear
+        End If
+    End If
+    On Error GoTo 0
+    TableExists_BD = exists
+End Function
+
+Sub EnsureTable_BD(tblName, colDefs)
+    On Error Resume Next
+    conn.Execute "CREATE TABLE " & tblName & " (" & colDefs & ")"
+    If Err.Number <> 0 Then
+        Session("DBSetupError") = Session("DBSetupError") & "[BD] Failed to create " & tblName & ": " & Err.Description & "<br>"
+        Err.Clear
+    End If
+    On Error GoTo 0
+End Sub
+
 Call CloseConnection()
 %>

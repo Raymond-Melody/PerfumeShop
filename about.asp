@@ -32,7 +32,7 @@ Call OpenConnection()
         <section class="about-section">
             <div class="section-grid">
                 <div class="section-image">
-                    <img src="/images/about/story.jpg" alt="品牌故事" onerror="this.style.display='none'">
+                    <div class="about-image-placeholder"></div>
                 </div>
                 <div class="section-content">
                     <h2>我们的故事</h2>

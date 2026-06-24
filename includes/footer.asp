@@ -58,9 +58,23 @@
     </a>
 
     <!-- 公共脚本 -->
-    <script src="/js/main.js"></script>
+    <!-- V12.0 图片懒加载 -->
+    <script src="/js/lazy-load.js?v=14.6"></script>
+    <!-- V12.0 主题切换 -->
+    <script src="/js/theme-toggle.js?v=14.6" defer></script>
+    <!-- V12.1 产品图库手势支持 -->
+    <script src="/js/product-gallery.js?v=14.6" defer></script>
+    <!-- V12.2 购物车动画 -->
+    <script src="/js/cart-animation.js?v=14.6" defer></script>
+    <!-- V12.3 筛选优化 -->
+    <script src="/js/filter-optimization.js?v=14.6" defer></script>
+    <!-- V13.2 骨架屏加载 -->
+    <script src="/js/skeleton-loader.js?v=14.6"></script>
+    <!-- V14.6 PWA 安装提示 -->
+    <script src="/js/pwa-install.js?v=14.6" defer></script>
+    <script src="/js/main.js?v=14.6"></script>
     
-    <script>
+    <script nonce="<%= Session("csp_nonce") %>">
     // 更新购物车数量
     function updateCartCount() {
         $.get('/api/cart_count.asp', function(data) {

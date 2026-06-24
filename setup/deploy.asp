@@ -1,5 +1,9 @@
-<%@ Language="VBScript" %>
-<% Option Explicit %>
+<%@ Language="VBScript" CodePage="65001" %>
+<%
+Option Explicit
+Response.CodePage = 65001
+Response.Charset = "UTF-8"
+%>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -107,10 +111,10 @@ End If
 Sub Log(level, msg)
     Dim icon, cssClass
     Select Case level
-        Case "success": icon = "✓": cssClass = "step-success"
-        Case "error":   icon = "✗": cssClass = "step-error"
-        Case "info":    icon = "►": cssClass = "step-info"
-        Case "warning": icon = "⚠": cssClass = "step-warning"
+        Case "success": icon = ChrW(&H2713) : cssClass = "step-success"
+        Case "error":   icon = ChrW(&H2717) : cssClass = "step-error"
+        Case "info":    icon = ChrW(&H25BA) : cssClass = "step-info"
+        Case "warning": icon = ChrW(&H26A0) : cssClass = "step-warning"
         Case "stage":   icon = ""
     End Select
     Response.Write "<div class=""step " & cssClass & """>" & icon & " " & Server.HTMLEncode(msg) & "</div>"
@@ -124,9 +128,9 @@ End Sub
 
 Sub StageEnd(status)
     Dim headerClass, icon
-    If status = "success" Then headerClass = "stage-success": icon = "✓"
-    If status = "error" Then headerClass = "stage-error": icon = "✗"
-    If status = "warning" Then headerClass = "stage-warning": icon = "⚠"
+    If status = "success" Then headerClass = "stage-success": icon = ChrW(&H2713)
+    If status = "error" Then headerClass = "stage-error": icon = ChrW(&H2717)
+    If status = "warning" Then headerClass = "stage-warning": icon = ChrW(&H26A0)
     Response.Write "</div></div>"
     Response.Write "<script>var s=document.querySelector('.stage-running');if(s){s.className='stage " & headerClass & "';s.querySelector('.stage-header').innerHTML='" & icon & " ' + s.querySelector('.stage-header').textContent.trim()}</script>"
     Response.Flush
@@ -240,8 +244,78 @@ Sub RunFullDeployment()
     ' 切换到 PerfumeShop
     conn.Execute "USE [PerfumeShop]"
     
+    ' ==== Stage 2b: 授予当前用户 DDL 权限 ====
+    Call StageStart("Stage 2b: 授予数据库权限（DDL + 数据读写 + 备份）")
+    
+    Dim currentUser
+    Set rs = conn.Execute("SELECT SUSER_NAME()")
+    If Not rs.EOF Then currentUser = rs.Fields(0).Value
+    rs.Close : Set rs = Nothing
+    
+    Call Log("info", "当前连接用户: " & currentUser)
+    
+    ' 创建数据库用户（如果不存在）
+    Call SafeExec(conn, "IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name='" & Replace(currentUser, "'", "''") & "') CREATE USER [" & currentUser & "] FOR LOGIN [" & currentUser & "]", "创建数据库用户")
+    
+    ' 授予 db_ddladmin（CREATE TABLE/INDEX/ALTER 等 DDL 权限）
+    Dim ddlGranted, readerGranted, writerGranted
+    ddlGranted = SafeExec(conn, "ALTER ROLE db_ddladmin ADD MEMBER [" & Replace(currentUser, "'", "''") & "]", "授予 db_ddladmin（DDL 权限）")
+    readerGranted = SafeExec(conn, "ALTER ROLE db_datareader ADD MEMBER [" & Replace(currentUser, "'", "''") & "]", "授予 db_datareader（数据读取）")
+    writerGranted = SafeExec(conn, "ALTER ROLE db_datawriter ADD MEMBER [" & Replace(currentUser, "'", "''") & "]", "授予 db_datawriter（数据写入）")
+    
+    ' 授予备份权限（可选）
+    Call SafeExec(conn, "GRANT BACKUP DATABASE TO [" & Replace(currentUser, "'", "''") & "]", "授予 BACKUP DATABASE")
+    Call SafeExec(conn, "GRANT BACKUP LOG TO [" & Replace(currentUser, "'", "''") & "]", "授予 BACKUP LOG")
+    
+    If ddlGranted Then
+        Call Log("success", "DDL 权限授予完成（CREATE/ALTER/DROP 表、索引等）")
+    Else
+        Call Log("warning", "DDL 权限授予失败（可能需要手动授权）")
+    End If
+    
+    If readerGranted Then
+        Call Log("success", "数据读取权限授予完成（SELECT）")
+    Else
+        Call Log("warning", "数据读取权限授予失败")
+    End If
+    
+    If writerGranted Then
+        Call Log("success", "数据写入权限授予完成（INSERT/UPDATE/DELETE）")
+    Else
+        Call Log("warning", "数据写入权限授予失败")
+    End If
+    
+    ' 如果 DDL 权限授予失败，显示详细的解决指南
+    If Not ddlGranted Then
+        Response.Write "<div style='background:#fff3e0;border:2px solid #FF9800;border-radius:6px;padding:16px;margin:10px 0;color:#e65100'>"
+        Response.Write "<strong>⚠ 权限不足警告：</strong>当前 IIS 身份 (<code>" & Server.HTMLEncode(currentUser) & "</code>) 没有安全管理员权限，无法自动授予 DDL 权限。<br><br>"
+        Response.Write "<strong>🔧 解决方案（三选一，按推荐顺序）：</strong><br>"
+        Response.Write "<ol style='margin:10px 0 0 20px;line-height:2'>"
+        Response.Write "<li><strong>一键修复（推荐）：</strong><br>"
+        Response.Write "  在文件资源管理器中打开 <code>" & Server.MapPath("..") & "\setup\grant_ddl_permission.ps1</code><br>"
+        Response.Write "  → 右键'以管理员身份运行' → 自动配置所有权限后刷新此页面</li>"
+        Response.Write "<li><strong>完整权限 SQL 脚本：</strong><br>"
+        Response.Write "  在文件资源管理器中打开 <code>" & Server.MapPath("..") & "\setup\grant_full_permissions.sql</code><br>"
+        Response.Write "  → 在 SSMS 中打开并执行，自动为所有 IIS 身份配置完整权限（DDL + 数据读写 + 备份）</li>"
+        Response.Write "<li><strong>SSMS 手动授权：</strong><br>"
+        Response.Write "  在 SSMS 中执行 <code>ALTER ROLE db_ddladmin ADD MEMBER [" & Server.HTMLEncode(currentUser) & "]</code><br>"
+        Response.Write "  → 然后再运行此部署工具</li>"
+        Response.Write "</ol>"
+        Response.Write "<hr style='margin:12px 0;border-color:#FF9800'>"
+        Response.Write "<strong>📋 需要授予的权限清单：</strong><br>"
+        Response.Write "<ul style='margin:8px 0 0 20px;line-height:1.8'>"
+        Response.Write "<li><code>db_ddladmin</code> - 创建/修改/删除表、索引、视图等数据库对象</li>"
+        Response.Write "<li><code>db_datareader</code> - 读取所有用户表中的数据</li>"
+        Response.Write "<li><code>db_datawriter</code> - 插入/更新/删除所有用户表中的数据</li>"
+        Response.Write "<li><code>BACKUP DATABASE</code> - 执行数据库完整备份（可选）</li>"
+        Response.Write "<li><code>BACKUP LOG</code> - 执行事务日志备份（可选）</li>"
+        Response.Write "</ul></div>"
+    End If
+    
+    Call StageEnd(IIf(ddlGranted, "success", "warning"))
+    
     ' ==== Stage 3: 创建所有表结构 ====
-    Call StageStart("Stage 3: 创建数据表结构（共55+张表）")
+    Call StageStart("Stage 3: 创建数据表结构（共62+张表）")
     
     ' --- 核心用户与权限表 ---
     If CreateTableIfNotExists(conn, "Users", "CREATE TABLE [Users] ([UserID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [Username] NVARCHAR(50) NOT NULL, [Password] NVARCHAR(255) NOT NULL, [Email] NVARCHAR(100) NOT NULL, [FullName] NVARCHAR(100) NULL, [Phone] NVARCHAR(20) NULL, [Address] NVARCHAR(200) NULL, [City] NVARCHAR(50) NULL, [PostalCode] NVARCHAR(20) NULL, [Points] INT NULL DEFAULT 0, [IsActive] BIT NULL DEFAULT 1, [IsVIP] BIT NULL DEFAULT 0, [UserRole] NVARCHAR(20) NULL DEFAULT 'user', [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
@@ -253,7 +327,13 @@ Sub RunFullDeployment()
     If CreateTableIfNotExists(conn, "AdminUsers", "CREATE TABLE [AdminUsers] ([AdminID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [Username] NVARCHAR(50) NOT NULL, [PasswordHash] NVARCHAR(255) NOT NULL, [Email] NVARCHAR(100) NOT NULL, [FullName] NVARCHAR(100) NULL, [Department] NVARCHAR(50) NULL, [RoleID] INT NULL, [IsActive] BIT NULL DEFAULT 1, [IsLocked] BIT NULL DEFAULT 0, [LastLogin] DATETIME2(7) NULL, [ResetToken] NVARCHAR(255) NULL, [ResetTokenExpiry] DATETIME2(7) NULL, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
     totalTables = totalTables + 1
 
-    If CreateTableIfNotExists(conn, "AdminLogs", "CREATE TABLE [AdminLogs] ([LogID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [AdminID] INT NULL, [ActionType] NVARCHAR(100) NULL, [TableName] NVARCHAR(50) NULL, [RecordID] NVARCHAR(50) NULL, [ModuleCode] NVARCHAR(50) NULL, [Notes] NVARCHAR(MAX) NULL, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
+    If CreateTableIfNotExists(conn, "AdminLogs", "CREATE TABLE [AdminLogs] ([LogID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [AdminID] INT NULL, [ActionType] NVARCHAR(100) NULL, [TableName] NVARCHAR(50) NULL, [RecordID] NVARCHAR(50) NULL, [ModuleCode] NVARCHAR(50) NULL, [Notes] NVARCHAR(MAX) NULL, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE(), [IPAddress] NVARCHAR(50) NULL)") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+
+    If CreateTableIfNotExists(conn, "LoginAlerts", "CREATE TABLE [LoginAlerts] ([AlertID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [AlertType] NVARCHAR(50) NULL, [AlertLevel] NVARCHAR(20) NULL DEFAULT 'info', [AlertMessage] NVARCHAR(500) NULL, [IPAddress] NVARCHAR(50) NULL, [AdminID] INT NULL, [IsRead] BIT NULL DEFAULT 0, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+
+    If CreateTableIfNotExists(conn, "IPBlacklist", "CREATE TABLE [IPBlacklist] ([IPID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [IPAddress] NVARCHAR(50) NOT NULL, [Reason] NVARCHAR(255) NULL, [BlockedAt] DATETIME2(7) NULL DEFAULT GETDATE(), [BlockedBy] INT NULL, [IsActive] BIT NULL DEFAULT 1, [ExpiresAt] DATETIME2(7) NULL, [HitCount] INT NULL DEFAULT 0, [LastHitAt] DATETIME2(7) NULL)") Then successTables = successTables + 1
     totalTables = totalTables + 1
 
     If CreateTableIfNotExists(conn, "ModulePermissions", "CREATE TABLE [ModulePermissions] ([PermissionID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [ModuleCode] NVARCHAR(50) NOT NULL, [ModuleName] NVARCHAR(100) NOT NULL, [ParentModule] NVARCHAR(50) NULL, [RequiredRole] NVARCHAR(20) NULL, [PermissionLevel] INT NULL, [URLPattern] NVARCHAR(200) NULL, [IsActive] BIT NULL DEFAULT 1)") Then successTables = successTables + 1
@@ -427,6 +507,19 @@ Sub RunFullDeployment()
     If CreateTableIfNotExists(conn, "BudgetPlans", "CREATE TABLE [BudgetPlans] ([BudgetID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [BudgetName] NVARCHAR(100) NULL, [Category] NVARCHAR(50) NULL, [Period] NVARCHAR(10) NULL, [BudgetAmount] DECIMAL(19,4) NULL, [ActualAmount] DECIMAL(19,4) NULL DEFAULT 0, [GMVAmount] DECIMAL(19,4) NULL DEFAULT 0, [ROI] FLOAT NULL, [AlertPercent] FLOAT NULL, [AlertROI] FLOAT NULL, [Status] NVARCHAR(20) NULL, [CreatedBy] NVARCHAR(50) NULL, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE(), [UpdatedAt] DATETIME2(7) NULL)") Then successTables = successTables + 1
     totalTables = totalTables + 1
 
+    ' --- V10.2 新增: 财务扩展表 ---
+    If CreateTableIfNotExists(conn, "AccountsReceivable", "CREATE TABLE [AccountsReceivable] ([ReceivableID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [OrderID] INT NULL, [UserID] INT NOT NULL, [CustomerName] NVARCHAR(200) NULL, [ReceivableNo] NVARCHAR(50) NULL, [Amount] DECIMAL(19,4) NULL DEFAULT 0, [ReceivedAmount] DECIMAL(19,4) NULL DEFAULT 0, [Status] NVARCHAR(20) NULL DEFAULT 'Pending', [DueDate] DATE NULL, [Notes] NVARCHAR(MAX) NULL, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE(), [UpdatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+
+    If CreateTableIfNotExists(conn, "AccountsPayable", "CREATE TABLE [AccountsPayable] ([PayableID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [PurchaseID] INT NULL, [SupplierID] INT NULL, [SupplierName] NVARCHAR(200) NULL, [PayableNo] NVARCHAR(50) NULL, [Amount] DECIMAL(19,4) NULL DEFAULT 0, [PaidAmount] DECIMAL(19,4) NULL DEFAULT 0, [Status] NVARCHAR(20) NULL DEFAULT 'Pending', [DueDate] DATE NULL, [InvoiceNo] NVARCHAR(100) NULL, [Notes] NVARCHAR(MAX) NULL, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE(), [UpdatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+
+    If CreateTableIfNotExists(conn, "CostCenters", "CREATE TABLE [CostCenters] ([CenterID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [CenterCode] NVARCHAR(50) NOT NULL, [CenterName] NVARCHAR(200) NOT NULL, [CenterType] NVARCHAR(50) NULL DEFAULT 'Department', [ParentID] INT NULL, [BudgetAmount] DECIMAL(19,4) NULL DEFAULT 0, [IsActive] BIT NULL DEFAULT 1, [Notes] NVARCHAR(MAX) NULL, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE(), [UpdatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+
+    If CreateTableIfNotExists(conn, "GLTransactions", "CREATE TABLE [GLTransactions] ([GLID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [GLNo] NVARCHAR(50) NULL, [TransactionDate] DATETIME2(7) NULL, [AccountCode] NVARCHAR(20) NULL, [AccountName] NVARCHAR(100) NULL, [DebitAmount] DECIMAL(19,4) NULL DEFAULT 0, [CreditAmount] DECIMAL(19,4) NULL DEFAULT 0, [CenterID] INT NULL, [RefType] NVARCHAR(50) NULL, [RefID] INT NULL, [RefNo] NVARCHAR(100) NULL, [Description] NVARCHAR(MAX) NULL, [CreatedBy] NVARCHAR(50) NULL, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
+    totalTables = totalTables + 1
+
     ' --- 营销相关表 ---
     If CreateTableIfNotExists(conn, "Coupons", "CREATE TABLE [Coupons] ([CouponID] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, [CouponCode] NVARCHAR(50) NULL, [DiscountType] NVARCHAR(20) NULL, [DiscountValue] DECIMAL(19,4) NULL, [MinPurchase] DECIMAL(19,4) NULL, [StartDate] DATETIME2(7) NULL, [EndDate] DATETIME2(7) NULL, [UsageLimit] INT NULL, [UsedCount] INT NULL DEFAULT 0, [IsActive] BIT NULL DEFAULT 1, [CreatedAt] DATETIME2(7) NULL DEFAULT GETDATE())") Then successTables = successTables + 1
     totalTables = totalTables + 1
@@ -543,6 +636,18 @@ Sub RunFullDeployment()
     idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_AdminLogs_ModuleCode') CREATE NONCLUSTERED INDEX [IX_AdminLogs_ModuleCode] ON [AdminLogs]([ModuleCode],[CreatedAt])"
     If SafeExec(conn, idxSQL, "IX_AdminLogs_ModuleCode") Then idxCount = idxCount + 1
 
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_LoginAlerts_CreatedAt') CREATE NONCLUSTERED INDEX [IX_LoginAlerts_CreatedAt] ON [LoginAlerts]([CreatedAt]) INCLUDE ([AlertType],[AlertLevel],[IsRead])"
+    If SafeExec(conn, idxSQL, "IX_LoginAlerts_CreatedAt") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_LoginAlerts_IsRead') CREATE NONCLUSTERED INDEX [IX_LoginAlerts_IsRead] ON [LoginAlerts]([IsRead],[CreatedAt])"
+    If SafeExec(conn, idxSQL, "IX_LoginAlerts_IsRead") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_IPBlacklist_IPAddress') CREATE NONCLUSTERED INDEX [IX_IPBlacklist_IPAddress] ON [IPBlacklist]([IPAddress],[IsActive])"
+    If SafeExec(conn, idxSQL, "IX_IPBlacklist_IPAddress") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_IPBlacklist_BlockedAt') CREATE NONCLUSTERED INDEX [IX_IPBlacklist_BlockedAt] ON [IPBlacklist]([BlockedAt]) INCLUDE ([IsActive])"
+    If SafeExec(conn, idxSQL, "IX_IPBlacklist_BlockedAt") Then idxCount = idxCount + 1
+
     idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_RawMaterialInventory_ItemCode') CREATE NONCLUSTERED INDEX [IX_RawMaterialInventory_ItemCode] ON [RawMaterialInventory]([ItemCode]) INCLUDE ([MaterialID],[ItemName],[StockQty],[UnitPrice],[SafetyStock])"
     If SafeExec(conn, idxSQL, "IX_RawMaterialInventory_ItemCode") Then idxCount = idxCount + 1
 
@@ -572,6 +677,47 @@ Sub RunFullDeployment()
 
     idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ProductNoteRatios_ProductID') CREATE NONCLUSTERED INDEX [IX_ProductNoteRatios_ProductID] ON [ProductNoteRatios]([ProductID]) INCLUDE ([NoteID],[Percentage])"
     If SafeExec(conn, idxSQL, "IX_ProductNoteRatios_ProductID") Then idxCount = idxCount + 1
+
+    ' --- V10.2 新增: 财务扩展表索引 ---
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_AccountsReceivable_Status') CREATE NONCLUSTERED INDEX [IX_AccountsReceivable_Status] ON [AccountsReceivable]([Status]) INCLUDE ([ReceivableID],[Amount],[ReceivedAmount],[DueDate])"
+    If SafeExec(conn, idxSQL, "IX_AccountsReceivable_Status") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_AccountsReceivable_DueDate') CREATE NONCLUSTERED INDEX [IX_AccountsReceivable_DueDate] ON [AccountsReceivable]([DueDate]) INCLUDE ([Status],[Amount],[ReceivedAmount])"
+    If SafeExec(conn, idxSQL, "IX_AccountsReceivable_DueDate") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_AccountsPayable_Status') CREATE NONCLUSTERED INDEX [IX_AccountsPayable_Status] ON [AccountsPayable]([Status]) INCLUDE ([PayableID],[Amount],[PaidAmount],[DueDate])"
+    If SafeExec(conn, idxSQL, "IX_AccountsPayable_Status") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_AccountsPayable_DueDate') CREATE NONCLUSTERED INDEX [IX_AccountsPayable_DueDate] ON [AccountsPayable]([DueDate]) INCLUDE ([Status],[Amount],[PaidAmount])"
+    If SafeExec(conn, idxSQL, "IX_AccountsPayable_DueDate") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_CostCenters_Code') CREATE NONCLUSTERED INDEX [IX_CostCenters_Code] ON [CostCenters]([CenterCode]) INCLUDE ([CenterName],[CenterType],[IsActive])"
+    If SafeExec(conn, idxSQL, "IX_CostCenters_Code") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_GLTransactions_CenterID') CREATE NONCLUSTERED INDEX [IX_GLTransactions_CenterID] ON [GLTransactions]([CenterID],[TransactionDate]) INCLUDE ([DebitAmount],[CreditAmount],[RefType])"
+    If SafeExec(conn, idxSQL, "IX_GLTransactions_CenterID") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_GLTransactions_GLNo') CREATE NONCLUSTERED INDEX [IX_GLTransactions_GLNo] ON [GLTransactions]([GLNo])"
+    If SafeExec(conn, idxSQL, "IX_GLTransactions_GLNo") Then idxCount = idxCount + 1
+
+    ' --- V10.3 新增: 财务报表性能索引 ---
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_PaymentRecords_CreatedAt') CREATE NONCLUSTERED INDEX [IX_PaymentRecords_CreatedAt] ON [PaymentRecords]([CreatedAt]) INCLUDE ([Amount],[PaymentType],[PaymentMethod],[Status])"
+    If SafeExec(conn, idxSQL, "IX_PaymentRecords_CreatedAt") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_PaymentRecords_TransactionType') CREATE NONCLUSTERED INDEX [IX_PaymentRecords_TransactionType] ON [PaymentRecords]([TransactionType]) INCLUDE ([Amount],[CreatedAt],[Status])"
+    If SafeExec(conn, idxSQL, "IX_PaymentRecords_TransactionType") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_ExpenseRecords_Period') CREATE NONCLUSTERED INDEX [IX_ExpenseRecords_Period] ON [ExpenseRecords]([Period]) INCLUDE ([ExpenseType],[Amount],[AllocationMethod])"
+    If SafeExec(conn, idxSQL, "IX_ExpenseRecords_Period") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_BudgetPlans_Category_Period') CREATE NONCLUSTERED INDEX [IX_BudgetPlans_Category_Period] ON [BudgetPlans]([Category],[Period]) INCLUDE ([BudgetAmount],[ActualAmount],[GMVAmount],[ROI])"
+    If SafeExec(conn, idxSQL, "IX_BudgetPlans_Category_Period") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Orders_ProfitAmount_Status') CREATE NONCLUSTERED INDEX [IX_Orders_ProfitAmount_Status] ON [Orders]([Status]) INCLUDE ([OrderID],[TotalAmount],[ProfitAmount],[CostAmount],[CreatedAt])"
+    If SafeExec(conn, idxSQL, "IX_Orders_ProfitAmount_Status") Then idxCount = idxCount + 1
+
+    idxSQL = "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_GLTransactions_Date') CREATE NONCLUSTERED INDEX [IX_GLTransactions_Date] ON [GLTransactions]([TransactionDate]) INCLUDE ([DebitAmount],[CreditAmount],[AccountCode],[CenterID])"
+    If SafeExec(conn, idxSQL, "IX_GLTransactions_Date") Then idxCount = idxCount + 1
 
     Call Log("success", "索引创建完成: " & idxCount & " 个")
     Call StageEnd("success")
@@ -605,9 +751,12 @@ Sub RunFullDeployment()
     If SafeExec(conn, "IF NOT EXISTS (SELECT * FROM Categories WHERE CategoryName='东方调') INSERT INTO [Categories]([CategoryName],[SortOrder],[IsActive]) VALUES('东方调',4,1)", "Categories - 东方调") Then : End If
     If SafeExec(conn, "IF NOT EXISTS (SELECT * FROM Categories WHERE CategoryName='清新调') INSERT INTO [Categories]([CategoryName],[SortOrder],[IsActive]) VALUES('清新调',5,1)", "Categories - 清新调") Then : End If
 
-    ' 4.6 SiteSettings
+    ' 4.6 CostCenters (V10.2新增)
+    If SafeExec(conn, "IF NOT EXISTS (SELECT * FROM CostCenters) INSERT INTO [CostCenters]([CenterCode],[CenterName],[CenterType],[BudgetAmount]) VALUES('RAW_MAT','原料采购','Procurement',0),('PACKAGING','包装物采购','Procurement',0),('BOTTLE','瓶子采购','Procurement',0),('PRODUCTION','生产制造','Production',0),('LOGISTICS','物流运输','Logistics',0),('MARKETING','市场营销','Marketing',0),('ADMIN','行政管理','Admin',0),('RND','研发设计','R&D',0)", "CostCenters种子数据") Then : End If
+
+    ' 4.7 SiteSettings
     If SafeExec(conn, "IF NOT EXISTS (SELECT * FROM SiteSettings WHERE SettingKey='site_name') INSERT INTO [SiteSettings]([SettingKey],[SettingName],[SettingValue],[Description]) VALUES('site_name','站点名称','香氛定制','网站名称')", "SiteSettings - site_name") Then : End If
-    If SafeExec(conn, "IF NOT EXISTS (SELECT * FROM SiteSettings WHERE SettingKey='site_version') INSERT INTO [SiteSettings]([SettingKey],[SettingName],[SettingValue],[Description]) VALUES('site_version','系统版本','V7.0','当前系统版本号')", "SiteSettings - version") Then : End If
+    If SafeExec(conn, "IF NOT EXISTS (SELECT * FROM SiteSettings WHERE SettingKey='site_version') INSERT INTO [SiteSettings]([SettingKey],[SettingName],[SettingValue],[Description]) VALUES('site_version','系统版本','V10.4','当前系统版本号')", "SiteSettings - version") Then : End If
 
     ' 4.7 FundAccounts
     If SafeExec(conn, "IF NOT EXISTS (SELECT * FROM FundAccounts) INSERT INTO [FundAccounts]([AccountName],[AccountType],[TotalBalance],[AvailableBalance],[AlertThreshold],[IsActive],[CreatedAt]) VALUES('主账户','cash',100000.0000,100000.0000,10000.0000,1,GETDATE())", "FundAccounts - 主账户") Then : End If
@@ -615,14 +764,50 @@ Sub RunFullDeployment()
     Call Log("success", "种子数据插入完成")
     Call StageEnd("success")
 
-    ' ==== Stage 5: 权限配置 ====
-    Call StageStart("Stage 5: 配置数据库权限")
-    Call SafeExec(conn, "IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name='NT AUTHORITY\NETWORK SERVICE') CREATE USER [NT AUTHORITY\NETWORK SERVICE] FOR LOGIN [NT AUTHORITY\NETWORK SERVICE]", "创建 NETWORK SERVICE 用户")
-    Call SafeExec(conn, "IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name='NT AUTHORITY\NETWORK SERVICE') EXEC sp_addrolemember 'db_datareader', 'NT AUTHORITY\NETWORK SERVICE'", "授予 db_datareader")
-    Call SafeExec(conn, "IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name='NT AUTHORITY\NETWORK SERVICE') EXEC sp_addrolemember 'db_datawriter', 'NT AUTHORITY\NETWORK SERVICE'", "授予 db_datawriter")
-    Call SafeExec(conn, "GRANT BACKUP DATABASE TO [NT AUTHORITY\NETWORK SERVICE]", "授予 BACKUP DATABASE")
-    Call SafeExec(conn, "GRANT BACKUP LOG TO [NT AUTHORITY\NETWORK SERVICE]", "授予 BACKUP LOG")
-    Call Log("success", "权限配置完成")
+    ' ==== Stage 5: 验证并完善权限配置 ====
+    Call StageStart("Stage 5: 验证并完善权限配置")
+    
+    ' 注：db_ddladmin/db_datareader/db_datawriter 已在 Stage 2b 授予
+    ' 此阶段进行权限验证和兼容性配置
+    
+    ' 5.1 验证当前用户权限
+    Set rs = conn.Execute("SELECT IS_ROLEMEMBER('db_ddladmin') AS HasDDL")
+    If Not rs.EOF Then
+        If rs.Fields("HasDDL").Value = 1 Then
+            Call Log("success", "当前用户拥有 db_ddladmin 角色 ✓")
+        Else
+            Call Log("warning", "当前用户缺少 db_ddladmin 角色")
+        End If
+    End If
+    rs.Close : Set rs = Nothing
+    
+    Set rs = conn.Execute("SELECT IS_ROLEMEMBER('db_datareader') AS HasReader")
+    If Not rs.EOF Then
+        If rs.Fields("HasReader").Value = 1 Then
+            Call Log("success", "当前用户拥有 db_datareader 角色 ✓")
+        Else
+            Call Log("warning", "当前用户缺少 db_datareader 角色")
+        End If
+    End If
+    rs.Close : Set rs = Nothing
+    
+    Set rs = conn.Execute("SELECT IS_ROLEMEMBER('db_datawriter') AS HasWriter")
+    If Not rs.EOF Then
+        If rs.Fields("HasWriter").Value = 1 Then
+            Call Log("success", "当前用户拥有 db_datawriter 角色 ✓")
+        Else
+            Call Log("warning", "当前用户缺少 db_datawriter 角色")
+        End If
+    End If
+    rs.Close : Set rs = Nothing
+    
+    ' 5.2 为 NETWORK SERVICE 授予权限（兼容旧版应用池身份）
+    Call SafeExec(conn, "IF NOT EXISTS (SELECT * FROM sys.database_principals WHERE name='NT AUTHORITY\\NETWORK SERVICE') CREATE USER [NT AUTHORITY\\NETWORK SERVICE] FOR LOGIN [NT AUTHORITY\\NETWORK SERVICE]", "创建 NETWORK SERVICE 用户")
+    Call SafeExec(conn, "ALTER ROLE db_datareader ADD MEMBER [NT AUTHORITY\\NETWORK SERVICE]", "授予 NETWORK SERVICE db_datareader")
+    Call SafeExec(conn, "ALTER ROLE db_datawriter ADD MEMBER [NT AUTHORITY\\NETWORK SERVICE]", "授予 NETWORK SERVICE db_datawriter")
+    Call SafeExec(conn, "GRANT BACKUP DATABASE TO [NT AUTHORITY\\NETWORK SERVICE]", "授予 NETWORK SERVICE BACKUP DATABASE")
+    
+    Call Log("success", "权限配置与验证完成")
     Call StageEnd("success")
 
     ' ==== Stage 6: 验证 ====
@@ -654,25 +839,25 @@ Sub RunFullDeployment()
         t = keyTables(i)
         Set rs = conn.Execute("SELECT COUNT(*) FROM sys.tables WHERE name='" & t & "'")
         If rs.Fields(0).Value > 0 Then
-            Call Log("success", "✓ " & t)
+            Call Log("success", ChrW(&H2713) & " " & t)
         Else
             verifyErr = verifyErr + 1
-            Call Log("error", "✗ " & t & " - 未找到!")
+            Call Log("error", ChrW(&H2717) & " " & t & " - 未找到!")
         End If
         rs.Close : Set rs = Nothing
     Next
 
     ' 验证种子数据
     Set rs = conn.Execute("SELECT COUNT(*) FROM AdminRoles")
-    If rs.Fields(0).Value > 0 Then Call Log("success", "✓ AdminRoles: " & rs.Fields(0).Value & " 条") Else Call Log("warning", "AdminRoles 为空")
+    If rs.Fields(0).Value > 0 Then Call Log("success", ChrW(&H2713) & " AdminRoles: " & rs.Fields(0).Value & " 条") Else Call Log("warning", "AdminRoles 为空")
     rs.Close : Set rs = Nothing
 
     Set rs = conn.Execute("SELECT COUNT(*) FROM AdminUsers")
-    If rs.Fields(0).Value > 0 Then Call Log("success", "✓ AdminUsers: " & rs.Fields(0).Value & " 条") Else Call Log("warning", "AdminUsers 为空")
+    If rs.Fields(0).Value > 0 Then Call Log("success", ChrW(&H2713) & " AdminUsers: " & rs.Fields(0).Value & " 条") Else Call Log("warning", "AdminUsers 为空")
     rs.Close : Set rs = Nothing
 
     Set rs = conn.Execute("SELECT COUNT(*) FROM ProductTypeConfig")
-    If rs.Fields(0).Value > 0 Then Call Log("success", "✓ ProductTypeConfig: " & rs.Fields(0).Value & " 条") Else Call Log("warning", "ProductTypeConfig 为空")
+    If rs.Fields(0).Value > 0 Then Call Log("success", ChrW(&H2713) & " ProductTypeConfig: " & rs.Fields(0).Value & " 条") Else Call Log("warning", "ProductTypeConfig 为空")
     rs.Close : Set rs = Nothing
 
     If verifyErr = 0 Then

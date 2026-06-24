@@ -183,6 +183,77 @@ End If
 ' 数据库大小
 Dim dbSize : dbSize = GetScalar("SELECT SUM(size)*8/1024 FROM sys.database_files WHERE type=0")
 Dim dbLogSize : dbLogSize = GetScalar("SELECT SUM(size)*8/1024 FROM sys.database_files WHERE type=1")
+
+' =====================================
+' V10.4: PowerShell 手动备份触发
+' =====================================
+Dim psMsg : psMsg = ""
+If Request.Form("action") = "ps_backup" Then
+    On Error Resume Next
+    Dim psScript : psScript = Server.MapPath("/database/backup_database.ps1")
+    Dim psBackupDir : psBackupDir = Server.MapPath("/database/backups/")
+    Dim wsShell : Set wsShell = Server.CreateObject("WScript.Shell")
+    If Not wsShell Is Nothing Then
+        Dim psCmd : psCmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & psScript & """ -BackupDir """ & psBackupDir & """ -RetentionDays " & BACKUP_RETENTION_DAYS
+        Dim psExec : psExec = wsShell.Run(psCmd, 0, True)
+        If psExec = 0 Then
+            psMsg = "PowerShell 备份任务已执行完成。"
+        Else
+            psMsg = "PowerShell 备份返回代码: " & psExec & "，请检查服务器日志。"
+        End If
+        Set wsShell = Nothing
+    Else
+        psMsg = "无法创建 WScript.Shell 对象（可能被安全策略禁用）。请通过任务计划程序手动运行。"
+    End If
+    On Error GoTo 0
+End If
+
+' =====================================
+' V10.4: 最近7天备份时间线
+' =====================================
+Dim timeline(6), tlIdx, tlDate, tlFound, f2
+tlIdx = 0
+Do While tlIdx < 7
+    tlDate = DateAdd("d", -tlIdx, Date())
+    tlFound = False
+    If bakCount > 0 Then
+        For Each f2 In fso.GetFolder(backupPath).Files
+            If LCase(fso.GetExtensionName(f2.Name)) = "bak" Then
+                If DateValue(f2.DateLastModified) = DateValue(tlDate) Then
+                    tlFound = True
+                    Exit For
+                End If
+            End If
+        Next
+    End If
+    timeline(tlIdx) = Array(tlDate, tlFound)
+    tlIdx = tlIdx + 1
+Loop
+
+' =====================================
+' V10.4: 备份成功率统计 (最近30天)
+' =====================================
+Dim successCount, totalAttempts, successRate
+successCount = 0 : totalAttempts = 0
+If bakCount > 0 Then
+    For Each f2 In fso.GetFolder(backupPath).Files
+        If LCase(fso.GetExtensionName(f2.Name)) = "bak" Then
+            If DateDiff("d", f2.DateLastModified, Now()) <= 30 Then
+                totalAttempts = totalAttempts + 1
+                If f2.Size > 0 Then successCount = successCount + 1
+            End If
+        End If
+    Next
+End If
+If totalAttempts > 0 Then
+    successRate = Round((successCount / totalAttempts) * 100, 1)
+Else
+    successRate = 0
+End If
+
+' V10.4: 下次计划备份时间
+Dim nextBackupTime
+nextBackupTime = DateAdd("d", 1, Date()) & " 02:00 AM"
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -231,18 +302,26 @@ Dim dbLogSize : dbLogSize = GetScalar("SELECT SUM(size)*8/1024 FROM sys.database
     <% If msg <> "" Then %>
     <div class="msg <%= IIf(InStr(msg,"失败")>0,"msg-error","msg-success") %>"><i class="fas fa-info-circle"></i> <%= msg %></div>
     <% End If %>
+    <% If psMsg <> "" Then %>
+    <div class="msg <%= IIf(InStr(psMsg,"失败")>0 Or InStr(psMsg,"无法")>0,"msg-error","msg-success") %>"><i class="fas fa-terminal"></i> <%= psMsg %></div>
+    <% End If %>
     
     <div class="stats-grid">
         <div class="stat-card"><div class="num"><%= dbSize %></div><div class="label">数据库大小(MB)</div></div>
         <div class="stat-card"><div class="num"><%= dbLogSize %></div><div class="label">日志大小(MB)</div></div>
         <div class="stat-card"><div class="num"><%= bakCount %></div><div class="label">备份文件数</div></div>
-        <div class="stat-card"><div class="num" style="color:#4CAF50;">就绪</div><div class="label">备份状态</div></div>
+        <div class="stat-card"><div class="num" style="color:<%= IIf(successRate>=80,"#4CAF50",IIf(successRate>=50,"#FF9800","#F44336")) %>;"><%= successRate %>%</div><div class="label">30天成功率</div></div>
+        <div class="stat-card"><div class="num" style="font-size:18px;color:#FF9800;"><%= nextBackupTime %></div><div class="label">下次计划备份</div></div>
     </div>
     
     <div class="backup-actions">
         <form method="post" style="display:inline;">
             <input type="hidden" name="action" value="backup_now">
-            <button type="submit" class="btn btn-success" onclick="return confirm('确认立即执行数据库备份？')"><i class="fas fa-save"></i> 立即备份</button>
+            <button type="submit" class="btn btn-success" onclick="return confirm('确认立即执行数据库备份？')"><i class="fas fa-save"></i> 立即备份 (SQL)</button>
+        </form>
+        <form method="post" style="display:inline;" onsubmit="return confirm('将通过 PowerShell 执行完整备份（含验证），确认继续？');">
+            <input type="hidden" name="action" value="ps_backup">
+            <button type="submit" class="btn btn-warning" style="background:#FF9800;border-color:#FF9800;"><i class="fas fa-terminal"></i> PowerShell 备份</button>
         </form>
         <button class="btn btn-primary" onclick="document.getElementById('diagPanel').style.display=document.getElementById('diagPanel').style.display=='none'?'':'none'"><i class="fas fa-stethoscope"></i> 检测修复</button>
     </div>
@@ -281,6 +360,44 @@ Dim dbLogSize : dbLogSize = GetScalar("SELECT SUM(size)*8/1024 FROM sys.database
             <% End If %>
         </div>
     </div>
+    
+    <!-- V10.4: 最近7天备份时间线 -->
+    <div class="card">
+        <div class="card-header"><i class="fas fa-calendar-check"></i> 最近7天备份时间线</div>
+        <div class="card-body">
+            <div class="timeline-bar">
+                <% Dim tlI
+                For tlI = 0 To 6
+                    Dim tlItem : tlItem = timeline(tlI)
+                    Dim tlDayName : tlDayName = WeekdayName(Weekday(tlItem(0)), True)
+                    Dim tlDayNum : tlDayNum = Day(tlItem(0))
+                    Dim tlHas : tlHas = tlItem(1)
+                %>
+                <div class="timeline-day <%= IIf(tlHas, "tl-success", "tl-miss") %>">
+                    <div class="tl-icon"><i class="fas <%= IIf(tlHas, "fa-check-circle", "fa-times-circle") %>"></i></div>
+                    <div class="tl-label"><%= tlDayName %></div>
+                    <div class="tl-date"><%= tlDayNum %></div>
+                </div>
+                <% Next %>
+            </div>
+            <div style="display:flex;justify-content:center;gap:24px;margin-top:10px;font-size:12px;color:#888;">
+                <span><span style="color:#4CAF50;">●</span> 已备份</span>
+                <span><span style="color:#666;">●</span> 未备份</span>
+            </div>
+        </div>
+    </div>
+    <style>
+        .timeline-bar { display: flex; justify-content: space-between; gap: 8px; }
+        .timeline-day { flex: 1; text-align: center; padding: 12px 8px; border-radius: 8px; transition: all 0.3s; }
+        .tl-success { background: rgba(76,175,80,0.12); border: 1px solid rgba(76,175,80,0.3); }
+        .tl-miss { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+        .tl-icon { font-size: 20px; margin-bottom: 6px; }
+        .tl-success .tl-icon { color: #4CAF50; }
+        .tl-miss .tl-icon { color: #555; }
+        .tl-label { font-size: 12px; color: #999; font-weight: 600; }
+        .tl-date { font-size: 16px; font-weight: 700; color: #e0e0e0; margin-top: 2px; }
+        @media (max-width: 768px) { .timeline-bar { flex-wrap: wrap; } .timeline-day { min-width: 40px; } }
+    </style>
     
     <!-- 备份配置信息 -->
     <div class="card">

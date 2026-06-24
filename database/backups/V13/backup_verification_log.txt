@@ -1,0 +1,39 @@
+﻿=====================================================
+PerfumeShop V13 Final Backup Verification Log
+=====================================================
+Backup Time: 2026-06-12 08:14:47
+Backup Location: F:\网站制作\网站\网站二\database\backups\V13
+=====================================================
+
+[1] Database Backup
+    File:       PerfumeShop_V13_Final_20260612.bak
+    Size:       13.49 MB (14143488 bytes)
+    SHA256:     555CE4C50F7589E2D57BECDF94DE6E240724DFF1A408CEC944EC1F6211F8FEF2
+    Pages:      1713 (PerfumeShop + PerfumeShop_log)
+    Status:     PASS - RESTORE VERIFYONLY confirmed valid
+    Method:     sqlcmd -> C:\temp -> copy to V13 dir
+
+[2] Code Archive
+    File:       PerfumeShop_V13_Code_20260612.zip
+    Size:       2.16 MB (2267696 bytes)
+    SHA256:     30C93DE9F7F5DED7689D2BE6C3A2FA4F262D4210B005A50AC573AFAF08C66F3B
+    Files:      328 (ASP/CSS/JS/images/config/docs/tools)
+    Compression: Optimal (zip)
+    Status:     PASS - Archive created successfully
+    Excluded:   database/backups, database/sqldata, .qoder, .git
+
+[3] Config Files (included in code archive)
+    - web.config (IIS configuration)
+    - includes/config.asp (application config)
+    - includes/connection.asp (DB connection)
+    - includes/cdn_config.asp (CDN configuration)
+
+=====================================================
+Backup Summary
+=====================================================
+Total Files:    2 backup files
+Total Size:     15.65 MB
+DB Status:      VERIFIED
+Code Status:    VERIFIED
+Overall:        ALL BACKUPS SUCCESSFUL
+=====================================================

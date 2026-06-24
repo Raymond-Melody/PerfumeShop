@@ -102,10 +102,16 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         ' 重置登录失败计数
                         Call ResetLoginFailure("Admin")
                         
-                        ' 如果选择了记住我，设置加密Cookie
+                        ' 如果选择了记住我，设置加密Cookie (V10: 安全加固)
                         If rememberMe <> "" Then
                             Response.Cookies("AdminRememberMe") = GenerateSecureToken(adminId)
-                            Response.Cookies("AdminRememberMe").Expires = DateAdd("d", 30, Now()) ' 30天后过期
+                            Response.Cookies("AdminRememberMe").Expires = DateAdd("d", 30, Now())
+                            Response.Cookies("AdminRememberMe").Path = "/"
+                            ' 注：HttpOnly需要IIS 7.0+支持，此处移除以保证兼容性
+                            ' Response.Cookies("AdminRememberMe").HttpOnly = True
+                            If LCase(Request.ServerVariables("HTTPS")) = "on" Then
+                                Response.Cookies("AdminRememberMe").Secure = True
+                            End If
                         End If
                         
                         Response.Redirect "portal.asp"

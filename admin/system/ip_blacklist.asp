@@ -26,22 +26,19 @@ Function GetScalar(sql)
     Set rs = Nothing : GetScalar = val
 End Function
 
-' 自动创建 IPBlacklist 表
-On Error Resume Next
-conn.Execute "SELECT TOP 1 * FROM IPBlacklist WHERE 1=0"
-If Err.Number <> 0 Then
+' V10.4: IPBlacklist 表已迁至 deploy.asp，此处做存在性检查
+Function TableExists_IPB()
+    On Error Resume Next
+    Dim rs : Set rs = conn.Execute("SELECT TOP 1 1 FROM sys.tables WHERE name='IPBlacklist'")
+    TableExists_IPB = (Err.Number = 0 And Not rs Is Nothing And Not rs.EOF)
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
     Err.Clear
-    conn.Execute "CREATE TABLE IPBlacklist (" & _
-        "IPID INT IDENTITY(1,1) PRIMARY KEY," & _
-        "IPAddress NVARCHAR(50) NOT NULL," & _
-        "Reason NVARCHAR(255)," & _
-        "BlockedAt DATETIME DEFAULT GETDATE()," & _
-        "BlockedBy INT," & _
-        "IsActive BIT DEFAULT 1," & _
-        "ExpiresAt DATETIME NULL," & _
-        "HitCount INT DEFAULT 0," & _
-        "LastHitAt DATETIME NULL" & _
-        ")"
+End Function
+
+If Not TableExists_IPB() Then
+    Response.Write "<div style='padding:40px;text-align:center;color:#EF9A9A;'><i class='fas fa-exclamation-triangle'></i> IPBlacklist 表不存在，请先运行 <a href='/setup/deploy.asp' style='color:#00bcd4;'>deploy.asp</a> 初始化数据库</div>"
+    Response.End
 End If
 On Error GoTo 0
 

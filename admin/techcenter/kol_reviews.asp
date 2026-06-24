@@ -61,6 +61,11 @@ Function SafeNum(val)
     On Error GoTo 0
 End Function
 
+' ========== IIF 函数 ==========
+Function IIF(cond, tVal, fVal)
+    If cond Then IIF = tVal Else IIF = fVal
+End Function
+
 ' ========== 处理审核操作 ==========
 Dim action, productId, status, message
 action = Request.Form("action")

@@ -35,6 +35,19 @@ If Not rs Is Nothing Then
     Set rs = Nothing
 End If
 
+' V10.3: ETag 支持 — 基于 SYS_VERSION + 用户标识 + 购物车数量
+Dim eTag, clientETag
+eTag = """" & SafeSHA256Hash(SYS_VERSION & "|cart|" & userId & "|" & sessionId & "|" & countVal) & """"
+clientETag = Request.ServerVariables("HTTP_IF_NONE_MATCH")
+
+If clientETag <> "" And clientETag = eTag Then
+    Response.Status = "304 Not Modified"
+    Call CloseConnection()
+    Response.End
+End If
+
+Response.AddHeader "ETag", eTag
+Response.AddHeader "Cache-Control", "no-cache"
 Response.Write countVal
 
 Call CloseConnection()

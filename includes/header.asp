@@ -5,23 +5,49 @@
 
 ' 确保CSRF令牌存在
 Call EnsureCSRFToken()
+
+' V14.6: 安全初始化 amphtmlLink（仅 product.asp 会设置此变量）
+If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- V14.6 资源预加载 -->
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="//code.jquery.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
+    <link rel="preload" href="/css/design-tokens.css?v=14.6" as="style">
+    <link rel="preload" href="/css/style.css?v=14.6" as="style">
+    <link rel="preload" href="https://code.jquery.com/jquery-3.6.0.min.js" as="script" crossorigin>
+    <!-- V14.6 PWA 增强 -->
+    <meta name="color-scheme" content="light dark">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="香氛定制">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
     <meta name="description" content="专业个性化定制香水，打造专属于你的独特香氛体验">
     <meta name="keywords" content="香水定制,个性化香水,定制香氛,专属香水">
     <title><%= SITE_NAME %></title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="/css/design-tokens.css">
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/pages.css">
-    <link rel="stylesheet" href="/css/buttons.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#8B4513">
+    <link rel="stylesheet" href="/css/design-tokens.css?v=14.6">
+    <link rel="stylesheet" href="/css/style.css?v=14.6">
+    <link rel="stylesheet" href="/css/pages.css?v=14.6">
+    <link rel="stylesheet" href="/css/buttons.css?v=14.6">
+    <link rel="stylesheet" href="/css/responsive.css?v=14.6">
+    <link rel="stylesheet" href="/css/lazy-load.css?v=14.6" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/css/cart-animation.css?v=14.6" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/css/filter-optimization.css?v=14.6">
+    <link rel="stylesheet" href="/css/theme.css?v=14.6">
+    <link rel="stylesheet" href="/css/skeleton.css?v=14.6" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <% If amphtmlLink <> "" Then Response.Write amphtmlLink %>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
+    <script nonce="<%= Session("csp_nonce") %>">
     // 全局CSRF令牌配置
     var csrfToken = '<%= Session("CSRFToken") %>';
     
@@ -64,6 +90,9 @@ Call EnsureCSRFToken()
     </script>
 </head>
 <body>
+    <!-- V11 移动端导航组件 -->
+    <!--#include file="mobile_nav.asp"-->
+    
     <!-- 顶部公告栏 -->
     <div class="top-bar">
         <div class="container">
@@ -128,7 +157,7 @@ Call EnsureCSRFToken()
     </header>
 
     <!-- 分类导航 -->
-    <nav class="main-nav">
+    <nav class="main-nav pc-only">
         <div class="container">
             <ul class="nav-list">
                 <li><a href="/index.asp"><i class="fas fa-home"></i> 首页</a></li>
@@ -160,6 +189,17 @@ Call EnsureCSRFToken()
             </ul>
         </div>
     </nav>
+
+    <!-- V11.1 PWA Service Worker注册 -->
+    <script nonce="<%= Session("csp_nonce") %>">
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('[PWA] SW registered:', reg.scope))
+                .catch(err => console.error('[PWA] SW failed:', err));
+        });
+    }
+    </script>
 
     <!-- 主内容区 -->
     <main class="main-content">

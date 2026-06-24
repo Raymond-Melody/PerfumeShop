@@ -1,4 +1,5 @@
 <!-- 产品技术管理中心导航 -->
+<!-- 注意：isManager 变量由父页面通过 includes/auth.asp 定义，此处不再重复 include -->
 <link rel="stylesheet" href="/css/admin.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <%
@@ -6,8 +7,14 @@
 Dim currentPage
 currentPage = LCase(Request.ServerVariables("SCRIPT_NAME"))
 
-' 判断当前用户角色（isManager 已在 auth.asp 中声明）
+' 判断当前用户角色（isManager 已在父页面的 auth.asp 中声明）
 ' TECH_MANAGER 显示全部功能，TECH_STAFF 隐藏删除相关功能
+' 安全回退：如果 isManager 未定义，默认为 False
+On Error Resume Next
+If IsEmpty(isManager) Then
+    isManager = False
+End If
+On Error GoTo 0
 
 ' 辅助函数：判断是否为当前页面
 Function GetNavActiveClass(pageName)

@@ -11,6 +11,12 @@ Response.ContentType = "text/html"
 <%
 Call OpenConnection()
 
+' V14: 会员登录检查
+If Session("UserID") = "" Or IsNull(Session("UserID")) Then
+    Response.Redirect "/user/login.asp?return=" & Server.URLEncode(Request.ServerVariables("SCRIPT_NAME") & "?" & Request.ServerVariables("QUERY_STRING"))
+    Response.End
+End If
+
 Dim productId, rsProduct, productType, kolId, reviewStatus, typeDisplayName
 productId = Request.QueryString("id")
 
@@ -24,11 +30,11 @@ Set rsType = ExecuteQuery("SELECT ProductType FROM Products WHERE ProductID = " 
 If rsType Is Nothing Or rsType.EOF Then
     Response.Redirect "/products.asp"
 End If
-productType = rsType("ProductType")
+productType = LCase(rsType("ProductType") & "")
 rsType.Close
 Set rsType = Nothing
 
-If IsNull(productType) Then productType = "Custom"
+If productType = "" Then productType = "custom"
 
 ' 获取类型显示名称（此时没有其他Recordset打开）
 typeDisplayName = GetProductTypeDisplayName(productType)
@@ -57,7 +63,7 @@ If IsNull(productEngravingPrice) Then productEngravingPrice = 0 Else productEngr
 ' 获取 KOL 预设比例
 Dim dictKOLRatios
 Set dictKOLRatios = Server.CreateObject("Scripting.Dictionary")
-If productType = "KOL" Then
+If productType = "kol" Then
     Dim rsKOL, kolPct
     Set rsKOL = ExecuteQuery("SELECT * FROM ProductNoteRatios WHERE ProductID = " & CInt(productId))
     If Not rsKOL Is Nothing Then
@@ -95,6 +101,16 @@ If Not rsMinPercent Is Nothing Then
     rsMinPercent.Close
 End If
 Set rsMinPercent = Nothing
+%>
+<%
+' V13.1: AMP产品页链接（移动端加速）
+Dim amphtmlLink, ampProtocol
+If Request.ServerVariables("HTTPS") = "on" Then
+    ampProtocol = "https://"
+Else
+    ampProtocol = "http://"
+End If
+amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVariables("SERVER_NAME") & "/amp_product.asp?id=" & productId & """ />"
 %>
 <!--#include file="includes/header.asp"-->
 
@@ -136,7 +152,7 @@ Set rsMinPercent = Nothing
             <div class="price-section">
                 <span class="base-price" id="basePrice" data-price="<%= CDbl(rsProduct("BasePrice")) %>"><%= FormatMoney(rsProduct("BasePrice")) %></span>
                 <span class="price-note" id="priceNote">
-                    <% If productType = "Fixed" Then %>
+                    <% If productType = "standard" Then %>
                         (固定价格)
                     <% Else %>
                         起 (根据定制选项价格会有所变化)
@@ -153,44 +169,23 @@ Set rsMinPercent = Nothing
                 <input type="hidden" name="productType" value="<%= productType %>">
                 <%= GetCSRFTokenField() %>
                 
-                <% If productType = "Custom" Or productType = "KOL" Then %>
-                <!-- 选择前调 - 仅定制/KOL香水显示 -->
+                <% If productType = "custom" Then %>
+                <!-- 选择前调 - 仅定制香水显示 -->
                 <div class="option-section">
                     <h3><i class="fas fa-wind"></i> 前调 <span class="option-tip">香水的第一印象（最小 <%= minTopPercent %>%）</span></h3>
                     <div class="option-grid" id="topNotes">
                         <%
-                        Dim rsNotes, isSelected, kolRatio, showNote, cardClass, wrapperStyle, noteVal
+                        Dim rsNotes
                         Set rsNotes = ExecuteQuery("SELECT n.* FROM FragranceNotes n INNER JOIN ProductNotes pn ON n.NoteID = pn.NoteID WHERE pn.ProductID = " & CInt(productId) & " AND n.NoteType = '前调' AND n.IsActive <> 0")
                         If Not rsNotes Is Nothing Then
                             Do While Not rsNotes.EOF
-                                isSelected = False
-                                kolRatio = 0
-                                showNote = True
-                                If productType = "KOL" Then
-                                    If dictKOLRatios.Exists(CStr(rsNotes("NoteID"))) Then
-                                        isSelected = True
-                                        kolRatio = dictKOLRatios(CStr(rsNotes("NoteID")))
-                                    Else
-                                        showNote = False
-                                    End If
-                                End If
-                                
-                                If showNote Then
-                                    cardClass = "option-card"
-                                    If isSelected Then cardClass = cardClass & " active"
-                                    wrapperStyle = "display:none; margin-top: 10px;"
-                                    If isSelected Then wrapperStyle = "display:block; margin-top: 10px;"
-                                    noteVal = rsNotes("RecommendedPercentage")
-                                    If IsNull(noteVal) Then noteVal = 0 Else noteVal = CDbl(noteVal)
-                                    If isSelected Then noteVal = kolRatio
                         %>
                         <div class="option-card-wrapper">
-                            <label class="<%= cardClass %>">
+                            <label class="option-card">
                                 <input type="checkbox" name="topNote" value="<%= rsNotes("NoteID") %>" 
                                     data-price="<%= CDbl(rsNotes("PriceAddition")) %>" 
                                     data-name="<%= HTMLEncode(rsNotes("NoteName")) %>" 
-                                    <% If isSelected Then Response.Write "checked" End If %>
-                                    <% If productType = "KOL" Then %> onclick="return false;" <% Else %> onclick="toggleNote(this)" <% End If %>>
+                                    onclick="toggleNote(this)">
                                 <div class="option-content">
                                     <span class="option-name"><%= HTMLEncode(rsNotes("NoteName")) %></span>
                                     <span class="option-desc"><%= HTMLEncode(rsNotes("Description") & "") %></span>
@@ -199,15 +194,13 @@ Set rsMinPercent = Nothing
                                     <% End If %>
                                 </div>
                             </label>
-                            <div class="percent-input-wrapper" <% If isSelected Then %>style="display:block; margin-top: 10px;"<% Else %>style="display:none; margin-top: 10px;"<% End If %>>
+                            <div class="percent-input-wrapper" style="display:none; margin-top: 10px;">
                                 <label>比例: <input type="number" name="percent_top_<%= rsNotes("NoteID") %>" class="note-percent" min="1" max="100" 
-                                    value="<%= noteVal %>" 
-                                    <% If productType = "KOL" Then Response.Write "readonly" End If %>
+                                    value="<%= rsNotes("RecommendedPercentage") %>" 
                                     onchange="calculateTotal()"> %</label>
                             </div>
                         </div>
                         <%
-                                End If
                                 rsNotes.MoveNext
                             Loop
                             rsNotes.Close
@@ -224,32 +217,13 @@ Set rsMinPercent = Nothing
                         Set rsNotes = ExecuteQuery("SELECT n.* FROM FragranceNotes n INNER JOIN ProductNotes pn ON n.NoteID = pn.NoteID WHERE pn.ProductID = " & CInt(productId) & " AND n.NoteType = '中调' AND n.IsActive <> 0")
                         If Not rsNotes Is Nothing Then
                             Do While Not rsNotes.EOF
-                                isSelected = False
-                                kolRatio = 0
-                                showNote = True
-                                If productType = "KOL" Then
-                                    If dictKOLRatios.Exists(CStr(rsNotes("NoteID"))) Then
-                                        isSelected = True
-                                        kolRatio = dictKOLRatios(CStr(rsNotes("NoteID")))
-                                    Else
-                                        showNote = False
-                                    End If
-                                End If
-                                
-                                If showNote Then
-                                    cardClass = "option-card"
-                                    If isSelected Then cardClass = cardClass & " active"
-                                    noteVal = rsNotes("RecommendedPercentage")
-                                    If IsNull(noteVal) Then noteVal = 0 Else noteVal = CDbl(noteVal)
-                                    If isSelected Then noteVal = kolRatio
                         %>
                         <div class="option-card-wrapper">
-                            <label class="<%= cardClass %>">
+                            <label class="option-card">
                                 <input type="checkbox" name="middleNote" value="<%= rsNotes("NoteID") %>" 
                                     data-price="<%= CDbl(rsNotes("PriceAddition")) %>" 
                                     data-name="<%= HTMLEncode(rsNotes("NoteName")) %>" 
-                                    <% If isSelected Then Response.Write "checked" End If %>
-                                    <% If productType = "KOL" Then %> onclick="return false;" <% Else %> onclick="toggleNote(this)" <% End If %>>
+                                    onclick="toggleNote(this)">
                                 <div class="option-content">
                                     <span class="option-name"><%= HTMLEncode(rsNotes("NoteName")) %></span>
                                     <span class="option-desc"><%= HTMLEncode(rsNotes("Description") & "") %></span>
@@ -258,15 +232,13 @@ Set rsMinPercent = Nothing
                                     <% End If %>
                                 </div>
                             </label>
-                            <div class="percent-input-wrapper" <% If isSelected Then %>style="display:block; margin-top: 10px;"<% Else %>style="display:none; margin-top: 10px;"<% End If %>>
+                            <div class="percent-input-wrapper" style="display:none; margin-top: 10px;">
                                 <label>比例: <input type="number" name="percent_mid_<%= rsNotes("NoteID") %>" class="note-percent" min="1" max="100" 
-                                    value="<%= noteVal %>" 
-                                    <% If productType = "KOL" Then Response.Write "readonly" End If %>
+                                    value="<%= rsNotes("RecommendedPercentage") %>" 
                                     onchange="calculateTotal()"> %</label>
                             </div>
                         </div>
                         <%
-                                End If
                                 rsNotes.MoveNext
                             Loop
                             rsNotes.Close
@@ -283,32 +255,13 @@ Set rsMinPercent = Nothing
                         Set rsNotes = ExecuteQuery("SELECT n.* FROM FragranceNotes n INNER JOIN ProductNotes pn ON n.NoteID = pn.NoteID WHERE pn.ProductID = " & CInt(productId) & " AND n.NoteType = '后调' AND n.IsActive <> 0")
                         If Not rsNotes Is Nothing Then
                             Do While Not rsNotes.EOF
-                                isSelected = False
-                                kolRatio = 0
-                                showNote = True
-                                If productType = "KOL" Then
-                                    If dictKOLRatios.Exists(CStr(rsNotes("NoteID"))) Then
-                                        isSelected = True
-                                        kolRatio = dictKOLRatios(CStr(rsNotes("NoteID")))
-                                    Else
-                                        showNote = False
-                                    End If
-                                End If
-                                
-                                If showNote Then
-                                    cardClass = "option-card"
-                                    If isSelected Then cardClass = cardClass & " active"
-                                    noteVal = rsNotes("RecommendedPercentage")
-                                    If IsNull(noteVal) Then noteVal = 0 Else noteVal = CDbl(noteVal)
-                                    If isSelected Then noteVal = kolRatio
                         %>
                         <div class="option-card-wrapper">
-                            <label class="<%= cardClass %>">
+                            <label class="option-card">
                                 <input type="checkbox" name="baseNote" value="<%= rsNotes("NoteID") %>" 
                                     data-price="<%= CDbl(rsNotes("PriceAddition")) %>" 
                                     data-name="<%= HTMLEncode(rsNotes("NoteName")) %>" 
-                                    <% If isSelected Then Response.Write "checked" End If %>
-                                    <% If productType = "KOL" Then %> onclick="return false;" <% Else %> onclick="toggleNote(this)" <% End If %>>
+                                    onclick="toggleNote(this)">
                                 <div class="option-content">
                                     <span class="option-name"><%= HTMLEncode(rsNotes("NoteName")) %></span>
                                     <span class="option-desc"><%= HTMLEncode(rsNotes("Description") & "") %></span>
@@ -317,15 +270,13 @@ Set rsMinPercent = Nothing
                                     <% End If %>
                                 </div>
                             </label>
-                            <div class="percent-input-wrapper" <% If isSelected Then %>style="display:block; margin-top: 10px;"<% Else %>style="display:none; margin-top: 10px;"<% End If %>>
+                            <div class="percent-input-wrapper" style="display:none; margin-top: 10px;">
                                 <label>比例: <input type="number" name="percent_base_<%= rsNotes("NoteID") %>" class="note-percent" min="1" max="100" 
-                                    value="<%= noteVal %>" 
-                                    <% If productType = "KOL" Then Response.Write "readonly" End If %>
+                                    value="<%= rsNotes("RecommendedPercentage") %>" 
                                     onchange="calculateTotal()"> %</label>
                             </div>
                         </div>
                         <%
-                                End If
                                 rsNotes.MoveNext
                             Loop
                             rsNotes.Close
@@ -336,7 +287,7 @@ Set rsMinPercent = Nothing
                 </div>
                 
                 <!-- 香调配比实时验证面板 - 仅Custom类型显示 -->
-                <% If productType = "Custom" Then %>
+                <% If productType = "custom" Then %>
                 <div class="option-section ratio-validation-panel" id="ratioValidationPanel">
                     <h3><i class="fas fa-chart-pie"></i> 配比验证</h3>
                     <div class="ratio-status-list">
@@ -418,8 +369,12 @@ Set rsMinPercent = Nothing
                         %>
                         <label class="option-card volume-card">
                             <input type="radio" name="volume" value="<%= rsVolumes("VolumeID") %>" 
-                                <% If productType = "Fixed" Then %>
+                                <% If productType = "standard" Then %>
+                                <% If hasProductVolumes Then %>
                                 data-fixed-price="<%= CDbl(rsVolumes("Price")) %>"
+                                <% Else %>
+                                data-fixed-price="<%= CDbl(rsProduct("BasePrice")) * volMultiplier %>"
+                                <% End If %>
                                 <% Else %>
                                 data-multiplier="<%= CDbl(rsVolumes("PriceMultiplier")) %>" 
                                 <% End If %>
@@ -427,7 +382,7 @@ Set rsMinPercent = Nothing
                             <div class="option-content">
                                 <span class="volume-size"><%= rsVolumes("VolumeML") %>ml</span>
                                 <span class="option-name"><%= HTMLEncode(rsVolumes("VolumeName")) %></span>
-                                <% If productType = "Fixed" Then %>
+                                <% If productType = "standard" Then %>
                                 <span class="volume-multiplier">×<%= FormatNumber(volMultiplier, 1) %></span>
                                 <% Else %>
                                 <span class="volume-multiplier">×<%= CDbl(rsVolumes("PriceMultiplier")) %></span>
@@ -445,7 +400,7 @@ Set rsMinPercent = Nothing
                     </div>
                 </div>
 
-                <% If productType <> "Fixed" Then %>
+                <% If productType <> "standard" Then %>
                 <!-- 选择瓶子 -->
                 <div class="option-section">
                     <h3><i class="fas fa-wine-bottle"></i> 瓶身款式</h3>
@@ -548,7 +503,7 @@ Set rsMinPercent = Nothing
 
                 <!-- 价格汇总 -->
                 <div class="price-summary">
-                    <% If productType = "Fixed" Then %>
+                    <% If productType = "standard" Then %>
                     <!-- 品牌定香价格摘要 -->
                     <div class="summary-row">
                         <span>选择规格:</span>
@@ -560,7 +515,7 @@ Set rsMinPercent = Nothing
                         <span id="summaryEngraving"><%= FormatMoney(productEngravingPrice) %></span>
                     </div>
                     <% End If %>
-                    <% ElseIf productType = "KOL" Then %>
+                    <% ElseIf productType = "kol" Then %>
                     <!-- KOL商品价格摘要 -->
                     <div class="summary-row">
                         <span>基础价格:</span>
@@ -757,7 +712,7 @@ $(document).ready(function() {
 
 // 切换香调选中状态
 window.toggleNote = function(checkbox) {
-    if (productType === 'KOL') return; // KOL产品不可修改
+    if (productType === 'kol') return; // KOL产品不可修改
 
     var $wrapper = $(checkbox).closest('.option-card-wrapper');
     var $percentWrapper = $wrapper.find('.percent-input-wrapper');
@@ -807,7 +762,7 @@ function calculateTotal() {
     var bottlePrice = 0, multiplier = 1, fixedPrice = 0;
     var engravingPrice = 0;
     
-    if (productType === 'Fixed') {
+    if (productType === 'standard') {
         var $selectedVol = $('input[name="volume"]:checked');
         var selectedFixedPrice = parseFloat($selectedVol.data('fixed-price'));
         if (!isNaN(selectedFixedPrice) && selectedFixedPrice > 0) {
@@ -838,7 +793,7 @@ function calculateTotal() {
     }
     
     // KOL商品 - 配比已预设，不需要验证
-    if (productType === 'KOL') {
+    if (productType === 'kol') {
         if ($('input[name="bottle"]:checked').length) {
             bottlePrice = parseFloat($('input[name="bottle"]:checked').data('price')) || 0;
         }
@@ -876,7 +831,7 @@ function calculateTotal() {
         var notePrice = parseFloat($checkbox.data('price')) || 0;
         var $wrapper = $checkbox.closest('.option-card-wrapper');
         var $percentInput = $wrapper.find('.note-percent');
-        var percent = parseInt($percentInput.val()) || 0;
+        var percent = parseFloat($percentInput.val()) || 0;
         topPercent += percent;
         totalPercent += percent;
         notesTotal += (notePrice * percent / 100);
@@ -888,7 +843,7 @@ function calculateTotal() {
         var notePrice = parseFloat($checkbox.data('price')) || 0;
         var $wrapper = $checkbox.closest('.option-card-wrapper');
         var $percentInput = $wrapper.find('.note-percent');
-        var percent = parseInt($percentInput.val()) || 0;
+        var percent = parseFloat($percentInput.val()) || 0;
         middlePercent += percent;
         totalPercent += percent;
         notesTotal += (notePrice * percent / 100);
@@ -900,7 +855,7 @@ function calculateTotal() {
         var notePrice = parseFloat($checkbox.data('price')) || 0;
         var $wrapper = $checkbox.closest('.option-card-wrapper');
         var $percentInput = $wrapper.find('.note-percent');
-        var percent = parseInt($percentInput.val()) || 0;
+        var percent = parseFloat($percentInput.val()) || 0;
         basePercent += percent;
         totalPercent += percent;
         notesTotal += (notePrice * percent / 100);
@@ -936,7 +891,7 @@ function calculateTotal() {
     $('#summaryBase').text('¥' + basePrice.toFixed(2));
     $('#totalPercentDisplay').text(totalPercent + '%');
     
-    if (totalPercent !== 100) {
+    if (Math.abs(totalPercent - 100) > 0.01) {
         $('#totalPercentDisplay').css('color', 'red');
     } else {
         $('#totalPercentDisplay').css('color', 'green');
@@ -953,7 +908,7 @@ function calculateTotal() {
 // 更新香调配比实时验证面板
 function updateRatioValidationPanel(totalPercent, topPercent, middlePercent, basePercent) {
     // 仅对Custom类型显示验证
-    if (productType !== 'Custom') {
+    if (productType !== 'custom') {
         $('#ratioValidationPanel').hide();
         return;
     }
@@ -978,9 +933,9 @@ function updateRatioValidationPanel(totalPercent, topPercent, middlePercent, bas
     var baseValid = basePercent >= minBasePercent;
     updateStatusItem('baseStatus', 'baseStatusIcon', baseValid, basePercent + '% ≥ ' + minBasePercent + '%');
     
-    // 验证总计
-    var totalValid = totalPercent === 100;
-    updateStatusItem('totalStatus', 'totalStatusIcon', totalValid, totalPercent + '% / 100%');
+    // 验证总计（使用容差0.01避免浮点数精度问题）
+    var totalValid = Math.abs(totalPercent - 100) < 0.01;
+    updateStatusItem('totalStatus', 'totalStatusIcon', totalValid, totalPercent.toFixed(1) + '% / 100%');
     
     // 显示验证消息
     var message = '';
@@ -992,10 +947,11 @@ function updateRatioValidationPanel(totalPercent, topPercent, middlePercent, bas
         if (!middleValid) issues.push('中调比例不足（需≥' + minMiddlePercent + '%）');
         if (!baseValid) issues.push('后调比例不足（需≥' + minBasePercent + '%）');
         if (!totalValid) {
+            var diff = Math.abs(totalPercent - 100);
             if (totalPercent < 100) {
-                issues.push('总配比不足100%（还差' + (100 - totalPercent) + '%）');
+                issues.push('总配比不足100%（还差' + diff.toFixed(1) + '%）');
             } else {
-                issues.push('总配比超过100%（超出' + (totalPercent - 100) + '%）');
+                issues.push('总配比超过100%（超出' + diff.toFixed(1) + '%）');
             }
         }
         message = '⚠️ ' + issues.join('；');
@@ -1032,23 +988,23 @@ function changeQty(delta) {
 function submitCustomCart() {
     var result = calculateTotal();
     // 只有定制香水需要验证配比，KOL商品配比已在后台验证
-    if (productType === 'Custom') {
-        // 验证总和为100%
-        if (result.total !== 100) {
-            alert('前、中、后调所选基香的百分比总和必须等于100%（当前：' + result.total + '%）');
+    if (productType === 'custom') {
+        // 验证总和为100%（使用容差0.01避免浮点数精度问题）
+        if (Math.abs(result.total - 100) > 0.01) {
+            alert('前、中、后调所选基香的百分比总和必须等于100%（当前：' + result.total.toFixed(1) + '%）');
             return;
         }
         // 验证每种调性最小比例
-        if (result.top < minTopPercent) {
-            alert('前调比例不能低于' + minTopPercent + '%，当前为' + result.top + '%');
+        if (result.top < minTopPercent - 0.01) {
+            alert('前调比例不能低于' + minTopPercent + '%，当前为' + result.top.toFixed(1) + '%');
             return;
         }
-        if (result.middle < minMiddlePercent) {
-            alert('中调比例不能低于' + minMiddlePercent + '%，当前为' + result.middle + '%');
+        if (result.middle < minMiddlePercent - 0.01) {
+            alert('中调比例不能低于' + minMiddlePercent + '%，当前为' + result.middle.toFixed(1) + '%');
             return;
         }
-        if (result.base < minBasePercent) {
-            alert('后调比例不能低于' + minBasePercent + '%，当前为' + result.base + '%');
+        if (result.base < minBasePercent - 0.01) {
+            alert('后调比例不能低于' + minBasePercent + '%，当前为' + result.base.toFixed(1) + '%');
             return;
         }
     }
@@ -1068,23 +1024,23 @@ function submitCustomCart() {
 function submitCustomBuyNow() {
     var result = calculateTotal();
     // 只有定制香水需要验证配比，KOL商品配比已在后台验证
-    if (productType === 'Custom') {
-        // 验证总和为100%
-        if (result.total !== 100) {
-            alert('前、中、后调所选基香的百分比总和必须等于100%（当前：' + result.total + '%）');
+    if (productType === 'custom') {
+        // 验证总和为100%（使用容差0.01避免浮点数精度问题）
+        if (Math.abs(result.total - 100) > 0.01) {
+            alert('前、中、后调所选基香的百分比总和必须等于100%（当前：' + result.total.toFixed(1) + '%）');
             return;
         }
         // 验证每种调性最小比例
-        if (result.top < minTopPercent) {
-            alert('前调比例不能低于' + minTopPercent + '%，当前为' + result.top + '%');
+        if (result.top < minTopPercent - 0.01) {
+            alert('前调比例不能低于' + minTopPercent + '%，当前为' + result.top.toFixed(1) + '%');
             return;
         }
-        if (result.middle < minMiddlePercent) {
-            alert('中调比例不能低于' + minMiddlePercent + '%，当前为' + result.middle + '%');
+        if (result.middle < minMiddlePercent - 0.01) {
+            alert('中调比例不能低于' + minMiddlePercent + '%，当前为' + result.middle.toFixed(1) + '%');
             return;
         }
-        if (result.base < minBasePercent) {
-            alert('后调比例不能低于' + minBasePercent + '%，当前为' + result.base + '%');
+        if (result.base < minBasePercent - 0.01) {
+            alert('后调比例不能低于' + minBasePercent + '%，当前为' + result.base.toFixed(1) + '%');
             return;
         }
     }

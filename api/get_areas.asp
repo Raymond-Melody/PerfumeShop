@@ -1,4 +1,4 @@
-<%@ Language="VBScript" %>
+<%@ Language="VBScript" CodePage="65001" %>
 <%
 Response.ContentType = "application/json"
 Response.Charset = "UTF-8"
@@ -46,7 +46,12 @@ If Not rs Is Nothing Then
     If Not rs.EOF Then
         Do While Not rs.EOF
             ReDim Preserve areasArray(i)
-            areasArray(i) = "{""AreaID"": " & rs("AreaID") & ", ""AreaName"": """ & Replace(rs("AreaName"), """", "\"") & """}"
+            Dim areaName
+            areaName = rs("AreaName")
+            If IsNull(areaName) Then areaName = ""
+            areaName = Replace(areaName, "\", "\\")
+            areaName = Replace(areaName, """", "\""")
+            areasArray(i) = "{""AreaID"":" & rs("AreaID") & ",""AreaName"":""" & areaName & """}"
             i = i + 1
             rs.MoveNext
         Loop
@@ -68,7 +73,12 @@ Response.Write jsonResponse
 
 If Err.Number <> 0 Then
     Response.Clear
-    Response.Write "{""error"": """ & Replace(Err.Description, """", "\"") & """, ""areas"": []}"
+    Dim errMsg
+    errMsg = Err.Description
+    If IsNull(errMsg) Then errMsg = ""
+    errMsg = Replace(errMsg, "\", "\\")
+    errMsg = Replace(errMsg, """", "\""")
+    Response.Write "{""error"":""" & errMsg & """,""areas"":[]}"
 End If
 
 On Error GoTo 0
