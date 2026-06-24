@@ -1,49 +1,41 @@
 <%@ Language="VBScript" CodePage="65001" %>
-<%
-Response.Charset = "UTF-8"
-Response.ContentType = "application/json"
-%>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/api_response.asp"-->
 <%
 Call OpenConnection()
 
 ' CSRF验证
-If Not ValidateCSRFToken() Then
-    Response.Status = "403 Forbidden"
-    Response.Write "{""success"":false,""message"":""安全验证失败，请刷新页面重试""}"
+If Not API_CheckCSRF() Then
+    Call API_Error(API_ERR_CSRF_INVALID, API_GetErrorMessage(API_ERR_CSRF_INVALID))
     Response.End
 End If
 
-Dim cartId
-Dim sessionId, userId
-Dim whereClause
-
+Dim cartId, sessionId, userId, whereClause
 cartId = Request.Form("cartId")
 sessionId = Session.SessionID
 userId = Session("UserID")
 
-' 验证参数
 If cartId = "" Or Not IsNumeric(cartId) Then
-    Response.Write "{""success"":false,""message"":""无效的购物车项""}"
+    Call API_Error(API_ERR_PARAM_INVALID, "无效的购物车项")
     Response.End
 End If
 
-' 构建权限检查条件
 If userId <> "" Then
     whereClause = "CartID = " & CInt(cartId) & " AND UserID = " & userId
 Else
-    whereClause = "CartID = " & CInt(cartId) & " AND SessionID = '" & SafeSQL(sessionId) & "'"
+    whereClause = "CartID = " & CInt(cartId) & " AND SessionID = '" & Replace(sessionId, "'", "''") & "'"
 End If
 
-' 删除购物车项
 Dim sql
 sql = "DELETE FROM Cart WHERE " & whereClause
+conn.Execute sql
 
-If ExecuteNonQuery(sql) Then
-    Response.Write "{""success"":true}"
+If Err.Number <> 0 Then
+    Call API_Error(API_ERR_DB_ERROR, "删除失败")
+    Err.Clear
 Else
-    Response.Write "{""success"":false,""message"":""删除失败""}"
+    Call API_Success(Null, "已移除")
 End If
 
 Call CloseConnection()

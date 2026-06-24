@@ -1,12 +1,35 @@
 <%
 ' ============================================
-' 数据库连接模块 - SQL Server版本
+' 数据库连接模块 - SQL Server版本 (V16.0)
+' 支持 SQLOLEDB (旧) 和 MSOLEDBSQL (新) 双Provider
+' 通过 config.asp 中 FEATURE_MSOLEDBSQL 开关切换
 ' ============================================
 
 Dim conn
 
+' ============================================
+' V15: 构建数据库连接字符串
+' 支持双Provider，通过Feature Flag切换
+' ============================================
+Function BuildConnectionString()
+    Dim serverName, dbName
+    serverName = "localhost\YOURPERFUME"
+    dbName = "PerfumeShop"
+    
+    If FEATURE_MSOLEDBSQL Then
+        ' V15: Microsoft OLE DB Driver for SQL Server (推荐)
+        ' 需安装: https://aka.ms/downloadmsoledbsql
+        ' 优势: TLS 1.2加密、更好的UTF-8支持、持续维护
+        BuildConnectionString = "Provider=MSOLEDBSQL;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;TrustServerCertificate=yes;"
+    Else
+        ' V14.6兼容: SQLOLEDB (已弃用但仍可用)
+        BuildConnectionString = "Provider=SQLOLEDB;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;"
+    End If
+End Function
+
 ' 打开数据库连接
 Sub OpenConnection()
+    Dim connStr
     On Error Resume Next
     Set conn = Server.CreateObject("ADODB.Connection")
     
@@ -21,12 +44,30 @@ Sub OpenConnection()
         Response.End
     End If
     
-    ' SQL Server数据库连接字符串 (默认实例 MSSQLSERVER, SQL Server 2017)
-    conn.Open "Provider=SQLOLEDB;Server=localhost\YOURPERFUME;Database=PerfumeShop;Integrated Security=SSPI;"
+    ' V16: 根据Feature Flag选择连接字符串
+    connStr = BuildConnectionString()
+    conn.Open connStr
     
     If Err.Number <> 0 Then
-        Response.Write "<div class='error'>数据库连接失败: " & Replace(Server.HTMLEncode(Err.Description), "'", "&#39;") & " 错误号: " & Err.Number & "</div>"
-        Response.End
+        ' MSOLEDBSQL失败时尝试回退到SQLOLEDB
+        If FEATURE_MSOLEDBSQL Then
+            Err.Clear
+            ' 重新创建连接对象回退（避免conn.Close在未打开连接上报错）
+            Set conn = Nothing
+            Set conn = Server.CreateObject("ADODB.Connection")
+            ' 临时回退到SQLOLEDB
+            conn.Open "Provider=SQLOLEDB;Server=localhost\YOURPERFUME;Database=PerfumeShop;Integrated Security=SSPI;"
+            If Err.Number <> 0 Then
+                Response.Write "<div class='error'>数据库连接失败 (MSOLEDBSQL回退也失败): " & Replace(Server.HTMLEncode(Err.Description), "'", "&#39;") & "</div>"
+                Response.End
+            Else
+                ' 回退成功，写入日志提示
+                Session("DBFallbackNotice") = "MSOLEDBSQL不可用，已回退到SQLOLEDB。请安装MSOLEDBSQL驱动。"
+            End If
+        Else
+            Response.Write "<div class='error'>数据库连接失败: " & Replace(Server.HTMLEncode(Err.Description), "'", "&#39;") & " 错误号: " & Err.Number & "</div>"
+            Response.End
+        End If
     End If
 End Sub
 

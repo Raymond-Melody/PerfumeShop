@@ -10,6 +10,7 @@ End If
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/password_utils.asp"-->
 <!--#include file="../includes/member_utils.asp"-->
 <%
 Call OpenConnection()
@@ -113,10 +114,11 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                     If existCount > 0 Then
                         errorMsg = "邮箱已被注册"
                     Else
-                        ' 插入新用户（含推荐人和设备指纹）
-                        Dim sql
+                        ' V15: 使用安全的密码哈希存储
+                        Dim sql, hashedPassword
+                        hashedPassword = HashPassword(password)
                         sql = "INSERT INTO Users (Username, [Password], Email, FullName, Phone, ReferrerUserID, DeviceFingerprint, CreatedAt, IsActive) VALUES (" & _
-                            "'" & SafeSQL(username) & "', '" & SafeSQL(password) & "', '" & SafeSQL(email) & "', " & _
+                            "'" & SafeSQL(username) & "', '" & SafeSQL(hashedPassword) & "', '" & SafeSQL(email) & "', " & _
                             "'" & SafeSQL(fullName) & "', '" & SafeSQL(phone) & "', " & postReferrerUserId & ", " & _
                             "'" & SafeSQL(deviceFingerprint) & "', GETDATE(), 1)"
                         

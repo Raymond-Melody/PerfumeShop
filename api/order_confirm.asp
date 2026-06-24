@@ -1,22 +1,15 @@
 <%@ Language="VBScript" CodePage="65001" %>
-<%
-Response.Charset = "UTF-8"
-Response.ContentType = "application/json"
-
-If Session("UserID") = "" Then
-    Response.Write "{""success"":false,""message"":""请先登录""}"
-    Response.End
-End If
-%>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/api_response.asp"-->
 <%
+If Not API_RequireLogin() Then Response.End
+
 Call OpenConnection()
 
 ' CSRF验证
-If Not ValidateCSRFToken() Then
-    Response.Status = "403 Forbidden"
-    Response.Write "{""success"":false,""message"":""安全验证失败，请刷新页面重试""}"
+If Not API_CheckCSRF() Then
+    Call API_Error(API_ERR_CSRF_INVALID, API_GetErrorMessage(API_ERR_CSRF_INVALID))
     Response.End
 End If
 
@@ -25,32 +18,39 @@ orderId = Request.Form("orderId")
 userId = Session("UserID")
 
 If orderId = "" Or Not IsNumeric(orderId) Then
-    Response.Write "{""success"":false,""message"":""无效的订单""}"
+    Call API_Error(API_ERR_PARAM_INVALID, "无效的订单")
     Response.End
 End If
 
-' 检查订单归属和状态
-Dim currentStatus
-currentStatus = GetScalar("SELECT Status FROM Orders WHERE OrderID = " & CInt(orderId) & " AND UserID = " & userId)
+orderId = CLng(orderId)
 
-If IsNull(currentStatus) Or currentStatus = "" Then
-    Response.Write "{""success"":false,""message"":""订单不存在""}"
+' 检查订单归属和状态
+Dim rs, currentStatus
+currentStatus = ""
+Set rs = conn.Execute("SELECT Status FROM Orders WHERE OrderID = " & orderId & " AND UserID = " & userId)
+If Not rs Is Nothing Then
+    If Not rs.EOF Then currentStatus = rs("Status")
+    rs.Close
+End If
+Set rs = Nothing
+
+If currentStatus = "" Then
+    Call API_Error(API_ERR_NOT_FOUND, "订单不存在")
     Response.End
 End If
 
 If currentStatus <> "Shipped" Then
-    Response.Write "{""success"":false,""message"":""只能确认已发货订单""}"
+    Call API_Error(API_ERR_BUSINESS_RULE, "只能确认已发货订单")
     Response.End
 End If
 
-' 确认收货
-Dim sql
-sql = "UPDATE Orders SET Status = 'Delivered', UpdatedAt = GETDATE() WHERE OrderID = " & CInt(orderId) & " AND UserID = " & userId
+conn.Execute "UPDATE Orders SET Status = 'Delivered', UpdatedAt = GETDATE() WHERE OrderID = " & orderId & " AND UserID = " & userId
 
-If ExecuteNonQuery(sql) Then
-    Response.Write "{""success"":true}"
+If Err.Number <> 0 Then
+    Call API_Error(API_ERR_DB_ERROR, "操作失败")
+    Err.Clear
 Else
-    Response.Write "{""success"":false,""message"":""操作失败""}"
+    Call API_Success(Null, "收货确认成功")
 End If
 
 Call CloseConnection()

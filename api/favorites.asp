@@ -1,162 +1,113 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <%
 ' ============================================
-' 收藏功能API
+' V15.0 收藏功能API - 统一响应格式
 ' 处理添加、删除和检查收藏状态
 ' ============================================
-Response.Charset = "UTF-8"
-Response.ContentType = "application/json"
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/api_response.asp"-->
 <%
 On Error Resume Next
 
-' 安全的查询函数，不输出错误信息到响应流
-Function SafeExecuteQuery(sql)
-    Dim rs
-    Set rs = Server.CreateObject("ADODB.Recordset")
-    On Error Resume Next
-    rs.Open sql, conn, 1, 1
-    If Err.Number <> 0 Then
-        ' 不输出错误到响应，只返回Nothing
-        Set SafeExecuteQuery = Nothing
-        ' 为了调试，将错误保存到Session
-        Session("LastDBError") = "查询错误: " & Err.Description & " SQL: " & sql
-    Else
-        Set SafeExecuteQuery = rs
-    End If
-    On Error GoTo 0
-End Function
-
-' 安全的非查询函数，不输出错误信息到响应流
-Function SafeExecuteNonQuery(sql)
-    On Error Resume Next
-    conn.Execute sql
-    If Err.Number <> 0 Then
-        SafeExecuteNonQuery = False
-    Else
-        SafeExecuteNonQuery = True
-    End If
-    On Error GoTo 0
-End Function
-
 ' 检查用户是否登录
-If Session("UserID") = "" Or IsEmpty(Session("UserID")) Then
-    Response.Write "{""success"": false, ""message"": ""请先登录""}"
-    Response.End
-End If
+If Not API_RequireLogin() Then Response.End
 
 ' 打开数据库连接
 Call OpenConnection()
 
 ' CSRF验证 - 对于修改操作（add/remove）需要验证
-Dim needsCSRF
-needsCSRF = False
-If Request.Form("action") = "add" Or Request.Form("action") = "remove" Then
-    needsCSRF = True
-End If
-
-If needsCSRF And Not ValidateCSRFToken() Then
-    Response.Write "{""success"": false, ""message"": ""安全验证失败，请刷新页面重试""}"
-    Call CloseConnection()
-    Response.End
-End If
-
-' 获取参数
-Dim action, productId, userId
+Dim action, productId, userId, needsCSRF
 action = Request.Form("action")
 If action = "" Then action = Request.QueryString("action")
 productId = Request.Form("productId")
 If productId = "" Then productId = Request.QueryString("productId")
 userId = Session("UserID")
 
+needsCSRF = (action = "add" Or action = "remove")
+If needsCSRF And Not API_CheckCSRF() Then
+    Call API_Error(API_ERR_CSRF_INVALID, API_GetErrorMessage(API_ERR_CSRF_INVALID))
+    Call CloseConnection()
+    Response.End
+End If
+
 ' 验证参数
 If action = "" Then
-    Response.Write "{""success"": false, ""message"": ""缺少操作类型参数""}"
+    Call API_Error(API_ERR_PARAM_MISSING, "缺少操作类型参数")
     Call CloseConnection()
     Response.End
 End If
 
 If Not IsNumeric(productId) Then
-    Response.Write "{""success"": false, ""message"": ""无效的产品ID""}"
+    Call API_Error(API_ERR_PARAM_INVALID, "无效的产品ID")
     Call CloseConnection()
     Response.End
 End If
 
+productId = CLng(productId)
+
 ' 处理不同的操作
 Select Case action
     Case "add"
-        ' 检查是否已收藏
-        Dim rsCheck
-        Set rsCheck = SafeExecuteQuery("SELECT FavoriteID FROM UserFavorites WHERE UserID = " & userId & " AND ProductID = " & productId)
-        
+        Dim isAlreadyFav, rsCheck
+        isAlreadyFav = False
+        Set rsCheck = conn.Execute("SELECT FavoriteID FROM UserFavorites WHERE UserID=" & userId & " AND ProductID=" & productId)
         If Not rsCheck Is Nothing Then
-            If Not rsCheck.EOF Then
-                ' 已收藏
-                Response.Write "{""success"": true, ""message"": ""已收藏"", ""action"": ""added""}"
-                rsCheck.Close
-                Set rsCheck = Nothing
-            Else
-                ' 添加收藏
-                Dim sql
-                sql = "INSERT INTO UserFavorites (UserID, ProductID, CreatedTime) VALUES (" & userId & ", " & productId & ", GETDATE())"
-                If SafeExecuteNonQuery(sql) Then
-                    Response.Write "{""success"": true, ""message"": ""收藏成功"", ""action"": ""added""}"
-                Else
-                    Dim insertError
-                    insertError = ""
-                    If Session("LastDBError") <> "" Then
-                        insertError = " (" & Session("LastDBError") & ")"
-                    End If
-                    Response.Write "{""success"": false, ""message"": ""收藏失败" & insertError & """}"
-                End If
-                rsCheck.Close
-                Set rsCheck = Nothing
-            End If
+            If Not rsCheck.EOF Then isAlreadyFav = True
+            rsCheck.Close
+        End If
+        Set rsCheck = Nothing
+        
+        If isAlreadyFav Then
+            Dim favResult
+            Set favResult = Server.CreateObject("Scripting.Dictionary")
+            favResult.Add "action", "added"
+            favResult.Add "isFavorite", True
+            Call API_Success(favResult, "已收藏")
+            Set favResult = Nothing
         Else
-            Dim queryError
-            queryError = ""
-            If Session("LastDBError") <> "" Then
-                queryError = " (" & Session("LastDBError") & ")"
+            conn.Execute "INSERT INTO UserFavorites (UserID, ProductID, CreatedTime) VALUES (" & userId & ", " & productId & ", GETDATE())"
+            If Err.Number <> 0 Then
+                Call API_Error(API_ERR_DB_ERROR, "收藏失败")
+                Err.Clear
+            Else
+                Dim addResult
+                Set addResult = Server.CreateObject("Scripting.Dictionary")
+                addResult.Add "action", "added"
+                addResult.Add "isFavorite", True
+                Call API_Success(addResult, "收藏成功")
+                Set addResult = Nothing
             End If
-            Response.Write "{""success"": false, ""message"": ""数据库查询失败" & queryError & """}"
         End If
         
     Case "remove"
-        ' 删除收藏
-        Dim sqlDel
-        sqlDel = "DELETE FROM UserFavorites WHERE UserID = " & userId & " AND ProductID = " & productId
-        If SafeExecuteNonQuery(sqlDel) Then
-            Response.Write "{""success"": true, ""message"": ""取消收藏成功"", ""action"": ""removed""}"
+        conn.Execute "DELETE FROM UserFavorites WHERE UserID=" & userId & " AND ProductID=" & productId
+        If Err.Number <> 0 Then
+            Call API_Error(API_ERR_DB_ERROR, "取消收藏失败")
+            Err.Clear
         Else
-            Dim deleteError
-            deleteError = ""
-            If Session("LastDBError") <> "" Then
-                deleteError = " (" & Session("LastDBError") & ")"
-            End If
-            Response.Write "{""success"": false, ""message"": ""取消收藏失败" & deleteError & """}"
+            Dim removeResult
+            Set removeResult = Server.CreateObject("Scripting.Dictionary")
+            removeResult.Add "action", "removed"
+            removeResult.Add "isFavorite", False
+            Call API_Success(removeResult, "取消收藏成功")
+            Set removeResult = Nothing
         End If
         
     Case "check"
-        ' V10.3: ETag 支持 — 基于 SYS_VERSION + 用户 + 产品ID
-        Dim checkETag, clientCheckETag, isFavorite
-        isFavorite = False
-        
-        ' 检查是否已收藏
-        Dim rsCheck2
-        Set rsCheck2 = SafeExecuteQuery("SELECT FavoriteID FROM UserFavorites WHERE UserID = " & userId & " AND ProductID = " & productId)
-        
+        Dim isFav, rsCheck2
+        isFav = False
+        Set rsCheck2 = conn.Execute("SELECT FavoriteID FROM UserFavorites WHERE UserID=" & userId & " AND ProductID=" & productId)
         If Not rsCheck2 Is Nothing Then
-            If Not rsCheck2.EOF Then
-                isFavorite = True
-            End If
+            If Not rsCheck2.EOF Then isFav = True
             rsCheck2.Close
-            Set rsCheck2 = Nothing
         End If
+        Set rsCheck2 = Nothing
         
-        ' 生成 ETag 并检查 If-None-Match
-        checkETag = """" & SafeSHA256Hash(SYS_VERSION & "|fav|" & userId & "|" & productId & "|" & isFavorite) & """"
+        ' ETag 支持（向后兼容）
+        Dim checkETag, clientCheckETag
+        checkETag = """" & SafeSHA256Hash(SYS_VERSION & "|fav|" & userId & "|" & productId & "|" & isFav) & """"
         clientCheckETag = Request.ServerVariables("HTTP_IF_NONE_MATCH")
         
         If clientCheckETag <> "" And clientCheckETag = checkETag Then
@@ -168,14 +119,14 @@ Select Case action
         Response.AddHeader "ETag", checkETag
         Response.AddHeader "Cache-Control", "no-cache"
         
-        If isFavorite Then
-            Response.Write "{""success"": true, ""isFavorite"": true}"
-        Else
-            Response.Write "{""success"": true, ""isFavorite"": false}"
-        End If
+        Dim checkResult
+        Set checkResult = Server.CreateObject("Scripting.Dictionary")
+        checkResult.Add "isFavorite", isFav
+        Call API_Success(checkResult, "success")
+        Set checkResult = Nothing
         
     Case Else
-        Response.Write "{""success"": false, ""message"": ""无效的操作""}"
+        Call API_Error(API_ERR_PARAM_INVALID, "无效的操作类型")
 End Select
 
 Call CloseConnection()

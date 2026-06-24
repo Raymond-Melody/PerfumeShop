@@ -255,7 +255,7 @@
             var found = [];
             var checked = 0;
 
-            caches.open('perfumeshop-v14-dynamic').then(function(cache) {
+            caches.open('perfumeshop-v16-dynamic').then(function(cache) {
                 pageUrls.forEach(function(page) {
                     cache.match(page.url).then(function(response) {
                         if (response && response.ok) {
@@ -272,7 +272,7 @@
                 });
             }).catch(function() {
                 // 同时检查静态缓存
-                caches.open('perfumeshop-v14-static').then(function(cache) {
+                caches.open('perfumeshop-v16-static').then(function(cache) {
                     pageUrls.forEach(function(page) {
                         cache.match(page.url).then(function(response) {
                             if (response && response.ok) {

@@ -10,6 +10,7 @@ End If
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/password_utils.asp"-->
 <%
 Call OpenConnection()
 
@@ -38,42 +39,74 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         If username = "" Or password = "" Then
             errorMsg = "请输入用户名和密码"
         Else
-            ' 查询用户
-            Dim rsUser, hashedPwd
-            hashedPwd = password ' 实际项目中应该使用加密
+            ' V15: 使用安全的密码哈希验证
+            Dim rsUser, storedHash, verifiedPwd
+            verifiedPwd = False
             
-            Set rsUser = ExecuteQuery("SELECT * FROM Users WHERE (Username = '" & SafeSQL(username) & "' OR Email = '" & SafeSQL(username) & "') AND [Password] = '" & SafeSQL(hashedPwd) & "' AND IsActive <> 0")
+            Set rsUser = ExecuteQuery("SELECT UserID, Username, Email, FullName, [Password] FROM Users WHERE (Username = '" & SafeSQL(username) & "' OR Email = '" & SafeSQL(username) & "') AND IsActive <> 0")
             
             If Not rsUser Is Nothing And Not rsUser.EOF Then
-                ' 登录成功 - 重置失败计数
-                Call ResetLoginFailure("User")
+                ' 获取存储的密码哈希（兼容明文旧数据）
+                If IsNull(rsUser("Password")) Then
+                    storedHash = ""
+                Else
+                    storedHash = rsUser("Password")
+                End If
                 
-                Session("UserID") = rsUser("UserID")
-                Session("Username") = rsUser("Username")
-                Session("Email") = rsUser("Email")
-                Session("FullName") = rsUser("FullName")
+                ' V15: 使用VerifyPassword验证（支持V1/V2/V3和向后兼容明文）
+                If storedHash = "" Then
+                    verifiedPwd = False
+                ElseIf Left(storedHash, 3) = "V3$" Or Left(storedHash, 3) = "V2_" Then
+                    ' 使用V15密码验证
+                    verifiedPwd = VerifyPassword(password, storedHash)
+                ElseIf Len(storedHash) <= 40 And InStr(storedHash, "$") = 0 Then
+                    ' 兼容旧版明文密码（逐步淘汰）
+                    verifiedPwd = (storedHash = password)
+                Else
+                    ' V1格式或其他哈希
+                    verifiedPwd = VerifyPassword(password, storedHash)
+                End If
                 
-                ' 合并匿名购物车到用户购物车
-                Dim sessionId
-                sessionId = Session.SessionID
-                Call ExecuteNonQuery("UPDATE Cart SET UserID = " & rsUser("UserID") & ", SessionID = NULL WHERE SessionID = '" & SafeSQL(sessionId) & "' AND UserID IS NULL")
-                
-                rsUser.Close
-                Set rsUser = Nothing
-                
-                ' 跳转
-                Dim returnUrl
-                returnUrl = Request.QueryString("return")
-                If returnUrl = "" Then returnUrl = "/user/index.asp"
-                Response.Redirect returnUrl
-            Else
-                ' 登录失败 - 记录失败次数
-                Call RecordLoginFailure("User")
-                errorMsg = "用户名或密码错误"
-                If Not rsUser Is Nothing Then
+                If verifiedPwd Then
+                    ' 登录成功 - 重置失败计数
+                    Call ResetLoginFailure("User")
+                    
+                    Session("UserID") = rsUser("UserID")
+                    Session("Username") = rsUser("Username")
+                    Session("Email") = rsUser("Email")
+                    Session("FullName") = rsUser("FullName")
+                    
+                    ' 合并匿名购物车到用户购物车
+                    Dim sessionId
+                    sessionId = Session.SessionID
+                    Call ExecuteNonQuery("UPDATE Cart SET UserID = " & rsUser("UserID") & ", SessionID = NULL WHERE SessionID = '" & SafeSQL(sessionId) & "' AND UserID IS NULL")
+                    
+                    ' V15: 检查是否需要升级密码哈希
+                    If NeedsPasswordUpgrade(storedHash) Then
+                        Dim newHash
+                        newHash = HashPassword(password)
+                        Call ExecuteNonQuery("UPDATE Users SET [Password] = '" & SafeSQL(newHash) & "' WHERE UserID = " & rsUser("UserID"))
+                    End If
+                    
                     rsUser.Close
                     Set rsUser = Nothing
+                    
+                    ' 跳转
+                    Dim returnUrl
+                    returnUrl = Request.QueryString("return")
+                    If returnUrl = "" Then returnUrl = "/user/index.asp"
+                    Response.Redirect returnUrl
                 End If
+            End If
+            
+            ' 登录失败 - 记录失败次数
+            If Not verifiedPwd Then
+                Call RecordLoginFailure("User")
+                errorMsg = "用户名或密码错误"
+            End If
+            If Not rsUser Is Nothing Then
+                rsUser.Close
+                Set rsUser = Nothing
             End If
         End If
     End If

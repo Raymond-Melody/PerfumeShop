@@ -47,7 +47,7 @@
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2024 香氛定制 版权所有 | <a href="/privacy.asp">隐私政策</a> | <a href="/terms.asp">服务条款</a></p>
+                <p>&copy; <%= Year(Now()) %> 香氛定制 版权所有 | <a href="/privacy.asp">隐私政策</a> | <a href="/terms.asp">服务条款</a></p>
             </div>
         </div>
     </footer>
@@ -59,26 +59,35 @@
 
     <!-- 公共脚本 -->
     <!-- V12.0 图片懒加载 -->
-    <script src="/js/lazy-load.js?v=14.6"></script>
+    <script src="/js/lazy-load.js?v=15.0"></script>
     <!-- V12.0 主题切换 -->
-    <script src="/js/theme-toggle.js?v=14.6" defer></script>
+    <script src="/js/theme-toggle.js?v=15.0" defer></script>
     <!-- V12.1 产品图库手势支持 -->
-    <script src="/js/product-gallery.js?v=14.6" defer></script>
+    <script src="/js/product-gallery.js?v=15.0" defer></script>
     <!-- V12.2 购物车动画 -->
-    <script src="/js/cart-animation.js?v=14.6" defer></script>
+    <script src="/js/cart-animation.js?v=15.0" defer></script>
     <!-- V12.3 筛选优化 -->
-    <script src="/js/filter-optimization.js?v=14.6" defer></script>
+    <script src="/js/filter-optimization.js?v=15.0" defer></script>
     <!-- V13.2 骨架屏加载 -->
-    <script src="/js/skeleton-loader.js?v=14.6"></script>
+    <script src="/js/skeleton-loader.js?v=15.0"></script>
     <!-- V14.6 PWA 安装提示 -->
-    <script src="/js/pwa-install.js?v=14.6" defer></script>
-    <script src="/js/main.js?v=14.6"></script>
+    <script src="/js/pwa-install.js?v=15.0" defer></script>
+    <script src="/js/main.js?v=15.0"></script>
     
     <script nonce="<%= Session("csp_nonce") %>">
     // 更新购物车数量
     function updateCartCount() {
         $.get('/api/cart_count.asp', function(data) {
-            $('#cartCount').text(data);
+            // V15: 支持新JSON格式 {"code":0,"data":{"count":N}} 和旧纯文本格式
+            if (typeof data === 'object' && data.data && typeof data.data.count !== 'undefined') {
+                $('#cartCount').text(data.data.count);
+            } else if (typeof data === 'object' && typeof data.count !== 'undefined') {
+                $('#cartCount').text(data.count);
+            } else if (!isNaN(data)) {
+                $('#cartCount').text(data);
+            }
+        }).fail(function() {
+            console.warn('购物车数量获取失败');
         });
     }
     $(document).ready(function() {

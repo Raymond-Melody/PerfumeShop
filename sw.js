@@ -1,10 +1,10 @@
 /**
  * PerfumeShop PWA Service Worker
- * V14.6 - 完整离线缓存 + Stale-While-Revalidate + 缓存过期 + 推送通知
+ * V16.0 - 完整离线缓存 + Stale-While-Revalidate + 缓存过期 + 推送通知 + API NetworkFirst
  */
 
 // ── 缓存配置 ──
-var CACHE_VERSION = 'perfumeshop-v14';
+var CACHE_VERSION = 'perfumeshop-v16';
 var CACHE_STATIC = CACHE_VERSION + '-static';
 var CACHE_DYNAMIC = CACHE_VERSION + '-dynamic';
 var CACHE_IMAGES = CACHE_VERSION + '-images';
@@ -22,20 +22,20 @@ var STATIC_ASSETS = [
   '/products.asp',
   '/about.asp',
   '/contact.asp',
-  '/css/design-tokens.css?v=14.6',
-  '/css/style.css?v=14.6',
-  '/css/pages.css?v=14.6',
-  '/css/buttons.css?v=14.6',
-  '/css/responsive.css?v=14.6',
-  '/css/lazy-load.css?v=14.6',
-  '/css/cart-animation.css?v=14.6',
-  '/css/filter-optimization.css?v=14.6',
-  '/css/theme.css?v=14.6',
-  '/css/skeleton.css?v=14.6',
-  '/js/main.js?v=14.6',
-  '/js/lazy-load.js?v=14.6',
-  '/js/theme-toggle.js?v=14.6',
-  '/js/skeleton-loader.js?v=14.6',
+  '/css/design-tokens.css?v=16.0',
+  '/css/style.css?v=16.0',
+  '/css/pages.css?v=16.0',
+  '/css/buttons.css?v=16.0',
+  '/css/responsive.css?v=16.0',
+  '/css/lazy-load.css?v=16.0',
+  '/css/cart-animation.css?v=16.0',
+  '/css/filter-optimization.css?v=16.0',
+  '/css/theme.css?v=16.0',
+  '/css/skeleton.css?v=16.0',
+  '/js/main.js?v=16.0',
+  '/js/lazy-load.js?v=16.0',
+  '/js/theme-toggle.js?v=16.0',
+  '/js/skeleton-loader.js?v=16.0',
   '/images/default-product.svg',
   '/images/default-avatar.svg',
   OFFLINE_PAGE,
@@ -115,15 +115,15 @@ function purgeExpiredCache(cacheName, maxAge) {
 
 // ── 安装事件 ──
 self.addEventListener('install', function(event) {
-  console.log('[SW V14] Installing...');
+  console.log('[SW V16] Installing...');
   event.waitUntil(
     caches.open(CACHE_STATIC)
       .then(function(cache) {
-        console.log('[SW V14] Caching ' + STATIC_ASSETS.length + ' static assets...');
+        console.log('[SW V16] Caching ' + STATIC_ASSETS.length + ' static assets...');
         // 逐个缓存，允许单个失败不影响整体
         var promises = STATIC_ASSETS.map(function(url) {
           return cache.add(url).catch(function(err) {
-            console.warn('[SW V14] Failed to cache: ' + url, err.message);
+            console.warn('[SW V16] Failed to cache: ' + url, err.message);
           });
         });
         return Promise.all(promises);
@@ -136,14 +136,14 @@ self.addEventListener('install', function(event) {
 
 // ── 激活事件 ──
 self.addEventListener('activate', function(event) {
-  console.log('[SW V14] Activating...');
+  console.log('[SW V16] Activating...');
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       // 清理所有旧版本缓存
       var deletions = cacheNames.filter(function(name) {
         return name.indexOf('perfumeshop') === 0 && name !== CACHE_STATIC && name !== CACHE_DYNAMIC && name !== CACHE_IMAGES;
       }).map(function(name) {
-        console.log('[SW V14] Removing old cache: ' + name);
+        console.log('[SW V16] Removing old cache: ' + name);
         return caches.delete(name);
       });
       return Promise.all(deletions);
@@ -401,4 +401,4 @@ self.addEventListener('message', function(event) {
   }
 });
 
-console.log('[SW V14] Service Worker loaded');
+console.log('[SW V16] Service Worker loaded');

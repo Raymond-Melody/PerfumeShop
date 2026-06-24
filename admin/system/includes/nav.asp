@@ -23,6 +23,7 @@
             <li><a href="admins.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/admins.asp" Then %> class="active"<% End If %>><i class="fas fa-users-cog"></i> <span>管理员管理</span></a></li>
             <li><a href="roles.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/roles.asp" Then %> class="active"<% End If %>><i class="fas fa-user-tag"></i> <span>角色管理</span></a></li>
             <li><a href="logs.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/logs.asp" Then %> class="active"<% End If %>><i class="fas fa-history"></i> <span>操作日志</span></a></li>
+            <li><a href="audit_logs.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/audit_logs.asp" Then %> class="active"<% End If %>><i class="fas fa-shield-alt"></i> <span>审计日志 V16</span></a></li>
             <li class="sidebar-section-title">系统安全</li>
             <li><a href="security_audit.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/security_audit.asp" Then %> class="active"<% End If %>><i class="fas fa-shield-alt"></i> <span>安全审计</span></a></li>
             <li><a href="backup_center.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/backup_center.asp" Then %> class="active"<% End If %>><i class="fas fa-database"></i> <span>备份中心</span></a></li>

@@ -21,11 +21,12 @@ If Len(callbackString) > 0 Then
     callbackString = Left(callbackString, Len(callbackString) - 1)
 End If
 
-' 包含支付处理模块
+%>
 <!--#include file="includes/config.asp"-->
 <!--#include file="includes/connection.asp"-->
 <!--#include file="includes/payment_handler.asp"-->
 <!--#include file="includes/cost_engine.asp"-->
+<%
 
 Call OpenConnection()
 

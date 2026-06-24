@@ -14,16 +14,16 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- V14.6 资源预加载 -->
+    <!-- V16.0 资源预加载 -->
     <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
     <link rel="dns-prefetch" href="//code.jquery.com">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preconnect" href="https://code.jquery.com" crossorigin>
-    <link rel="preload" href="/css/design-tokens.css?v=14.6" as="style">
-    <link rel="preload" href="/css/style.css?v=14.6" as="style">
+    <link rel="preload" href="/css/design-tokens.css?v=16.2" as="style">
+    <link rel="preload" href="/css/style.css?v=16.2" as="style">
     <link rel="preload" href="https://code.jquery.com/jquery-3.6.0.min.js" as="script" crossorigin>
     <!-- V14.6 PWA 增强 -->
-    <meta name="color-scheme" content="light dark">
+    <meta name="color-scheme" content="light only">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="香氛定制">
@@ -34,16 +34,16 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#8B4513">
-    <link rel="stylesheet" href="/css/design-tokens.css?v=14.6">
-    <link rel="stylesheet" href="/css/style.css?v=14.6">
-    <link rel="stylesheet" href="/css/pages.css?v=14.6">
-    <link rel="stylesheet" href="/css/buttons.css?v=14.6">
-    <link rel="stylesheet" href="/css/responsive.css?v=14.6">
-    <link rel="stylesheet" href="/css/lazy-load.css?v=14.6" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/css/cart-animation.css?v=14.6" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/css/filter-optimization.css?v=14.6">
-    <link rel="stylesheet" href="/css/theme.css?v=14.6">
-    <link rel="stylesheet" href="/css/skeleton.css?v=14.6" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/css/design-tokens.css?v=16.2">
+    <link rel="stylesheet" href="/css/style.css?v=16.2">
+    <link rel="stylesheet" href="/css/pages.css?v=16.2">
+    <link rel="stylesheet" href="/css/buttons.css?v=16.2">
+    <link rel="stylesheet" href="/css/responsive.css?v=16.2">
+    <link rel="stylesheet" href="/css/lazy-load.css?v=16.2" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/css/cart-animation.css?v=16.2" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/css/filter-optimization.css?v=16.2">
+    <link rel="stylesheet" href="/css/theme.css?v=16.2">
+    <link rel="stylesheet" href="/css/skeleton.css?v=16.2" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <% If amphtmlLink <> "" Then Response.Write amphtmlLink %>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

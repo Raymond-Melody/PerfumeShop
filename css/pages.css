@@ -924,6 +924,8 @@
     border-radius: var(--radius);
     outline: none;
     transition: var(--transition);
+    color: var(--text-color, #333);
+    background: var(--bg-color, #fff);
 }
 
 .auth-form input:focus {
@@ -1431,6 +1433,8 @@
     border-radius: var(--radius);
     outline: none;
     transition: var(--transition);
+    color: var(--text-color, #333);
+    background: var(--bg-color, #fff);
 }
 
 .form-group input:focus,
@@ -2000,6 +2004,8 @@
     outline: none;
     transition: var(--transition);
     font-size: 14px;
+    color: var(--text-color, #333);
+    background: var(--bg-color, #fff);
 }
 
 .form-group input:focus,

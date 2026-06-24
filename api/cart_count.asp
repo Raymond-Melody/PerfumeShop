@@ -1,16 +1,16 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <%
-Response.Charset = "UTF-8"
-Response.ContentType = "text/plain"
+' ============================================
+' V15.0 购物车数量API - 统一响应格式
+' ============================================
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/api_response.asp"-->
 <%
 Call OpenConnection()
 
-Dim sessionId, userId
-Dim whereClause, count
-
+Dim sessionId, userId, whereClause, count
 sessionId = Session.SessionID
 userId = Session("UserID")
 
@@ -18,24 +18,24 @@ userId = Session("UserID")
 If userId <> "" Then
     whereClause = "UserID = " & userId
 Else
-    whereClause = "SessionID = '" & SafeSQL(sessionId) & "'"
+    whereClause = "SessionID = '" & Replace(sessionId, "'", "''") & "'"
 End If
 
-' 获取购物车数量 (Access兼容)
-Dim rs, countVal
+' 获取购物车数量
+Dim rs, countVal, rsCart
 countVal = 0
-Set rs = ExecuteQuery("SELECT SUM(Quantity) AS TotalQty FROM Cart WHERE " & whereClause)
-If Not rs Is Nothing Then
-    If Not rs.EOF Then
-        If Not IsNull(rs("TotalQty")) Then
-            countVal = rs("TotalQty")
+Set rsCart = conn.Execute("SELECT SUM(Quantity) AS TotalQty FROM Cart WHERE " & whereClause)
+If Not rsCart Is Nothing Then
+    If Not rsCart.EOF Then
+        If Not IsNull(rsCart("TotalQty")) Then
+            countVal = CLng(rsCart("TotalQty"))
         End If
     End If
-    rs.Close
-    Set rs = Nothing
+    rsCart.Close
 End If
+Set rsCart = Nothing
 
-' V10.3: ETag 支持 — 基于 SYS_VERSION + 用户标识 + 购物车数量
+' ETag 支持（向后兼容）
 Dim eTag, clientETag
 eTag = """" & SafeSHA256Hash(SYS_VERSION & "|cart|" & userId & "|" & sessionId & "|" & countVal) & """"
 clientETag = Request.ServerVariables("HTTP_IF_NONE_MATCH")
@@ -48,7 +48,13 @@ End If
 
 Response.AddHeader "ETag", eTag
 Response.AddHeader "Cache-Control", "no-cache"
-Response.Write countVal
+
+' V15: 返回标准化JSON格式
+Dim result
+Set result = Server.CreateObject("Scripting.Dictionary")
+result.Add "count", countVal
+Call API_Success(result, "success")
+Set result = Nothing
 
 Call CloseConnection()
 %>

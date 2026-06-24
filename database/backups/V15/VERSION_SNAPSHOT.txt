@@ -1,0 +1,90 @@
+# PerfumeShop - Version Snapshot V15.0
+# Generated: 2026-06-24
+# ========================================
+
+## System Info
+- Site Name: Custom Fragrance (XiangFen DingZhi)
+- Version: V15.0
+- Database: SQL Server 2017 (localhost\YOURPERFUME\PerfumeShop)
+- Web Server: IIS (Classic ASP / VBScript)
+- DB Size: 80 MB
+- Tables: 110
+- ASP Files: 267 total
+
+## Module Structure
+- admin/: 145 pages (finance/operation/purchase/system/prodcenter/techcenter/semifinished/logistics/inventory)
+- api/: 14 API endpoints
+- user/: 12 user center pages
+- includes/: 21 shared modules
+- setup/: 11 deployment/verification tools
+- root/: 60+ pages (index, products, cart, checkout, customize, about, contact, etc.)
+- tools/: 2 utility scripts
+- database/: SQL scripts + migration files (backups excluded from code zip)
+
+## Key Configuration
+- Free shipping: >= 299 yuan
+- Shipping fee: 15 yuan
+- Page size: 12 items
+- Session timeout: 60 min
+- Security headers: CSP, X-Frame-Options, X-XSS-Protection, HSTS, Permissions-Policy
+- Password: SHA-256 V2 (pepper + 10 iterations)
+- CSRF: Session token validation on all forms
+- Rate limiting: 5 failed login attempts -> 15 min lockout
+- Authentication: Session-based (User + Admin dual auth)
+
+## V15 New Features (Feature Flags)
+- FEATURE_MSOLEDBSQL = False (P0: MSOLEDBSQL driver, needs installation)
+- FEATURE_DAL_ENABLED = False (P0: Unified Data Access Layer)
+- FEATURE_PASSWORD_V3 = False (P0: SHA-512 with 1000 iterations)
+- FEATURE_STRUCTURED_LOGGING = True (P1: Structured logging, enabled)
+- FEATURE_API_V1 = False (P1: API v1 unified response format)
+- FEATURE_CACHE_MANAGER = True (P1: Application-level cache, enabled)
+- FEATURE_SSE_NOTIFICATIONS = False (P2: SSE real-time notifications)
+- FEATURE_EMAIL_NOTIFICATIONS = False (P2: Email notifications)
+- FEATURE_ANALYTICS_DASHBOARD = False (P2: Analytics dashboard)
+- FEATURE_PWA_ENHANCED = False (P2: PWA enhanced)
+- FEATURE_I18N = False (P3: Internationalization)
+
+## V15 Key Deliverables
+- connection.asp: Dual-provider support (SQLOLEDB/MSOLEDBSQL) with automatic fallback
+- password_utils.asp: SHA-256 V2 password hashing (pepper + 10-round iteration)
+- dal.asp: Unified Data Access Layer with parameterized queries
+- error_handler.asp: Structured error handling with logging integration
+- api_response.asp: Standardized JSON API response format
+- cdn_config.asp: CDN image URL transformation
+- email_utils.asp: Email notification utility
+- common_utils.asp: Shared utility functions
+- purchase/ fixed_brand/: Purchase management system
+- finance/: Financial management (22 modules)
+- operation/: Operations dashboard + analytics
+
+## V15 Quality Assessment (2026-06-24)
+- All pages: 200/302 HTTP status (no 500 errors)
+- 14/14 API endpoints returning 200
+- User login/register: Secure password hashing (V2)
+- Admin panel: All 9 modules functional
+- Security headers: All 7 configured
+- CSRF protection: Active on all forms
+- SQL injection: SafeSQL + parameterized queries
+
+## V15 Bug Fixes Applied (2026-06-24)
+1. 6 API files: Removed duplicate V14/V15 code blocks (cart_remove/update/clear, favorites, order_cancel/confirm)
+2. admin/analytics/index.asp: Fixed include paths (../includes/ -> ../../includes/)
+3. user/delete_order.asp: Rewritten with proper error handling
+4. payment_callback.asp: Moved SSI includes outside ASP code blocks
+5. user/login.asp: Upgraded from plaintext to VerifyPassword()
+6. user/register.asp: Upgraded from plaintext to HashPassword()
+7. user/forgot.asp: Created new password recovery page
+8. admin/forgot_password.asp: Fixed GETDATE() -> Now()
+
+## Backup Files (V15)
+- Database: PerfumeShop_V15_Full.bak (15.02 MB, verified OK)
+- Code: PerfumeShop_V15_code.zip (2.27 MB, 267 ASP files + CSS/JS/images)
+
+## Known Items for V16
+- Upgrade FEATURE_PASSWORD_V3 to True (SHA-512, 1000 iterations)
+- Enable FEATURE_DAL_ENABLED after DAL coverage audit
+- Enable FEATURE_MSOLEDBSQL after driver installation
+- Standardize cart_add.asp to use api_response.asp (currently HTML alerts)
+- Consider ASP.NET Core incremental migration per V15 plan
+- Add comprehensive automated testing

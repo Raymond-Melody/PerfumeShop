@@ -1,7 +1,7 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <%
 ' ============================================
-' V14.6 结算页 - 主调度器
+' V16.0 结算页 - 主调度器
 ' 原文件 99KB/1827行 → 调度器 + 8个子模块
 ' ============================================
 Response.Charset = "UTF-8"
@@ -59,7 +59,7 @@ End If
 </div><!-- .container -->
 
 <script src="/js/area_data.js"></script>
-<script src="/js/checkout.js?v=14.6"></script>
+<script src="/js/checkout.js?v=16.0"></script>
 
 <!--#include file="includes/footer.asp"-->
 <%

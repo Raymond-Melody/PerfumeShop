@@ -78,5 +78,21 @@
     }
   ],
   "categories": ["shopping", "lifestyle"],
-  "lang": "zh-CN"
+  "lang": "zh-CN",
+  "screenshots": [
+    {
+      "src": "/images/screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/images/screenshots/mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "id": "perfumeshop-v16",
+  "scope": "/"
 }

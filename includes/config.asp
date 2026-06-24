@@ -1,6 +1,6 @@
 <%
 ' ============================================
-' PerfumeShop Configuration V14.6
+' PerfumeShop Configuration V16.0
 ' ============================================
 Const SITE_NAME = "Custom Fragrance"
 Const SITE_EMAIL = "contact@perfumeshop.com"
@@ -13,8 +13,8 @@ Function GetSiteURL()
     GetSiteURL = proto & Request.ServerVariables("HTTP_HOST")
 End Function
 
-Const SYS_VERSION = "V14.6"
-Const SYS_VERSION_NAME = "PerfumeShop V14.6"
+Const SYS_VERSION = "V16.0"
+Const SYS_VERSION_NAME = "PerfumeShop V16.0"
 Const COOKIE_SECRET = "PerfumeShop_SecKey_2026_X9K3m"
 Const COOKIE_SECRET_V10 = "PF_V10_SHA256_Salt_7kM2xP9qR4vN8wL3jH6fD1sA5gK0"
 Const PASSWORD_PEPPER = "P3rfum3Sh0p_S@lt_2026!"
@@ -33,6 +33,29 @@ Const UPLOAD_PATH_AVATARS = "/images/avatars/"
 Const UPLOAD_PATH_DEFAULT = "/images/uploads/"
 Session.Timeout = 60
 Const ORDER_PREFIX = "PF"
+
+' ============================================
+' V16 Feature Flags - 新功能默认关闭，验证后逐项开启
+' ============================================
+Const FEATURE_MSOLEDBSQL = False        ' P0: MSOLEDBSQL (需先启用SQL Server TCP/IP协议)
+                                        ' 原因：YOURPERFUME实例仅监听Shared Memory，
+                                        ' MSOLEDBSQL要求TCP。解决：SQL Server配置管理器
+                                        ' → YOURPERFUME协议 → 启用TCP/IP → 重启服务
+Const FEATURE_DAL_ENABLED = True        ' P0: 启用统一数据访问层 (V16激活)
+Const FEATURE_PASSWORD_V3 = True        ' P0: 启用SHA-512密码哈希V3 (V16激活)
+Const FEATURE_STRUCTURED_LOGGING = True ' P1: 启用结构化日志 (无外部依赖)
+Const FEATURE_API_V1 = True             ' P1: 启用API v1统一响应格式 (V16激活)
+Const FEATURE_CACHE_MANAGER = True      ' P1: 启用缓存管理器 (无外部依赖)
+Const FEATURE_SSE_NOTIFICATIONS = True  ' P2: 启用SSE实时通知 (V16激活)
+Const FEATURE_EMAIL_NOTIFICATIONS = True ' P2: 启用邮件通知 (V16激活)
+Const FEATURE_ANALYTICS_DASHBOARD = True ' P2: 启用数据分析仪表盘 (V16激活)
+Const FEATURE_PWA_ENHANCED = True       ' P2: 启用PWA增强 (V16激活)
+Const FEATURE_I18N = False              ' P3: 启用国际化
+
+' V15 DAL配置
+Const DAL_QUERY_TIMEOUT = 30            ' DAL查询超时(秒)
+Const DAL_LOG_SLOW_QUERIES = True       ' 记录慢查询(>500ms)
+Const DAL_SLOW_QUERY_THRESHOLD = 500    ' 慢查询阈值(毫秒)
 
 Sub GenerateCSPNonce()
     Dim nonce, i, charType, charCode

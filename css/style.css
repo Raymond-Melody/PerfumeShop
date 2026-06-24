@@ -58,6 +58,8 @@ img {
 input, button, textarea, select {
     font-family: inherit;
     font-size: inherit;
+    color: var(--dt-color-text, #333);
+    background: var(--dt-color-bg, #fff);
 }
 
 .container {

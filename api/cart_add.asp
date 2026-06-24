@@ -1,18 +1,17 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <%
 Response.Charset = "UTF-8"
-Response.ContentType = "text/html"
+Response.ContentType = "application/json"
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/api_response.asp"-->
 <%
 Call OpenConnection()
 
-' CSRF验证
-If Not ValidateCSRFToken() Then
-    Response.Clear
-    Response.ContentType = "text/html"
-    Response.Write "<html><body><script>alert('安全验证失败，请刷新页面重试'); window.history.back();</script></body></html>"
+' V16: CSRF验证 (使用API标准)
+If Not API_CheckCSRF() Then
+    Call API_Error(API_ERR_CSRF_INVALID, "安全验证失败，请刷新页面重试")
     Response.End
 End If
 
@@ -41,26 +40,20 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     customLabel = SafeSQL(Request.Form("customLabel"))
     quantity = Request.Form("quantity")
     
-    ' 如果Request.Form无法获取数据，尝试使用Request.BinaryRead
+    ' V16: 空表单数据 - JSON响应
     If Request.Form.Count = 0 Then
-        Response.Clear
-        Response.ContentType = "text/html"
-        Response.Write "<html><body><script>alert('表单数据为空，请刷新页面重试'); window.history.back();</script></body></html>"
+        Call API_Error(API_ERR_PARAM_MISSING, "表单数据为空，请刷新页面重试")
         Response.End
     End If
     
-    ' 验证productId（安全处理，不输出详细调试信息）
+    ' V16: 验证productId
     If productId = "" Or Not IsNumeric(productId) Then
-        Response.Clear
-        Response.ContentType = "text/html"
-        Response.Write "<html><body><script>alert('无效的产品参数，请返回重试'); window.history.back();</script></body></html>"
+        Call API_Error(API_ERR_PARAM_INVALID, "无效的产品参数")
         Response.End
     End If
 Else
-    ' 非POST请求
-    Response.Clear
-    Response.ContentType = "text/html"
-    Response.Write "<html><body><script>alert('请求方法错误'); window.history.back();</script></body></html>"
+    ' V16: 非POST请求
+    Call API_Error(API_ERR_PARAM_INVALID, "请求方法错误，仅支持POST")
     Response.End
 End If
 
@@ -101,7 +94,7 @@ If quantity < 1 Then quantity = 1
 Dim rsP
 Set rsP = ExecuteQuery("SELECT BasePrice, ProductType, Engravable, EngravingPrice FROM Products WHERE ProductID = " & CInt(productId))
 If rsP Is Nothing Or rsP.EOF Then
-    Response.Write "<html><body><script>alert('产品不存在'); window.history.back();</script></body></html>"
+    Call API_Error(API_ERR_NOT_FOUND, "产品不存在")
     Response.End
 End If
 basePrice = CDbl(rsP("BasePrice"))
@@ -242,23 +235,23 @@ Else
     notesPrice = notesPrice + ProcessNotes(middleNote, "中调")
     notesPrice = notesPrice + ProcessNotes(baseNote, "后调")
     
-    ' 后端再次验证总百分比（使用容差0.01避免浮点数精度问题）
+    ' V16: 后端再次验证总百分比
     If Abs(totalPercent - 100) > 0.01 Then
-        Response.Write "<html><body><script>alert('配比总和必须等于100% (当前: " & FormatNumber(totalPercent, 1) & "%)'); window.history.back();</script></body></html>"
+        Call API_Error(API_ERR_BUSINESS_RULE, "配比总和必须等于100% (当前: " & FormatNumber(totalPercent, 1) & "%)")
         Response.End
     End If
     
-    ' 验证每种调性最小比例（使用容差0.01避免浮点数精度问题）
+    ' V16: 验证每种调性最小比例
     If topPercent < (minTopPercent - 0.01) Then
-        Response.Write "<html><body><script>alert('前调比例不能低于" & minTopPercent & "%，当前为" & FormatNumber(topPercent, 1) & "%'); window.history.back();</script></body></html>"
+        Call API_Error(API_ERR_BUSINESS_RULE, "前调比例不能低于" & minTopPercent & "%，当前为" & FormatNumber(topPercent, 1) & "%")
         Response.End
     End If
     If middlePercent < (minMiddlePercent - 0.01) Then
-        Response.Write "<html><body><script>alert('中调比例不能低于" & minMiddlePercent & "%，当前为" & FormatNumber(middlePercent, 1) & "%'); window.history.back();</script></body></html>"
+        Call API_Error(API_ERR_BUSINESS_RULE, "中调比例不能低于" & minMiddlePercent & "%，当前为" & FormatNumber(middlePercent, 1) & "%")
         Response.End
     End If
     If basePercent < (minBasePercent - 0.01) Then
-        Response.Write "<html><body><script>alert('后调比例不能低于" & minBasePercent & "%，当前为" & FormatNumber(basePercent, 1) & "%'); window.history.back();</script></body></html>"
+        Call API_Error(API_ERR_BUSINESS_RULE, "后调比例不能低于" & minBasePercent & "%，当前为" & FormatNumber(basePercent, 1) & "%")
         Response.End
     End If
     
@@ -333,9 +326,9 @@ Else
             Next
         End If
         
-        ' 如果有库存不足的香调，显示错误
+        ' V16: 库存不足 - JSON响应
         If insufficientNotes <> "" Then
-            Response.Write "<html><body><script>alert('以下香调库存不足，无法添加到购物车：\n" & insufficientNotes & "\n\n请调整购买数量或联系客服咨询。'); window.history.back();</script></body></html>"
+            Call API_Error(API_ERR_BUSINESS_RULE, "以下香调库存不足：" & insufficientNotes)
             Response.End
         End If
     End If
@@ -424,14 +417,22 @@ sql = "INSERT INTO Cart (UserID, SessionID, ProductID, TopNoteID, MiddleNoteID, 
             Call SaveNoteSelections(cartId, baseNote, "后调")
         End If
 
-    ' 检查是否为直接购买
+    ' V16: 构建JSON成功响应
+    Dim cartCount, responseData
+    cartCount = GetScalar("SELECT COUNT(*) FROM Cart WHERE SessionID = '" & SafeSQL(sessionId) & "'")
+    Set responseData = Server.CreateObject("Scripting.Dictionary")
+    responseData.Add "cartId", cartId
+    responseData.Add "cartCount", CInt(cartCount)
+    responseData.Add "unitPrice", CDbl(unitPrice)
+    responseData.Add "quantity", quantity
     If Request.Form("buyNow") <> "" Then
-        Response.Write "<html><body><script>alert('已添加到购物车！'); window.location.href = '/checkout.asp';</script></body></html>"
+        responseData.Add "redirect", "/checkout.asp"
     Else
-        Response.Write "<html><body><script>alert('已添加到购物车！'); window.history.back();</script></body></html>"
+        responseData.Add "redirect", ""
     End If
+    Call API_Success(responseData, "已添加到购物车！")
 Else
-    Response.Write "<html><body><script>alert('添加失败，请重试'); window.history.back();</script></body></html>"
+    Call API_Error(API_ERR_DB_ERROR, "添加失败，请重试")
 End If
 
 ' 保存详细的香调配比到 CartNoteSelections

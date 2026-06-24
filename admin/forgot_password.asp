@@ -38,7 +38,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             ' 生成重置令牌
             Dim resetToken, expiryTime
             resetToken = GenerateResetToken()
-            expiryTime = DateAdd("h", 1, GETDATE()) ' 1小时后过期
+            expiryTime = DateAdd("h", 1, Now()) ' 1小时后过期
             
             ' 更新数据库中的重置令牌
             Dim updateSql
