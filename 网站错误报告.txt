@@ -1,7 +1,0 @@
-PerfumeShop 数据库初始化工具
-Step 1: 连接到 SQL Server (master)...
-Microsoft OLE DB Provider for SQL Server      '80004005'
-
-[DBNETLIB][ConnectionOpen (Connect()).]SQL Server      ڻ ܾ    ʡ 
-
-/setup/db_setup.asp     36
