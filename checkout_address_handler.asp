@@ -18,12 +18,12 @@ End If
 ' 处理表单提交 - 添加地址
 If Request.Form("action") = "add" Then
     Dim consignee, phoneNum, provinceName, cityName, districtName, detailAddress, isDefaultAddr
-    consignee = SafeSQL(Trim(Request.Form("realName")))
-    phoneNum = SafeSQL(Trim(Request.Form("phone")))
-    provinceName = SafeSQL(Trim(Request.Form("province")))
-    cityName = SafeSQL(Trim(Request.Form("city")))
-    districtName = SafeSQL(Trim(Request.Form("district")))
-    detailAddress = SafeSQL(Trim(Request.Form("address")))
+    consignee = Trim(Request.Form("realName"))
+    phoneNum = Trim(Request.Form("phone"))
+    provinceName = Trim(Request.Form("province"))
+    cityName = Trim(Request.Form("city"))
+    districtName = Trim(Request.Form("district"))
+    detailAddress = Trim(Request.Form("address"))
     isDefaultAddr = Request.Form("isDefault")
 
     If isDefaultAddr <> "" And isDefaultAddr <> "0" Then
@@ -36,17 +36,15 @@ If Request.Form("action") = "add" Then
     If consignee = "" Or phoneNum = "" Or provinceName = "" Or cityName = "" Or districtName = "" Or detailAddress = "" Then
         Session("ErrorMessage") = "请填写完整的收货信息"
     Else
-        ' 如果设为默认地址，先取消其他默认地址
+        ' V17: 如果设为默认地址，先取消其他默认地址
         If isDefaultAddr <> 0 Then
-            Call ExecuteNonQuery("UPDATE UserAddresses SET IsDefault = 0 WHERE UserID = " & userId)
+            Call DAL_Users_ClearDefaultAddress(userId)
         End If
 
-        Dim insertSql
-        insertSql = "INSERT INTO UserAddresses (UserID, Consignee, Phone, Province, City, District, Address, IsDefault, CreatedAt) VALUES (" & userId & ", '" & consignee & "', '" & phoneNum & "', '" & provinceName & "', '" & cityName & "', '" & districtName & "', '" & detailAddress & "', " & isDefaultAddr & ", GETDATE())"
+        ' V17: 使用参数化DAL函数
+        Dim newAddressId : newAddressId = DAL_Users_AddAddress(userId, consignee, phoneNum, provinceName, cityName, districtName, detailAddress, isDefaultAddr)
 
-        If ExecuteNonQuery(insertSql) Then
-            Dim newAddressId
-            newAddressId = GetLastInsertID("UserAddresses")
+        If newAddressId > 0 Then
             Dim paymentMethodFromForm
             paymentMethodFromForm = Request.Form("payment_method")
             Dim redirectUrl
@@ -80,4 +78,7 @@ If Request.Form("action") = "add" Then
         End If
     End If
 End If
+
+' V17: 清理参数中的SafeSQL函数（已改为直接使用原始输入）
+' 参数现在由DAL层自动处理SQL注入防护
 %>

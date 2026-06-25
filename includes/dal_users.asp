@@ -141,4 +141,98 @@ Function DAL_Users_AdminLogin(username, passwordHash)
     params(1) = Array("@PasswordHash", DAL_adVarChar, 255, passwordHash)
     Set DAL_Users_AdminLogin = DAL_GetRow(sql, params)
 End Function
+
+' ============================================
+' V17: 获取用户地址列表
+' ============================================
+Function DAL_Users_GetAddresses(userId)
+    Dim sql, params(0)
+    sql = "SELECT * FROM UserAddresses WHERE UserID=@UserID ORDER BY IsDefault DESC, CreatedAt DESC"
+    params(0) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    Set DAL_Users_GetAddresses = DAL_GetList(sql, params)
+End Function
+
+' ============================================
+' V17: 取消用户所有默认地址
+' ============================================
+Sub DAL_Users_ClearDefaultAddress(userId)
+    Dim sql, params(0)
+    sql = "UPDATE UserAddresses SET IsDefault = 0 WHERE UserID = @UserID"
+    params(0) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    DAL_Execute sql, params
+End Sub
+
+' ============================================
+' V17: 设置默认地址
+' ============================================
+Function DAL_Users_SetDefaultAddress(addressId, userId)
+    Dim sql, params(1)
+    sql = "UPDATE UserAddresses SET IsDefault = 1 WHERE AddressID = @AddressID AND UserID = @UserID"
+    params(0) = Array("@AddressID", DAL_adInteger, 0, CLng(addressId))
+    params(1) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    DAL_Users_SetDefaultAddress = (DAL_Execute(sql, params) >= 0)
+End Function
+
+' ============================================
+' V17: 添加收货地址（返回新地址ID）
+' ============================================
+Function DAL_Users_AddAddress(userId, consignee, phone, province, city, district, addr, isDefault)
+    Dim sql, fields(7), params(7)
+    fields(0) = "UserID" : fields(1) = "Consignee" : fields(2) = "Phone"
+    fields(3) = "Province" : fields(4) = "City" : fields(5) = "District"
+    fields(6) = "Address" : fields(7) = "IsDefault"
+    
+    params(0) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    params(1) = Array("@Consignee", DAL_adVarChar, 100, consignee)
+    params(2) = Array("@Phone", DAL_adVarChar, 20, phone)
+    params(3) = Array("@Province", DAL_adVarChar, 50, province)
+    params(4) = Array("@City", DAL_adVarChar, 50, city)
+    params(5) = Array("@District", DAL_adVarChar, 50, district)
+    params(6) = Array("@Address", DAL_adVarChar, 200, addr)
+    params(7) = Array("@IsDefault", DAL_adInteger, 0, CLng(isDefault))
+    
+    DAL_Users_AddAddress = DAL_Insert("UserAddresses", fields, params)
+End Function
+
+' ============================================
+' V17: 更新收货地址
+' ============================================
+Function DAL_Users_UpdateAddress(addressId, userId, consignee, phone, province, city, district, addr, isDefault)
+    Dim sql, params(8)
+    sql = "UPDATE UserAddresses SET Consignee=@Consignee, Phone=@Phone, Province=@Province, " & _
+          "City=@City, District=@District, Address=@Address, IsDefault=@IsDefault " & _
+          "WHERE AddressID=@AddressID AND UserID=@UserID"
+    params(0) = Array("@Consignee", DAL_adVarChar, 100, consignee)
+    params(1) = Array("@Phone", DAL_adVarChar, 20, phone)
+    params(2) = Array("@Province", DAL_adVarChar, 50, province)
+    params(3) = Array("@City", DAL_adVarChar, 50, city)
+    params(4) = Array("@District", DAL_adVarChar, 50, district)
+    params(5) = Array("@Address", DAL_adVarChar, 200, addr)
+    params(6) = Array("@IsDefault", DAL_adInteger, 0, CLng(isDefault))
+    params(7) = Array("@AddressID", DAL_adInteger, 0, CLng(addressId))
+    params(8) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    DAL_Users_UpdateAddress = (DAL_Execute(sql, params) >= 0)
+End Function
+
+' ============================================
+' V17: 删除收货地址
+' ============================================
+Function DAL_Users_DeleteAddress(addressId, userId)
+    Dim sql, params(1)
+    sql = "DELETE FROM UserAddresses WHERE AddressID=@AddressID AND UserID=@UserID"
+    params(0) = Array("@AddressID", DAL_adInteger, 0, CLng(addressId))
+    params(1) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    DAL_Users_DeleteAddress = (DAL_Execute(sql, params) >= 0)
+End Function
+
+' ============================================
+' V17: 获取单个收货地址
+' ============================================
+Function DAL_Users_GetAddress(addressId, userId)
+    Dim sql, params(1)
+    sql = "SELECT * FROM UserAddresses WHERE AddressID=@AddressID AND UserID=@UserID"
+    params(0) = Array("@AddressID", DAL_adInteger, 0, CLng(addressId))
+    params(1) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    Set DAL_Users_GetAddress = DAL_GetRow(sql, params)
+End Function
 %>

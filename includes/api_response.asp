@@ -289,11 +289,13 @@ End Sub
 ' ============================================
 ' 快速CSRF验证
 ' 返回True表示验证通过或无需验证
+' V17: 增强版 - 支持Token池验证，防止并发请求失效
 ' ============================================
 Function API_CheckCSRF()
-    Dim token
+    Dim token, i, tokenArr
     token = Request.Form("csrf_token")
     If token = "" Then token = Request.QueryString("csrf_token")
+    If token = "" Then token = Request.ServerVariables("HTTP_X_CSRF_TOKEN")
     
     ' 如果token为空且Session中也没有存储token，允许通过（兼容旧版API）
     If token = "" And (Session("CSRFToken") = "" Or IsEmpty(Session("CSRFToken"))) Then
@@ -301,12 +303,24 @@ Function API_CheckCSRF()
         Exit Function
     End If
     
-    If token <> Session("CSRFToken") Then
-        API_CheckCSRF = False
+    ' V17: Token池验证 - 检查当前token是否匹配最新token
+    If token = Session("CSRFToken") Then
+        API_CheckCSRF = True
         Exit Function
     End If
     
-    API_CheckCSRF = True
+    ' V17: 检查历史token池（防止并发AJAX请求失效）
+    If IsArray(Session("CSRFTokenHistory")) Then
+        tokenArr = Session("CSRFTokenHistory")
+        For i = 0 To UBound(tokenArr)
+            If token = tokenArr(i) Then
+                API_CheckCSRF = True
+                Exit Function
+            End If
+        Next
+    End If
+    
+    API_CheckCSRF = False
 End Function
 
 ' ============================================

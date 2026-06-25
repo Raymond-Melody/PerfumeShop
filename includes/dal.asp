@@ -18,9 +18,12 @@ Const DAL_adParamInput = 1   ' adParamInput
 
 ' ============================================
 ' 内部函数：创建 ADODB.Command 并绑定参数
+' V17.1: 修复 MSOLEDBSQL/SQLOLEDB 不支持命名参数的问题
+' 将 @ParamName 替换为 ? 位置占位符，使用匿名参数绑定
+' 重要：调用者必须保证 arrParams 顺序与 SQL 中 @Param 出现的顺序一致
 ' ============================================
-Function DAL_CreateCommand(sql, paramArray)
-    Dim cmd, i, pName, pType, pSize, pValue
+Function DAL_CreateCommand(sql, arrParams)
+    Dim cmd, i, pName, pType, pSize, pValue, posSql
     
     On Error Resume Next
     Set cmd = Server.CreateObject("ADODB.Command")
@@ -30,45 +33,90 @@ Function DAL_CreateCommand(sql, paramArray)
     End If
     
     Set cmd.ActiveConnection = conn
-    cmd.CommandText = sql
     cmd.CommandType = 1  ' adCmdText
     cmd.CommandTimeout = DAL_QUERY_TIMEOUT
     
+    ' V17.1: 转换命名参数为位置参数
+    ' MSOLEDBSQL/SQLOLEDB 不支持 ADO Command 的命名参数绑定
+    ' 必须使用 ? 占位符 + 匿名参数
+    ' 注意：同一个 @ParamName 可能在 SQL 中出现多次，每次都需要一个 ? 占位符
+    posSql = sql
+    
     ' 绑定参数
-    If IsArray(paramArray) Then
-        For i = 0 To UBound(paramArray)
-            If IsArray(paramArray(i)) Then
-                If UBound(paramArray(i)) >= 2 Then
-                    pName = paramArray(i)(0)
-                    pType = paramArray(i)(1)
-                    If UBound(paramArray(i)) >= 3 Then
-                        pSize = paramArray(i)(2)
+    If IsArray(arrParams) Then
+        For i = 0 To UBound(arrParams)
+            If IsArray(arrParams(i)) Then
+                If UBound(arrParams(i)) >= 2 Then
+                    pName = arrParams(i)(0)
+                    pType = arrParams(i)(1)
+                    If UBound(arrParams(i)) >= 3 Then
+                        pSize = arrParams(i)(2)
                     Else
                         pSize = 0
                     End If
-                    If UBound(paramArray(i)) >= 3 Then
-                        pValue = paramArray(i)(UBound(paramArray(i)))
+                    If UBound(arrParams(i)) >= 3 Then
+                        pValue = arrParams(i)(UBound(arrParams(i)))
                     Else
-                        pValue = paramArray(i)(2)
+                        pValue = arrParams(i)(2)
                     End If
                     ' 处理NULL值
                     If IsNull(pValue) Or (VarType(pValue) = 0 And pValue = "") Then
                         pValue = Null
                     End If
                     
-                    Dim paramObj
-                    If pSize > 0 Then
-                        Set paramObj = cmd.CreateParameter(pName, pType, DAL_adParamInput, pSize, pValue)
-                    Else
-                        Set paramObj = cmd.CreateParameter(pName, pType, DAL_adParamInput, 0, pValue)
-                    End If
-                    cmd.Parameters.Append paramObj
+                    ' V17.1: 将 SQL 中所有出现的 @ParamName 替换为 ?
+                    ' 同时统计出现次数，为每个出现创建一个匿名参数
+                    Dim occurCount, j
+                    occurCount = CountParamOccurrences(posSql, pName)
+                    posSql = ReplaceAllParams(posSql, pName)
+                    
+                    For j = 1 To occurCount
+                        Dim paramObj
+                        If pSize > 0 Then
+                            Set paramObj = cmd.CreateParameter("", pType, DAL_adParamInput, pSize, pValue)
+                        Else
+                            Set paramObj = cmd.CreateParameter("", pType, DAL_adParamInput, 0, pValue)
+                        End If
+                        cmd.Parameters.Append paramObj
+                    Next
                 End If
             End If
         Next
     End If
     
+    ' V17.1: 设置转换后的 SQL（? 占位符版本）
+    cmd.CommandText = posSql
+    
     Set DAL_CreateCommand = cmd
+End Function
+
+' ============================================
+' V17.1: 辅助函数 - 统计 @paramName 在 SQL 中出现的次数
+' ============================================
+Function CountParamOccurrences(sqlStr, paramName)
+    Dim count, pos
+    count = 0
+    pos = InStr(1, sqlStr, paramName, 1)  ' vbTextCompare = 1
+    Do While pos > 0
+        count = count + 1
+        pos = InStr(pos + Len(paramName), sqlStr, paramName, 1)
+    Loop
+    CountParamOccurrences = count
+End Function
+
+' ============================================
+' V17.1: 辅助函数 - 将 SQL 中所有匹配的 @paramName 替换为 ?
+' ============================================
+Function ReplaceAllParams(sqlStr, paramName)
+    Dim result, pos, paramLen
+    result = sqlStr
+    paramLen = Len(paramName)
+    pos = InStr(1, result, paramName, 1)  ' vbTextCompare = 1，大小写不敏感
+    Do While pos > 0
+        result = Left(result, pos - 1) & "?" & Mid(result, pos + paramLen)
+        pos = InStr(pos + 1, result, paramName, 1)
+    Loop
+    ReplaceAllParams = result
 End Function
 
 ' ============================================
@@ -78,14 +126,14 @@ End Function
 '         Array(Array("@Name", DAL_adVarChar, 50, "张三"), _
 '               Array("@ID", DAL_adInteger, 0, 123))
 ' ============================================
-Function DAL_Execute(sql, paramArray)
+Function DAL_Execute(sql, arrParams)
     Dim cmd, rowsAffected, startTime
     
     startTime = Timer()
     rowsAffected = -1
     
     On Error Resume Next
-    Set cmd = DAL_CreateCommand(sql, paramArray)
+    Set cmd = DAL_CreateCommand(sql, arrParams)
     If cmd Is Nothing Then
         DAL_Execute = -1
         Exit Function
@@ -116,7 +164,7 @@ End Function
 ' DAL_GetScalar: 获取单个标量值
 ' 返回: 查询结果的第一列第一行值，无结果返回 defaultVal
 ' ============================================
-Function DAL_GetScalar(sql, paramArray, defaultVal)
+Function DAL_GetScalar(sql, arrParams, defaultVal)
     Dim cmd, rs, result, startTime
     
     If IsNull(defaultVal) Or IsEmpty(defaultVal) Then defaultVal = ""
@@ -124,7 +172,7 @@ Function DAL_GetScalar(sql, paramArray, defaultVal)
     startTime = Timer()
     
     On Error Resume Next
-    Set cmd = DAL_CreateCommand(sql, paramArray)
+    Set cmd = DAL_CreateCommand(sql, arrParams)
     If cmd Is Nothing Then
         DAL_GetScalar = defaultVal
         Exit Function
@@ -164,13 +212,13 @@ End Function
 ' DAL_GetRow: 获取单行记录（返回Dictionary）
 ' 返回: Dictionary对象（字段名→值），无结果返回 Nothing
 ' ============================================
-Function DAL_GetRow(sql, paramArray)
+Function DAL_GetRow(sql, arrParams)
     Dim cmd, rs, dict, fld, startTime
     
     startTime = Timer()
     
     On Error Resume Next
-    Set cmd = DAL_CreateCommand(sql, paramArray)
+    Set cmd = DAL_CreateCommand(sql, arrParams)
     If cmd Is Nothing Then
         Set DAL_GetRow = Nothing
         Exit Function
@@ -216,13 +264,13 @@ End Function
 ' DAL_GetList: 获取多行记录（返回Recordset，兼容现有代码）
 ' 返回: ADODB.Recordset（客户端游标，支持RecordCount），无结果返回 Nothing
 ' ============================================
-Function DAL_GetList(sql, paramArray)
+Function DAL_GetList(sql, arrParams)
     Dim cmd, rs, startTime
     
     startTime = Timer()
     
     On Error Resume Next
-    Set cmd = DAL_CreateCommand(sql, paramArray)
+    Set cmd = DAL_CreateCommand(sql, arrParams)
     If cmd Is Nothing Then
         Set DAL_GetList = Nothing
         Exit Function
@@ -260,7 +308,7 @@ End Function
 ' DAL_GetListPaged: 分页查询
 ' 返回: Recordset + 通过pageInfo Dictionary返回分页信息
 ' ============================================
-Function DAL_GetListPaged(sql, paramArray, page, pageSize, ByRef pageInfo)
+Function DAL_GetListPaged(sql, arrParams, page, pageSize, ByRef pageInfo)
     Dim countSql, totalCount, totalPages, rs
     
     ' 计算总数（从SQL中提取COUNT）
@@ -270,7 +318,7 @@ Function DAL_GetListPaged(sql, paramArray, page, pageSize, ByRef pageInfo)
     
     ' 构建COUNT查询
     countSql = "SELECT COUNT(*) FROM (" & sql & ") AS DAL_CountSub"
-    totalCount = CLng(DAL_GetScalar(countSql, paramArray, 0))
+    totalCount = CLng(DAL_GetScalar(countSql, arrParams, 0))
     totalPages = Int((totalCount + pageSize - 1) / pageSize)
     If totalPages < 1 Then totalPages = 1
     If page > totalPages Then page = totalPages
@@ -280,7 +328,7 @@ Function DAL_GetListPaged(sql, paramArray, page, pageSize, ByRef pageInfo)
     Dim pagedSql
     pagedSql = sql & " OFFSET " & offset & " ROWS FETCH NEXT " & pageSize & " ROWS ONLY"
     
-    Set rs = DAL_GetList(pagedSql, paramArray)
+    Set rs = DAL_GetList(pagedSql, arrParams)
     Set DAL_GetListPaged = rs
     
     ' 填充分页信息
@@ -297,10 +345,10 @@ End Function
 ' DAL_Exists: 检查记录是否存在
 ' 返回: Boolean
 ' ============================================
-Function DAL_Exists(tableName, whereClause, paramArray)
+Function DAL_Exists(tableName, whereClause, arrParams)
     Dim sql, count
     sql = "SELECT COUNT(*) FROM [" & tableName & "] WHERE " & whereClause
-    count = CLng(DAL_GetScalar(sql, paramArray, 0))
+    count = CLng(DAL_GetScalar(sql, arrParams, 0))
     DAL_Exists = (count > 0)
 End Function
 
@@ -308,7 +356,7 @@ End Function
 ' DAL_Insert: 插入记录并返回自增ID
 ' 返回: 新插入记录的IDENTITY值，失败返回0
 ' ============================================
-Function DAL_Insert(tableName, fields, paramArray)
+Function DAL_Insert(tableName, fields, arrParams)
     Dim sql, cols, vals, i, insertId
     
     If IsArray(fields) Then
@@ -324,7 +372,7 @@ Function DAL_Insert(tableName, fields, paramArray)
     End If
     
     sql = "INSERT INTO [" & tableName & "] (" & cols & ") VALUES (" & vals & "); SELECT SCOPE_IDENTITY();"
-    insertId = CLng(DAL_GetScalar(sql, paramArray, 0))
+    insertId = CLng(DAL_GetScalar(sql, arrParams, 0))
     DAL_Insert = insertId
 End Function
 

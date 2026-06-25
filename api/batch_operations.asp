@@ -9,12 +9,13 @@ Response.ContentType = "application/json"
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/api_response.asp"-->
 <!--#include file="../includes/audit_utils.asp"-->
 <%
 Call OpenConnection()
 
-' V16: 确保审计日志表存在
+' V17: 确保审计日志表存在
 Call EnsureAuditLogTable()
 
 ' 权限检查
@@ -44,13 +45,16 @@ failCount = 0
 
 Select Case action
     Case "batch_ship"
-        ' 批量发货
+        ' V17: 使用参数化DAL查询
         For i = 0 To UBound(idArray)
             id = Trim(idArray(i))
             If IsNumeric(id) And id <> "" Then
                 Dim trackingNo
                 trackingNo = Trim(Request.Form("tracking_no"))
-                If ExecuteNonQuery("UPDATE Orders SET Status='Shipped', TrackingNo='" & SafeSQL(trackingNo) & "', ShippedAt=GETDATE() WHERE OrderID=" & CLng(id) & " AND Status='Paid'") Then
+                Dim shipParams(1)
+                shipParams(0) = Array("@TrackingNo", DAL_adVarChar, 100, Left(trackingNo, 100))
+                shipParams(1) = Array("@OrderID", DAL_adInteger, 0, CLng(id))
+                If DAL_Execute("UPDATE Orders SET Status='Shipped', TrackingNo=@TrackingNo, ShippedAt=GETDATE() WHERE OrderID=@OrderID AND Status='Paid'", shipParams) >= 0 Then
                     successCount = successCount + 1
                 Else
                     failCount = failCount + 1
@@ -59,11 +63,13 @@ Select Case action
         Next
         
     Case "batch_cancel"
-        ' 批量取消订单
+        ' V17: 使用参数化DAL查询
         For i = 0 To UBound(idArray)
             id = Trim(idArray(i))
             If IsNumeric(id) And id <> "" Then
-                If ExecuteNonQuery("UPDATE Orders SET Status='Cancelled', CancelledAt=GETDATE() WHERE OrderID=" & CLng(id) & " AND Status IN ('Pending','Paid')") Then
+                Dim cancelParams(0)
+                cancelParams(0) = Array("@OrderID", DAL_adInteger, 0, CLng(id))
+                If DAL_Execute("UPDATE Orders SET Status='Cancelled', CancelledAt=GETDATE() WHERE OrderID=@OrderID AND Status IN ('Pending','Paid')", cancelParams) >= 0 Then
                     successCount = successCount + 1
                 Else
                     failCount = failCount + 1
@@ -72,11 +78,13 @@ Select Case action
         Next
         
     Case "batch_list"
-        ' 批量上架产品
+        ' V17: 使用参数化DAL查询
         For i = 0 To UBound(idArray)
             id = Trim(idArray(i))
             If IsNumeric(id) And id <> "" Then
-                If ExecuteNonQuery("UPDATE Products SET IsActive=1 WHERE ProductID=" & CLng(id)) Then
+                Dim listParams(0)
+                listParams(0) = Array("@ProductID", DAL_adInteger, 0, CLng(id))
+                If DAL_Execute("UPDATE Products SET IsActive=1 WHERE ProductID=@ProductID", listParams) >= 0 Then
                     successCount = successCount + 1
                 Else
                     failCount = failCount + 1
@@ -85,11 +93,13 @@ Select Case action
         Next
         
     Case "batch_unlist"
-        ' 批量下架产品
+        ' V17: 使用参数化DAL查询
         For i = 0 To UBound(idArray)
             id = Trim(idArray(i))
             If IsNumeric(id) And id <> "" Then
-                If ExecuteNonQuery("UPDATE Products SET IsActive=0 WHERE ProductID=" & CLng(id)) Then
+                Dim unlistParams(0)
+                unlistParams(0) = Array("@ProductID", DAL_adInteger, 0, CLng(id))
+                If DAL_Execute("UPDATE Products SET IsActive=0 WHERE ProductID=@ProductID", unlistParams) >= 0 Then
                     successCount = successCount + 1
                 Else
                     failCount = failCount + 1
@@ -98,11 +108,62 @@ Select Case action
         Next
         
     Case "batch_delete_cart"
-        ' 批量清理过期购物车
+        ' V17: 使用参数化DAL查询
         For i = 0 To UBound(idArray)
             id = Trim(idArray(i))
             If IsNumeric(id) And id <> "" Then
-                If ExecuteNonQuery("DELETE FROM Cart WHERE CartID=" & CLng(id)) Then
+                Dim cartDelParams(0)
+                cartDelParams(0) = Array("@CartID", DAL_adInteger, 0, CLng(id))
+                If DAL_Execute("DELETE FROM Cart WHERE CartID=@CartID", cartDelParams) >= 0 Then
+                    successCount = successCount + 1
+                Else
+                    failCount = failCount + 1
+                End If
+            End If
+        Next
+        
+    Case "batch_update_status"
+        ' V17: 订单批量状态更新
+        Dim newStatus : newStatus = Trim(Request.Form("new_status"))
+        Dim validStatuses : validStatuses = Array("Pending", "Paid", "Processing", "Shipped", "Delivered", "Cancelled")
+        Dim statusValid : statusValid = False
+        For i = 0 To UBound(validStatuses)
+            If newStatus = validStatuses(i) Then statusValid = True : Exit For
+        Next
+        If Not statusValid Then
+            Call API_Error(API_ERR_PARAM_INVALID, "无效的订单状态: " & newStatus)
+            Response.End
+        End If
+        
+        For i = 0 To UBound(idArray)
+            id = Trim(idArray(i))
+            If IsNumeric(id) And id <> "" Then
+                Dim statusParams(1)
+                statusParams(0) = Array("@Status", DAL_adVarChar, 50, newStatus)
+                statusParams(1) = Array("@OrderID", DAL_adInteger, 0, CLng(id))
+                If DAL_Execute("UPDATE Orders SET Status=@Status, UpdatedAt=GETDATE() WHERE OrderID=@OrderID AND Status<>'Delivered' AND Status<>'Cancelled'", statusParams) >= 0 Then
+                    successCount = successCount + 1
+                Else
+                    failCount = failCount + 1
+                End If
+            End If
+        Next
+        
+    Case "batch_category"
+        ' V17: 产品分类批量调整
+        Dim newTypeCode : newTypeCode = Trim(Request.Form("type_code"))
+        If newTypeCode = "" Then
+            Call API_Error(API_ERR_PARAM_MISSING, "请选择目标分类")
+            Response.End
+        End If
+        
+        For i = 0 To UBound(idArray)
+            id = Trim(idArray(i))
+            If IsNumeric(id) And id <> "" Then
+                Dim catParams(1)
+                catParams(0) = Array("@TypeCode", DAL_adVarChar, 50, newTypeCode)
+                catParams(1) = Array("@ProductID", DAL_adInteger, 0, CLng(id))
+                If DAL_Execute("UPDATE Products SET TypeCode=@TypeCode WHERE ProductID=@ProductID", catParams) >= 0 Then
                     successCount = successCount + 1
                 Else
                     failCount = failCount + 1

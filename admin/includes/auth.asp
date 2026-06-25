@@ -5,6 +5,7 @@
 ' 建议: 在页面开头包含此文件前，先包含:
 '   <!--#include file="../includes/config.asp"-->
 '   <!--#include file="../includes/connection.asp"-->
+'   <!--#include file="../includes/dal.asp"-->
 ' 以启用Remember Me Cookie恢复功能
 ' ============================================
 
@@ -32,8 +33,9 @@ If Session("AdminID") = "" Then
                 ' 从数据库验证管理员ID
                 Call OpenConnection
                 
-                Dim rsAuth
-                Set rsAuth = ExecuteQuery("SELECT AdminID, Username, IsActive FROM AdminUsers WHERE AdminID = " & CLng(validatedAdminId) & " AND IsActive = 1")
+                Dim rsAuth, authParams(0)
+                authParams(0) = Array("@AdminID", DAL_adInteger, 0, CLng(validatedAdminId))
+                Set rsAuth = DAL_GetList("SELECT AdminID, Username, IsActive FROM AdminUsers WHERE AdminID=@AdminID AND IsActive=1", authParams)
                 
                 If Not rsAuth Is Nothing And Not rsAuth.EOF Then
                     ' 会话恢复成功

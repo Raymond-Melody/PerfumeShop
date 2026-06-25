@@ -295,4 +295,49 @@ Function DAL_Products_GetVolumes()
           "WHERE IsActive=1 ORDER BY VolumeML ASC"
     Set DAL_Products_GetVolumes = DAL_GetList(sql, Null)
 End Function
+
+' ============================================
+' V17: 产品搜索建议（自动完成）
+' 返回: 匹配的产品名称和价格（轻量级，用于搜索框自动完成）
+' ============================================
+Function DAL_Products_GetSuggestions(keyword, maxResults)
+    Dim sql, params(0)
+    If IsNull(maxResults) Or maxResults < 1 Then maxResults = 8
+    sql = "SELECT TOP " & CLng(maxResults) & " ProductID, ProductName, BasePrice, ImageURL, ProductType " & _
+          "FROM Products WHERE IsActive=1 AND ProductName LIKE '%' + @Keyword + '%' " & _
+          "ORDER BY CASE WHEN ProductName LIKE @Keyword + '%' THEN 0 ELSE 1 END, ProductName ASC"
+    params(0) = Array("@Keyword", DAL_adVarChar, 100, keyword)
+    Set DAL_Products_GetSuggestions = DAL_GetList(sql, params)
+End Function
+
+' ============================================
+' V17: 搜索历史记录管理
+' ============================================
+Function DAL_Products_GetSearchHistory(userId, limit)
+    Dim sql, params(0)
+    If IsNull(limit) Or limit < 1 Then limit = 10
+    sql = "SELECT TOP " & CLng(limit) & " SearchID, Keyword, SearchCount, LastSearchedAt " & _
+          "FROM SearchHistory WHERE UserID=@UserID ORDER BY LastSearchedAt DESC"
+    params(0) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    Set DAL_Products_GetSearchHistory = DAL_GetList(sql, params)
+End Function
+
+Sub DAL_Products_RecordSearch(userId, keyword)
+    Dim sql, params(1)
+    If userId = "" Or IsNull(userId) Then
+        userId = 0
+    End If
+    keyword = Left(Trim(keyword), 100)
+    If keyword = "" Then Exit Sub
+    
+    ' 更新或插入搜索记录
+    sql = "IF EXISTS (SELECT 1 FROM SearchHistory WHERE UserID=@UserID AND Keyword=@Keyword) " & _
+          "UPDATE SearchHistory SET SearchCount=SearchCount+1, LastSearchedAt=GETDATE() " & _
+          "WHERE UserID=@UserID AND Keyword=@Keyword " & _
+          "ELSE INSERT INTO SearchHistory (UserID, Keyword, SearchCount, LastSearchedAt) " & _
+          "VALUES (@UserID, @Keyword, 1, GETDATE())"
+    params(0) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
+    params(1) = Array("@Keyword", DAL_adVarChar, 100, keyword)
+    DAL_Execute sql, params
+End Sub
 %>

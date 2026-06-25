@@ -45,7 +45,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             If updateResult Then
                 ' 发送密码重置邮件
                 On Error Resume Next
-                Call SendPasswordResetEmail(rsUser("Email"), rsUser("FullName"), resetToken)
+                Call SendUserPasswordResetEmail(rsUser("Email"), rsUser("FullName"), resetToken)
                 On Error GoTo 0
                 
                 successMessage = "密码重置链接已发送到您的邮箱。请检查您的收件箱。"

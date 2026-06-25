@@ -5,6 +5,8 @@ Response.ContentType = "text/html"
 %>
 <!--#include file="includes/config.asp"-->
 <!--#include file="includes/connection.asp"-->
+<!--#include file="includes/dal.asp"-->
+<!--#include file="includes/dal_products.asp"-->
 <!--#include file="includes/product_type_utils.asp"-->
 <%
 Call OpenConnection()
@@ -22,7 +24,16 @@ activeTypeCodes = GetActiveTypeCodesForSQL()
 
 ' 获取参数
 Dim keyword, sortBy, page, totalCount, totalPages, productType
-keyword = SafeSQL(Request.QueryString("keyword"))
+keyword = Request.QueryString("keyword")
+If keyword <> "" Then
+    keyword = Trim(keyword)
+    ' V17: 记录搜索历史
+    Dim userIdForHistory
+    userIdForHistory = Session("UserID")
+    If userIdForHistory <> "" Then
+        Call DAL_Products_RecordSearch(userIdForHistory, keyword)
+    End If
+End If
 sortBy = Request.QueryString("sort")
 page = Request.QueryString("page")
 productType = Request.QueryString("type")
@@ -54,7 +65,9 @@ Else
 End If
 
 If keyword <> "" Then
-    whereClause = whereClause & " AND (ProductName LIKE '%" & keyword & "%' OR Description LIKE '%" & keyword & "%')"
+    ' V17: 使用SafeLike防止SQL注入和LIKE通配符注入，加权排序（名称匹配优先）
+    whereClause = whereClause & " AND (p.ProductName LIKE '%" & SafeLike(keyword) & "%' OR p.Description LIKE '%" & SafeLike(keyword) & "%')"
+    orderClause = " ORDER BY CASE WHEN p.ProductName LIKE '" & SafeLike(keyword) & "%' THEN 0 WHEN p.ProductName LIKE '%" & SafeLike(keyword) & "%' THEN 1 ELSE 2 END, ISNULL(p.CreatedAt, '2099-12-31') DESC, p.ProductID DESC"
 End If
 
 Select Case sortBy

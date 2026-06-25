@@ -6,6 +6,9 @@ Response.ContentType = "text/html"
 <!--#include file="includes/auth.asp"-->
 <!--#include file="../../includes/config.asp"-->
 <!--#include file="../../includes/connection.asp"-->
+<!--#include file="../../includes/dal.asp"-->
+<!--#include file="../../includes/dal_finance.asp"-->
+<!--#include file="../../includes/audit_utils.asp"-->
 <%
 ' 安全数值转换函数
 Function SafeNum(val)
@@ -35,38 +38,27 @@ Dim safeStart, safeEnd
 safeStart = SafeSQL(startDate)
 safeEnd = SafeSQL(endDate)
 
-' 月度收入汇总
+' V17: 使用参数化DAL查询
 Dim rsMonthly
-Set rsMonthly = ExecuteQuery( _
-    "SELECT Year(OrderDate) AS Y, Month(OrderDate) AS M, COUNT(*) AS OrderCount, SUM(CAST(TotalAmount AS FLOAT)) AS Revenue " & _
-    "FROM Orders WHERE OrderDate >= #" & safeStart & "# AND OrderDate <= #" & safeEnd & "# " & _
-    "GROUP BY Year(OrderDate), Month(OrderDate) " & _
-    "ORDER BY Year(OrderDate) DESC, Month(OrderDate) DESC")
+Set rsMonthly = DAL_Fin_GetMonthlyRevenue(startDate, endDate)
 
-' 订单金额分布统计
-Dim cnt0_50, cnt50_100, cnt100_200, cnt200_500, cnt500plus
-cnt0_50 = GetScalar("SELECT COUNT(*) FROM Orders WHERE TotalAmount >= 0 AND TotalAmount < 50 AND OrderDate >= #" & safeStart & "# AND OrderDate <= #" & safeEnd & "'")
-cnt50_100 = GetScalar("SELECT COUNT(*) FROM Orders WHERE TotalAmount >= 50 AND TotalAmount < 100 AND OrderDate >= #" & safeStart & "# AND OrderDate <= #" & safeEnd & "'")
-cnt100_200 = GetScalar("SELECT COUNT(*) FROM Orders WHERE TotalAmount >= 100 AND TotalAmount < 200 AND OrderDate >= #" & safeStart & "# AND OrderDate <= #" & safeEnd & "'")
-cnt200_500 = GetScalar("SELECT COUNT(*) FROM Orders WHERE TotalAmount >= 200 AND TotalAmount < 500 AND OrderDate >= #" & safeStart & "# AND OrderDate <= #" & safeEnd & "'")
-cnt500plus = GetScalar("SELECT COUNT(*) FROM Orders WHERE TotalAmount >= 500 AND OrderDate >= #" & safeStart & "# AND OrderDate <= #" & safeEnd & "'")
+' V17: 使用参数化DAL查询订单金额分布
+Call DAL_Fin_GetOrderDistribution(startDate, endDate, cnt0_50, cnt50_100, cnt100_200, cnt200_500, cnt500plus)
 
 Dim totalDistribution
 totalDistribution = CLng("0" & cnt0_50) + CLng("0" & cnt50_100) + CLng("0" & cnt100_200) + CLng("0" & cnt200_500) + CLng("0" & cnt500plus)
 If totalDistribution = 0 Then totalDistribution = 1
 
-' 支付方式占比统计
+' V17: 使用参数化DAL查询支付方式统计
 Dim rsPayment
-Set rsPayment = ExecuteQuery( _
-    "SELECT PaymentMethod, COUNT(*) AS Cnt, SUM(CAST(TotalAmount AS FLOAT)) AS Total " & _
-    "FROM Orders WHERE OrderDate >= #" & safeStart & "# AND OrderDate <= #" & safeEnd & "# " & _
-    "GROUP BY PaymentMethod")
+Set rsPayment = DAL_Fin_GetPaymentStats(startDate, endDate)
 
+' V17: 使用参数化DAL查询总收入
 Dim grandTotal
-grandTotal = GetScalar("SELECT CAST(IIF(SUM(TotalAmount) IS NULL, 0, SUM(TotalAmount)) AS FLOAT) FROM Orders WHERE OrderDate >= #" & safeStart & "# AND OrderDate <= #" & safeEnd & "#")
-If IsNull(grandTotal) Or grandTotal = "" Then grandTotal = 0
+grandTotal = DAL_Fin_GetTotalRevenue(startDate, endDate)
 
-Call LogAdminAction("查看财务报表", "finance", "Orders", "", safeStart & " 至 " & safeEnd)
+' V17: 替换为审计日志
+Call AuditLog("view", "finance", 0, "Reports", safeStart & " 至 " & safeEnd)
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">

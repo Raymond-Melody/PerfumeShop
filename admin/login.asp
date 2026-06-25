@@ -13,6 +13,8 @@ End If
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/dal.asp"-->
+<!--#include file="../includes/dal_users.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <%
 
@@ -33,6 +35,8 @@ errorMessage = ""
 If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     ' CSRF验证
     If Not ValidateCSRFToken() Then
+        ' V17.2: 验证失败时强制刷新令牌，允许用户立即重试
+        Call GenerateCSRFToken()
         errorMessage = "安全验证失败，请刷新页面重试"
     Else
         username = Trim(Request.Form("username"))
@@ -64,9 +68,10 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         If Not tableExists Then
             errorMessage = "错误：管理员表 AdminUsers 不存在，请先运行初始化脚本 admin/init_admin_table.asp 创建表。"
         Else
-            ' 从数据库查找用户
-            Dim rsUser
-            Set rsUser = ExecuteQuery("SELECT AdminID, Username, PasswordHash, IsActive FROM AdminUsers WHERE Username = '" & SafeSQL(username) & "' AND ISNULL(IsActive, 0) <> 0")
+            ' V17: 使用参数化查询防止SQL注入
+            Dim rsUser, sqlParams(0)
+            sqlParams(0) = Array("@Username", DAL_adVarChar, 50, username)
+            Set rsUser = DAL_GetList("SELECT AdminID, Username, PasswordHash, IsActive FROM AdminUsers WHERE Username=@Username AND ISNULL(IsActive, 0)<>0", sqlParams)
                         
             If Not rsUser Is Nothing And IsObject(rsUser) Then
                 If Not rsUser.EOF And Not rsUser.BOF Then
@@ -91,7 +96,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         adminUsername = rsUser.Fields("Username").Value
                     End If
                     
-                    ' 使用增强型密码验证 (支持V1/V2自动升级)
+                    ' V17: 使用参数化密码验证 (支持V1/V2/V3自动升级)
                     If AdminVerifyAndUpgrade(password, storedHash, adminId) Then
                         ' 登录成功
                         Session("AdminID") = adminId
@@ -102,13 +107,11 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         ' 重置登录失败计数
                         Call ResetLoginFailure("Admin")
                         
-                        ' 如果选择了记住我，设置加密Cookie (V10: 安全加固)
+                        ' 如果选择了记住我，设置加密Cookie
                         If rememberMe <> "" Then
                             Response.Cookies("AdminRememberMe") = GenerateSecureToken(adminId)
                             Response.Cookies("AdminRememberMe").Expires = DateAdd("d", 30, Now())
                             Response.Cookies("AdminRememberMe").Path = "/"
-                            ' 注：HttpOnly需要IIS 7.0+支持，此处移除以保证兼容性
-                            ' Response.Cookies("AdminRememberMe").HttpOnly = True
                             If LCase(Request.ServerVariables("HTTPS")) = "on" Then
                                 Response.Cookies("AdminRememberMe").Secure = True
                             End If
@@ -116,12 +119,10 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         
                         Response.Redirect "portal.asp"
                     Else
-                        ' 记录登录失败
                         Call RecordLoginFailure("Admin")
                         errorMessage = "用户名或密码错误"
                     End If
                 Else
-                    ' 记录登录失败
                     Call RecordLoginFailure("Admin")
                     errorMessage = "用户名或密码错误"
                 End If
@@ -131,16 +132,13 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                     Set rsUser = Nothing
                 End If
             Else
-                errorMessage = "数据库查询失败: " & Session("LastDBError")
+                errorMessage = "数据库查询失败: " & DAL_GetLastError()
             End If
-                        
-            ' rsUser已经在上面关闭过了，不需要再次关闭
         End If
         End If
     End If
 End If
 
-' 确保页面有CSRF令牌
 Call EnsureCSRFToken()
 %>
 <!DOCTYPE html>

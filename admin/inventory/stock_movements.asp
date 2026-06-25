@@ -6,6 +6,8 @@ Response.ContentType = "text/html"
 <!--#include file="includes/auth.asp"-->
 <!--#include file="../../includes/config.asp"-->
 <!--#include file="../../includes/connection.asp"-->
+<!--#include file="../../includes/dal.asp"-->
+<!--#include file="../../includes/dal_inventory.asp"-->
 <%
 Call OpenConnection()
 
@@ -19,22 +21,6 @@ Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
 End Function
 
-Function GetScalar(sql)
-    Dim rs, val : val = 0
-    On Error Resume Next
-    Set rs = conn.Execute(sql)
-    If Err.Number = 0 Then
-        If Not rs Is Nothing Then
-            If Not rs.EOF Then val = rs(0)
-            If IsNull(val) Then val = 0
-            rs.Close
-        End If
-    Else : Err.Clear
-    End If
-    Set rs = Nothing
-    GetScalar = val
-End Function
-
 ' ========== 筛选条件 ==========
 Dim smType : smType = Request.QueryString("type")
 Dim smStart : smStart = Request.QueryString("start_date")
@@ -45,58 +31,25 @@ If smPage = "" Or Not IsNumeric(smPage) Then smPage = 1 Else smPage = CInt(smPag
 
 Const smPageSize = 20
 
-' 构建 WHERE 条件
-Dim smWhere : smWhere = " WHERE 1=1"
+' V17: 使用参数化DAL查询
+Dim smPageInfo
+Dim rsSM
+Set rsSM = DAL_Inv_GetMovements(smType, smStart, smEnd, smSearch, smPage, smPageSize, smPageInfo)
 
-If smType <> "" And smType <> "all" Then
-    smWhere = smWhere & " AND MovementType='" & SafeSQL(smType) & "'"
-End If
-
-If smStart <> "" Then
-    smWhere = smWhere & " AND CreatedAt >= '" & SafeSQL(smStart) & "'"
-End If
-
-If smEnd <> "" Then
-    smWhere = smWhere & " AND CreatedAt < '" & SafeSQL(smEnd) & " 23:59:59'"
-End If
-
-If smSearch <> "" Then
-    smWhere = smWhere & " AND (ItemName LIKE '%" & SafeSQL(smSearch) & "%' OR ItemCode LIKE '%" & SafeSQL(smSearch) & "%' OR ReferenceNo LIKE '%" & SafeSQL(smSearch) & "%')"
-End If
-
-' ========== 统计数据 ==========
-Dim smTotal
-smTotal = SafeNum(GetScalar("SELECT COUNT(*) FROM StockMovements" & smWhere))
+Dim smTotal : smTotal = smPageInfo("totalCount")
+Dim smTotalPages : smTotalPages = smPageInfo("totalPages")
 
 ' 各种类型统计
 Dim inCount, outCount, adjustCount, transferCount
-inCount = SafeNum(GetScalar("SELECT COUNT(*) FROM StockMovements WHERE MovementType='In'"))
-outCount = SafeNum(GetScalar("SELECT COUNT(*) FROM StockMovements WHERE MovementType='Out'"))
-adjustCount = SafeNum(GetScalar("SELECT COUNT(*) FROM StockMovements WHERE MovementType='Adjust'"))
-transferCount = SafeNum(GetScalar("SELECT COUNT(*) FROM StockMovements WHERE MovementType='Transfer'"))
+inCount = DAL_Inv_CountMovementsByType("In")
+outCount = DAL_Inv_CountMovementsByType("Out")
+adjustCount = DAL_Inv_CountMovementsByType("Adjust")
+transferCount = DAL_Inv_CountMovementsByType("Transfer")
 
 ' 本月入库/出库
 Dim monthInCount, monthOutCount
-monthInCount = SafeNum(GetScalar("SELECT COUNT(*) FROM StockMovements WHERE MovementType='In' AND CreatedAt >= DATEADD(month,-1,GETDATE())"))
-monthOutCount = SafeNum(GetScalar("SELECT COUNT(*) FROM StockMovements WHERE MovementType='Out' AND CreatedAt >= DATEADD(month,-1,GETDATE())"))
-
-' ========== 分页查询 ==========
-Dim smOffset : smOffset = (smPage - 1) * smPageSize
-Dim rsSM
-On Error Resume Next
-Set rsSM = conn.Execute(_
-    "SELECT * FROM StockMovements" & smWhere & _
-    " ORDER BY CreatedAt DESC " & _
-    "OFFSET " & smOffset & " ROWS FETCH NEXT " & smPageSize & " ROWS ONLY")
-If Err.Number <> 0 Then
-	Err.Clear
-	Set rsSM = Nothing
-End If
-On Error GoTo 0
-
-' 总页数
-Dim smTotalPages : smTotalPages = 1
-If smTotal > 0 Then smTotalPages = Int((smTotal - 1) / smPageSize) + 1
+monthInCount = DAL_Inv_CountMonthIn()
+monthOutCount = DAL_Inv_CountMonthOut()
 
 ' 构建筛选URL参数
 Function BuildFilterURL(excludePage)

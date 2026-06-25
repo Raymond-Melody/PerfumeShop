@@ -51,29 +51,35 @@ End Function
 
 ' ============================================
 ' SHA-256 哈希包装器
-' 优先使用 connection.asp 中的 SafeSHA256Hash (VBScript实现)
-' 不可用时回退到 SQL Server HASHBYTES
+' V17.1: 优先使用 SQL Server HASHBYTES（可靠、确定性）
+'    VBScript SHA-256 因整数溢出不可靠，DJB2 因浮点精度非确定性
+'    回退顺序: SQL HASHBYTES → VBScript → DJB2 (仅最后手段)
 ' ============================================
 Function HASH_SHA256(inputStr)
+    ' V17.1: 途径1 - SQL Server HASHBYTES（最可靠，真正的 SHA-256）
     On Error Resume Next
-    ' 途径1: 使用 connection.asp 中的 SafeSHA256Hash
-    HASH_SHA256 = SafeSHA256Hash(inputStr)
-    If Err.Number <> 0 Or HASH_SHA256 = "" Then
-        Err.Clear
-        ' 途径2: 使用 SQL Server HASHBYTES
-        If IsObject(conn) Then
-            Dim rs
-            Set rs = conn.Execute("SELECT CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', '" & SafeSQL(inputStr) & "'), 2)")
-            If Not rs Is Nothing And Not rs.EOF Then
+    If IsObject(conn) Then
+        Dim rs
+        Set rs = conn.Execute("SELECT CONVERT(VARCHAR(64), HASHBYTES('SHA2_256', '" & SafeSQL(inputStr) & "'), 2)")
+        If Err.Number = 0 And Not rs Is Nothing Then
+            If Not rs.EOF Then
                 HASH_SHA256 = LCase(rs(0))
-                rs.Close
+                rs.Close : Set rs = Nothing
+                On Error GoTo 0
+                Exit Function
             End If
-            Set rs = Nothing
+            rs.Close
         End If
+        Set rs = Nothing
+        Err.Clear
     End If
+    
+    ' 途径2: VBScript SafeSHA256Hash
+    HASH_SHA256 = SafeSHA256Hash(inputStr)
+    If Err.Number <> 0 Then Err.Clear
     On Error GoTo 0
     
-    ' 途径3: 完全回退到DJB2 (比V2的模256循环强)
+    ' 途径3: DJB2 非加密回退（仅当上面都失败时）
     If HASH_SHA256 = "" Then
         HASH_SHA256 = DJB2Hash(inputStr)
     End If
@@ -253,13 +259,16 @@ End Function
 
 ' 升级密码哈希到当前推荐版本
 Sub UpgradePasswordHash(adminId, password)
-    Dim newHash, sql
+    Dim newHash, sql, params(1)
     If FEATURE_PASSWORD_V3 Then
         newHash = HashPasswordV3(password)
     Else
         newHash = HashPasswordV2(password)
     End If
-    sql = "UPDATE AdminUsers SET PasswordHash = '" & SafeSQL(newHash) & "' WHERE AdminID = " & CLng(adminId)
-    ExecuteNonQuery sql
+    ' V17: 参数化查询防止SQL注入
+    sql = "UPDATE AdminUsers SET PasswordHash=@PasswordHash WHERE AdminID=@AdminID"
+    params(0) = Array("@PasswordHash", DAL_adVarChar, 255, newHash)
+    params(1) = Array("@AdminID", DAL_adInteger, 0, CLng(adminId))
+    DAL_Execute sql, params
 End Sub
 %>

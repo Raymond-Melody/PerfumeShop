@@ -1,7 +1,15 @@
 <%
 ' ============================================
-' PerfumeShop Configuration V16.0
+' PerfumeShop Configuration V17.0
 ' ============================================
+
+' V17.2: 强制 UTF-8 编码，解决中文乱码问题
+' Response.CodePage 控制输出编码和表单提交解码，CodePage 65001 = UTF-8
+' Session.CodePage 控制 Session 中的字符串编码
+' 源文件为 UTF-8 Without BOM，必须显式设置 CodePage
+Response.CodePage = 65001
+Session.CodePage = 65001
+
 Const SITE_NAME = "Custom Fragrance"
 Const SITE_EMAIL = "contact@perfumeshop.com"
 Const SITE_NOREPLY = "noreply@perfumeshop.com"
@@ -13,8 +21,8 @@ Function GetSiteURL()
     GetSiteURL = proto & Request.ServerVariables("HTTP_HOST")
 End Function
 
-Const SYS_VERSION = "V16.0"
-Const SYS_VERSION_NAME = "PerfumeShop V16.0"
+Const SYS_VERSION = "V17.0"
+Const SYS_VERSION_NAME = "PerfumeShop V17.0"
 Const COOKIE_SECRET = "PerfumeShop_SecKey_2026_X9K3m"
 Const COOKIE_SECRET_V10 = "PF_V10_SHA256_Salt_7kM2xP9qR4vN8wL3jH6fD1sA5gK0"
 Const PASSWORD_PEPPER = "P3rfum3Sh0p_S@lt_2026!"
@@ -37,10 +45,12 @@ Const ORDER_PREFIX = "PF"
 ' ============================================
 ' V16 Feature Flags - 新功能默认关闭，验证后逐项开启
 ' ============================================
-Const FEATURE_MSOLEDBSQL = False        ' P0: MSOLEDBSQL (需先启用SQL Server TCP/IP协议)
+Const FEATURE_MSOLEDBSQL = True         ' P0: MSOLEDBSQL (需先启用SQL Server TCP/IP协议)
                                         ' 原因：YOURPERFUME实例仅监听Shared Memory，
                                         ' MSOLEDBSQL要求TCP。解决：SQL Server配置管理器
                                         ' → YOURPERFUME协议 → 启用TCP/IP → 重启服务
+                                        ' 回退：若MSOLEDBSQL不可用，自动回退SQLOLEDB
+                                        ' 脚本: database/enable_tcpip_sqlserver.ps1
 Const FEATURE_DAL_ENABLED = True        ' P0: 启用统一数据访问层 (V16激活)
 Const FEATURE_PASSWORD_V3 = True        ' P0: 启用SHA-512密码哈希V3 (V16激活)
 Const FEATURE_STRUCTURED_LOGGING = True ' P1: 启用结构化日志 (无外部依赖)
@@ -50,7 +60,7 @@ Const FEATURE_SSE_NOTIFICATIONS = True  ' P2: 启用SSE实时通知 (V16激活)
 Const FEATURE_EMAIL_NOTIFICATIONS = True ' P2: 启用邮件通知 (V16激活)
 Const FEATURE_ANALYTICS_DASHBOARD = True ' P2: 启用数据分析仪表盘 (V16激活)
 Const FEATURE_PWA_ENHANCED = True       ' P2: 启用PWA增强 (V16激活)
-Const FEATURE_I18N = False              ' P3: 启用国际化
+Const FEATURE_I18N = True              ' P2: 启用国际化 (V17激活)
 
 ' V15 DAL配置
 Const DAL_QUERY_TIMEOUT = 30            ' DAL查询超时(秒)
@@ -78,7 +88,7 @@ Response.AddHeader "X-Content-Type-Options", "nosniff"
 Response.AddHeader "X-Frame-Options", "SAMEORIGIN"
 Response.AddHeader "X-XSS-Protection", "1; mode=block"
 Response.AddHeader "Referrer-Policy", "strict-origin-when-cross-origin"
-Response.AddHeader "Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+Response.AddHeader "Content-Security-Policy", "default-src 'self'; script-src 'self' 'nonce-" & Session("csp_nonce") & "' https://cdnjs.cloudflare.com https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
 Response.AddHeader "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
 Response.AddHeader "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
 

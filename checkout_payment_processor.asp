@@ -36,10 +36,9 @@ If paymentMethod <> "" Then
     ' 判断是否是已存在订单模式
     If isExistingOrder Then
         orderId = existingOrderId
-        realName = rsExistingOrder("ShippingName")
-        phone = rsExistingOrder("ShippingPhone")
-        address = rsExistingOrder("ShippingAddress")
-        rsExistingOrder.Close
+        realName = rsExistingOrder("ShippingName") & ""
+        phone = rsExistingOrder("ShippingPhone") & ""
+        address = rsExistingOrder("ShippingAddress") & ""
         Set rsExistingOrder = Nothing
     Else
         ' 新订单模式

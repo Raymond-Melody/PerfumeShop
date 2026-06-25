@@ -44,11 +44,11 @@ Sub EnsureAuditLogTable()
     On Error GoTo 0
 End Sub
 
-' 写入审计日志
+' V17: 使用参数化查询防止SQL注入
 Sub AuditLog(actionType, targetType, targetID, targetName, details)
     On Error Resume Next
     
-    Dim adminID, adminName, ipAddr, userAgent
+    Dim adminID, adminName, ipAddr, userAgent, sql, params(), paramIdx, targetIdValue
     adminID = Session("AdminID")
     adminName = Session("AdminName")
     If adminName = "" Then adminName = "Admin#" & adminID
@@ -56,26 +56,55 @@ Sub AuditLog(actionType, targetType, targetID, targetName, details)
     ipAddr = Left(Request.ServerVariables("REMOTE_ADDR"), 50)
     userAgent = Left(Request.ServerVariables("HTTP_USER_AGENT"), 500)
     
-    ' 构建SQL（使用参数化风格防止注入）
-    Dim sql, targetIdValue
-    If targetID <> "" Then
+    ' 使用参数化查询
+    paramIdx = -1
+    ReDim params(0)
+    
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@AdminID", DAL_adInteger, 0, CLng(adminID))
+    
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@AdminName", DAL_adVarChar, 100, Left(adminName, 100))
+    
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@ActionType", DAL_adVarChar, 50, Left(actionType, 50))
+    
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@TargetType", DAL_adVarChar, 50, Left(targetType, 50))
+    
+    If targetID <> "" AND IsNumeric(targetID) Then
         targetIdValue = CLng(targetID)
     Else
-        targetIdValue = "NULL"
+        targetIdValue = Null
     End If
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@TargetID", DAL_adInteger, 0, targetIdValue)
+    
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@TargetName", DAL_adVarChar, 200, Left(targetName, 200))
+    
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@Details", DAL_adVarChar, 4000, Left(details, 4000))
+    
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@IPAddress", DAL_adVarChar, 50, ipAddr)
+    
+    paramIdx = paramIdx + 1
+    ReDim Preserve params(paramIdx)
+    params(paramIdx) = Array("@UserAgent", DAL_adVarChar, 500, userAgent)
     
     sql = "INSERT INTO AdminAuditLog (AdminID, AdminName, ActionType, TargetType, TargetID, TargetName, Details, IPAddress, UserAgent) " & _
-          "VALUES (" & CLng(adminID) & ", " & _
-          "'" & SafeSQL(adminName) & "', " & _
-          "'" & SafeSQL(actionType) & "', " & _
-          "'" & SafeSQL(targetType) & "', " & _
-          targetIdValue & ", " & _
-          "'" & SafeSQL(Left(targetName, 200)) & "', " & _
-          "'" & SafeSQL(Left(details, 4000)) & "', " & _
-          "'" & SafeSQL(ipAddr) & "', " & _
-          "'" & SafeSQL(userAgent) & "')"
+          "VALUES (@AdminID, @AdminName, @ActionType, @TargetType, @TargetID, @TargetName, @Details, @IPAddress, @UserAgent)"
     
-    conn.Execute sql
+    DAL_Execute sql, params
     
     Err.Clear
     On Error GoTo 0
@@ -104,56 +133,73 @@ Sub AuditBatch(actionName, totalCount, successCount, failCount, details)
     Call AuditLog(AUDIT_ACTION_BATCH, AUDIT_TARGET_SYSTEM, 0, actionName, batchDetail)
 End Sub
 
-' 获取审计日志（分页）
+' V17: 获取审计日志（分页）使用参数化查询
 Function GetAuditLogs(page, pageSize, actionFilter, dateFrom, dateTo)
-    Dim sql, whereParts
-    whereParts = "WHERE 1=1"
+    Dim sql, params(), paramIdx
+    
+    sql = "SELECT LogID, AdminID, AdminName, ActionType, TargetType, TargetID, TargetName, " & _
+          "Details, IPAddress, CreatedAt " & _
+          "FROM AdminAuditLog WHERE 1=1"
+    
+    paramIdx = -1
+    ReDim params(0)
     
     If actionFilter <> "" Then
-        whereParts = whereParts & " AND ActionType='" & SafeSQL(actionFilter) & "'"
+        sql = sql & " AND ActionType=@ActionFilter"
+        paramIdx = paramIdx + 1
+        ReDim Preserve params(paramIdx)
+        params(paramIdx) = Array("@ActionFilter", DAL_adVarChar, 50, actionFilter)
     End If
     If dateFrom <> "" Then
-        whereParts = whereParts & " AND CreatedAt>='" & SafeSQL(dateFrom) & "'"
+        sql = sql & " AND CreatedAt>=@DateFrom"
+        paramIdx = paramIdx + 1
+        ReDim Preserve params(paramIdx)
+        params(paramIdx) = Array("@DateFrom", DAL_adVarChar, 20, dateFrom)
     End If
     If dateTo <> "" Then
-        whereParts = whereParts & " AND CreatedAt<='" & SafeSQL(dateTo) & " 23:59:59'"
+        sql = sql & " AND CreatedAt<=@DateTo"
+        paramIdx = paramIdx + 1
+        ReDim Preserve params(paramIdx)
+        params(paramIdx) = Array("@DateTo", DAL_adVarChar, 30, dateTo & " 23:59:59")
     End If
     
     Dim offset
     offset = (page - 1) * pageSize
     
-    sql = "SELECT LogID, AdminID, AdminName, ActionType, TargetType, TargetID, TargetName, " & _
-          "Details, IPAddress, CreatedAt " & _
-          "FROM AdminAuditLog " & whereParts & _
-          " ORDER BY CreatedAt DESC " & _
-          "OFFSET " & offset & " ROWS FETCH NEXT " & pageSize & " ROWS ONLY"
+    sql = sql & " ORDER BY CreatedAt DESC OFFSET " & offset & " ROWS FETCH NEXT " & pageSize & " ROWS ONLY"
     
-    Set GetAuditLogs = conn.Execute(sql)
+    Set GetAuditLogs = DAL_GetList(sql, params)
 End Function
 
-' 获取审计日志总数
+' V17: 获取审计日志总数（参数化查询）
 Function GetAuditLogCount(actionFilter, dateFrom, dateTo)
-    Dim sql, whereParts
-    whereParts = "WHERE 1=1"
+    Dim sql, params(), paramIdx, count
+    
+    sql = "SELECT COUNT(*) FROM AdminAuditLog WHERE 1=1"
+    
+    paramIdx = -1
+    ReDim params(0)
     
     If actionFilter <> "" Then
-        whereParts = whereParts & " AND ActionType='" & SafeSQL(actionFilter) & "'"
+        sql = sql & " AND ActionType=@ActionFilter"
+        paramIdx = paramIdx + 1
+        ReDim Preserve params(paramIdx)
+        params(paramIdx) = Array("@ActionFilter", DAL_adVarChar, 50, actionFilter)
     End If
     If dateFrom <> "" Then
-        whereParts = whereParts & " AND CreatedAt>='" & SafeSQL(dateFrom) & "'"
+        sql = sql & " AND CreatedAt>=@DateFrom"
+        paramIdx = paramIdx + 1
+        ReDim Preserve params(paramIdx)
+        params(paramIdx) = Array("@DateFrom", DAL_adVarChar, 20, dateFrom)
     End If
     If dateTo <> "" Then
-        whereParts = whereParts & " AND CreatedAt<='" & SafeSQL(dateTo) & " 23:59:59'"
+        sql = sql & " AND CreatedAt<=@DateTo"
+        paramIdx = paramIdx + 1
+        ReDim Preserve params(paramIdx)
+        params(paramIdx) = Array("@DateTo", DAL_adVarChar, 30, dateTo & " 23:59:59")
     End If
     
-    sql = "SELECT COUNT(*) FROM AdminAuditLog " & whereParts
-    Dim rs, count
-    Set rs = conn.Execute(sql)
-    If Not rs Is Nothing Then
-        If Not rs.EOF Then count = CLng(rs(0))
-        rs.Close
-    End If
-    Set rs = Nothing
+    count = CLng(DAL_GetScalar(sql, params, 0))
     GetAuditLogCount = count
 End Function
 %>

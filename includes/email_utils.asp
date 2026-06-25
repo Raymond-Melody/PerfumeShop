@@ -48,6 +48,53 @@ Sub SendPasswordResetEmail(toEmail, fullName, resetToken)
     On Error Goto 0
 End Sub
 
+' ============================================
+' 用户密码重置邮件（前端用户专用）
+' ============================================
+Sub SendUserPasswordResetEmail(toEmail, fullName, resetToken)
+    Dim subject, body, resetLink
+    
+    Dim emailProtocol
+    If Request.ServerVariables("HTTPS") = "on" Then
+        emailProtocol = "https://"
+    Else
+        emailProtocol = "http://"
+    End If
+    resetLink = emailProtocol & Request.ServerVariables("SERVER_NAME") & ":" & Request.ServerVariables("SERVER_PORT") & "/user/reset_password.asp?token=" & resetToken
+    
+    subject = "密码重置 - " & SITE_NAME
+    
+    body = "<html><body>"
+    body = body & "<h2>密码重置请求</h2>"
+    body = body & "<p>亲爱的 " & fullName & "，</p>"
+    body = body & "<p>您请求重置账户密码。请点击下面的链接设置新密码：</p>"
+    body = body & "<p><a href='" & resetLink & "'>" & resetLink & "</a></p>"
+    body = body & "<p>此链接将在1小时内过期。</p>"
+    body = body & "<p>如果您没有请求密码重置，请忽略此邮件。</p>"
+    body = body & "<hr>"
+    body = body & "<p>" & SITE_NAME & "</p>"
+    body = body & "</body></html>"
+    
+    On Error Resume Next
+    Dim objMail
+    Set objMail = Server.CreateObject("CDONTS.NewMail")
+    
+    If Err.Number = 0 Then
+        objMail.From = SITE_NOREPLY
+        objMail.To = toEmail
+        objMail.Subject = subject
+        objMail.BodyFormat = 0
+        objMail.MailFormat = 0
+        objMail.Body = body
+        objMail.Send
+        Set objMail = Nothing
+    Else
+        Session("EmailError") = "邮件发送失败: " & Err.Description
+        Err.Clear
+    End If
+    On Error Goto 0
+End Sub
+
 ' 发送一般邮件
 Sub SendEmail(toEmail, subject, body, isHtml)
     On Error Resume Next

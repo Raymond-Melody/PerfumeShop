@@ -1,87 +1,145 @@
-<%
-' ============================================
-' 数据库连接模块 - SQL Server版本 (V16.0)
-' 支持 SQLOLEDB (旧) 和 MSOLEDBSQL (新) 双Provider
-' 通过 config.asp 中 FEATURE_MSOLEDBSQL 开关切换
-' ============================================
+<% 
+' ============================================ 
+' 数据库连接模块 - SQL Server版本 (V17.0) 
+' 支持 SQLOLEDB (旧) 和 MSOLEDBSQL (新) 双Provider 
+' V17: 添加连接健康检查、自动重试机制、连接池自动重置 
+' 通过 config.asp 中 FEATURE_MSOLEDBSQL 开关切换 
+' ============================================ 
 
 Dim conn
+Const CONN_MAX_RETRIES = 3          ' V17: 最大连接重试次数
+Const CONN_RETRY_DELAY_MS = 500     ' V17: 重试间隔毫秒
 
-' ============================================
-' V15: 构建数据库连接字符串
-' 支持双Provider，通过Feature Flag切换
-' ============================================
-Function BuildConnectionString()
-    Dim serverName, dbName
-    serverName = "localhost\YOURPERFUME"
-    dbName = "PerfumeShop"
+' ============================================ 
+' V15: 构建数据库连接字符串 
+' 支持双Provider，通过Feature Flag切换 
+' ============================================ 
+Function BuildConnectionString() 
+    Dim serverName, dbName 
+    serverName = "localhost\YOURPERFUME" 
+    dbName = "PerfumeShop" 
     
-    If FEATURE_MSOLEDBSQL Then
-        ' V15: Microsoft OLE DB Driver for SQL Server (推荐)
-        ' 需安装: https://aka.ms/downloadmsoledbsql
-        ' 优势: TLS 1.2加密、更好的UTF-8支持、持续维护
-        BuildConnectionString = "Provider=MSOLEDBSQL;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;TrustServerCertificate=yes;"
-    Else
-        ' V14.6兼容: SQLOLEDB (已弃用但仍可用)
-        BuildConnectionString = "Provider=SQLOLEDB;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;"
-    End If
-End Function
+    If FEATURE_MSOLEDBSQL Then 
+        ' V17: Microsoft OLE DB Driver for SQL Server (推荐) 
+        ' 需安装: https://aka.ms/downloadmsoledbsql 
+        ' 优势: TLS 1.2加密、更好的UTF-8支持、持续维护 
+        BuildConnectionString = "Provider=MSOLEDBSQL;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;TrustServerCertificate=yes;" 
+    Else 
+        ' V14.6兼容: SQLOLEDB (已弃用但仍可用) 
+        BuildConnectionString = "Provider=SQLOLEDB;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;" 
+    End If 
+End Function 
 
-' 打开数据库连接
-Sub OpenConnection()
-    Dim connStr
-    On Error Resume Next
-    Set conn = Server.CreateObject("ADODB.Connection")
+' V17: 增强版打开数据库连接（含健康检查和自动重试） 
+Sub OpenConnection() 
+    Dim connStr, retryCount, connected 
+    retryCount = 0 
+    connected = False 
     
-    If Err.Number <> 0 Then
-        Response.Write "<div class='error'>无法创建数据库连接对象: " & Replace(Server.HTMLEncode(Err.Description), "'", "&#39;") & " 错误号: " & Err.Number & "</div>"
-        Response.End
-    End If
+    Do While Not connected And retryCount <= CONN_MAX_RETRIES 
+        On Error Resume Next 
+        
+        If retryCount > 0 Then 
+            ' 重试前等待 
+            Dim waitUntil : waitUntil = Timer() + (CONN_RETRY_DELAY_MS / 1000) 
+            Do While Timer() < waitUntil : Loop 
+        End If 
+        
+        Err.Clear 
+        
+        ' 每次重试重新创建连接对象 
+        If Not conn Is Nothing Then 
+            If conn.State = 1 Then conn.Close 
+            Set conn = Nothing 
+        End If 
+        Set conn = Server.CreateObject("ADODB.Connection") 
+        
+        If Err.Number = 0 And Not conn Is Nothing Then 
+            ' 根据Feature Flag选择连接字符串 
+            connStr = BuildConnectionString() 
+            conn.Open connStr 
+            
+            If Err.Number = 0 Then 
+                ' 连接成功，执行健康检查 
+                Dim verifyRs 
+                Set verifyRs = conn.Execute("SELECT 1 AS health_check") 
+                If Err.Number = 0 And Not verifyRs Is Nothing Then 
+                    verifyRs.Close : Set verifyRs = Nothing 
+                    connected = True 
+                    If retryCount > 0 Then 
+                        Session("DBConnectInfo") = "数据库连接成功 (重试" & retryCount & "次)" 
+                    End If 
+                Else 
+                    Err.Clear 
+                End If 
+                If Not verifyRs Is Nothing Then 
+                    verifyRs.Close : Set verifyRs = Nothing 
+                End If 
+            ElseIf FEATURE_MSOLEDBSQL Then 
+                ' MSOLEDBSQL失败时尝试回退到SQLOLEDB 
+                Dim fallbackErr : fallbackErr = Err.Description 
+                Err.Clear 
+                Set conn = Nothing 
+                Set conn = Server.CreateObject("ADODB.Connection") 
+                conn.Open "Provider=SQLOLEDB;Server=localhost\YOURPERFUME;Database=PerfumeShop;Integrated Security=SSPI;" 
+                If Err.Number = 0 Then 
+                    Dim fbRs : Set fbRs = conn.Execute("SELECT 1 AS health_check") 
+                    If Err.Number = 0 Then 
+                        fbRs.Close : Set fbRs = Nothing 
+                        connected = True 
+                        Session("DBFallbackNotice") = "MSOLEDBSQL不可用，已回退到SQLOLEDB。错误: " & Left(fallbackErr, 200) 
+                    Else 
+                        Err.Clear 
+                        If Not fbRs Is Nothing Then fbRs.Close : Set fbRs = Nothing 
+                    End If 
+                Else 
+                    Err.Clear 
+                End If 
+                If conn Is Nothing Or conn.State <> 1 Then 
+                    Set conn = Nothing 
+                End If 
+            Else 
+                Err.Clear 
+                Set conn = Nothing 
+            End If 
+        Else 
+            Err.Clear 
+            Set conn = Nothing 
+        End If 
+        
+        On Error GoTo 0 
+        retryCount = retryCount + 1 
+    Loop 
     
-    ' 检查对象是否成功创建
-    If conn Is Nothing Then
-        Response.Write "<div class='error'>数据库连接对象创建失败</div>"
-        Response.End
-    End If
-    
-    ' V16: 根据Feature Flag选择连接字符串
-    connStr = BuildConnectionString()
-    conn.Open connStr
-    
-    If Err.Number <> 0 Then
-        ' MSOLEDBSQL失败时尝试回退到SQLOLEDB
-        If FEATURE_MSOLEDBSQL Then
-            Err.Clear
-            ' 重新创建连接对象回退（避免conn.Close在未打开连接上报错）
-            Set conn = Nothing
-            Set conn = Server.CreateObject("ADODB.Connection")
-            ' 临时回退到SQLOLEDB
-            conn.Open "Provider=SQLOLEDB;Server=localhost\YOURPERFUME;Database=PerfumeShop;Integrated Security=SSPI;"
-            If Err.Number <> 0 Then
-                Response.Write "<div class='error'>数据库连接失败 (MSOLEDBSQL回退也失败): " & Replace(Server.HTMLEncode(Err.Description), "'", "&#39;") & "</div>"
-                Response.End
-            Else
-                ' 回退成功，写入日志提示
-                Session("DBFallbackNotice") = "MSOLEDBSQL不可用，已回退到SQLOLEDB。请安装MSOLEDBSQL驱动。"
-            End If
-        Else
-            Response.Write "<div class='error'>数据库连接失败: " & Replace(Server.HTMLEncode(Err.Description), "'", "&#39;") & " 错误号: " & Err.Number & "</div>"
-            Response.End
+    ' V17: 连接成功时按概率记录心跳日志
+    If connected Then
+        Randomize
+        If Int(Rnd * 50) = 0 Then
+            Call LogHeartbeat()
         End If
     End If
+
+    ' 如果所有重试都失败 
+    If Not connected Then 
+        Session("DBLastError") = "数据库连接失败 (已重试" & retryCount & "次)" 
+        Response.Write "<div class='error'>数据库连接失败，请稍后重试。" & _ 
+                      "错误代码: DB-CONN-001</div>" 
+        Response.End 
+    End If 
 End Sub
 
-' 关闭数据库连接
-Sub CloseConnection()
-    On Error Resume Next
-    If IsObject(conn) Then
-        If Not conn Is Nothing Then
-            If conn.State = 1 Then
-                conn.Close
-            End If
-        End If
-        Set conn = Nothing
-    End If
+' V17: 增强版关闭数据库连接 
+Sub CloseConnection() 
+    On Error Resume Next 
+    If IsObject(conn) Then 
+        If Not conn Is Nothing Then 
+            If conn.State = 1 Then 
+                conn.Close 
+            End If 
+        End If 
+        Set conn = Nothing 
+    End If 
+    Err.Clear 
 End Sub
 
 ' 执行查询并返回记录集 - 修复参数绑定问题
@@ -324,6 +382,39 @@ Function FormatMoney(amount)
     On Error GoTo 0
     FormatMoney = "¥" & FormatNumber(dblAmount, 2)
 End Function
+
+' ============================================
+' V17: 数据库心跳检测日志
+' 写入 AppLogs 表，用于监控数据库连接可用性
+' ============================================
+Sub LogHeartbeat()
+    Dim sql, params()
+    On Error Resume Next
+    
+    ' 确保 conn 有效
+    If conn Is Nothing Then Exit Sub
+    If conn.State <> 1 Then Exit Sub
+    
+    sql = "INSERT INTO AppLogs (LogLevel, LogMessage, LogSource, IPAddress, PageURL) " & _
+          "VALUES (@LogLevel, @LogMessage, @LogSource, @IPAddress, @PageURL)"
+    
+    ReDim params(4)
+    params(0) = Array("@LogLevel", DAL_adVarChar, 10, "INFO")
+    params(1) = Array("@LogMessage", DAL_adVarChar, 500, "DB-Heartbeat: 连接正常")
+    params(2) = Array("@LogSource", DAL_adVarChar, 100, "connection.asp")
+    params(3) = Array("@IPAddress", DAL_adVarChar, 50, Left(Request.ServerVariables("REMOTE_ADDR"), 50))
+    params(4) = Array("@PageURL", DAL_adVarChar, 200, Left(Request.ServerVariables("SCRIPT_NAME"), 200))
+    
+    ' 尝试写入心跳日志（忽略失败，不影响主流程）
+    Dim cmd
+    Set cmd = DAL_CreateCommand(sql, params)
+    If Not cmd Is Nothing Then
+        cmd.Execute
+    End If
+    Set cmd = Nothing
+    Err.Clear
+    On Error GoTo 0
+End Sub
 
 ' 获取当前日期时间
 Function GetNow()
@@ -683,13 +774,38 @@ Sub EnsureCSRFToken()
 End Sub
 
 ' 生成CSRF令牌
+' V17: 生成新token时保留旧token到历史池，防止并发请求失效
 Function GenerateCSRFToken()
-    Dim token, i
+    Dim token, i, oldToken, tokenArr, maxHistory
+    
+    ' 保存旧token到历史池（最多保留5个）
+    maxHistory = 4
+    oldToken = Session("CSRFToken")
+    If oldToken <> "" And Not IsEmpty(oldToken) Then
+        If IsArray(Session("CSRFTokenHistory")) Then
+            tokenArr = Session("CSRFTokenHistory")
+            ' 如果历史池未满，追加
+            If UBound(tokenArr) < maxHistory Then
+                ReDim Preserve tokenArr(UBound(tokenArr) + 1)
+                tokenArr(UBound(tokenArr)) = oldToken
+            Else
+                ' 历史池已满，移除最旧的，添加最新的
+                Dim j
+                For j = 0 To UBound(tokenArr) - 1
+                    tokenArr(j) = tokenArr(j + 1)
+                Next
+                tokenArr(UBound(tokenArr)) = oldToken
+            End If
+        Else
+            tokenArr = Array(oldToken)
+        End If
+        Session("CSRFTokenHistory") = tokenArr
+    End If
+    
     Randomize
     token = ""
     
     For i = 1 To 32
-        ' 随机生成A-Z, a-z, 0-9字符
         Dim charType, charCode
         charType = Int(Rnd * 3)
         Select Case charType
@@ -714,8 +830,9 @@ Function GetCSRFTokenField()
 End Function
 
 ' 验证CSRF令牌
+' V17: 增强版 - 支持Token池验证，防止并发请求失效
 Function ValidateCSRFToken()
-    Dim sessionToken, requestToken
+    Dim sessionToken, requestToken, i, tokenArr
     
     sessionToken = Session("CSRFToken")
     
@@ -732,14 +849,24 @@ Function ValidateCSRFToken()
         requestToken = Request.ServerVariables("HTTP_X_CSRF_TOKEN")
     End If
     
-    ' 验证
-    If sessionToken = "" Or requestToken = "" Then
-        ValidateCSRFToken = False
-    ElseIf sessionToken = requestToken Then
+    ' 验证主token
+    If requestToken <> "" And requestToken = sessionToken Then
         ValidateCSRFToken = True
-    Else
-        ValidateCSRFToken = False
+        Exit Function
     End If
+    
+    ' V17: 检查历史token池（防止并发AJAX请求失效）
+    If requestToken <> "" And IsArray(Session("CSRFTokenHistory")) Then
+        tokenArr = Session("CSRFTokenHistory")
+        For i = 0 To UBound(tokenArr)
+            If requestToken = tokenArr(i) Then
+                ValidateCSRFToken = True
+                Exit Function
+            End If
+        Next
+    End If
+    
+    ValidateCSRFToken = False
 End Function
 
 ' 获取CSRF令牌URL参数

@@ -82,6 +82,8 @@ todayLogs = GetScalar("SELECT COUNT(*) FROM AdminLogs WHERE CAST(CreatedAt AS DA
                 <a href="settings.asp" class="action-btn"><i class="fas fa-cog"></i><span>管理配置</span></a>
                 <a href="statistics.asp" class="action-btn"><i class="fas fa-chart-line"></i><span>数据统计</span></a>
                 <a href="version.asp" class="action-btn"><i class="fas fa-code-branch"></i><span>版本信息</span></a>
+                <a href="image_management.asp" class="action-btn"><i class="fas fa-images"></i><span>图片管理</span></a>
+                <a href="data_quality.asp" class="action-btn"><i class="fas fa-clipboard-check"></i><span>数据质量</span></a>
                 <a href="guide.asp" class="action-btn"><i class="fas fa-book-open"></i><span>使用指南</span></a>
                 <a href="backup_center.asp" class="action-btn"><i class="fas fa-database"></i><span>备份中心</span></a>
             </div>

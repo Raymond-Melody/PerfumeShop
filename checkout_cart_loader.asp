@@ -1,22 +1,22 @@
 <%
 ' ============================================
 ' V14.6 结算页 - 购物车/订单数据加载
-' 从 checkout.asp 提取
+' V17: 迁移到DAL参数化查询
 ' ============================================
 
-' 查询支付方式启用状态
+' V17: 查询支付方式启用状态 - 使用DAL参数化
 Dim enableAlipay, enableWechat, enablePaypal, enableCOD, enableBankTransfer
-enableAlipay = GetScalar("SELECT SettingValue FROM SiteSettings WHERE SettingKey='EnableAlipay'")
-enableWechat = GetScalar("SELECT SettingValue FROM SiteSettings WHERE SettingKey='EnableWechatPay'")
-enablePaypal = GetScalar("SELECT SettingValue FROM SiteSettings WHERE SettingKey='EnablePayPal'")
-enableCOD = GetScalar("SELECT SettingValue FROM SiteSettings WHERE SettingKey='EnableCOD'")
-enableBankTransfer = GetScalar("SELECT SettingValue FROM SiteSettings WHERE SettingKey='EnableBankTransfer'")
+enableAlipay = DAL_Admin_GetSetting("EnableAlipay")
+enableWechat = DAL_Admin_GetSetting("EnableWechatPay")
+enablePaypal = DAL_Admin_GetSetting("EnablePayPal")
+enableCOD = DAL_Admin_GetSetting("EnableCOD")
+enableBankTransfer = DAL_Admin_GetSetting("EnableBankTransfer")
 ' 默认值处理
-If IsNull(enableAlipay) Or enableAlipay = "" Then enableAlipay = "1"
-If IsNull(enableWechat) Or enableWechat = "" Then enableWechat = "1"
-If IsNull(enablePaypal) Or enablePaypal = "" Then enablePaypal = "1"
-If IsNull(enableCOD) Or enableCOD = "" Then enableCOD = "1"
-If IsNull(enableBankTransfer) Or enableBankTransfer = "" Then enableBankTransfer = "1"
+If enableAlipay = "" Then enableAlipay = "1"
+If enableWechat = "" Then enableWechat = "1"
+If enablePaypal = "" Then enablePaypal = "1"
+If enableCOD = "" Then enableCOD = "1"
+If enableBankTransfer = "" Then enableBankTransfer = "1"
 
 Dim userId
 userId = Session("UserID")
@@ -27,24 +27,19 @@ existingOrderId = Trim(Request.QueryString("order_id"))
 isExistingOrder = False
 
 If existingOrderId <> "" And IsNumeric(existingOrderId) Then
-    ' 验证订单归属和状态
+    ' V17: 验证订单归属和状态 - 使用DAL参数化查询
     Dim rsExistingOrder
-    Set rsExistingOrder = ExecuteQuery("SELECT OrderID, OrderNo, TotalAmount, Status, PaymentMethod, ShippingName, ShippingPhone, ShippingAddress FROM Orders WHERE OrderID = " & existingOrderId & " AND UserID = " & userId)
-
-    If Not rsExistingOrder Is Nothing And Not rsExistingOrder.EOF Then
-        If rsExistingOrder("Status") = "Pending" Then
+    Set rsExistingOrder = DAL_Checkout_GetByID(CLng(existingOrderId))
+    
+    If Not rsExistingOrder Is Nothing Then
+        If rsExistingOrder("Status") = "Pending" And CStr(rsExistingOrder("UserID")) = CStr(userId) Then
             isExistingOrder = True
         Else
-            rsExistingOrder.Close
             Set rsExistingOrder = Nothing
             Response.Redirect "/user/order_detail.asp?order_id=" & existingOrderId
             Response.End
         End If
     Else
-        If Not rsExistingOrder Is Nothing Then
-            rsExistingOrder.Close
-            Set rsExistingOrder = Nothing
-        End If
         Response.Redirect "/user/orders.asp"
         Response.End
     End If
@@ -164,22 +159,19 @@ Else
     End If
 End If
 
-' 获取用户地址信息
-Dim rsUser, userAddress, userPhone, userFullName
-userAddress = ""
-userPhone = ""
-userFullName = ""
+    ' V17: 获取用户地址信息 - 使用DAL参数化查询
+    Dim rsUser, userAddress, userPhone, userFullName
+    userAddress = ""
+    userPhone = ""
+    userFullName = ""
 
-If userId <> "" Then
-    Set rsUser = ExecuteQuery("SELECT FullName, Phone, Address FROM Users WHERE UserID = " & userId)
-    If Not rsUser Is Nothing Then
-        If Not rsUser.EOF Then
-            userFullName = rsUser("FullName")
-            userPhone = rsUser("Phone")
-            userAddress = rsUser("Address")
+    If userId <> "" Then
+        Dim userDict
+        Set userDict = DAL_Users_GetByID(CLng(userId))
+        If Not userDict Is Nothing Then
+            userFullName = userDict("FullName") & ""
+            userPhone = userDict("Phone") & ""
+            userAddress = userDict("Address") & ""
         End If
-        rsUser.Close
-        Set rsUser = Nothing
-    End If
-End If
+        Set userDict = Nothing
 %>

@@ -14,6 +14,8 @@ End Function
 %>
 <!--#include file="includes/config.asp"-->
 <!--#include file="includes/connection.asp"-->
+<!--#include file="includes/dal.asp"-->
+<!--#include file="includes/dal_cart.asp"-->
 <%
 Call OpenConnection()
 
@@ -51,23 +53,12 @@ userId = Session("UserID")
         cartCount = 0
         totalEngravingFee = 0
         
+        ' V17: 使用参数化DAL查询
         If userId <> "" Then
-            whereClause = "UserID = " & userId
+            Set rsCart = DAL_Cart_GetByUser(userId)
         Else
-            whereClause = "SessionID = '" & SafeSQL(sessionId) & "'"
+            Set rsCart = DAL_Cart_GetBySession(sessionId)
         End If
-        
-        Set rsCart = ExecuteQuery("SELECT c.*, p.ProductName, p.ImageURL, p.EngravingPrice, p.ProductType, " & _
-            "tn.NoteName AS TopNoteName, mn.NoteName AS MiddleNoteName, bn.NoteName AS BaseNoteName, " & _
-            "v.VolumeName, v.VolumeML, b.BottleName " & _
-            "FROM ((((((Cart c " & _
-            "LEFT JOIN Products p ON c.ProductID = p.ProductID) " & _
-            "LEFT JOIN FragranceNotes tn ON c.TopNoteID = tn.NoteID) " & _
-            "LEFT JOIN FragranceNotes mn ON c.MiddleNoteID = mn.NoteID) " & _
-            "LEFT JOIN FragranceNotes bn ON c.BaseNoteID = bn.NoteID) " & _
-            "LEFT JOIN Volumes v ON c.VolumeID = v.VolumeID) " & _
-            "LEFT JOIN BottleStyles b ON c.BottleID = b.BottleID) " & _
-            "WHERE " & whereClause & " ORDER BY c.CreatedAt DESC")
         
         Response.Write "<!-- DEBUG: SQL executed successfully -->" & vbCrLf
         
@@ -145,7 +136,8 @@ userId = Session("UserID")
                                 cartProductTypeLC = LCase(cartProductType)
                                 ' KOL推荐产品与品牌定香产品不显示香调配比信息
                                 If cartProductTypeLC = "custom" Then
-                                    Set rsNoteSel = ExecuteQuery("SELECT n.NoteName, s.Percentage, s.NoteType FROM CartNoteSelections s INNER JOIN FragranceNotes n ON s.NoteID = n.NoteID WHERE s.CartID = " & rsCart("CartID"))
+                                    ' V17: 使用参数化DAL查询
+                                    Set rsNoteSel = DAL_Cart_GetNoteSelections(rsCart("CartID"))
                                     If Not rsNoteSel Is Nothing Then
                                         Do While Not rsNoteSel.EOF
                                             currentNoteType = Trim(rsNoteSel("NoteType") & "")

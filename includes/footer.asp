@@ -6,8 +6,8 @@
             <div class="footer-grid">
                 <!-- 关于我们 -->
                 <div class="footer-section">
-                    <h4>关于香氛定制</h4>
-                    <p>我们致力于为每一位顾客打造独一无二的专属香水，让香氛成为你个性的延伸。</p>
+                    <h4><% If FEATURE_I18N Then Response.Write T("about", Empty) Else Response.Write "关于香氛定制" End If %></h4>
+                    <p><% If FEATURE_I18N Then Response.Write T("site_slogan", Empty) Else Response.Write "我们致力于为每一位顾客打造独一无二的专属香水，让香氛成为你个性的延伸。" End If %></p>
                     <div class="social-links">
                         <a href="#"><i class="fab fa-weixin"></i></a>
                         <a href="#"><i class="fab fa-weibo"></i></a>
@@ -17,12 +17,21 @@
 
                 <!-- 快速链接 -->
                 <div class="footer-section">
-                    <h4>快速链接</h4>
+                    <h4><% If FEATURE_I18N Then Response.Write T("products", Empty) Else Response.Write "快速链接" End If %></h4>
                     <ul>
-                        <li><a href="/products.asp">全部产品</a></li>
-                        <li><a href="/customize.asp">开始定制</a></li>
-                        <li><a href="/about.asp">品牌故事</a></li>
-                        <li><a href="/contact.asp">联系我们</a></li>
+                        <li><a href="/products.asp"><% If FEATURE_I18N Then Response.Write T("products", Empty) Else Response.Write "全部产品" End If %></a></li>
+                        <li><a href="/customize.asp"><% If FEATURE_I18N Then Response.Write T("buy_now", Empty) Else Response.Write "开始定制" End If %></a></li>
+                        <li><a href="/about.asp"><% If FEATURE_I18N Then Response.Write T("about", Empty) Else Response.Write "品牌故事" End If %></a></li>
+                        <li><a href="/contact.asp"><% If FEATURE_I18N Then Response.Write T("contact", Empty) Else Response.Write "联系我们" End If %></a></li>
+                    </ul>
+                </div>
+
+                <!-- 语言选择 -->
+                <div class="footer-section">
+                    <h4><% If FEATURE_I18N Then Response.Write T("language", Empty) Else Response.Write "语言" End If %></h4>
+                    <ul class="footer-lang">
+                        <li><a href="?lang=zh-CN" class="lang-link<%= IIF(I18N_GetLocale()="zh-CN"," active","") %>"><i class="fas fa-language"></i> 简体中文</a></li>
+                        <li><a href="?lang=en-US" class="lang-link<%= IIF(I18N_GetLocale()="en-US"," active","") %>"><i class="fas fa-language"></i> English</a></li>
                     </ul>
                 </div>
 
@@ -47,7 +56,7 @@
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; <%= Year(Now()) %> 香氛定制 版权所有 | <a href="/privacy.asp">隐私政策</a> | <a href="/terms.asp">服务条款</a></p>
+                <p><% If FEATURE_I18N Then Response.Write T("copyright", Array(Year(Now()), T("site_name", Empty))) Else Response.Write "&copy; " & Year(Now()) & " 香氛定制 版权所有" End If %> | <a href="/privacy.asp">隐私政策</a> | <a href="/terms.asp">服务条款</a></p>
             </div>
         </div>
     </footer>

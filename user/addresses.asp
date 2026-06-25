@@ -1,6 +1,8 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/dal.asp"-->
+<!--#include file="../includes/dal_users.asp"-->
 <%
 Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
@@ -25,48 +27,43 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         
     If action = "add" Or action = "edit" Then
         Dim consignee, phone, province, city, district, address, isDefault
-        consignee = SafeSQL(Trim(Request.Form("consignee")))
-        phone = SafeSQL(Trim(Request.Form("phone")))
-        province = SafeSQL(Trim(Request.Form("province")))
-        city = SafeSQL(Trim(Request.Form("city")))
-        district = SafeSQL(Trim(Request.Form("district")))
-        address = SafeSQL(Trim(Request.Form("address")))
+        consignee = Trim(Request.Form("consignee"))
+        phone = Trim(Request.Form("phone"))
+        province = Trim(Request.Form("province"))
+        city = Trim(Request.Form("city"))
+        district = Trim(Request.Form("district"))
+        address = Trim(Request.Form("address"))
         isDefault = Request.Form("isDefault")
             
-        If isDefault <> "" And isDefault <> "0" Then
-            isDefault = 1
-        Else
-            isDefault = 0
-        End If
+        If isDefault <> "" And isDefault <> "0" Then isDefault = 1 Else isDefault = 0 End If
             
-        Dim sql
         If action = "add" Then
-            ' 如果设为默认地址，先取消其他默认地址
-            If isDefault <> 0 Then
-                Call ExecuteNonQuery("UPDATE UserAddresses SET IsDefault = 0 WHERE UserID = " & Session("UserID"))
+            ' V17: 如果设为默认地址，先取消其他默认地址
+            If isDefault <> 0 Then Call DAL_Users_ClearDefaultAddress(Session("UserID"))
+            
+            ' V17: 使用参数化DAL函数
+            Dim newId : newId = DAL_Users_AddAddress(Session("UserID"), consignee, phone, province, city, district, address, isDefault)
+            If newId > 0 Then
+                Response.Write "<script>alert('地址保存成功'); location.href='addresses.asp';</script>"
+            Else
+                Response.Write "<script>alert('地址保存失败'); location.href='addresses.asp';</script>"
             End If
-                
-            sql = "INSERT INTO UserAddresses (UserID, Consignee, Phone, Province, City, District, Address, IsDefault, CreatedAt) VALUES (" & Session("UserID") & ", '" & consignee & "', '" & phone & "', '" & province & "', '" & city & "', '" & district & "', '" & address & "', " & isDefault & ", GETDATE())"
         ElseIf action = "edit" Then
-            Dim addressId
-            addressId = Request.Form("addressId")
+            Dim addressId : addressId = Request.Form("addressId")
             If Not IsNumeric(addressId) Then
                 Response.Write "<script>alert('无效的地址ID'); history.back();</script>"
                 Response.End
             End If
                 
-            ' 如果设为默认地址，先取消其他默认地址
-            If isDefault <> 0 Then
-                Call ExecuteNonQuery("UPDATE UserAddresses SET IsDefault = 0 WHERE UserID = " & Session("UserID"))
-            End If
-                
-            sql = "UPDATE UserAddresses SET Consignee = '" & consignee & "', Phone = '" & phone & "', Province = '" & province & "', City = '" & city & "', District = '" & district & "', Address = '" & address & "', IsDefault = " & isDefault & " WHERE AddressID = " & addressId & " AND UserID = " & Session("UserID")
-        End If
+            ' V17: 如果设为默认地址，先取消其他默认地址
+            If isDefault <> 0 Then Call DAL_Users_ClearDefaultAddress(Session("UserID"))
             
-        If ExecuteNonQuery(sql) Then
-            Response.Write "<script>alert('地址保存成功'); location.href='addresses.asp';</script>"
-        Else
-            Response.Write "<script>alert('地址保存失败'); location.href='addresses.asp';</script>"
+            ' V17: 使用参数化DAL函数
+            If DAL_Users_UpdateAddress(CLng(addressId), Session("UserID"), consignee, phone, province, city, district, address, isDefault) Then
+                Response.Write "<script>alert('地址保存成功'); location.href='addresses.asp';</script>"
+            Else
+                Response.Write "<script>alert('地址保存失败'); location.href='addresses.asp';</script>"
+            End If
         End If
     ElseIf action = "delete" Then
         Dim deleteId
@@ -76,9 +73,8 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             Response.End
         End If
         
-        Dim deleteSql
-        deleteSql = "DELETE FROM UserAddresses WHERE AddressID = " & deleteId & " AND UserID = " & Session("UserID")
-        If ExecuteNonQuery(deleteSql) Then
+        ' V17: 使用参数化DAL函数
+        If DAL_Users_DeleteAddress(CLng(deleteId), Session("UserID")) Then
             Response.Write "<script>alert('地址删除成功'); location.href='addresses.asp';</script>"
         Else
             Response.Write "<script>alert('地址删除失败'); location.href='addresses.asp';</script>"
@@ -91,13 +87,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             Response.End
         End If
         
-        ' 先取消所有默认地址
-        Call ExecuteNonQuery("UPDATE UserAddresses SET IsDefault = 0 WHERE UserID = " & Session("UserID"))
-        
-        ' 设置指定地址为默认地址
-        Dim setDefaultSql
-        setDefaultSql = "UPDATE UserAddresses SET IsDefault = 1 WHERE AddressID = " & setAddressId & " AND UserID = " & Session("UserID")
-        If ExecuteNonQuery(setDefaultSql) Then
+        ' V17: 使用参数化DAL函数
+        Call DAL_Users_ClearDefaultAddress(Session("UserID"))
+        If DAL_Users_SetDefaultAddress(CLng(setAddressId), Session("UserID")) Then
             Response.Write "<script>alert('默认地址设置成功'); location.href='addresses.asp';</script>"
         Else
             Response.Write "<script>alert('默认地址设置失败'); location.href='addresses.asp';</script>"
@@ -159,7 +151,7 @@ userId = Session("UserID")
                     <% 
                     ' 获取用户地址列表
                     Dim rsAddresses
-                    Set rsAddresses = ExecuteQuery("SELECT * FROM UserAddresses WHERE UserID = " & userId & " ORDER BY IsDefault DESC, CreatedAt DESC")
+                    Set rsAddresses = DAL_Users_GetAddresses(userId)
                     If Not rsAddresses Is Nothing And Not rsAddresses.EOF Then
                         Do While Not rsAddresses.EOF
                     %>

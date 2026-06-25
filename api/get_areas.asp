@@ -5,6 +5,7 @@ Response.Charset = "UTF-8"
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/dal.asp"-->
 <%
 On Error Resume Next
 
@@ -20,24 +21,20 @@ If Not IsNumeric(parentId) Then parentId = 0
 parentId = CInt(parentId)
 If level = "" Then level = 1
 
-Dim sql, rs
-
 ' 如果提供了父级名称，先查找父级ID
 If parentName <> "" Then
-    Dim parentSql, parentRs
-    parentSql = "SELECT AreaID FROM Areas WHERE AreaName = '" & SafeSQL(parentName) & "'"
-    Set parentRs = ExecuteQuery(parentSql)
-    If Not parentRs Is Nothing Then
-        If Not parentRs.EOF Then
-            parentId = parentRs("AreaID")
-        End If
-        parentRs.Close
-        Set parentRs = Nothing
+    Dim parentParams(0)
+    parentParams(0) = Array("@AreaName", DAL_adVarChar, 100, parentName)
+    Dim parentRow : Set parentRow = DAL_GetRow("SELECT AreaID FROM Areas WHERE AreaName=@AreaName", parentParams)
+    If Not parentRow Is Nothing Then
+        parentId = parentRow("AreaID")
     End If
+    Set parentRow = Nothing
 End If
 
-sql = "SELECT AreaID, AreaName FROM Areas WHERE ParentID = " & CInt(parentId) & " ORDER BY AreaID"
-Set rs = ExecuteQuery(sql)
+Dim rs
+Set rs = DAL_GetList("SELECT AreaID, AreaName FROM Areas WHERE ParentID=@ParentID ORDER BY AreaID", _
+    Array(Array("@ParentID", DAL_adInteger, 0, parentId)))
 
 Dim areasArray(), i
 i = 0

@@ -76,16 +76,17 @@ Function BuildFullAddress(province, city, district, detail)
     BuildFullAddress = result
 End Function
 
-' 根据ID获取地区名称的函数
+' V17: 根据ID获取地区名称的函数 - 使用参数化查询
 Function GetAreaNameById(areaId)
     If Not IsNumeric(areaId) Or areaId = "" Then
         GetAreaNameById = ""
         Exit Function
     End If
 
-    Dim sql, rs
-    sql = "SELECT AreaName FROM Areas WHERE AreaID = " & areaId
-    Set rs = ExecuteQuery(sql)
+    Dim sql, rs, params(0)
+    sql = "SELECT AreaName FROM Areas WHERE AreaID = @AreaID"
+    params(0) = Array("@AreaID", DAL_adInteger, 0, CLng(areaId))
+    Set rs = DAL_GetList(sql, params)
 
     If Not rs Is Nothing Then
         If Not rs.EOF Then

@@ -10,6 +10,7 @@ End If
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <%
 Call OpenConnection()
@@ -21,12 +22,16 @@ successMsg = ""
 ' 检查URL参数消息（如注册成功后跳转）
 If Request.QueryString("msg") = "registered" Then
     successMsg = "注册成功！请使用您的账号和密码登录"
+ElseIf Request.QueryString("msg") = "pwd_changed" Then
+    successMsg = "密码修改成功！请使用新密码登录"
 End If
 
 ' 处理登录
 If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     ' CSRF验证
     If Not ValidateCSRFToken() Then
+        ' V17.2: 验证失败时强制刷新令牌，允许用户立即重试
+        Call GenerateCSRFToken()
         errorMsg = "安全验证失败，请刷新页面重试"
     ' 速率限制检查
     ElseIf IsLoginLocked("User") Then
@@ -43,9 +48,13 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             Dim rsUser, storedHash, verifiedPwd
             verifiedPwd = False
             
-            Set rsUser = ExecuteQuery("SELECT UserID, Username, Email, FullName, [Password] FROM Users WHERE (Username = '" & SafeSQL(username) & "' OR Email = '" & SafeSQL(username) & "') AND IsActive <> 0")
+            ' V17: 参数化查询防止SQL注入
+            Dim loginParams(0)
+            loginParams(0) = Array("@Username", DAL_adVarChar, 50, username)
+            Set rsUser = DAL_GetList("SELECT UserID, Username, Email, FullName, [Password] FROM Users WHERE (Username=@Username OR Email=@Username) AND IsActive<>0", loginParams)
             
-            If Not rsUser Is Nothing And Not rsUser.EOF Then
+            If Not rsUser Is Nothing Then
+                            If Not rsUser.EOF Then
                 ' 获取存储的密码哈希（兼容明文旧数据）
                 If IsNull(rsUser("Password")) Then
                     storedHash = ""
@@ -97,8 +106,8 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                     If returnUrl = "" Then returnUrl = "/user/index.asp"
                     Response.Redirect returnUrl
                 End If
+                End If
             End If
-            
             ' 登录失败 - 记录失败次数
             If Not verifiedPwd Then
                 Call RecordLoginFailure("User")
