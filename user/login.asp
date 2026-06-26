@@ -9,7 +9,6 @@ If Session("UserID") <> "" Then
 End If
 %>
 <!--#include file="../includes/config.asp"-->
-<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
@@ -140,8 +139,8 @@ Call EnsureCSRFToken()
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
-                <h1><% If FEATURE_I18N Then Response.Write T("user_login_welcome", Empty) Else %>欢迎回来<% End If %></h1>
-                <p><% If FEATURE_I18N Then Response.Write T("user_login_subtitle", Empty) Else %>登录您的账户，继续定制香氛之旅<% End If %></p>
+                <h1><% If FEATURE_I18N Then %><%= T("user_login_welcome", Empty) %><% Else %>欢迎回来<% End If %></h1>
+                <p><% If FEATURE_I18N Then %><%= T("user_login_subtitle", Empty) %><% Else %>登录您的账户，继续定制香氛之旅<% End If %></p>
             </div>
             
             <% If errorMsg <> "" Then %>
@@ -159,14 +158,14 @@ Call EnsureCSRFToken()
             <form method="post" class="auth-form" id="loginForm">
                 <%= GetCSRFTokenField() %>
                 <div class="form-group">
-                    <label for="username"><i class="fas fa-user"></i> <% If FEATURE_I18N Then Response.Write T("user_login_username", Empty) Else %>用户名/邮箱<% End If %></label>
-                    <input type="text" id="username" name="username" placeholder="<% If FEATURE_I18N Then Response.Write T("user_login_username_placeholder", Empty) Else %>请输入用户名或邮箱<% End If %>" required>
+                    <label for="username"><i class="fas fa-user"></i> <% If FEATURE_I18N Then %><%= T("user_login_username", Empty) %><% Else %>用户名/邮箱<% End If %></label>
+                    <input type="text" id="username" name="username" placeholder="<% If FEATURE_I18N Then %><%= T("user_login_username_placeholder", Empty) %><% Else %>请输入用户名或邮箱<% End If %>" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="password"><i class="fas fa-lock"></i> <% If FEATURE_I18N Then Response.Write T("user_login_password", Empty) Else %>密码<% End If %></label>
+                    <label for="password"><i class="fas fa-lock"></i> <% If FEATURE_I18N Then %><%= T("user_login_password", Empty) %><% Else %>密码<% End If %></label>
                     <div class="password-input">
-                        <input type="password" id="password" name="password" placeholder="<% If FEATURE_I18N Then Response.Write T("user_login_password_placeholder", Empty) Else %>请输入密码<% End If %>" required>
+                        <input type="password" id="password" name="password" placeholder="<% If FEATURE_I18N Then %><%= T("user_login_password_placeholder", Empty) %><% Else %>请输入密码<% End If %>" required>
                         <button type="button" class="toggle-password" onclick="togglePassword()">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -175,29 +174,29 @@ Call EnsureCSRFToken()
                 
                 <div class="form-options">
                     <label class="checkbox-label">
-                        <input type="checkbox" name="remember"> <% If FEATURE_I18N Then Response.Write T("user_login_remember", Empty) Else %>记住我<% End If %>
+                        <input type="checkbox" name="remember"> <% If FEATURE_I18N Then %><%= T("user_login_remember", Empty) %><% Else %>记住我<% End If %>
                     </label>
-                    <a href="/user/forgot.asp" class="forgot-link"><% If FEATURE_I18N Then Response.Write T("user_login_forgot", Empty) Else %>忘记密码？<% End If %></a>
+                    <a href="/user/forgot.asp" class="forgot-link"><% If FEATURE_I18N Then %><%= T("user_login_forgot", Empty) %><% Else %>忘记密码？<% End If %></a>
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-lg btn-block">
-                    <i class="fas fa-sign-in-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_login_btn", Empty) Else %>登录<% End If %>
+                    <i class="fas fa-sign-in-alt"></i> <% If FEATURE_I18N Then %><%= T("user_login_btn", Empty) %><% Else %>登录<% End If %>
                 </button>
             </form>
             
             <div class="auth-divider">
-                <span><% If FEATURE_I18N Then Response.Write T("user_login_or", Empty) Else %>或<% End If %></span>
+                <span><% If FEATURE_I18N Then %><%= T("user_login_or", Empty) %><% Else %>或<% End If %></span>
             </div>
             
             <div class="social-login">
                 <button type="button" class="btn btn-social btn-wechat">
-                    <i class="fab fa-weixin"></i> <% If FEATURE_I18N Then Response.Write T("user_login_wechat", Empty) Else %>微信登录<% End If %>
+                    <i class="fab fa-weixin"></i> <% If FEATURE_I18N Then %><%= T("user_login_wechat", Empty) %><% Else %>微信登录<% End If %>
                 </button>
             </div>
             
             <div class="auth-footer">
-                <p><% If FEATURE_I18N Then Response.Write T("user_login_no_account", Empty) Else %>还没有账户？<% End If %> <a href="/user/register.asp"><% If FEATURE_I18N Then Response.Write T("user_login_register_now", Empty) Else %>立即注册<% End If %></a></p>
-                <p class="auth-notice"><i class="fas fa-info-circle"></i> <% If FEATURE_I18N Then Response.Write T("user_register_referral_required", Empty) Else %>本平台采用会员推荐制，需通过现有会员推荐链接注册<% End If %></p>
+                <p><% If FEATURE_I18N Then %><%= T("user_login_no_account", Empty) %><% Else %>还没有账户？<% End If %> <a href="/user/register.asp"><% If FEATURE_I18N Then %><%= T("user_login_register_now", Empty) %><% Else %>立即注册<% End If %></a></p>
+                <p class="auth-notice"><i class="fas fa-info-circle"></i> <% If FEATURE_I18N Then %><%= T("user_register_referral_required", Empty) %><% Else %>本平台采用会员推荐制，需通过现有会员推荐链接注册<% End If %></p>
             </div>
         </div>
         

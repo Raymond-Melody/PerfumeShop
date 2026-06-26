@@ -37,26 +37,26 @@
 
                 <!-- 客户服务 -->
                 <div class="footer-section">
-                    <h4><% If FEATURE_I18N Then Response.Write T("footer_customer_service", Empty) Else %>客户服务<% End If %></h4>
+                    <h4><% If FEATURE_I18N Then %><%= T("footer_customer_service", Empty) %><% Else %>客户服务<% End If %></h4>
                     <ul>
-                        <li><a href="/help/shipping.asp"><% If FEATURE_I18N Then Response.Write T("footer_shipping_info", Empty) Else %>配送说明<% End If %></a></li>
-                        <li><a href="/help/return.asp"><% If FEATURE_I18N Then Response.Write T("footer_return_policy", Empty) Else %>退换政策<% End If %></a></li>
-                        <li><a href="/help/payment.asp"><% If FEATURE_I18N Then Response.Write T("footer_payment_methods", Empty) Else %>支付方式<% End If %></a></li>
-                        <li><a href="/help/faq.asp"><% If FEATURE_I18N Then Response.Write T("footer_faq", Empty) Else %>常见问题<% End If %></a></li>
+                        <li><a href="/help/shipping.asp"><% If FEATURE_I18N Then %><%= T("footer_shipping_info", Empty) %><% Else %>配送说明<% End If %></a></li>
+                        <li><a href="/help/return.asp"><% If FEATURE_I18N Then %><%= T("footer_return_policy", Empty) %><% Else %>退换政策<% End If %></a></li>
+                        <li><a href="/help/payment.asp"><% If FEATURE_I18N Then %><%= T("footer_payment_methods", Empty) %><% Else %>支付方式<% End If %></a></li>
+                        <li><a href="/help/faq.asp"><% If FEATURE_I18N Then %><%= T("footer_faq", Empty) %><% Else %>常见问题<% End If %></a></li>
                     </ul>
                 </div>
 
                 <!-- 联系方式 -->
                 <div class="footer-section">
-                    <h4><% If FEATURE_I18N Then Response.Write T("footer_contact_title", Empty) Else %>联系我们<% End If %></h4>
+                    <h4><% If FEATURE_I18N Then %><%= T("footer_contact_title", Empty) %><% Else %>联系我们<% End If %></h4>
                     <p><i class="fas fa-phone"></i> <%= SITE_PHONE %></p>
                     <p><i class="fas fa-envelope"></i> <%= SITE_EMAIL %></p>
-                    <p><i class="fas fa-clock"></i> <% If FEATURE_I18N Then Response.Write T("footer_business_hours", Empty) Else %>周一至周日 9:00-21:00<% End If %></p>
+                    <p><i class="fas fa-clock"></i> <% If FEATURE_I18N Then %><%= T("footer_business_hours", Empty) %><% Else %>周一至周日 9:00-21:00<% End If %></p>
                 </div>
             </div>
 
             <div class="footer-bottom">
-                <p><% If FEATURE_I18N Then Response.Write T("footer_copyright", Array(Year(Now()))) Else %>&copy; <%= Year(Now()) %> 香氛定制 版权所有<% End If %> | <a href="/privacy.asp"><% If FEATURE_I18N Then Response.Write T("footer_privacy_policy", Empty) Else %>隐私政策<% End If %></a> | <a href="/terms.asp"><% If FEATURE_I18N Then Response.Write T("footer_terms_of_service", Empty) Else %>服务条款<% End If %></a></p>
+                <p><% If FEATURE_I18N Then %><%= T("footer_copyright", Array(Year(Now()))) %><% Else %>&copy; <%= Year(Now()) %> 香氛定制 版权所有<% End If %> | <a href="/privacy.asp"><% If FEATURE_I18N Then %><%= T("footer_privacy_policy", Empty) %><% Else %>隐私政策<% End If %></a> | <a href="/terms.asp"><% If FEATURE_I18N Then %><%= T("footer_terms_of_service", Empty) %><% Else %>服务条款<% End If %></a></p>
             </div>
         </div>
     </footer>

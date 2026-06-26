@@ -16,7 +16,6 @@ End If
 <!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/dal_users.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
-<!--#include file="../includes/i18n.asp"-->
 <%
 
 ' === 打开数据库连接 ===
@@ -147,7 +146,7 @@ Call EnsureCSRFToken()
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><% If FEATURE_I18N Then Response.Write T("admin_login_page_title", Empty) Else %>管理员登录 - 香氛定制电商网站<% End If %></title>
+    <title><% If FEATURE_I18N Then %><%= T("admin_login_page_title", Empty) %><% Else %>管理员登录 - 香氛定制电商网站<% End If %></title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
         .admin-login-container {
@@ -236,11 +235,11 @@ Call EnsureCSRFToken()
 </head>
 <body>
     <div class="admin-login-container">
-        <h2><% If FEATURE_I18N Then Response.Write T("admin_login_heading", Empty) Else %>管理员登录<% End If %></h2>
+        <h2><% If FEATURE_I18N Then %><%= T("admin_login_heading", Empty) %><% Else %>管理员登录<% End If %></h2>
         
         
         <div class="login-info">
-            <% If FEATURE_I18N Then Response.Write T("admin_login_info", Empty) Else %>请输入管理员账户信息登录<% End If %><br>
+            <% If FEATURE_I18N Then %><%= T("admin_login_info", Empty) %><% Else %>请输入管理员账户信息登录<% End If %><br>
         </div>
         
         <% If errorMessage <> "" Then %>
@@ -250,27 +249,27 @@ Call EnsureCSRFToken()
         <form method="post">
             <%= GetCSRFTokenField() %>
             <div class="form-group">
-                <label for="username"><% If FEATURE_I18N Then Response.Write T("admin_login_username", Empty) Else %>用户名<% End If %></label>
+                <label for="username"><% If FEATURE_I18N Then %><%= T("admin_login_username", Empty) %><% Else %>用户名<% End If %></label>
                 <input type="text" id="username" name="username" value="<%= username %>" required>
             </div>
             
             <div class="form-group">
-                <label for="password"><% If FEATURE_I18N Then Response.Write T("admin_login_password", Empty) Else %>密码<% End If %></label>
+                <label for="password"><% If FEATURE_I18N Then %><%= T("admin_login_password", Empty) %><% Else %>密码<% End If %></label>
                 <input type="password" id="password" name="password" required>
             </div>
             
             <div class="remember-forgot-container">
                 <div class="remember-me">
                     <input type="checkbox" id="remember_me" name="remember_me" value="1">
-                    <label for="remember_me"><% If FEATURE_I18N Then Response.Write T("admin_login_remember", Empty) Else %>记住我<% End If %></label>
+                    <label for="remember_me"><% If FEATURE_I18N Then %><%= T("admin_login_remember", Empty) %><% Else %>记住我<% End If %></label>
                 </div>
                 
                 <div class="forgot-password">
-                    <a href="forgot_password.asp"><% If FEATURE_I18N Then Response.Write T("admin_login_forgot", Empty) Else %>忘记密码？<% End If %></a>
+                    <a href="forgot_password.asp"><% If FEATURE_I18N Then %><%= T("admin_login_forgot", Empty) %><% Else %>忘记密码？<% End If %></a>
                 </div>
             </div>
             
-            <button type="submit" class="btn"><% If FEATURE_I18N Then Response.Write T("admin_login_btn", Empty) Else %>登录<% End If %></button>
+            <button type="submit" class="btn"><% If FEATURE_I18N Then %><%= T("admin_login_btn", Empty) %><% Else %>登录<% End If %></button>
         </form>
     </div>
 </body>

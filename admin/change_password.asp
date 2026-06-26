@@ -7,7 +7,6 @@ Response.ContentType = "text/html"
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
-<!--#include file="../includes/i18n.asp"-->
 <%
 Call OpenConnection()
 

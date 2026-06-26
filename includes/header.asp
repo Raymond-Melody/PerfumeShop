@@ -1,4 +1,3 @@
-<!--#include file="i18n.asp"-->
 <%
 ' ============================================
 ' 公共头部文件
@@ -27,10 +26,10 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
     <meta name="color-scheme" content="light only">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="<% If FEATURE_I18N Then Response.Write T("header_meta_title", Empty) Else %>香氛定制<% End If %>">
+    <meta name="apple-mobile-web-app-title" content="<% If FEATURE_I18N Then %><%= T("header_meta_title", Empty) %><% Else %>香氛定制<% End If %>">
     <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
-    <meta name="description" content="<% If FEATURE_I18N Then Response.Write T("header_meta_description", Empty) Else %>专业个性化定制香水，打造专属于你的独特香氛体验<% End If %>">
-    <meta name="keywords" content="<% If FEATURE_I18N Then Response.Write T("header_meta_keywords", Empty) Else %>香水定制,个性化香水,定制香氛,专属香水<% End If %>">
+    <meta name="description" content="<% If FEATURE_I18N Then %><%= T("header_meta_description", Empty) %><% Else %>专业个性化定制香水，打造专属于你的独特香氛体验<% End If %>">
+    <meta name="keywords" content="<% If FEATURE_I18N Then %><%= T("header_meta_keywords", Empty) %><% Else %>香水定制,个性化香水,定制香氛,专属香水<% End If %>">
     <title><%= SITE_NAME %></title>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <link rel="manifest" href="/manifest.json">
@@ -173,9 +172,9 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
                 <i class="fas fa-phone"></i> <%= SITE_PHONE %>
                 <% If FEATURE_I18N Then %>
                 <span class="lang-switcher">
-                    <a href="?lang=zh-CN" class="lang-link<%= IIF(I18N_GetLocale()="zh-CN"," active","") %>"><% If FEATURE_I18N Then Response.Write T("header_lang_zh", Empty) Else %>中文<% End If %></a>
+                    <a href="?lang=zh-CN" class="lang-link<%= IIF(I18N_GetLocale()="zh-CN"," active","") %>"><% If FEATURE_I18N Then %><%= T("header_lang_zh", Empty) %><% Else %>中文<% End If %></a>
                     <span class="lang-divider">|</span>
-                    <a href="?lang=en-US" class="lang-link<%= IIF(I18N_GetLocale()="en-US"," active","") %>"><% If FEATURE_I18N Then Response.Write T("header_lang_en", Empty) Else %>EN<% End If %></a>
+                    <a href="?lang=en-US" class="lang-link<%= IIF(I18N_GetLocale()="en-US"," active","") %>"><% If FEATURE_I18N Then %><%= T("header_lang_en", Empty) %><% Else %>EN<% End If %></a>
                 </span>
                 <% End If %>
             </span>
@@ -211,12 +210,12 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
                     <div class="user-info dropdown">
                         <a href="#"><i class="fas fa-user"></i> <%= Session("Username") %></a>
                         <div class="dropdown-menu">
-                            <a href="/user/index.asp"><i class="fas fa-user-circle"></i> <% If FEATURE_I18N Then Response.Write T("header_user_center", Empty) Else %>个人中心<% End If %></a>
-                            <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then Response.Write T("header_my_orders", Empty) Else %>我的订单<% End If %></a>
-                            <a href="/user/settings.asp"><i class="fas fa-cog"></i> <% If FEATURE_I18N Then Response.Write T("header_account_settings", Empty) Else %>账户设置<% End If %></a>
-                            <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then Response.Write T("header_shipping_address", Empty) Else %>收货地址<% End If %></a>
-                            <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("header_my_favorites", Empty) Else %>我的收藏<% End If %></a>
-                            <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then Response.Write T("header_logout", Empty) Else %>退出登录<% End If %></a>
+                            <a href="/user/index.asp"><i class="fas fa-user-circle"></i> <% If FEATURE_I18N Then %><%= T("header_user_center", Empty) %><% Else %>个人中心<% End If %></a>
+                            <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then %><%= T("header_my_orders", Empty) %><% Else %>我的订单<% End If %></a>
+                            <a href="/user/settings.asp"><i class="fas fa-cog"></i> <% If FEATURE_I18N Then %><%= T("header_account_settings", Empty) %><% Else %>账户设置<% End If %></a>
+                            <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then %><%= T("header_shipping_address", Empty) %><% Else %>收货地址<% End If %></a>
+                            <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("header_my_favorites", Empty) %><% Else %>我的收藏<% End If %></a>
+                            <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then %><%= T("header_logout", Empty) %><% Else %>退出登录<% End If %></a>
                         </div>
                     </div>
                     <%

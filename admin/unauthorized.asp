@@ -10,7 +10,7 @@ Response.ContentType = "text/html"
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><% If FEATURE_I18N Then Response.Write T("admin_unauthorized_page_title", Empty) Else %>无访问权限 - 香氛电商系统<% End If %></title>
+    <title><% If FEATURE_I18N Then %><%= T("admin_unauthorized_page_title", Empty) %><% Else %>无访问权限 - 香氛电商系统<% End If %></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -78,20 +78,20 @@ Response.ContentType = "text/html"
         <div class="icon">
             <i class="fas fa-lock"></i>
         </div>
-        <h1><% If FEATURE_I18N Then Response.Write T("admin_unauthorized_heading", Empty) Else %>无访问权限<% End If %></h1>
+        <h1><% If FEATURE_I18N Then %><%= T("admin_unauthorized_heading", Empty) %><% Else %>无访问权限<% End If %></h1>
         <p>
-            <% If FEATURE_I18N Then Response.Write T("admin_unauthorized_message", Empty) Else %>抱歉，您没有权限访问此功能模块。<% End If %><br>
+            <% If FEATURE_I18N Then %><%= T("admin_unauthorized_message", Empty) %><% Else %>抱歉，您没有权限访问此功能模块。<% End If %><br>
             <% If Request.QueryString("module") <> "" Then %>
-            <% If FEATURE_I18N Then Response.Write T("admin_unauthorized_module_label", Empty) Else %>尝试访问的模块：<% End If %>
+            <% If FEATURE_I18N Then %><%= T("admin_unauthorized_module_label", Empty) %><% Else %>尝试访问的模块：<% End If %>
             <div class="module-name"><%= Server.HTMLEncode(Request.QueryString("module")) %></div>
             <% End If %>
         </p>
         <div>
-            <a href="portal.asp" class="btn"><i class="fas fa-home"></i> <% If FEATURE_I18N Then Response.Write T("admin_unauthorized_back", Empty) Else %>返回统一入口<% End If %></a>
-            <a href="logout.asp" class="btn btn-secondary"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then Response.Write T("admin_unauthorized_logout", Empty) Else %>退出登录<% End If %></a>
+            <a href="portal.asp" class="btn"><i class="fas fa-home"></i> <% If FEATURE_I18N Then %><%= T("admin_unauthorized_back", Empty) %><% Else %>返回统一入口<% End If %></a>
+            <a href="logout.asp" class="btn btn-secondary"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then %><%= T("admin_unauthorized_logout", Empty) %><% Else %>退出登录<% End If %></a>
         </div>
         <div class="contact-info">
-            <p><i class="fas fa-info-circle"></i> <% If FEATURE_I18N Then Response.Write T("admin_unauthorized_contact", Empty) Else %>如需访问此功能，请联系系统管理员<% End If %></p>
+            <p><i class="fas fa-info-circle"></i> <% If FEATURE_I18N Then %><%= T("admin_unauthorized_contact", Empty) %><% Else %>如需访问此功能，请联系系统管理员<% End If %></p>
         </div>
     </div>
 </body>

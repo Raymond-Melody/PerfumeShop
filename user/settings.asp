@@ -1,6 +1,5 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <!--#include file="../includes/config.asp"-->
-<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <%
@@ -127,11 +126,11 @@ Session("pwd_success") = ""
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
+        <a href="/index.asp"><% If FEATURE_I18N Then %><%= T("breadcrumb_home", Empty) %><% Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <a href="/user/index.asp"><% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
+        <a href="/user/index.asp"><% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
         <span class="separator">/</span>
-        <span><% If FEATURE_I18N Then Response.Write T("user_settings_title", Empty) Else %>账户设置<% End If %></span>
+        <span><% If FEATURE_I18N Then %><%= T("user_settings_title", Empty) %><% Else %>账户设置<% End If %></span>
     </div>
 </div>
 
@@ -145,62 +144,62 @@ Session("pwd_success") = ""
             </div>
             
             <nav class="user-nav">
-                <a href="/user/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
-                <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_orders", Empty) Else %>我的订单<% End If %></a>
-                <a href="/user/settings.asp" class="active"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_settings", Empty) Else %>账户设置<% End If %></a>
-                <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_addresses", Empty) Else %>收货地址<% End If %></a>
-                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_favorites", Empty) Else %>我的收藏<% End If %></a>
-                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_logout", Empty) Else %>退出登录<% End If %></a>
+                <a href="/user/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
+                <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then %><%= T("user_nav_orders", Empty) %><% Else %>我的订单<% End If %></a>
+                <a href="/user/settings.asp" class="active"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then %><%= T("user_nav_settings", Empty) %><% Else %>账户设置<% End If %></a>
+                <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_addresses", Empty) %><% Else %>收货地址<% End If %></a>
+                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("user_nav_favorites", Empty) %><% Else %>我的收藏<% End If %></a>
+                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_logout", Empty) %><% Else %>退出登录<% End If %></a>
             </nav>
         </aside>
         
         <!-- 主内容 -->
         <div class="user-main">
             <div class="user-card">
-                <h2 class="card-title"><i class="fas fa-cog"></i> <% If FEATURE_I18N Then Response.Write T("user_settings_title", Empty) Else %>账户设置<% End If %></h2>
+                <h2 class="card-title"><i class="fas fa-cog"></i> <% If FEATURE_I18N Then %><%= T("user_settings_title", Empty) %><% Else %>账户设置<% End If %></h2>
                 
                 <form method="post" class="form-horizontal" action="settings.asp">
                     <%= GetCSRFTokenField() %>
                     <div class="form-group">
-                        <label for="fullName"><% If FEATURE_I18N Then Response.Write T("user_settings_name", Empty) Else %>姓名<% End If %></label>
-                        <input type="text" id="fullName" name="fullName" value="<%= HTMLEncode(rsUser("FullName")) %>" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_name_placeholder", Empty) Else %>请输入您的姓名<% End If %>">
+                        <label for="fullName"><% If FEATURE_I18N Then %><%= T("user_settings_name", Empty) %><% Else %>姓名<% End If %></label>
+                        <input type="text" id="fullName" name="fullName" value="<%= HTMLEncode(rsUser("FullName")) %>" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_name_placeholder", Empty) %><% Else %>请输入您的姓名<% End If %>">
                     </div>
                     
                     <div class="form-group">
-                        <label for="email"><% If FEATURE_I18N Then Response.Write T("user_settings_email", Empty) Else %>邮箱<% End If %></label>
-                        <input type="email" id="email" name="email" value="<%= HTMLEncode(rsUser("Email")) %>" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_email_placeholder", Empty) Else %>请输入邮箱地址<% End If %>">
+                        <label for="email"><% If FEATURE_I18N Then %><%= T("user_settings_email", Empty) %><% Else %>邮箱<% End If %></label>
+                        <input type="email" id="email" name="email" value="<%= HTMLEncode(rsUser("Email")) %>" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_email_placeholder", Empty) %><% Else %>请输入邮箱地址<% End If %>">
                     </div>
                     
                     <div class="form-group">
-                        <label for="phone"><% If FEATURE_I18N Then Response.Write T("user_settings_phone", Empty) Else %>手机号<% End If %></label>
-                        <input type="tel" id="phone" name="phone" value="<%= HTMLEncode(rsUser("Phone")) %>" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_phone_placeholder", Empty) Else %>请输入手机号<% End If %>">
+                        <label for="phone"><% If FEATURE_I18N Then %><%= T("user_settings_phone", Empty) %><% Else %>手机号<% End If %></label>
+                        <input type="tel" id="phone" name="phone" value="<%= HTMLEncode(rsUser("Phone")) %>" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_phone_placeholder", Empty) %><% Else %>请输入手机号<% End If %>">
                     </div>
                     
                     <div class="form-group">
-                        <label for="address"><% If FEATURE_I18N Then Response.Write T("user_settings_address", Empty) Else %>地址<% End If %></label>
-                        <textarea id="address" name="address" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_address_placeholder", Empty) Else %>请输入收货地址<% End If %>"><%= HTMLEncode(rsUser("Address")) %></textarea>
+                        <label for="address"><% If FEATURE_I18N Then %><%= T("user_settings_address", Empty) %><% Else %>地址<% End If %></label>
+                        <textarea id="address" name="address" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_address_placeholder", Empty) %><% Else %>请输入收货地址<% End If %>"><%= HTMLEncode(rsUser("Address")) %></textarea>
                     </div>
                     
                     <div class="form-group">
-                        <label for="city"><% If FEATURE_I18N Then Response.Write T("user_settings_city", Empty) Else %>城市<% End If %></label>
-                        <input type="text" id="city" name="city" value="<%= HTMLEncode(rsUser("City")) %>" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_city_placeholder", Empty) Else %>请输入所在城市<% End If %>">
+                        <label for="city"><% If FEATURE_I18N Then %><%= T("user_settings_city", Empty) %><% Else %>城市<% End If %></label>
+                        <input type="text" id="city" name="city" value="<%= HTMLEncode(rsUser("City")) %>" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_city_placeholder", Empty) %><% Else %>请输入所在城市<% End If %>">
                     </div>
                     
                     <div class="form-group">
-                        <label for="postalCode"><% If FEATURE_I18N Then Response.Write T("user_settings_postal", Empty) Else %>邮政编码<% End If %></label>
-                        <input type="text" id="postalCode" name="postalCode" value="<%= HTMLEncode(rsUser("PostalCode")) %>" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_postal_placeholder", Empty) Else %>请输入邮政编码<% End If %>">
+                        <label for="postalCode"><% If FEATURE_I18N Then %><%= T("user_settings_postal", Empty) %><% Else %>邮政编码<% End If %></label>
+                        <input type="text" id="postalCode" name="postalCode" value="<%= HTMLEncode(rsUser("PostalCode")) %>" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_postal_placeholder", Empty) %><% Else %>请输入邮政编码<% End If %>">
                     </div>
                     
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("user_settings_save_btn", Empty) Else %>保存设置<% End If %></button>
-                        <button type="button" class="btn btn-text" onclick="history.back()"><% If FEATURE_I18N Then Response.Write T("user_settings_cancel", Empty) Else %>取消<% End If %></button>
+                        <button type="submit" class="btn btn-primary"><% If FEATURE_I18N Then %><%= T("user_settings_save_btn", Empty) %><% Else %>保存设置<% End If %></button>
+                        <button type="button" class="btn btn-text" onclick="history.back()"><% If FEATURE_I18N Then %><%= T("user_settings_cancel", Empty) %><% Else %>取消<% End If %></button>
                     </div>
                 </form>
             </div>
 
             <!-- 修改密码卡片 -->
             <div class="user-card" id="change-password">
-                <h2 class="card-title"><i class="fas fa-lock"></i> <% If FEATURE_I18N Then Response.Write T("user_settings_change_pwd", Empty) Else %>修改密码<% End If %></h2>
+                <h2 class="card-title"><i class="fas fa-lock"></i> <% If FEATURE_I18N Then %><%= T("user_settings_change_pwd", Empty) %><% Else %>修改密码<% End If %></h2>
                 
                 <% If pwdErrorMsg <> "" Then %>
                 <div class="alert alert-error" style="margin-bottom:16px;">
@@ -218,23 +217,23 @@ Session("pwd_success") = ""
                     <input type="hidden" name="form_action" value="change_password">
                     
                     <div class="form-group">
-                        <label for="current_password"><% If FEATURE_I18N Then Response.Write T("user_settings_current_pwd", Empty) Else %>当前密码<% End If %></label>
-                        <input type="password" id="current_password" name="current_password" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_current_pwd_placeholder", Empty) Else %>请输入当前密码<% End If %>" required>
+                        <label for="current_password"><% If FEATURE_I18N Then %><%= T("user_settings_current_pwd", Empty) %><% Else %>当前密码<% End If %></label>
+                        <input type="password" id="current_password" name="current_password" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_current_pwd_placeholder", Empty) %><% Else %>请输入当前密码<% End If %>" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="new_password"><% If FEATURE_I18N Then Response.Write T("user_settings_new_pwd", Empty) Else %>新密码<% End If %></label>
-                        <input type="password" id="new_password" name="new_password" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_new_pwd_placeholder", Empty) Else %>至少6个字符<% End If %>" required minlength="6">
+                        <label for="new_password"><% If FEATURE_I18N Then %><%= T("user_settings_new_pwd", Empty) %><% Else %>新密码<% End If %></label>
+                        <input type="password" id="new_password" name="new_password" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_new_pwd_placeholder", Empty) %><% Else %>至少6个字符<% End If %>" required minlength="6">
                     </div>
                     
                     <div class="form-group">
-                        <label for="confirm_password"><% If FEATURE_I18N Then Response.Write T("user_settings_confirm_new_pwd", Empty) Else %>确认新密码<% End If %></label>
-                        <input type="password" id="confirm_password" name="confirm_password" placeholder="<% If FEATURE_I18N Then Response.Write T("user_settings_confirm_new_pwd_placeholder", Empty) Else %>再次输入新密码<% End If %>" required minlength="6">
+                        <label for="confirm_password"><% If FEATURE_I18N Then %><%= T("user_settings_confirm_new_pwd", Empty) %><% Else %>确认新密码<% End If %></label>
+                        <input type="password" id="confirm_password" name="confirm_password" placeholder="<% If FEATURE_I18N Then %><%= T("user_settings_confirm_new_pwd_placeholder", Empty) %><% Else %>再次输入新密码<% End If %>" required minlength="6">
                     </div>
                     
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-key"></i> <% If FEATURE_I18N Then Response.Write T("user_settings_update_pwd_btn", Empty) Else %>更新密码<% End If %>
+                            <i class="fas fa-key"></i> <% If FEATURE_I18N Then %><%= T("user_settings_update_pwd_btn", Empty) %><% Else %>更新密码<% End If %>
                         </button>
                     </div>
                 </form>
@@ -245,7 +244,7 @@ Session("pwd_success") = ""
 
 <script>
 function removeAvatar() {
-    alert('<% If FEATURE_I18N Then Response.Write T("user_settings_avatar_deleted", Empty) Else %>头像已删除<% End If %>');
+    alert('<% If FEATURE_I18N Then %><%= T("user_settings_avatar_deleted", Empty) %><% Else %>头像已删除<% End If %>');
 }
 </script>
 

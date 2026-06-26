@@ -93,16 +93,16 @@ If page > totalPages Then page = totalPages
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
+        <a href="/index.asp"><% If FEATURE_I18N Then %><%= T("breadcrumb_home", Empty) %><% Else %>首页<% End If %></a>
         <span class="separator">/</span>
         <%
         If keyword <> "" Then
         %>
-        <span><% If FEATURE_I18N Then Response.Write T("products_breadcrumb_search", Array(HTMLEncode(keyword))) Else %>搜索结果: <%= HTMLEncode(keyword) %><% End If %></span>
+        <span><% If FEATURE_I18N Then %><%= T("products_breadcrumb_search", Array(HTMLEncode(keyword))) %><% Else %>搜索结果: <%= HTMLEncode(keyword) %><% End If %></span>
         <%
         Else
         %>
-        <span><% If FEATURE_I18N Then Response.Write T("products_breadcrumb_all", Empty) Else %>全部香水<% End If %></span>
+        <span><% If FEATURE_I18N Then %><%= T("products_breadcrumb_all", Empty) %><% Else %>全部香水<% End If %></span>
         <%
         End If
         %>
@@ -117,9 +117,9 @@ If page > totalPages Then page = totalPages
         <!-- 侧边栏筛选 -->
         <aside class="sidebar">
             <div class="filter-section">
-                <h4><% If FEATURE_I18N Then Response.Write T("products_filter_type", Empty) Else %>产品类型<% End If %></h4>
+                <h4><% If FEATURE_I18N Then %><%= T("products_filter_type", Empty) %><% Else %>产品类型<% End If %></h4>
                 <ul class="filter-list">
-                    <li><a href="/products.asp" class="<%= IIf(productType = "", "active", "") %>"><% If FEATURE_I18N Then Response.Write T("products_filter_all", Empty) Else %>全部<% End If %></a></li>
+                    <li><a href="/products.asp" class="<%= IIf(productType = "", "active", "") %>"><% If FEATURE_I18N Then %><%= T("products_filter_all", Empty) %><% Else %>全部<% End If %></a></li>
                     <% 
                     Dim fIdx, fCode, fName
                     If IsArray(activeTypes) Then
@@ -136,19 +136,19 @@ If page > totalPages Then page = totalPages
             </div>
             
             <div class="filter-section">
-                <h3><% If FEATURE_I18N Then Response.Write T("products_filter_price", Empty) Else %>价格区间<% End If %></h3>
+                <h3><% If FEATURE_I18N Then %><%= T("products_filter_price", Empty) %><% Else %>价格区间<% End If %></h3>
                 <ul class="filter-list">
-                    <li><a href="/products.asp?price=0-300"><% If FEATURE_I18N Then Response.Write T("products_filter_price_1", Empty) Else %>¥300以下<% End If %></a></li>
-                    <li><a href="/products.asp?price=300-500"><% If FEATURE_I18N Then Response.Write T("products_filter_price_2", Empty) Else %>¥300-500<% End If %></a></li>
-                    <li><a href="/products.asp?price=500-800"><% If FEATURE_I18N Then Response.Write T("products_filter_price_3", Empty) Else %>¥500-800<% End If %></a></li>
-                    <li><a href="/products.asp?price=800"><% If FEATURE_I18N Then Response.Write T("products_filter_price_4", Empty) Else %>¥800以上<% End If %></a></li>
+                    <li><a href="/products.asp?price=0-300"><% If FEATURE_I18N Then %><%= T("products_filter_price_1", Empty) %><% Else %>¥300以下<% End If %></a></li>
+                    <li><a href="/products.asp?price=300-500"><% If FEATURE_I18N Then %><%= T("products_filter_price_2", Empty) %><% Else %>¥300-500<% End If %></a></li>
+                    <li><a href="/products.asp?price=500-800"><% If FEATURE_I18N Then %><%= T("products_filter_price_3", Empty) %><% Else %>¥500-800<% End If %></a></li>
+                    <li><a href="/products.asp?price=800"><% If FEATURE_I18N Then %><%= T("products_filter_price_4", Empty) %><% Else %>¥800以上<% End If %></a></li>
                 </ul>
             </div>
             
             <div class="filter-section cta-box">
-                <h3><% If FEATURE_I18N Then Response.Write T("products_filter_cta_title", Empty) Else %>想要专属定制？<% End If %></h3>
-                <p><% If FEATURE_I18N Then Response.Write T("products_filter_cta_desc", Empty) Else %>打造独一无二的个性香水<% End If %></p>
-                <a href="/customize.asp" class="btn btn-primary btn-block"><% If FEATURE_I18N Then Response.Write T("products_filter_cta_btn", Empty) Else %>开始定制<% End If %></a>
+                <h3><% If FEATURE_I18N Then %><%= T("products_filter_cta_title", Empty) %><% Else %>想要专属定制？<% End If %></h3>
+                <p><% If FEATURE_I18N Then %><%= T("products_filter_cta_desc", Empty) %><% Else %>打造独一无二的个性香水<% End If %></p>
+                <a href="/customize.asp" class="btn btn-primary btn-block"><% If FEATURE_I18N Then %><%= T("products_filter_cta_btn", Empty) %><% Else %>开始定制<% End If %></a>
             </div>
         </aside>
 
@@ -159,19 +159,19 @@ If page > totalPages Then page = totalPages
                     <%
                     If keyword <> "" Then
                     %>
-                    <span><% If FEATURE_I18N Then Response.Write T("products_search_for", Array(HTMLEncode(keyword))) Else %>搜索"<%= HTMLEncode(keyword) %>"<% End If %></span>
+                    <span><% If FEATURE_I18N Then %><%= T("products_search_for", Array(HTMLEncode(keyword))) %><% Else %>搜索"<%= HTMLEncode(keyword) %>"<% End If %></span>
                     <%
                     End If
                     %>
-                    <span><% If FEATURE_I18N Then Response.Write T("products_count", Array(totalCount)) Else %>共 <%= totalCount %> 件商品<% End If %></span>
+                    <span><% If FEATURE_I18N Then %><%= T("products_count", Array(totalCount)) %><% Else %>共 <%= totalCount %> 件商品<% End If %></span>
                 </div>
                 <div class="sort-options">
-                    <label><% If FEATURE_I18N Then Response.Write T("products_sort_label", Empty) Else %>排序<% End If %>:</label>
+                    <label><% If FEATURE_I18N Then %><%= T("products_sort_label", Empty) %><% Else %>排序<% End If %>:</label>
                     <select id="sortSelect" onchange="changeSort(this.value)">
-                        <option value="newest" <% If sortBy = "" Or sortBy = "newest" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then Response.Write T("products_sort_newest", Empty) Else %>最新上架<% End If %></option>
-                        <option value="price_asc" <% If sortBy = "price_asc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then Response.Write T("products_sort_price_asc", Empty) Else %>价格从低到高<% End If %></option>
-                        <option value="price_desc" <% If sortBy = "price_desc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then Response.Write T("products_sort_price_desc", Empty) Else %>价格从高到低<% End If %></option>
-                        <option value="name" <% If sortBy = "name" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then Response.Write T("products_sort_name", Empty) Else %>名称排序<% End If %></option>
+                        <option value="newest" <% If sortBy = "" Or sortBy = "newest" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("products_sort_newest", Empty) %><% Else %>最新上架<% End If %></option>
+                        <option value="price_asc" <% If sortBy = "price_asc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("products_sort_price_asc", Empty) %><% Else %>价格从低到高<% End If %></option>
+                        <option value="price_desc" <% If sortBy = "price_desc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("products_sort_price_desc", Empty) %><% Else %>价格从高到低<% End If %></option>
+                        <option value="name" <% If sortBy = "name" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("products_sort_name", Empty) %><% Else %>名称排序<% End If %></option>
                     </select>
                 </div>
             </div>
@@ -233,17 +233,17 @@ If page > totalPages Then page = totalPages
                         <img data-src="<%= rsProducts("ImageURL") %>" src="<%= DEFAULT_PRODUCT_IMAGE %>" alt="<%= HTMLEncode(rsProducts("ProductName")) %>" class="lazy-placeholder" onerror="this.src='<%= DEFAULT_PRODUCT_IMAGE %>'">
                         <div class="product-badges">
                             <% If pType = "standard" Then %>
-                            <span class="badge badge-fixed"><% If FEATURE_I18N Then Response.Write T("products_badge_fixed", Empty) Else %>品牌定香<% End If %></span>
+                            <span class="badge badge-fixed"><% If FEATURE_I18N Then %><%= T("products_badge_fixed", Empty) %><% Else %>品牌定香<% End If %></span>
                             <% ElseIf pType = "KOL" Then %>
-                            <span class="badge badge-kol"><% If FEATURE_I18N Then Response.Write T("products_badge_kol", Empty) Else %>KOL推荐<% End If %></span>
+                            <span class="badge badge-kol"><% If FEATURE_I18N Then %><%= T("products_badge_kol", Empty) %><% Else %>KOL推荐<% End If %></span>
                             <% End If %>
                             <% If pCategory = "奢华系列" Then %>
-                            <span class="badge badge-premium"><% If FEATURE_I18N Then Response.Write T("products_badge_premium", Empty) Else %>奢华<% End If %></span>
+                            <span class="badge badge-premium"><% If FEATURE_I18N Then %><%= T("products_badge_premium", Empty) %><% Else %>奢华<% End If %></span>
                             <% End If %>
                         </div>
                         <div class="product-overlay">
-                            <a href="/product.asp?id=<%= pId %>" class="btn btn-white"><% If FEATURE_I18N Then Response.Write T("view_detail", Empty) Else %>查看详情<% End If %></a>
-                            <button class="btn btn-icon" onclick="quickView(<%= pId %>)" title="<% If FEATURE_I18N Then Response.Write T("products_quick_view", Empty) Else %>快速预览<% End If %>">
+                            <a href="/product.asp?id=<%= pId %>" class="btn btn-white"><% If FEATURE_I18N Then %><%= T("view_detail", Empty) %><% Else %>查看详情<% End If %></a>
+                            <button class="btn btn-icon" onclick="quickView(<%= pId %>)" title="<% If FEATURE_I18N Then %><%= T("products_quick_view", Empty) %><% Else %>快速预览<% End If %>">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -255,10 +255,10 @@ If page > totalPages Then page = totalPages
                         <div class="product-footer">
                             <div class="product-price">
                                 <span class="price"><%= FormatMoney(pPrice) %></span>
-                                <span class="price-label"><% If FEATURE_I18N Then Response.Write T("price_from", Empty) Else %>起<% End If %></span>
+                                <span class="price-label"><% If FEATURE_I18N Then %><%= T("price_from", Empty) %><% Else %>起<% End If %></span>
                             </div>
                             <a href="/product.asp?id=<%= pId %>" class="btn btn-sm btn-outline">
-                                <% If pType = "standard" Then %><% If FEATURE_I18N Then Response.Write T("products_btn_purchase", Empty) Else %>选购<% End If %><% Else %><% If FEATURE_I18N Then Response.Write T("products_btn_customize", Empty) Else %>定制<% End If %><% End If %>
+                                <% If pType = "standard" Then %><% If FEATURE_I18N Then %><%= T("products_btn_purchase", Empty) %><% Else %>选购<% End If %><% Else %><% If FEATURE_I18N Then %><%= T("products_btn_customize", Empty) %><% Else %>定制<% End If %><% End If %>
                             </a>
                         </div>
                     </div>
@@ -274,9 +274,9 @@ If page > totalPages Then page = totalPages
                 %>
                 <div class="no-results">
                     <i class="fas fa-search"></i>
-                    <h3><% If FEATURE_I18N Then Response.Write T("products_no_results", Empty) Else %>未找到相关产品<% End If %></h3>
-                    <p><% If FEATURE_I18N Then Response.Write T("products_no_results_hint", Empty) Else %>换个关键词试试，或者浏览我们的全部产品<% End If %></p>
-                    <a href="/products.asp" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("products_no_results_btn", Empty) Else %>查看全部<% End If %></a>
+                    <h3><% If FEATURE_I18N Then %><%= T("products_no_results", Empty) %><% Else %>未找到相关产品<% End If %></h3>
+                    <p><% If FEATURE_I18N Then %><%= T("products_no_results_hint", Empty) %><% Else %>换个关键词试试，或者浏览我们的全部产品<% End If %></p>
+                    <a href="/products.asp" class="btn btn-primary"><% If FEATURE_I18N Then %><%= T("products_no_results_btn", Empty) %><% Else %>查看全部<% End If %></a>
                 </div>
                 <%
                 End If

@@ -1,6 +1,5 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <!--#include file="../includes/config.asp"-->
-<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/dal_users.asp"-->
@@ -111,11 +110,11 @@ userId = Session("UserID")
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
+        <a href="/index.asp"><% If FEATURE_I18N Then %><%= T("breadcrumb_home", Empty) %><% Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <a href="/user/index.asp"><% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
+        <a href="/user/index.asp"><% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
         <span class="separator">/</span>
-        <span><% If FEATURE_I18N Then Response.Write T("user_addresses_title", Empty) Else %>收货地址<% End If %></span>
+        <span><% If FEATURE_I18N Then %><%= T("user_addresses_title", Empty) %><% Else %>收货地址<% End If %></span>
     </div>
 </div>
 
@@ -129,12 +128,12 @@ userId = Session("UserID")
             </div>
             
             <nav class="user-nav">
-                <a href="/user/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
-                <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_orders", Empty) Else %>我的订单<% End If %></a>
-                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_settings", Empty) Else %>账户设置<% End If %></a>
-                <a href="/user/addresses.asp" class="active"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_addresses", Empty) Else %>收货地址<% End If %></a>
-                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_favorites", Empty) Else %>我的收藏<% End If %></a>
-                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_logout", Empty) Else %>退出登录<% End If %></a>
+                <a href="/user/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
+                <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then %><%= T("user_nav_orders", Empty) %><% Else %>我的订单<% End If %></a>
+                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then %><%= T("user_nav_settings", Empty) %><% Else %>账户设置<% End If %></a>
+                <a href="/user/addresses.asp" class="active"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_addresses", Empty) %><% Else %>收货地址<% End If %></a>
+                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("user_nav_favorites", Empty) %><% Else %>我的收藏<% End If %></a>
+                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_logout", Empty) %><% Else %>退出登录<% End If %></a>
             </nav>
         </aside>
         
@@ -142,9 +141,9 @@ userId = Session("UserID")
         <div class="user-main">
             <div class="user-card">
                 <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_addresses_title", Empty) Else %>收货地址<% End If %></h2>
+                    <h2 class="card-title"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then %><%= T("user_addresses_title", Empty) %><% Else %>收货地址<% End If %></h2>
                     <button class="btn btn-primary" onclick="showAddressForm()">
-                        <i class="fas fa-plus"></i> <% If FEATURE_I18N Then Response.Write T("user_addresses_add", Empty) Else %>新增收货地址<% End If %>
+                        <i class="fas fa-plus"></i> <% If FEATURE_I18N Then %><%= T("user_addresses_add", Empty) %><% Else %>新增收货地址<% End If %>
                     </button>
                 </div>
                 
@@ -161,7 +160,7 @@ userId = Session("UserID")
                             <div class="address-name">
                                 <%= HTMLEncode(rsAddresses("Consignee")) %> 
                                 <% If rsAddresses("IsDefault") <> 0 Then %>
-                                <span class="badge"><% If FEATURE_I18N Then Response.Write T("user_addresses_default", Empty) Else %>默认<% End If %></span>
+                                <span class="badge"><% If FEATURE_I18N Then %><%= T("user_addresses_default", Empty) %><% Else %>默认<% End If %></span>
                                 <% End If %>
                             </div>
                             <div class="address-phone"><%= HTMLEncode(rsAddresses("Phone")) %></div>
@@ -173,16 +172,13 @@ userId = Session("UserID")
                             </div>
                         </div>
                         <div class="address-actions">
-                            <%
-                            If rsAddresses("IsDefault") <> 0 Then
-                                Response.Write "<button class=""btn btn-sm btn-outline disabled""><% If FEATURE_I18N Then Response.Write T("user_addresses_default", Empty) Else %>默认地址<% End If %></button>"
-                            Else
-                                Response.Write "<button class=""btn btn-sm btn-outline"" onclick=""setDefaultAddress(" & rsAddresses("AddressID") & ")""><% If FEATURE_I18N Then Response.Write T("checkout_address_set_default", Empty) Else %>设为默认<% End If %></button>"
-                            End If
-                            
-                            Response.Write "<button class=""btn btn-sm btn-text"" onclick=""editAddress(" & rsAddresses("AddressID") & ")""><% If FEATURE_I18N Then Response.Write T("user_addresses_edit", Empty) Else %>编辑<% End If %></button>"
-                            Response.Write "<button class=""btn btn-sm btn-text text-danger"" onclick=""deleteAddress(" & rsAddresses("AddressID") & ")""><% If FEATURE_I18N Then Response.Write T("user_addresses_delete", Empty) Else %>删除<% End If %></button>"
-                            %>
+                            <% If rsAddresses("IsDefault") <> 0 Then %>
+                            <button class="btn btn-sm btn-outline disabled"><% If FEATURE_I18N Then %><%= T("user_addresses_default", Empty) %><% Else %>默认地址<% End If %></button>
+                        <% Else %>
+                            <button class="btn btn-sm btn-outline" onclick="setDefaultAddress(<%= rsAddresses("AddressID") %>)"><% If FEATURE_I18N Then %><%= T("checkout_address_set_default", Empty) %><% Else %>设为默认<% End If %></button>
+                        <% End If %>
+                        <button class="btn btn-sm btn-text" onclick="editAddress(<%= rsAddresses("AddressID") %>)"><% If FEATURE_I18N Then %><%= T("user_addresses_edit", Empty) %><% Else %>编辑<% End If %></button>
+                        <button class="btn btn-sm btn-text text-danger" onclick="deleteAddress(<%= rsAddresses("AddressID") %>)"><% If FEATURE_I18N Then %><%= T("user_addresses_delete", Empty) %><% Else %>删除<% End If %></button>
                         </div>
                     </div>
                     <%
@@ -194,7 +190,7 @@ userId = Session("UserID")
                     %>
                     <div class="address-empty">
                         <i class="fas fa-map-marker-alt"></i>
-                        <h3><% If FEATURE_I18N Then Response.Write T("user_addresses_empty", Empty) Else %>暂无收货地址<% End If %></h3>
+                        <h3><% If FEATURE_I18N Then %><%= T("user_addresses_empty", Empty) %><% Else %>暂无收货地址<% End If %></h3>
                         <p>请添加收货地址，方便商品配送</p>
                         <button class="btn btn-primary" onclick="showAddressForm()">立即添加</button>
                     </div>
@@ -209,7 +205,7 @@ userId = Session("UserID")
 <div class="modal" id="addressModal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 id="modalTitle"><% If FEATURE_I18N Then Response.Write T("checkout_address_save", Empty) Else %>新增收货地址<% End If %></h3>
+            <h3 id="modalTitle"><% If FEATURE_I18N Then %><%= T("checkout_address_save", Empty) %><% Else %>新增收货地址<% End If %></h3>
             <span class="close" onclick="closeAddressForm()">&times;</span>
         </div>
         <div class="modal-body">
@@ -219,19 +215,19 @@ userId = Session("UserID")
                             <input type="hidden" id="formAddressId" name="addressId" value="">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="consignee"><% If FEATURE_I18N Then Response.Write T("checkout_address_consignee", Empty) Else %>收货人姓名<% End If %> *</label>
+                        <label for="consignee"><% If FEATURE_I18N Then %><%= T("checkout_address_consignee", Empty) %><% Else %>收货人姓名<% End If %> *</label>
                         <input type="text" id="consignee" name="consignee" required>
                     </div>
                     <div class="form-group">
-                        <label for="phone"><% If FEATURE_I18N Then Response.Write T("checkout_address_phone", Empty) Else %>联系电话<% End If %> *</label>
+                        <label for="phone"><% If FEATURE_I18N Then %><%= T("checkout_address_phone", Empty) %><% Else %>联系电话<% End If %> *</label>
                         <input type="tel" id="phone" name="phone" required>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="province"><% If FEATURE_I18N Then Response.Write T("checkout_address_province", Empty) Else %>所在地区<% End If %> *</label>
+                    <label for="province"><% If FEATURE_I18N Then %><%= T("checkout_address_province", Empty) %><% Else %>所在地区<% End If %> *</label>
                     <select id="province" name="province" required onchange="updateCities()">
-                        <option value=""><% If FEATURE_I18N Then Response.Write T("checkout_address_province_placeholder", Empty) Else %>请选择省份<% End If %></option>
+                        <option value=""><% If FEATURE_I18N Then %><%= T("checkout_address_province_placeholder", Empty) %><% Else %>请选择省份<% End If %></option>
                         <option value="北京市">北京市</option>
                         <option value="上海市">上海市</option>
                         <option value="天津市">天津市</option>
@@ -268,28 +264,28 @@ userId = Session("UserID")
                         <option value="澳门特别行政区">澳门特别行政区</option>
                     </select>
                     <select id="city" name="city" required onchange="updateDistricts()">
-                        <option value=""><% If FEATURE_I18N Then Response.Write T("checkout_address_city_placeholder", Empty) Else %>请选择城市<% End If %></option>
+                        <option value=""><% If FEATURE_I18N Then %><%= T("checkout_address_city_placeholder", Empty) %><% Else %>请选择城市<% End If %></option>
                     </select>
                     <select id="district" name="district" required>
-                        <option value=""><% If FEATURE_I18N Then Response.Write T("checkout_address_district_placeholder", Empty) Else %>请选择区县<% End If %></option>
+                        <option value=""><% If FEATURE_I18N Then %><%= T("checkout_address_district_placeholder", Empty) %><% Else %>请选择区县<% End If %></option>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="address"><% If FEATURE_I18N Then Response.Write T("checkout_address_detail", Empty) Else %>详细地址<% End If %> *</label>
-                    <input type="text" id="address" name="address" placeholder="<% If FEATURE_I18N Then Response.Write T("checkout_address_detail_placeholder", Empty) Else %>请输入详细地址，如街道、门牌号等<% End If %>" required>
+                    <label for="address"><% If FEATURE_I18N Then %><%= T("checkout_address_detail", Empty) %><% Else %>详细地址<% End If %> *</label>
+                    <input type="text" id="address" name="address" placeholder="<% If FEATURE_I18N Then %><%= T("checkout_address_detail_placeholder", Empty) %><% Else %>请输入详细地址，如街道、门牌号等<% End If %>" required>
                 </div>
                 
                 <div class="form-group">
                     <label class="checkbox-label">
                         <input type="checkbox" id="isDefault" name="isDefault" value="1">
-                        <% If FEATURE_I18N Then Response.Write T("checkout_address_set_default", Empty) Else %>设为默认地址<% End If %>
+                        <% If FEATURE_I18N Then %><%= T("checkout_address_set_default", Empty) %><% Else %>设为默认地址<% End If %>
                     </label>
                 </div>
                 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("checkout_address_save", Empty) Else %>保存地址<% End If %></button>
-                    <button type="button" class="btn btn-text" onclick="closeAddressForm()"><% If FEATURE_I18N Then Response.Write T("checkout_address_cancel", Empty) Else %>取消<% End If %></button>
+                    <button type="submit" class="btn btn-primary"><% If FEATURE_I18N Then %><%= T("checkout_address_save", Empty) %><% Else %>保存地址<% End If %></button>
+                    <button type="button" class="btn btn-text" onclick="closeAddressForm()"><% If FEATURE_I18N Then %><%= T("checkout_address_cancel", Empty) %><% Else %>取消<% End If %></button>
                 </div>
             </form>
         </div>
@@ -361,7 +357,7 @@ function updateDistricts() {
 }
 
 function showAddressForm() {
-    document.getElementById('modalTitle').textContent = '<% If FEATURE_I18N Then Response.Write T("checkout_address_save", Empty) Else %>新增收货地址<% End If %>';
+    document.getElementById('modalTitle').textContent = '<% If FEATURE_I18N Then %><%= T("checkout_address_save", Empty) %><% Else %>新增收货地址<% End If %>';
     document.getElementById('addressForm').reset();
     document.getElementById('formAction').value = 'add';
     document.getElementById('formAddressId').value = '';
@@ -370,7 +366,7 @@ function showAddressForm() {
 }
 
 function editAddress(addressId) {
-    document.getElementById('modalTitle').textContent = '<% If FEATURE_I18N Then Response.Write T("user_addresses_edit", Empty) Else %>编辑收货地址<% End If %>';
+    document.getElementById('modalTitle').textContent = '<% If FEATURE_I18N Then %><%= T("user_addresses_edit", Empty) %><% Else %>编辑收货地址<% End If %>';
     document.getElementById('formAction').value = 'edit';
     document.getElementById('formAddressId').value = addressId;
     document.getElementById('addressModal').classList.add('show');
@@ -383,7 +379,7 @@ function closeAddressForm() {
 }
 
 function deleteAddress(addressId) {
-    if (confirm('<% If FEATURE_I18N Then Response.Write T("user_address_delete_confirm", Empty) Else %>确定要删除这个地址吗？<% End If %>')) {
+    if (confirm('<% If FEATURE_I18N Then %><%= T("user_address_delete_confirm", Empty) %><% Else %>确定要删除这个地址吗？<% End If %>')) {
         // 创建一个隐藏表单来提交删除请求
         var form = document.createElement('form');
         form.method = 'POST';

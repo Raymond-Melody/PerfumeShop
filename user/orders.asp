@@ -4,7 +4,6 @@ Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
 %>
 <!--#include file="../includes/config.asp"-->
-<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/payment_config.asp"-->
 <%
@@ -227,11 +226,11 @@ Set rsOrders = ExecuteQuery(finalSql)
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
+        <a href="/index.asp"><% If FEATURE_I18N Then %><%= T("breadcrumb_home", Empty) %><% Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <a href="/user/index.asp"><% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
+        <a href="/user/index.asp"><% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
         <span class="separator">/</span>
-        <span><% If FEATURE_I18N Then Response.Write T("user_orders_title", Empty) Else %>我的订单<% End If %></span>
+        <span><% If FEATURE_I18N Then %><%= T("user_orders_title", Empty) %><% Else %>我的订单<% End If %></span>
     </div>
 </div>
 
@@ -245,86 +244,86 @@ Set rsOrders = ExecuteQuery(finalSql)
             </div>
             
             <nav class="user-nav">
-                <a href="/user/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
-                <a href="/user/orders.asp" class="active"><i class="fas fa-list"></i> <% If FEATURE_I18N Then Response.Write T("user_orders_title", Empty) Else %>我的订单<% End If %></a>
-                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_settings", Empty) Else %>账户设置<% End If %></a>
-                <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_addresses", Empty) Else %>收货地址<% End If %></a>
-                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_favorites", Empty) Else %>我的收藏<% End If %></a>
-                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_logout", Empty) Else %>退出登录<% End If %></a>
+                <a href="/user/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
+                <a href="/user/orders.asp" class="active"><i class="fas fa-list"></i> <% If FEATURE_I18N Then %><%= T("user_orders_title", Empty) %><% Else %>我的订单<% End If %></a>
+                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then %><%= T("user_nav_settings", Empty) %><% Else %>账户设置<% End If %></a>
+                <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_addresses", Empty) %><% Else %>收货地址<% End If %></a>
+                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("user_nav_favorites", Empty) %><% Else %>我的收藏<% End If %></a>
+                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_logout", Empty) %><% Else %>退出登录<% End If %></a>
             </nav>
         </aside>
         
         <!-- 主内容 -->
         <div class="user-main">
             <div class="user-card">
-                <h2 class="card-title"><i class="fas fa-list"></i> <% If FEATURE_I18N Then Response.Write T("user_orders_title", Empty) Else %>我的订单<% End If %></h2>
+                <h2 class="card-title"><i class="fas fa-list"></i> <% If FEATURE_I18N Then %><%= T("user_orders_title", Empty) %><% Else %>我的订单<% End If %></h2>
                 
                 <!-- 搜索和筛选工具栏 -->
                 <div class="search-filters">
                     <!-- 搜索框 -->
                     <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="<% If FEATURE_I18N Then Response.Write T("user_orders_search_placeholder", Empty) Else %>搜索订单号、商品名称、收货人...<% End If %>" value="<%= HTMLEncode(Request.QueryString("search")) %>" />
-                        <button id="searchBtn" class="btn btn-sm"><% If FEATURE_I18N Then Response.Write T("user_orders_search_btn", Empty) Else %>搜索<% End If %></button>
+                        <input type="text" id="searchInput" placeholder="<% If FEATURE_I18N Then %><%= T("user_orders_search_placeholder", Empty) %><% Else %>搜索订单号、商品名称、收货人...<% End If %>" value="<%= HTMLEncode(Request.QueryString("search")) %>" />
+                        <button id="searchBtn" class="btn btn-sm"><% If FEATURE_I18N Then %><%= T("user_orders_search_btn", Empty) %><% Else %>搜索<% End If %></button>
                     </div>
                     
                     <!-- 时间范围筛选 -->
                     <div class="date-filter">
                         <select id="timeRange">
-                            <option value=""><% If FEATURE_I18N Then Response.Write T("user_orders_all_time", Empty) Else %>全部时间<% End If %></option>
-                            <option value="last_month" <% If Request.QueryString("time_range") = "last_month" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_last_month", Empty) Else %>最近一个月<% End If %></option>
-                            <option value="last_quarter" <% If Request.QueryString("time_range") = "last_quarter" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_last_quarter", Empty) Else %>最近三个月<% End If %></option>
-                            <option value="last_half_year" <% If Request.QueryString("time_range") = "last_half_year" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_last_half_year", Empty) Else %>最近半年<% End If %></option>
-                            <option value="last_year" <% If Request.QueryString("time_range") = "last_year" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_last_year", Empty) Else %>最近一年<% End If %></option>
+                            <option value=""><% If FEATURE_I18N Then %><%= T("user_orders_all_time", Empty) %><% Else %>全部时间<% End If %></option>
+                            <option value="last_month" <% If Request.QueryString("time_range") = "last_month" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_last_month", Empty) %><% Else %>最近一个月<% End If %></option>
+                            <option value="last_quarter" <% If Request.QueryString("time_range") = "last_quarter" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_last_quarter", Empty) %><% Else %>最近三个月<% End If %></option>
+                            <option value="last_half_year" <% If Request.QueryString("time_range") = "last_half_year" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_last_half_year", Empty) %><% Else %>最近半年<% End If %></option>
+                            <option value="last_year" <% If Request.QueryString("time_range") = "last_year" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_last_year", Empty) %><% Else %>最近一年<% End If %></option>
                         </select>
                         
                         <input type="date" id="startDate" value="<%= Server.HTMLEncode(Request.QueryString("start_date")) %>" />
-                        <span><% If FEATURE_I18N Then Response.Write T("user_orders_to", Empty) Else %>至<% End If %></span>
+                        <span><% If FEATURE_I18N Then %><%= T("user_orders_to", Empty) %><% Else %>至<% End If %></span>
                         <input type="date" id="endDate" value="<%= Server.HTMLEncode(Request.QueryString("end_date")) %>" />
-                        <button id="applyDateBtn" class="btn btn-sm"><% If FEATURE_I18N Then Response.Write T("user_orders_apply", Empty) Else %>应用<% End If %></button>
+                        <button id="applyDateBtn" class="btn btn-sm"><% If FEATURE_I18N Then %><%= T("user_orders_apply", Empty) %><% Else %>应用<% End If %></button>
                     </div>
                     
                     <!-- 高级搜索按钮 -->
-                    <button id="advancedSearchToggle" class="btn btn-sm"><% If FEATURE_I18N Then Response.Write T("user_orders_advanced_search", Empty) Else %>高级搜索<% End If %></button>
+                    <button id="advancedSearchToggle" class="btn btn-sm"><% If FEATURE_I18N Then %><%= T("user_orders_advanced_search", Empty) %><% Else %>高级搜索<% End If %></button>
                 </div>
                 
                 <!-- 高级搜索面板 -->
                 <div id="advancedSearchPanel" class="advanced-search-panel" style="display:none;">
                     <div class="advanced-search-fields">
                         <div class="field-group">
-                            <label><% If FEATURE_I18N Then Response.Write T("user_orders_status_label", Empty) Else %>订单状态<% End If %>:</label>
+                            <label><% If FEATURE_I18N Then %><%= T("user_orders_status_label", Empty) %><% Else %>订单状态<% End If %>:</label>
                             <select name="status">
-                                <option value=""><% If FEATURE_I18N Then Response.Write T("user_orders_all_status", Empty) Else %>全部状态<% End If %></option>
-                                <option value="Pending" <% If Request.QueryString("status") = "Pending" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_status_pending", Empty) Else %>待支付<% End If %></option>
-                                <option value="Paid" <% If Request.QueryString("status") = "Paid" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_status_paid", Empty) Else %>已支付<% End If %></option>
-                                <option value="Failed" <% If Request.QueryString("status") = "Failed" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_status_failed", Empty) Else %>支付失败<% End If %></option>
-                                <option value="Refunded" <% If Request.QueryString("status") = "Refunded" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_status_refunded", Empty) Else %>已退款<% End If %></option>
+                                <option value=""><% If FEATURE_I18N Then %><%= T("user_orders_all_status", Empty) %><% Else %>全部状态<% End If %></option>
+                                <option value="Pending" <% If Request.QueryString("status") = "Pending" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_status_pending", Empty) %><% Else %>待支付<% End If %></option>
+                                <option value="Paid" <% If Request.QueryString("status") = "Paid" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_status_paid", Empty) %><% Else %>已支付<% End If %></option>
+                                <option value="Failed" <% If Request.QueryString("status") = "Failed" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_status_failed", Empty) %><% Else %>支付失败<% End If %></option>
+                                <option value="Refunded" <% If Request.QueryString("status") = "Refunded" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_status_refunded", Empty) %><% Else %>已退款<% End If %></option>
                             </select>
                         </div>
                         
                         <div class="field-group">
-                            <label><% If FEATURE_I18N Then Response.Write T("user_orders_payment_method_label", Empty) Else %>支付方式<% End If %>:</label>
+                            <label><% If FEATURE_I18N Then %><%= T("user_orders_payment_method_label", Empty) %><% Else %>支付方式<% End If %>:</label>
                             <select name="payment_method">
-                                <option value=""><% If FEATURE_I18N Then Response.Write T("user_orders_all_payment", Empty) Else %>全部方式<% End If %></option>
-                                <option value="1" <% If Request.QueryString("payment_method") = "1" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_pm_wechat", Empty) Else %>微信支付<% End If %></option>
-                                <option value="2" <% If Request.QueryString("payment_method") = "2" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_pm_alipay", Empty) Else %>支付宝<% End If %></option>
-                                <option value="3" <% If Request.QueryString("payment_method") = "3" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_pm_paypal", Empty) Else %>PayPal<% End If %></option>
-                                <option value="4" <% If Request.QueryString("payment_method") = "4" Then Response.Write "selected" %>><% If FEATURE_I18N Then Response.Write T("user_orders_pm_cod", Empty) Else %>货到付款<% End If %></option>
+                                <option value=""><% If FEATURE_I18N Then %><%= T("user_orders_all_payment", Empty) %><% Else %>全部方式<% End If %></option>
+                                <option value="1" <% If Request.QueryString("payment_method") = "1" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_pm_wechat", Empty) %><% Else %>微信支付<% End If %></option>
+                                <option value="2" <% If Request.QueryString("payment_method") = "2" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_pm_alipay", Empty) %><% Else %>支付宝<% End If %></option>
+                                <option value="3" <% If Request.QueryString("payment_method") = "3" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_pm_paypal", Empty) %><% Else %>PayPal<% End If %></option>
+                                <option value="4" <% If Request.QueryString("payment_method") = "4" Then Response.Write "selected" %>><% If FEATURE_I18N Then %><%= T("user_orders_pm_cod", Empty) %><% Else %>货到付款<% End If %></option>
                             </select>
                         </div>
                         
                         <div class="field-group">
-                            <button id="advancedSearchBtn" class="btn btn-sm"><% If FEATURE_I18N Then Response.Write T("user_orders_advanced_search", Empty) Else %>高级搜索<% End If %></button>
-                            <button id="clearFiltersBtn" class="btn btn-sm btn-secondary"><% If FEATURE_I18N Then Response.Write T("user_orders_clear_filter", Empty) Else %>清空筛选<% End If %></button>
+                            <button id="advancedSearchBtn" class="btn btn-sm"><% If FEATURE_I18N Then %><%= T("user_orders_advanced_search", Empty) %><% Else %>高级搜索<% End If %></button>
+                            <button id="clearFiltersBtn" class="btn btn-sm btn-secondary"><% If FEATURE_I18N Then %><%= T("user_orders_clear_filter", Empty) %><% Else %>清空筛选<% End If %></button>
                         </div>
                     </div>
                 </div>
                 
                 <!-- 订单筛选 -->
                 <div class="order-filters">
-                    <a href="/user/orders.asp?<% If Request.QueryString("search") <> "" Then Response.Write "search=" & Server.URLEncode(Request.QueryString("search")) & "&" End If %><% If Request.QueryString("time_range") <> "" Then Response.Write "time_range=" & Request.QueryString("time_range") & "&" End If %><% If Request.QueryString("start_date") <> "" Then Response.Write "start_date=" & Request.QueryString("start_date") & "&" End If %><% If Request.QueryString("end_date") <> "" Then Response.Write "end_date=" & Request.QueryString("end_date") & "&" End If %><% If Request.QueryString("payment_method") <> "" Then Response.Write "payment_method=" & Request.QueryString("payment_method") & "&" End If %><% If Request.QueryString("status") <> "" Then Response.Write "status=" & Request.QueryString("status") & "&" End If %>" class="<% If orderStatusFilter = "" Then Response.Write "active" End If %>"><% If FEATURE_I18N Then Response.Write T("user_orders_all_orders", Empty) Else %>全部订单<% End If %></a>
-                    <a href="/user/orders.asp?status=<%= PAYMENT_STATUS_PENDING %>&<% If Request.QueryString("search") <> "" Then Response.Write "search=" & Server.URLEncode(Request.QueryString("search")) & "&" End If %><% If Request.QueryString("time_range") <> "" Then Response.Write "time_range=" & Request.QueryString("time_range") & "&" End If %><% If Request.QueryString("start_date") <> "" Then Response.Write "start_date=" & Request.QueryString("start_date") & "&" End If %><% If Request.QueryString("end_date") <> "" Then Response.Write "end_date=" & Request.QueryString("end_date") & "&" End If %><% If Request.QueryString("payment_method") <> "" Then Response.Write "payment_method=" & Request.QueryString("payment_method") & "&" End If %>" class="<% If orderStatusFilter = PAYMENT_STATUS_PENDING Then Response.Write "active" End If %>"><% If FEATURE_I18N Then Response.Write T("user_orders_status_pending", Empty) Else %>待支付<% End If %></a>
-                    <a href="/user/orders.asp?status=<%= PAYMENT_STATUS_PAID %>&<% If Request.QueryString("search") <> "" Then Response.Write "search=" & Server.URLEncode(Request.QueryString("search")) & "&" End If %><% If Request.QueryString("time_range") <> "" Then Response.Write "time_range=" & Request.QueryString("time_range") & "&" End If %><% If Request.QueryString("start_date") <> "" Then Response.Write "start_date=" & Request.QueryString("start_date") & "&" End If %><% If Request.QueryString("end_date") <> "" Then Response.Write "end_date=" & Request.QueryString("end_date") & "&" End If %><% If Request.QueryString("payment_method") <> "" Then Response.Write "payment_method=" & Request.QueryString("payment_method") & "&" End If %>" class="<% If orderStatusFilter = PAYMENT_STATUS_PAID Then Response.Write "active" End If %>"><% If FEATURE_I18N Then Response.Write T("user_orders_status_paid", Empty) Else %>已支付<% End If %></a>
-                    <a href="/user/orders.asp?status=<%= PAYMENT_STATUS_FAILED %>&<% If Request.QueryString("search") <> "" Then Response.Write "search=" & Server.URLEncode(Request.QueryString("search")) & "&" End If %><% If Request.QueryString("time_range") <> "" Then Response.Write "time_range=" & Request.QueryString("time_range") & "&" End If %><% If Request.QueryString("start_date") <> "" Then Response.Write "start_date=" & Request.QueryString("start_date") & "&" End If %><% If Request.QueryString("end_date") <> "" Then Response.Write "end_date=" & Request.QueryString("end_date") & "&" End If %><% If Request.QueryString("payment_method") <> "" Then Response.Write "payment_method=" & Request.QueryString("payment_method") & "&" End If %>" class="<% If orderStatusFilter = PAYMENT_STATUS_FAILED Then Response.Write "active" End If %>"><% If FEATURE_I18N Then Response.Write T("user_orders_status_failed", Empty) Else %>支付失败<% End If %></a>
+                    <a href="/user/orders.asp?<% If Request.QueryString("search") <> "" Then Response.Write "search=" & Server.URLEncode(Request.QueryString("search")) & "&" End If %><% If Request.QueryString("time_range") <> "" Then Response.Write "time_range=" & Request.QueryString("time_range") & "&" End If %><% If Request.QueryString("start_date") <> "" Then Response.Write "start_date=" & Request.QueryString("start_date") & "&" End If %><% If Request.QueryString("end_date") <> "" Then Response.Write "end_date=" & Request.QueryString("end_date") & "&" End If %><% If Request.QueryString("payment_method") <> "" Then Response.Write "payment_method=" & Request.QueryString("payment_method") & "&" End If %><% If Request.QueryString("status") <> "" Then Response.Write "status=" & Request.QueryString("status") & "&" End If %>" class="<% If orderStatusFilter = "" Then Response.Write "active" End If %>"><% If FEATURE_I18N Then %><%= T("user_orders_all_orders", Empty) %><% Else %>全部订单<% End If %></a>
+                    <a href="/user/orders.asp?status=<%= PAYMENT_STATUS_PENDING %>&<% If Request.QueryString("search") <> "" Then Response.Write "search=" & Server.URLEncode(Request.QueryString("search")) & "&" End If %><% If Request.QueryString("time_range") <> "" Then Response.Write "time_range=" & Request.QueryString("time_range") & "&" End If %><% If Request.QueryString("start_date") <> "" Then Response.Write "start_date=" & Request.QueryString("start_date") & "&" End If %><% If Request.QueryString("end_date") <> "" Then Response.Write "end_date=" & Request.QueryString("end_date") & "&" End If %><% If Request.QueryString("payment_method") <> "" Then Response.Write "payment_method=" & Request.QueryString("payment_method") & "&" End If %>" class="<% If orderStatusFilter = PAYMENT_STATUS_PENDING Then Response.Write "active" End If %>"><% If FEATURE_I18N Then %><%= T("user_orders_status_pending", Empty) %><% Else %>待支付<% End If %></a>
+                    <a href="/user/orders.asp?status=<%= PAYMENT_STATUS_PAID %>&<% If Request.QueryString("search") <> "" Then Response.Write "search=" & Server.URLEncode(Request.QueryString("search")) & "&" End If %><% If Request.QueryString("time_range") <> "" Then Response.Write "time_range=" & Request.QueryString("time_range") & "&" End If %><% If Request.QueryString("start_date") <> "" Then Response.Write "start_date=" & Request.QueryString("start_date") & "&" End If %><% If Request.QueryString("end_date") <> "" Then Response.Write "end_date=" & Request.QueryString("end_date") & "&" End If %><% If Request.QueryString("payment_method") <> "" Then Response.Write "payment_method=" & Request.QueryString("payment_method") & "&" End If %>" class="<% If orderStatusFilter = PAYMENT_STATUS_PAID Then Response.Write "active" End If %>"><% If FEATURE_I18N Then %><%= T("user_orders_status_paid", Empty) %><% Else %>已支付<% End If %></a>
+                    <a href="/user/orders.asp?status=<%= PAYMENT_STATUS_FAILED %>&<% If Request.QueryString("search") <> "" Then Response.Write "search=" & Server.URLEncode(Request.QueryString("search")) & "&" End If %><% If Request.QueryString("time_range") <> "" Then Response.Write "time_range=" & Request.QueryString("time_range") & "&" End If %><% If Request.QueryString("start_date") <> "" Then Response.Write "start_date=" & Request.QueryString("start_date") & "&" End If %><% If Request.QueryString("end_date") <> "" Then Response.Write "end_date=" & Request.QueryString("end_date") & "&" End If %><% If Request.QueryString("payment_method") <> "" Then Response.Write "payment_method=" & Request.QueryString("payment_method") & "&" End If %>" class="<% If orderStatusFilter = PAYMENT_STATUS_FAILED Then Response.Write "active" End If %>"><% If FEATURE_I18N Then %><%= T("user_orders_status_failed", Empty) %><% Else %>支付失败<% End If %></a>
                 </div>
                 
                 <!-- 调试信息 -->
@@ -352,7 +351,7 @@ Set rsOrders = ExecuteQuery(finalSql)
                     %>
                     <div class="order-item">
                         <div class="order-header">
-                            <span class="order-no"><% If FEATURE_I18N Then Response.Write T("user_order_detail_order_no", Empty) Else %>订单号<% End If %>: <%= rsOrders("OrderNo") %></span>
+                            <span class="order-no"><% If FEATURE_I18N Then %><%= T("user_order_detail_order_no", Empty) %><% Else %>订单号<% End If %>: <%= rsOrders("OrderNo") %></span>
                             <span class="order-date"><%= rsOrders("CreatedAt") %></span>
                             <span class="order-status status-<%= rsOrders("Status") %>">
                                 <% Select Case rsOrders("Status")
@@ -373,11 +372,11 @@ Set rsOrders = ExecuteQuery(finalSql)
                         <div class="order-body">
                             <div class="order-summary">
                                 <div class="order-amount">
-                                    <span><% If FEATURE_I18N Then Response.Write T("user_orders_amount", Empty) Else %>金额<% End If %>:</span>
+                                    <span><% If FEATURE_I18N Then %><%= T("user_orders_amount", Empty) %><% Else %>金额<% End If %>:</span>
                                     <strong><%= FormatMoney(rsOrders("TotalAmount")) %></strong>
                                 </div>
                                 <div class="order-products">
-                                    <span><% If FEATURE_I18N Then Response.Write T("user_orders_products", Empty) Else %>商品<% End If %>:</span>
+                                    <span><% If FEATURE_I18N Then %><%= T("user_orders_products", Empty) %><% Else %>商品<% End If %>:</span>
                                     <span>
                                         <%
                                         ' 解析Notes字段获取商品信息
@@ -461,7 +460,7 @@ Set rsOrders = ExecuteQuery(finalSql)
                             </div>
                             
                             <div class="order-payment">
-                                <span><% If FEATURE_I18N Then Response.Write T("user_orders_payment_method", Empty) Else %>支付方式<% End If %>:</span>
+                                <span><% If FEATURE_I18N Then %><%= T("user_orders_payment_method", Empty) %><% Else %>支付方式<% End If %>:</span>
                                 <span>
                                     <%
                                     Dim pmValue
@@ -486,16 +485,16 @@ Set rsOrders = ExecuteQuery(finalSql)
                             </div>
                             
                             <div class="order-contact">
-                                <span><% If FEATURE_I18N Then Response.Write T("user_orders_consignee", Empty) Else %>收货人<% End If %>:</span>
+                                <span><% If FEATURE_I18N Then %><%= T("user_orders_consignee", Empty) %><% Else %>收货人<% End If %>:</span>
                                 <span><%= HTMLEncode(rsOrders("FullName")) %></span>
                             </div>
                         </div>
                         
                         <div class="order-actions">
                             <% If rsOrders("Status") = "Pending" Then %>
-                            <a href="/checkout.asp?order_id=<%= rsOrders("OrderID") %>" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("user_orders_pay_now", Empty) Else %>立即支付<% End If %></a>
+                            <a href="/checkout.asp?order_id=<%= rsOrders("OrderID") %>" class="btn btn-primary"><% If FEATURE_I18N Then %><%= T("user_orders_pay_now", Empty) %><% Else %>立即支付<% End If %></a>
                             <% End If %> 
-                            <a href="/user/order_detail.asp?order_id=<%= rsOrders("OrderID") %>" class="btn btn-outline"><% If FEATURE_I18N Then Response.Write T("user_orders_view_detail", Empty) Else %>查看详情<% End If %></a>
+                            <a href="/user/order_detail.asp?order_id=<%= rsOrders("OrderID") %>" class="btn btn-outline"><% If FEATURE_I18N Then %><%= T("user_orders_view_detail", Empty) %><% Else %>查看详情<% End If %></a>
                             
                             ' 评价状态显示
                             <% 
@@ -510,20 +509,20 @@ Set rsOrders = ExecuteQuery(finalSql)
                             If hasReviewId Then
                             %>
                             <span class="review-badge reviewed">
-                                <i class="fas fa-check-circle"></i> <% If FEATURE_I18N Then Response.Write T("user_orders_reviewed", Empty) Else %>已评价<% End If %>
+                                <i class="fas fa-check-circle"></i> <% If FEATURE_I18N Then %><%= T("user_orders_reviewed", Empty) %><% Else %>已评价<% End If %>
                             </span>
                             <%
                             ' 未评价且订单状态允许评价（Paid或Completed）
                             ElseIf orderStatusForReview = "Paid" Or orderStatusForReview = "Completed" Then
                             %>
                             <a href="/user/order_detail.asp?order_id=<%= rsOrders("OrderID") %>#review-section" class="btn btn-review">
-                                <i class="fas fa-star"></i> <% If FEATURE_I18N Then Response.Write T("user_orders_go_review", Empty) Else %>去评价<% End If %>
+                                <i class="fas fa-star"></i> <% If FEATURE_I18N Then %><%= T("user_orders_go_review", Empty) %><% Else %>去评价<% End If %>
                             </a>
                             <%
                             End If
                             %>
                             
-                            <a href="javascript:void(0)" onclick="deleteOrder(this.getAttribute('data-order-id'))" data-order-id="<%= rsOrders("OrderID") %>" class="btn btn-danger btn-sm"><% If FEATURE_I18N Then Response.Write T("user_orders_delete", Empty) Else %>删除<% End If %></a>
+                            <a href="javascript:void(0)" onclick="deleteOrder(this.getAttribute('data-order-id'))" data-order-id="<%= rsOrders("OrderID") %>" class="btn btn-danger btn-sm"><% If FEATURE_I18N Then %><%= T("user_orders_delete", Empty) %><% Else %>删除<% End If %></a>
                         </div>
                     </div>
                     <%
@@ -538,9 +537,9 @@ Set rsOrders = ExecuteQuery(finalSql)
                 %>
                 <div class="empty-orders">
                     <i class="fas fa-inbox"></i>
-                    <h3><% If FEATURE_I18N Then Response.Write T("user_orders_empty_title", Empty) Else %>暂无订单<% End If %></h3>
-                    <p><% If FEATURE_I18N Then Response.Write T("user_orders_empty_desc", Empty) Else %>您还没有任何订单记录<% End If %></p>
-                    <a href="/products.asp" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("user_orders_go_shopping", Empty) Else %>去购物<% End If %></a>
+                    <h3><% If FEATURE_I18N Then %><%= T("user_orders_empty_title", Empty) %><% Else %>暂无订单<% End If %></h3>
+                    <p><% If FEATURE_I18N Then %><%= T("user_orders_empty_desc", Empty) %><% Else %>您还没有任何订单记录<% End If %></p>
+                    <a href="/products.asp" class="btn btn-primary"><% If FEATURE_I18N Then %><%= T("user_orders_go_shopping", Empty) %><% Else %>去购物<% End If %></a>
                 </div>
                 <%
                     End If
@@ -652,7 +651,7 @@ $(document).ready(function() {
 
 // 删除订单函数
 function deleteOrder(orderId) {
-    if (confirm('<% If FEATURE_I18N Then Response.Write T("user_orders_delete_confirm", Empty) Else %>确定要删除这个订单吗？此操作不可撤销。<% End If %>')) {
+    if (confirm('<% If FEATURE_I18N Then %><%= T("user_orders_delete_confirm", Empty) %><% Else %>确定要删除这个订单吗？此操作不可撤销。<% End If %>')) {
         // 发送AJAX请求删除订单
         $.ajax({
             url: '/user/delete_order.asp',
@@ -665,14 +664,14 @@ function deleteOrder(orderId) {
             success: function(response) {
                 if (response.success) {
                     // 删除成功，刷新页面
-                    alert('<% If FEATURE_I18N Then Response.Write T("user_orders_delete_success", Empty) Else %>订单删除成功<% End If %>');
+                    alert('<% If FEATURE_I18N Then %><%= T("user_orders_delete_success", Empty) %><% Else %>订单删除成功<% End If %>');
                     location.reload();
                 } else {
-                    alert('<% If FEATURE_I18N Then Response.Write T("user_orders_delete_fail", Empty) Else %>删除失败<% End If %>：' + response.message);
+                    alert('<% If FEATURE_I18N Then %><%= T("user_orders_delete_fail", Empty) %><% Else %>删除失败<% End If %>：' + response.message);
                 }
             },
             error: function() {
-                alert('<% If FEATURE_I18N Then Response.Write T("user_orders_delete_error", Empty) Else %>删除请求失败，请稍后重试<% End If %>');
+                alert('<% If FEATURE_I18N Then %><%= T("user_orders_delete_error", Empty) %><% Else %>删除请求失败，请稍后重试<% End If %>');
             }
         });
     }

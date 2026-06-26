@@ -6,7 +6,7 @@
                 <div class="modal" id="addressModal">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h3 id="modalTitle"><% If FEATURE_I18N Then Response.Write T("checkout_new_address_btn", Empty) Else %>新增收货地址<% End If %></h3>
+                            <h3 id="modalTitle"><% If FEATURE_I18N Then %><%= T("checkout_new_address_btn", Empty) %><% Else %>新增收货地址<% End If %></h3>
                             <span class="close" onclick="closeAddressForm()">&times;</span>
                         </div>
                         <div class="modal-body">
@@ -18,19 +18,19 @@
                                 <input type="hidden" name="payment_method" value="" id="addressFormPaymentMethod">
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="consignee"><% If FEATURE_I18N Then Response.Write T("checkout_address_consignee", Empty) Else %>收货人姓名<% End If %> *</label>
+                                        <label for="consignee"><% If FEATURE_I18N Then %><%= T("checkout_address_consignee", Empty) %><% Else %>收货人姓名<% End If %> *</label>
                                         <input type="text" id="consignee" name="realName" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="phone"><% If FEATURE_I18N Then Response.Write T("checkout_address_phone", Empty) Else %>联系电话<% End If %> *</label>
+                                        <label for="phone"><% If FEATURE_I18N Then %><%= T("checkout_address_phone", Empty) %><% Else %>联系电话<% End If %> *</label>
                                         <input type="tel" id="phone" name="phone" required>
                                     </div>
                                 </div>
                                     
                                 <div class="form-group">
-                                    <label for="province"><% If FEATURE_I18N Then Response.Write T("checkout_address_region", Empty) Else %>所在地区<% End If %> *</label>
+                                    <label for="province"><% If FEATURE_I18N Then %><%= T("checkout_address_region", Empty) %><% Else %>所在地区<% End If %> *</label>
                                     <select id="province" name="province" required onchange="updateCities()">
-                                        <option value=""><% If FEATURE_I18N Then Response.Write T("checkout_address_province_placeholder", Empty) Else %>请选择省份<% End If %></option>
+                                        <option value=""><% If FEATURE_I18N Then %><%= T("checkout_address_province_placeholder", Empty) %><% Else %>请选择省份<% End If %></option>
                                         <option value="北京市">北京市</option>
                                         <option value="上海市">上海市</option>
                                         <option value="天津市">天津市</option>
@@ -67,28 +67,28 @@
                                         <option value="澳门特别行政区">澳门特别行政区</option>
                                     </select>
                                     <select id="city" name="city" required onchange="updateDistricts()">
-                                        <option value=""><% If FEATURE_I18N Then Response.Write T("checkout_address_city_placeholder", Empty) Else %>请选择城市<% End If %></option>
+                                        <option value=""><% If FEATURE_I18N Then %><%= T("checkout_address_city_placeholder", Empty) %><% Else %>请选择城市<% End If %></option>
                                     </select>
                                     <select id="district" name="district" required>
-                                        <option value=""><% If FEATURE_I18N Then Response.Write T("checkout_address_district_placeholder", Empty) Else %>请选择区县<% End If %></option>
+                                        <option value=""><% If FEATURE_I18N Then %><%= T("checkout_address_district_placeholder", Empty) %><% Else %>请选择区县<% End If %></option>
                                     </select>
                                 </div>
                                     
                                 <div class="form-group">
-                                    <label for="address"><% If FEATURE_I18N Then Response.Write T("checkout_address_detail", Empty) Else %>详细地址<% End If %> *</label>
-                                    <input type="text" id="address" name="address" placeholder="<% If FEATURE_I18N Then Response.Write T("checkout_address_detail_placeholder", Empty) Else %>请输入详细地址，如街道、门牌号等<% End If %>" required>
+                                    <label for="address"><% If FEATURE_I18N Then %><%= T("checkout_address_detail", Empty) %><% Else %>详细地址<% End If %> *</label>
+                                    <input type="text" id="address" name="address" placeholder="<% If FEATURE_I18N Then %><%= T("checkout_address_detail_placeholder", Empty) %><% Else %>请输入详细地址，如街道、门牌号等<% End If %>" required>
                                 </div>
                                     
                                 <div class="form-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="isDefault" name="isDefault" value="1">
-                                        <% If FEATURE_I18N Then Response.Write T("checkout_address_set_default", Empty) Else %>设为默认地址<% End If %>
+                                        <% If FEATURE_I18N Then %><%= T("checkout_address_set_default", Empty) %><% Else %>设为默认地址<% End If %>
                                     </label>
                                 </div>
                                     
                                 <div class="form-actions">
-                                    <button type="submit" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("checkout_address_save", Empty) Else %>保存地址<% End If %></button>
-                                    <button type="button" class="btn btn-text" onclick="closeAddressForm()"><% If FEATURE_I18N Then Response.Write T("checkout_address_cancel", Empty) Else %>取消<% End If %></button>
+                                    <button type="submit" class="btn btn-primary"><% If FEATURE_I18N Then %><%= T("checkout_address_save", Empty) %><% Else %>保存地址<% End If %></button>
+                                    <button type="button" class="btn btn-text" onclick="closeAddressForm()"><% If FEATURE_I18N Then %><%= T("checkout_address_cancel", Empty) %><% Else %>取消<% End If %></button>
                                 </div>
                             </form>
                         </div>

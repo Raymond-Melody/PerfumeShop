@@ -174,4 +174,5 @@ End If
             userAddress = userDict("Address") & ""
         End If
         Set userDict = Nothing
+    End If
 %>

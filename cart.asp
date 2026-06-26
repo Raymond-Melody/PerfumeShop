@@ -35,15 +35,15 @@ userId = Session("UserID")
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
+        <a href="/index.asp"><% If FEATURE_I18N Then %><%= T("breadcrumb_home", Empty) %><% Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <span><% If FEATURE_I18N Then Response.Write T("cart_breadcrumb", Empty) Else %>购物车<% End If %></span>
+        <span><% If FEATURE_I18N Then %><%= T("cart_breadcrumb", Empty) %><% Else %>购物车<% End If %></span>
     </div>
 </div>
 
 <div class="container">
     <div class="cart-page">
-        <h1 class="page-title"><i class="fas fa-shopping-cart"></i> <% If FEATURE_I18N Then Response.Write T("cart_title", Empty) Else %>我的购物车<% End If %></h1>
+        <h1 class="page-title"><i class="fas fa-shopping-cart"></i> <% If FEATURE_I18N Then %><%= T("cart_title", Empty) %><% Else %>我的购物车<% End If %></h1>
         
         <%
         Dim rsCart, cartCount, cartTotal, totalEngravingFee
@@ -84,13 +84,13 @@ userId = Session("UserID")
             <div class="cart-items">
                 <div class="cart-header-row">
                     <div class="col-checkbox">
-                        <input type="checkbox" id="selectAll" checked onchange="toggleAllSelection()"> <% If FEATURE_I18N Then Response.Write T("cart_select_all", Empty) Else %>全选<% End If %>
+                        <input type="checkbox" id="selectAll" checked onchange="toggleAllSelection()"> <% If FEATURE_I18N Then %><%= T("cart_select_all", Empty) %><% Else %>全选<% End If %>
                     </div>
-                    <span class="col-product"><% If FEATURE_I18N Then Response.Write T("cart_col_product", Empty) Else %>商品信息<% End If %></span>
-                    <span class="col-price"><% If FEATURE_I18N Then Response.Write T("cart_col_price", Empty) Else %>单价<% End If %></span>
-                    <span class="col-quantity"><% If FEATURE_I18N Then Response.Write T("cart_col_quantity", Empty) Else %>数量<% End If %></span>
-                    <span class="col-subtotal"><% If FEATURE_I18N Then Response.Write T("cart_col_subtotal", Empty) Else %>小计<% End If %></span>
-                    <span class="col-action"><% If FEATURE_I18N Then Response.Write T("cart_col_action", Empty) Else %>操作<% End If %></span>
+                    <span class="col-product"><% If FEATURE_I18N Then %><%= T("cart_col_product", Empty) %><% Else %>商品信息<% End If %></span>
+                    <span class="col-price"><% If FEATURE_I18N Then %><%= T("cart_col_price", Empty) %><% Else %>单价<% End If %></span>
+                    <span class="col-quantity"><% If FEATURE_I18N Then %><%= T("cart_col_quantity", Empty) %><% Else %>数量<% End If %></span>
+                    <span class="col-subtotal"><% If FEATURE_I18N Then %><%= T("cart_col_subtotal", Empty) %><% Else %>小计<% End If %></span>
+                    <span class="col-action"><% If FEATURE_I18N Then %><%= T("cart_col_action", Empty) %><% Else %>操作<% End If %></span>
                 </div>
                 
                 <%
@@ -162,22 +162,22 @@ userId = Session("UserID")
                                 End If
                                 %>
                                 <% If cartProductTypeLC = "custom" And topList <> "" Then %>
-                                <span><i class="fas fa-wind"></i> <% If FEATURE_I18N Then Response.Write T("cart_note_top", Empty) Else %>前调<% End If %>: <%= topList %></span>
+                                <span><i class="fas fa-wind"></i> <% If FEATURE_I18N Then %><%= T("cart_note_top", Empty) %><% Else %>前调<% End If %>: <%= topList %></span>
                                 <% End If %>
                                 <% If cartProductTypeLC = "custom" And midList <> "" Then %>
-                                <span><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("cart_note_mid", Empty) Else %>中调<% End If %>: <%= midList %></span>
+                                <span><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("cart_note_mid", Empty) %><% Else %>中调<% End If %>: <%= midList %></span>
                                 <% End If %>
                                 <% If cartProductTypeLC = "custom" And baseList <> "" Then %>
-                                <span><i class="fas fa-moon"></i> <% If FEATURE_I18N Then Response.Write T("cart_note_base", Empty) Else %>后调<% End If %>: <%= baseList %></span>
+                                <span><i class="fas fa-moon"></i> <% If FEATURE_I18N Then %><%= T("cart_note_base", Empty) %><% Else %>后调<% End If %>: <%= baseList %></span>
                                 <% End If %>
                                 <% If Not IsNull(rsCart("VolumeName")) Then %>
-                                <span><i class="fas fa-tint"></i> <% If FEATURE_I18N Then Response.Write T("cart_volume", Empty) Else %>容量<% End If %>: <%= rsCart("VolumeML") %>ml (<%= HTMLEncode(rsCart("VolumeName")) %>)</span>
+                                <span><i class="fas fa-tint"></i> <% If FEATURE_I18N Then %><%= T("cart_volume", Empty) %><% Else %>容量<% End If %>: <%= rsCart("VolumeML") %>ml (<%= HTMLEncode(rsCart("VolumeName")) %>)</span>
                                 <% End If %>
                                 <% If Not IsNull(rsCart("BottleName")) Then %>
-                                <span><i class="fas fa-wine-bottle"></i> <% If FEATURE_I18N Then Response.Write T("cart_bottle", Empty) Else %>瓶身<% End If %>: <%= HTMLEncode(rsCart("BottleName")) %></span>
+                                <span><i class="fas fa-wine-bottle"></i> <% If FEATURE_I18N Then %><%= T("cart_bottle", Empty) %><% Else %>瓶身<% End If %>: <%= HTMLEncode(rsCart("BottleName")) %></span>
                                 <% End If %>
                                 <% If Not IsNull(rsCart("CustomLabel")) And rsCart("CustomLabel") <> "" Then %>
-                                <span><i class="fas fa-pen-fancy"></i> <% If FEATURE_I18N Then Response.Write T("cart_label", Empty) Else %>刻字<% End If %>: <%= HTMLEncode(rsCart("CustomLabel")) %></span>
+                                <span><i class="fas fa-pen-fancy"></i> <% If FEATURE_I18N Then %><%= T("cart_label", Empty) %><% Else %>刻字<% End If %>: <%= HTMLEncode(rsCart("CustomLabel")) %></span>
                                 <% End If %>
                                 <% 
                                 ' 显示刻字费用（如果有刻字且产品有刻字费用）
@@ -189,7 +189,7 @@ userId = Session("UserID")
                                 On Error GoTo 0
                                 If Not IsNull(rsCart("CustomLabel")) And rsCart("CustomLabel") <> "" And itemEngravingPrice > 0 Then 
                                 %>
-                                <span style="color:#e91e63;"><i class="fas fa-tag"></i> <% If FEATURE_I18N Then Response.Write T("cart_label_fee", Empty) Else %>刻字费用<% End If %>: <%= FormatMoney(itemEngravingPrice) %></span>
+                                <span style="color:#e91e63;"><i class="fas fa-tag"></i> <% If FEATURE_I18N Then %><%= T("cart_label_fee", Empty) %><% Else %>刻字费用<% End If %>: <%= FormatMoney(itemEngravingPrice) %></span>
                                 <% End If %>
                             </div>
                         </div>
@@ -228,23 +228,23 @@ userId = Session("UserID")
             <!-- 购物车摘要 -->
             <div class="cart-summary">
                 <div class="summary-card">
-                    <h3><% If FEATURE_I18N Then Response.Write T("cart_summary_title", Empty) Else %>订单摘要<% End If %></h3>
+                    <h3><% If FEATURE_I18N Then %><%= T("cart_summary_title", Empty) %><% Else %>订单摘要<% End If %></h3>
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("cart_summary_count", Empty) Else %>商品数量<% End If %>:</span>
-                        <span id="selectedItemCount"><%= cartCount %> <% If FEATURE_I18N Then Response.Write T("cart_footer_items", Empty) Else %>件<% End If %></span>
+                        <span><% If FEATURE_I18N Then %><%= T("cart_summary_count", Empty) %><% Else %>商品数量<% End If %>:</span>
+                        <span id="selectedItemCount"><%= cartCount %> <% If FEATURE_I18N Then %><%= T("cart_footer_items", Empty) %><% Else %>件<% End If %></span>
                     </div>
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("cart_summary_amount", Empty) Else %>商品金额<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("cart_summary_amount", Empty) %><% Else %>商品金额<% End If %>:</span>
                         <span id="cartSubtotal"><%= FormatMoney(cartTotal) %></span>
                     </div>
                     <% If totalEngravingFee > 0 Then %>
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("cart_summary_engraving", Empty) Else %>刻字费用<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("cart_summary_engraving", Empty) %><% Else %>刻字费用<% End If %>:</span>
                         <span id="engravingFee"><%= FormatMoney(totalEngravingFee) %></span>
                     </div>
                     <% End If %>
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("cart_summary_shipping", Empty) Else %>运费<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("cart_summary_shipping", Empty) %><% Else %>运费<% End If %>:</span>
                         <span id="shippingFee"><%
                         Dim displayShippingFee
                         If cartTotal <= 0 Then
@@ -258,25 +258,25 @@ userId = Session("UserID")
                     </div>
                     <div class="shipping-tip">
                         <i class="fas fa-info-circle"></i>
-                        <span id="shippingTip"><% If FEATURE_I18N Then Response.Write T("cart_summary_shipping_tip", Array(FREE_SHIPPING_AMOUNT)) Else %>满<%= FREE_SHIPPING_AMOUNT %>元免运费<% End If %></span>
+                        <span id="shippingTip"><% If FEATURE_I18N Then %><%= T("cart_summary_shipping_tip", Array(FREE_SHIPPING_AMOUNT)) %><% Else %>满<%= FREE_SHIPPING_AMOUNT %>元免运费<% End If %></span>
                     </div>
                     <div class="summary-total">
-                        <span><% If FEATURE_I18N Then Response.Write T("cart_summary_total", Empty) Else %>应付总额<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("cart_summary_total", Empty) %><% Else %>应付总额<% End If %>:</span>
                         <span class="total-amount" id="cartTotal"><%= FormatMoney(grandTotal) %></span>
                     </div>
                     <a href="javascript:void(0)" onclick="goCheckout()" class="btn btn-primary btn-lg btn-block">
-                        <i class="fas fa-credit-card"></i> <% If FEATURE_I18N Then Response.Write T("cart_btn_checkout", Empty) Else %>去结算<% End If %>
+                        <i class="fas fa-credit-card"></i> <% If FEATURE_I18N Then %><%= T("cart_btn_checkout", Empty) %><% Else %>去结算<% End If %>
                     </a>
                     <a href="/products.asp" class="btn btn-outline btn-block">
-                        <i class="fas fa-arrow-left"></i> <% If FEATURE_I18N Then Response.Write T("cart_btn_continue", Empty) Else %>继续购物<% End If %>
+                        <i class="fas fa-arrow-left"></i> <% If FEATURE_I18N Then %><%= T("cart_btn_continue", Empty) %><% Else %>继续购物<% End If %>
                     </a>
                 </div>
                 
                 <div class="promo-code">
-                    <h4><% If FEATURE_I18N Then Response.Write T("cart_promo_title", Empty) Else %>优惠码<% End If %></h4>
+                    <h4><% If FEATURE_I18N Then %><%= T("cart_promo_title", Empty) %><% Else %>优惠码<% End If %></h4>
                     <div class="promo-input">
-                        <input type="text" id="promoCode" placeholder="<% If FEATURE_I18N Then Response.Write T("cart_promo_placeholder", Empty) Else %>输入优惠码<% End If %>">
-                        <button type="button" class="btn btn-sm" onclick="applyPromo()"><% If FEATURE_I18N Then Response.Write T("cart_promo_btn", Empty) Else %>应用<% End If %></button>
+                        <input type="text" id="promoCode" placeholder="<% If FEATURE_I18N Then %><%= T("cart_promo_placeholder", Empty) %><% Else %>输入优惠码<% End If %>">
+                        <button type="button" class="btn btn-sm" onclick="applyPromo()"><% If FEATURE_I18N Then %><%= T("cart_promo_btn", Empty) %><% Else %>应用<% End If %></button>
                     </div>
                 </div>
             </div>
@@ -285,15 +285,15 @@ userId = Session("UserID")
         <!-- 底部操作栏 -->
         <div class="cart-footer">
             <label class="select-all">
-                <input type="checkbox" id="selectAllBottom" checked onchange="toggleAllSelection()"> <% If FEATURE_I18N Then Response.Write T("cart_select_all", Empty) Else %>全选<% End If %>
+                <input type="checkbox" id="selectAllBottom" checked onchange="toggleAllSelection()"> <% If FEATURE_I18N Then %><%= T("cart_select_all", Empty) %><% Else %>全选<% End If %>
             </label>
             <button type="button" class="btn btn-text" onclick="clearCart()">
-                <i class="fas fa-trash"></i> <% If FEATURE_I18N Then Response.Write T("cart_clear", Empty) Else %>清空购物车<% End If %>
+                <i class="fas fa-trash"></i> <% If FEATURE_I18N Then %><%= T("cart_clear", Empty) %><% Else %>清空购物车<% End If %>
             </button>
             <div class="footer-summary">
-                <span><% If FEATURE_I18N Then Response.Write T("cart_footer_selected", Empty) Else %>已选<% End If %> <strong id="selectedCount"><%= cartCount %></strong> <% If FEATURE_I18N Then Response.Write T("cart_footer_items", Empty) Else %>件<% End If %></span>
-                <span><% If FEATURE_I18N Then Response.Write T("cart_footer_total", Empty) Else %>合计<% End If %>: <strong class="total" id="footerTotal"><%= FormatMoney(IIf(grandTotal >= FREE_SHIPPING_AMOUNT Or grandTotal <= 0, grandTotal, grandTotal + SHIPPING_FEE)) %></strong></span>
-<a href="javascript:void(0)" onclick="goCheckout()" class="btn btn-primary btn-lg"><% If FEATURE_I18N Then Response.Write T("cart_btn_checkout", Empty) Else %>去结算<% End If %></a>
+                <span><% If FEATURE_I18N Then %><%= T("cart_footer_selected", Empty) %><% Else %>已选<% End If %> <strong id="selectedCount"><%= cartCount %></strong> <% If FEATURE_I18N Then %><%= T("cart_footer_items", Empty) %><% Else %>件<% End If %></span>
+                <span><% If FEATURE_I18N Then %><%= T("cart_footer_total", Empty) %><% Else %>合计<% End If %>: <strong class="total" id="footerTotal"><%= FormatMoney(IIf(grandTotal >= FREE_SHIPPING_AMOUNT Or grandTotal <= 0, grandTotal, grandTotal + SHIPPING_FEE)) %></strong></span>
+<a href="javascript:void(0)" onclick="goCheckout()" class="btn btn-primary btn-lg"><% If FEATURE_I18N Then %><%= T("cart_btn_checkout", Empty) %><% Else %>去结算<% End If %></a>
             </div>
         </div>
         
@@ -302,9 +302,9 @@ userId = Session("UserID")
         %>
         <div class="cart-empty">
             <i class="fas fa-shopping-cart"></i>
-            <h2><% If FEATURE_I18N Then Response.Write T("cart_empty_title", Empty) Else %>购物车是空的<% End If %></h2>
-            <p><% If FEATURE_I18N Then Response.Write T("cart_empty_desc", Empty) Else %>快去挑选您喜欢的香水吧！<% End If %></p>
-            <a href="/products.asp" class="btn btn-primary btn-lg"><% If FEATURE_I18N Then Response.Write T("cart_empty_btn", Empty) Else %>开始选购<% End If %></a>
+            <h2><% If FEATURE_I18N Then %><%= T("cart_empty_title", Empty) %><% Else %>购物车是空的<% End If %></h2>
+            <p><% If FEATURE_I18N Then %><%= T("cart_empty_desc", Empty) %><% Else %>快去挑选您喜欢的香水吧！<% End If %></p>
+            <a href="/products.asp" class="btn btn-primary btn-lg"><% If FEATURE_I18N Then %><%= T("cart_empty_btn", Empty) %><% Else %>开始选购<% End If %></a>
         </div>
         <%
         End If
@@ -318,16 +318,16 @@ var FREE_SHIPPING_AMOUNT = <%=FREE_SHIPPING_AMOUNT%>;
 var SHIPPING_FEE = <%=SHIPPING_FEE%>;
 var TOTAL_ENGRAVING_FEE = <%=totalEngravingFee%>;
 // i18n JS strings
-var i18nConfirmRemove = '<% If FEATURE_I18N Then Response.Write T("cart_confirm_remove", Empty) Else %>确定要删除这件商品吗？<% End If %>';
-var i18nConfirmClear = '<% If FEATURE_I18N Then Response.Write T("cart_confirm_clear", Empty) Else %>确定要清空购物车吗？<% End If %>';
-var i18nPromoSoon = '<% If FEATURE_I18N Then Response.Write T("cart_promo_soon", Empty) Else %>优惠码功能即将上线！<% End If %>';
-var i18nAlertSelect = '<% If FEATURE_I18N Then Response.Write T("cart_alert_select", Empty) Else %>请至少选择一件商品进行结算<% End If %>';
-var i18nUpdateFailed = '<% If FEATURE_I18N Then Response.Write T("cart_alert_update_failed", Empty) Else %>更新失败<% End If %>';
-var i18nRemoveFailed = '<% If FEATURE_I18N Then Response.Write T("cart_alert_remove_failed", Empty) Else %>删除失败<% End If %>';
-var i18nClearFailed = '<% If FEATURE_I18N Then Response.Write T("cart_alert_clear_failed", Empty) Else %>操作失败<% End If %>';
-var i18nNetworkError = '<% If FEATURE_I18N Then Response.Write T("cart_alert_network", Empty) Else %>请求失败，请刷新页面重试<% End If %>';
-var i18nNoItems = '<% If FEATURE_I18N Then Response.Write T("cart_summary_no_items", Empty) Else %>暂无商品<% End If %>';
-var i18nFreeShipping = '<% If FEATURE_I18N Then Response.Write T("cart_summary_free_shipping", Empty) Else %>免运费<% End If %>';
+var i18nConfirmRemove = '<% If FEATURE_I18N Then %><%= T("cart_confirm_remove", Empty) %><% Else %>确定要删除这件商品吗？<% End If %>';
+var i18nConfirmClear = '<% If FEATURE_I18N Then %><%= T("cart_confirm_clear", Empty) %><% Else %>确定要清空购物车吗？<% End If %>';
+var i18nPromoSoon = '<% If FEATURE_I18N Then %><%= T("cart_promo_soon", Empty) %><% Else %>优惠码功能即将上线！<% End If %>';
+var i18nAlertSelect = '<% If FEATURE_I18N Then %><%= T("cart_alert_select", Empty) %><% Else %>请至少选择一件商品进行结算<% End If %>';
+var i18nUpdateFailed = '<% If FEATURE_I18N Then %><%= T("cart_alert_update_failed", Empty) %><% Else %>更新失败<% End If %>';
+var i18nRemoveFailed = '<% If FEATURE_I18N Then %><%= T("cart_alert_remove_failed", Empty) %><% Else %>删除失败<% End If %>';
+var i18nClearFailed = '<% If FEATURE_I18N Then %><%= T("cart_alert_clear_failed", Empty) %><% Else %>操作失败<% End If %>';
+var i18nNetworkError = '<% If FEATURE_I18N Then %><%= T("cart_alert_network", Empty) %><% Else %>请求失败，请刷新页面重试<% End If %>';
+var i18nNoItems = '<% If FEATURE_I18N Then %><%= T("cart_summary_no_items", Empty) %><% Else %>暂无商品<% End If %>';
+var i18nFreeShipping = '<% If FEATURE_I18N Then %><%= T("cart_summary_free_shipping", Empty) %><% Else %>免运费<% End If %>';
 
 function updateQuantity(cartId, delta) {
     $.ajax({

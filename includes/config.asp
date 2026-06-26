@@ -180,3 +180,4 @@ Function ConvertImagesToCDN(htmlContent)
     ConvertImagesToCDN = htmlContent
 End Function
 %>
+<!--#include file="i18n.asp"-->

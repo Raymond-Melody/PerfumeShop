@@ -1,6 +1,5 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <!--#include file="includes/config.asp"-->
-<!--#include file="includes/i18n.asp"-->
 <%
 ' ============================================
 ' V17.0 统一错误处理页面
@@ -106,7 +105,7 @@ End If
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><%= errTitle %> - <% If FEATURE_I18N Then Response.Write T("site_name", Empty) Else %>香氛定制<% End If %></title>
+<title><%= errTitle %> - <% If FEATURE_I18N Then %><%= T("site_name", Empty) %><% Else %>香氛定制<% End If %></title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
@@ -142,11 +141,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
     <div class="action-buttons">
         <a href="javascript:history.back()" class="btn btn-secondary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            <% If FEATURE_I18N Then Response.Write T("error_btn_back", Empty) Else %>返回上页<% End If %>
+            <% If FEATURE_I18N Then %><%= T("error_btn_back", Empty) %><% Else %>返回上页<% End If %>
         </a>
         <a href="/" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-            <% If FEATURE_I18N Then Response.Write T("error_btn_home", Empty) Else %>返回首页<% End If %>
+            <% If FEATURE_I18N Then %><%= T("error_btn_home", Empty) %><% Else %>返回首页<% End If %>
         </a>
     </div>
 </div>

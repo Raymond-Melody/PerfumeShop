@@ -7,7 +7,6 @@
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <!--#include file="../includes/email_utils.asp"-->
-<!--#include file="../includes/i18n.asp"-->
 <%
 Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
@@ -71,7 +70,7 @@ End If
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><% If FEATURE_I18N Then Response.Write T("admin_forgot_page_title", Empty) Else %>忘记密码 - 管理员登录<% End If %></title>
+    <title><% If FEATURE_I18N Then %><%= T("admin_forgot_page_title", Empty) %><% Else %>忘记密码 - 管理员登录<% End If %></title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
         .admin-login-container {
@@ -137,7 +136,7 @@ End If
 </head>
 <body>
     <div class="admin-login-container">
-        <h2><% If FEATURE_I18N Then Response.Write T("admin_forgot_heading", Empty) Else %>重置密码<% End If %></h2>
+        <h2><% If FEATURE_I18N Then %><%= T("admin_forgot_heading", Empty) %><% Else %>重置密码<% End If %></h2>
         
         <% If errorMessage <> "" Then %>
         <div class="error-message"><%= errorMessage %></div>
@@ -149,15 +148,15 @@ End If
         
         <form method="post">
             <div class="form-group">
-                <label for="username_or_email"><% If FEATURE_I18N Then Response.Write T("admin_forgot_label", Empty) Else %>用户名或邮箱地址<% End If %></label>
+                <label for="username_or_email"><% If FEATURE_I18N Then %><%= T("admin_forgot_label", Empty) %><% Else %>用户名或邮箱地址<% End If %></label>
                 <input type="text" id="username_or_email" name="username_or_email" value="<%= usernameOrEmail %>" required>
             </div>
             
-            <button type="submit" class="btn"><% If FEATURE_I18N Then Response.Write T("admin_forgot_btn", Empty) Else %>发送重置链接<% End If %></button>
+            <button type="submit" class="btn"><% If FEATURE_I18N Then %><%= T("admin_forgot_btn", Empty) %><% Else %>发送重置链接<% End If %></button>
         </form>
         
         <div class="back-to-login">
-            <a href="login.asp">&larr; <% If FEATURE_I18N Then Response.Write T("admin_forgot_back", Empty) Else %>返回登录页面<% End If %></a>
+            <a href="login.asp">&larr; <% If FEATURE_I18N Then %><%= T("admin_forgot_back", Empty) %><% Else %>返回登录页面<% End If %></a>
         </div>
     </div>
 </body>

@@ -30,17 +30,17 @@ Call EnsureCSRFToken()
 
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
+        <a href="/index.asp"><% If FEATURE_I18N Then %><%= T("breadcrumb_home", Empty) %><% Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <span><% If FEATURE_I18N Then Response.Write T("contact_breadcrumb", Empty) Else %>联系我们<% End If %></span>
+        <span><% If FEATURE_I18N Then %><%= T("contact_breadcrumb", Empty) %><% Else %>联系我们<% End If %></span>
     </div>
 </div>
 
 <div class="container">
     <div class="contact-page">
         <div class="contact-header">
-            <h1><% If FEATURE_I18N Then Response.Write T("contact_header_title", Empty) Else %>联系我们<% End If %></h1>
-            <p><% If FEATURE_I18N Then Response.Write T("contact_header_desc", Empty) Else %>有任何问题或建议，欢迎与我们联系<% End If %></p>
+            <h1><% If FEATURE_I18N Then %><%= T("contact_header_title", Empty) %><% Else %>联系我们<% End If %></h1>
+            <p><% If FEATURE_I18N Then %><%= T("contact_header_desc", Empty) %><% Else %>有任何问题或建议，欢迎与我们联系<% End If %></p>
         </div>
 
         <div class="contact-content">
@@ -48,33 +48,33 @@ Call EnsureCSRFToken()
             <div class="contact-info">
                 <div class="info-card">
                     <div class="info-icon"><i class="fas fa-phone"></i></div>
-                    <h3><% If FEATURE_I18N Then Response.Write T("contact_info_phone", Empty) Else %>客服热线<% End If %></h3>
+                    <h3><% If FEATURE_I18N Then %><%= T("contact_info_phone", Empty) %><% Else %>客服热线<% End If %></h3>
                     <p><%= SITE_PHONE %></p>
-                    <span><% If FEATURE_I18N Then Response.Write T("contact_info_hours", Empty) Else %>周一至周日 9:00-21:00<% End If %></span>
+                    <span><% If FEATURE_I18N Then %><%= T("contact_info_hours", Empty) %><% Else %>周一至周日 9:00-21:00<% End If %></span>
                 </div>
                 <div class="info-card">
                     <div class="info-icon"><i class="fas fa-envelope"></i></div>
-                    <h3><% If FEATURE_I18N Then Response.Write T("contact_info_email", Empty) Else %>电子邮箱<% End If %></h3>
+                    <h3><% If FEATURE_I18N Then %><%= T("contact_info_email", Empty) %><% Else %>电子邮箱<% End If %></h3>
                     <p><%= SITE_EMAIL %></p>
-                    <span><% If FEATURE_I18N Then Response.Write T("contact_info_email_hint", Empty) Else %>工作日24小时内回复<% End If %></span>
+                    <span><% If FEATURE_I18N Then %><%= T("contact_info_email_hint", Empty) %><% Else %>工作日24小时内回复<% End If %></span>
                 </div>
                 <div class="info-card">
                     <div class="info-icon"><i class="fab fa-weixin"></i></div>
-                    <h3><% If FEATURE_I18N Then Response.Write T("contact_info_wechat", Empty) Else %>官方微信<% End If %></h3>
+                    <h3><% If FEATURE_I18N Then %><%= T("contact_info_wechat", Empty) %><% Else %>官方微信<% End If %></h3>
                     <p>PerfumeCustom</p>
-                    <span><% If FEATURE_I18N Then Response.Write T("contact_info_wechat_hint", Empty) Else %>扫码关注获取优惠<% End If %></span>
+                    <span><% If FEATURE_I18N Then %><%= T("contact_info_wechat_hint", Empty) %><% Else %>扫码关注获取优惠<% End If %></span>
                 </div>
                 <div class="info-card">
                     <div class="info-icon"><i class="fas fa-map-marker-alt"></i></div>
-                    <h3><% If FEATURE_I18N Then Response.Write T("contact_info_address", Empty) Else %>公司地址<% End If %></h3>
-                    <p><% If FEATURE_I18N Then Response.Write T("contact_info_addr_text", Empty) Else %>上海市静安区南京西路<% End If %></p>
-                    <span><% If FEATURE_I18N Then Response.Write T("contact_info_addr_hint", Empty) Else %>香氛定制体验中心<% End If %></span>
+                    <h3><% If FEATURE_I18N Then %><%= T("contact_info_address", Empty) %><% Else %>公司地址<% End If %></h3>
+                    <p><% If FEATURE_I18N Then %><%= T("contact_info_addr_text", Empty) %><% Else %>上海市静安区南京西路<% End If %></p>
+                    <span><% If FEATURE_I18N Then %><%= T("contact_info_addr_hint", Empty) %><% Else %>香氛定制体验中心<% End If %></span>
                 </div>
             </div>
 
             <!-- 联系表单 -->
             <div class="contact-form-section">
-                <h2><% If FEATURE_I18N Then Response.Write T("contact_form_title", Empty) Else %>给我们留言<% End If %></h2>
+                <h2><% If FEATURE_I18N Then %><%= T("contact_form_title", Empty) %><% Else %>给我们留言<% End If %></h2>
                 
                 <% If successMsg <> "" Then %>
                 <div class="alert alert-success">
@@ -86,36 +86,36 @@ Call EnsureCSRFToken()
                     <%= GetCSRFTokenField() %>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="name"><% If FEATURE_I18N Then Response.Write T("contact_form_name", Empty) Else %>您的姓名 *<% End If %></label>
+                            <label for="name"><% If FEATURE_I18N Then %><%= T("contact_form_name", Empty) %><% Else %>您的姓名 *<% End If %></label>
                             <input type="text" id="name" name="name" required>
                         </div>
                         <div class="form-group">
-                            <label for="email"><% If FEATURE_I18N Then Response.Write T("contact_form_email", Empty) Else %>电子邮箱 *<% End If %></label>
+                            <label for="email"><% If FEATURE_I18N Then %><%= T("contact_form_email", Empty) %><% Else %>电子邮箱 *<% End If %></label>
                             <input type="email" id="email" name="email" required>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="phone"><% If FEATURE_I18N Then Response.Write T("contact_form_phone", Empty) Else %>联系电话<% End If %></label>
+                            <label for="phone"><% If FEATURE_I18N Then %><%= T("contact_form_phone", Empty) %><% Else %>联系电话<% End If %></label>
                             <input type="tel" id="phone" name="phone">
                         </div>
                         <div class="form-group">
-                            <label for="subject"><% If FEATURE_I18N Then Response.Write T("contact_form_subject", Empty) Else %>主题<% End If %></label>
+                            <label for="subject"><% If FEATURE_I18N Then %><%= T("contact_form_subject", Empty) %><% Else %>主题<% End If %></label>
                             <select id="subject" name="subject">
-                                <option value="咨询"><% If FEATURE_I18N Then Response.Write T("contact_form_subject_consult", Empty) Else %>产品咨询<% End If %></option>
-                                <option value="定制"><% If FEATURE_I18N Then Response.Write T("contact_form_subject_custom", Empty) Else %>定制服务<% End If %></option>
-                                <option value="售后"><% If FEATURE_I18N Then Response.Write T("contact_form_subject_after", Empty) Else %>售后服务<% End If %></option>
-                                <option value="合作"><% If FEATURE_I18N Then Response.Write T("contact_form_subject_biz", Empty) Else %>商务合作<% End If %></option>
-                                <option value="其他"><% If FEATURE_I18N Then Response.Write T("contact_form_subject_other", Empty) Else %>其他<% End If %></option>
+                                <option value="咨询"><% If FEATURE_I18N Then %><%= T("contact_form_subject_consult", Empty) %><% Else %>产品咨询<% End If %></option>
+                                <option value="定制"><% If FEATURE_I18N Then %><%= T("contact_form_subject_custom", Empty) %><% Else %>定制服务<% End If %></option>
+                                <option value="售后"><% If FEATURE_I18N Then %><%= T("contact_form_subject_after", Empty) %><% Else %>售后服务<% End If %></option>
+                                <option value="合作"><% If FEATURE_I18N Then %><%= T("contact_form_subject_biz", Empty) %><% Else %>商务合作<% End If %></option>
+                                <option value="其他"><% If FEATURE_I18N Then %><%= T("contact_form_subject_other", Empty) %><% Else %>其他<% End If %></option>
                             </select>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="message"><% If FEATURE_I18N Then Response.Write T("contact_form_message", Empty) Else %>留言内容 *<% End If %></label>
+                        <label for="message"><% If FEATURE_I18N Then %><%= T("contact_form_message", Empty) %><% Else %>留言内容 *<% End If %></label>
                         <textarea id="message" name="message" rows="5" required></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-paper-plane"></i> <% If FEATURE_I18N Then Response.Write T("contact_form_send", Empty) Else %>发送留言<% End If %>
+                        <i class="fas fa-paper-plane"></i> <% If FEATURE_I18N Then %><%= T("contact_form_send", Empty) %><% Else %>发送留言<% End If %>
                     </button>
                 </form>
             </div>

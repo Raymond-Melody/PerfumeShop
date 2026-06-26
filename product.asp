@@ -8,7 +8,6 @@ Response.ContentType = "text/html"
 <!--#include file="includes/product_type_utils.asp"-->
 <!--#include file="includes/recommendation_engine.asp"-->
 <!--#include file="includes/share_utils.asp"-->
-<!--#include file="includes/i18n.asp"-->
 <%
 Call OpenConnection()
 
@@ -118,9 +117,9 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
+        <a href="/index.asp"><% If FEATURE_I18N Then %><%= T("breadcrumb_home", Empty) %><% Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <a href="/products.asp"><% If FEATURE_I18N Then Response.Write T("product_breadcrumb_all", Empty) Else %>全部香水<% End If %></a>
+        <a href="/products.asp"><% If FEATURE_I18N Then %><%= T("product_breadcrumb_all", Empty) %><% Else %>全部香水<% End If %></a>
         <span class="separator">/</span>
         <a href="/products.asp?category=<%= Server.URLEncode(rsProduct("Category") & "") %>"><%= HTMLEncode(rsProduct("Category") & "") %></a>
         <span class="separator">/</span>
@@ -154,9 +153,9 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                 <span class="base-price" id="basePrice" data-price="<%= CDbl(rsProduct("BasePrice")) %>"><%= FormatMoney(rsProduct("BasePrice")) %></span>
                 <span class="price-note" id="priceNote">
                     <% If productType = "standard" Then %>
-                        <% If FEATURE_I18N Then Response.Write T("product_price_fixed", Empty) Else %>(固定价格)<% End If %>
+                        <% If FEATURE_I18N Then %><%= T("product_price_fixed", Empty) %><% Else %>(固定价格)<% End If %>
                     <% Else %>
-                        <% If FEATURE_I18N Then Response.Write T("product_price_from", Empty) Else %>起 (根据定制选项价格会有所变化)<% End If %>
+                        <% If FEATURE_I18N Then %><%= T("product_price_from", Empty) %><% Else %>起 (根据定制选项价格会有所变化)<% End If %>
                     <% End If %>
                 </span>
             </div>
@@ -173,7 +172,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                 <% If productType = "custom" Then %>
                 <!-- 选择前调 - 仅定制香水显示 -->
                 <div class="option-section">
-                    <h3><i class="fas fa-wind"></i> <% If FEATURE_I18N Then Response.Write T("product_option_top", Empty) Else %>前调<% End If %> <span class="option-tip"><% If FEATURE_I18N Then Response.Write T("product_option_top_tip", Array(minTopPercent)) Else %>香水的第一印象（最小 <%= minTopPercent %>%）<% End If %></span></h3>
+                    <h3><i class="fas fa-wind"></i> <% If FEATURE_I18N Then %><%= T("product_option_top", Empty) %><% Else %>前调<% End If %> <span class="option-tip"><% If FEATURE_I18N Then %><%= T("product_option_top_tip", Array(minTopPercent)) %><% Else %>香水的第一印象（最小 <%= minTopPercent %>%）<% End If %></span></h3>
                     <div class="option-grid" id="topNotes">
                         <%
                         Dim rsNotes
@@ -212,7 +211,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
 
                 <!-- 选择中调 -->
                 <div class="option-section">
-                    <h3><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("product_option_middle", Empty) Else %>中调<% End If %> <span class="option-tip"><% If FEATURE_I18N Then Response.Write T("product_option_middle_tip", Array(minMiddlePercent)) Else %>香水的核心灵魂（最小 <%= minMiddlePercent %>%）<% End If %></span></h3>
+                    <h3><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("product_option_middle", Empty) %><% Else %>中调<% End If %> <span class="option-tip"><% If FEATURE_I18N Then %><%= T("product_option_middle_tip", Array(minMiddlePercent)) %><% Else %>香水的核心灵魂（最小 <%= minMiddlePercent %>%）<% End If %></span></h3>
                     <div class="option-grid" id="middleNotes">
                         <%
                         Set rsNotes = ExecuteQuery("SELECT n.* FROM FragranceNotes n INNER JOIN ProductNotes pn ON n.NoteID = pn.NoteID WHERE pn.ProductID = " & CInt(productId) & " AND n.NoteType = '中调' AND n.IsActive <> 0")
@@ -250,7 +249,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
 
                 <!-- 选择后调 -->
                 <div class="option-section">
-                    <h3><i class="fas fa-moon"></i> <% If FEATURE_I18N Then Response.Write T("product_option_base", Empty) Else %>后调<% End If %> <span class="option-tip"><% If FEATURE_I18N Then Response.Write T("product_option_base_tip", Array(minBasePercent)) Else %>持久的余韵（最小 <%= minBasePercent %>%）<% End If %></span></h3>
+                    <h3><i class="fas fa-moon"></i> <% If FEATURE_I18N Then %><%= T("product_option_base", Empty) %><% Else %>后调<% End If %> <span class="option-tip"><% If FEATURE_I18N Then %><%= T("product_option_base_tip", Array(minBasePercent)) %><% Else %>持久的余韵（最小 <%= minBasePercent %>%）<% End If %></span></h3>
                     <div class="option-grid" id="baseNotes">
                         <%
                         Set rsNotes = ExecuteQuery("SELECT n.* FROM FragranceNotes n INNER JOIN ProductNotes pn ON n.NoteID = pn.NoteID WHERE pn.ProductID = " & CInt(productId) & " AND n.NoteType = '后调' AND n.IsActive <> 0")
@@ -290,30 +289,30 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                 <!-- 香调配比实时验证面板 - 仅Custom类型显示 -->
                 <% If productType = "custom" Then %>
                 <div class="option-section ratio-validation-panel" id="ratioValidationPanel">
-                    <h3><i class="fas fa-chart-pie"></i> <% If FEATURE_I18N Then Response.Write T("product_ratio_title", Empty) Else %>配比验证<% End If %></h3>
+                    <h3><i class="fas fa-chart-pie"></i> <% If FEATURE_I18N Then %><%= T("product_ratio_title", Empty) %><% Else %>配比验证<% End If %></h3>
                     <div class="ratio-status-list">
                         <div class="ratio-status-item" id="topStatus">
-                            <span class="status-label"><% If FEATURE_I18N Then Response.Write T("product_ratio_top", Empty) Else %>前调<% End If %>：</span>
+                            <span class="status-label"><% If FEATURE_I18N Then %><%= T("product_ratio_top", Empty) %><% Else %>前调<% End If %>：</span>
                             <span class="status-value" id="topCurrentPercent">0%</span>
-                            <span class="status-requirement"><% If FEATURE_I18N Then Response.Write T("product_ratio_min", Array(minTopPercent)) Else %>≥ 最小 <%= minTopPercent %>%<% End If %></span>
+                            <span class="status-requirement"><% If FEATURE_I18N Then %><%= T("product_ratio_min", Array(minTopPercent)) %><% Else %>≥ 最小 <%= minTopPercent %>%<% End If %></span>
                             <span class="status-icon" id="topStatusIcon"></span>
                         </div>
                         <div class="ratio-status-item" id="middleStatus">
-                            <span class="status-label"><% If FEATURE_I18N Then Response.Write T("product_ratio_middle", Empty) Else %>中调<% End If %>：</span>
+                            <span class="status-label"><% If FEATURE_I18N Then %><%= T("product_ratio_middle", Empty) %><% Else %>中调<% End If %>：</span>
                             <span class="status-value" id="middleCurrentPercent">0%</span>
-                            <span class="status-requirement"><% If FEATURE_I18N Then Response.Write T("product_ratio_min", Array(minMiddlePercent)) Else %>≥ 最小 <%= minMiddlePercent %>%<% End If %></span>
+                            <span class="status-requirement"><% If FEATURE_I18N Then %><%= T("product_ratio_min", Array(minMiddlePercent)) %><% Else %>≥ 最小 <%= minMiddlePercent %>%<% End If %></span>
                             <span class="status-icon" id="middleStatusIcon"></span>
                         </div>
                         <div class="ratio-status-item" id="baseStatus">
-                            <span class="status-label"><% If FEATURE_I18N Then Response.Write T("product_ratio_base", Empty) Else %>后调<% End If %>：</span>
+                            <span class="status-label"><% If FEATURE_I18N Then %><%= T("product_ratio_base", Empty) %><% Else %>后调<% End If %>：</span>
                             <span class="status-value" id="baseCurrentPercent">0%</span>
-                            <span class="status-requirement"><% If FEATURE_I18N Then Response.Write T("product_ratio_min", Array(minBasePercent)) Else %>≥ 最小 <%= minBasePercent %>%<% End If %></span>
+                            <span class="status-requirement"><% If FEATURE_I18N Then %><%= T("product_ratio_min", Array(minBasePercent)) %><% Else %>≥ 最小 <%= minBasePercent %>%<% End If %></span>
                             <span class="status-icon" id="baseStatusIcon"></span>
                         </div>
                         <div class="ratio-status-item total-status" id="totalStatus">
-                            <span class="status-label"><% If FEATURE_I18N Then Response.Write T("product_ratio_total", Empty) Else %>总计<% End If %>：</span>
+                            <span class="status-label"><% If FEATURE_I18N Then %><%= T("product_ratio_total", Empty) %><% Else %>总计<% End If %>：</span>
                             <span class="status-value" id="totalCurrentPercent">0%</span>
-                            <span class="status-requirement"><% If FEATURE_I18N Then Response.Write T("product_ratio_equal", Empty) Else %>= 100%<% End If %></span>
+                            <span class="status-requirement"><% If FEATURE_I18N Then %><%= T("product_ratio_equal", Empty) %><% Else %>= 100%<% End If %></span>
                             <span class="status-icon" id="totalStatusIcon"></span>
                         </div>
                     </div>
@@ -324,7 +323,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                                 
                 <!-- 选择容量 -->
                 <div class="option-section">
-                    <h3><i class="fas fa-tint"></i> <% If FEATURE_I18N Then Response.Write T("product_option_volume", Empty) Else %>容量规格<% End If %></h3>
+                    <h3><i class="fas fa-tint"></i> <% If FEATURE_I18N Then %><%= T("product_option_volume", Empty) %><% Else %>容量规格<% End If %></h3>
                     <div class="option-grid volume-grid" id="volumes">
                         <%
                         Dim rsVolumes, hasProductVolumes
@@ -404,7 +403,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                 <% If productType <> "standard" Then %>
                 <!-- 选择瓶子 -->
                 <div class="option-section">
-                    <h3><i class="fas fa-wine-bottle"></i> <% If FEATURE_I18N Then Response.Write T("product_option_bottle", Empty) Else %>瓶身款式<% End If %></h3>
+                    <h3><i class="fas fa-wine-bottle"></i> <% If FEATURE_I18N Then %><%= T("product_option_bottle", Empty) %><% Else %>瓶身款式<% End If %></h3>
                     <div class="option-grid bottle-grid" id="bottles">
                         <%
                         Dim rsBottles, bottleSql, hasProductBottles
@@ -470,20 +469,20 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                 <% If productEngravable Then %>
                 <!-- 个性化标签 -->
                 <div class="option-section">
-                    <h3><i class="fas fa-pen-fancy"></i> <% If FEATURE_I18N Then Response.Write T("product_option_label", Empty) Else %>专属标签<% End If %> <span class="option-tip"><% If FEATURE_I18N Then Response.Write T("product_option_label_optional", Empty) Else %>可选<% End If %></span></h3>
+                    <h3><i class="fas fa-pen-fancy"></i> <% If FEATURE_I18N Then %><%= T("product_option_label", Empty) %><% Else %>专属标签<% End If %> <span class="option-tip"><% If FEATURE_I18N Then %><%= T("product_option_label_optional", Empty) %><% Else %>可选<% End If %></span></h3>
                     <div class="checkbox-group" style="margin-bottom: 10px;">
                         <label style="display: flex; align-items: center; cursor: pointer;">
                             <input type="checkbox" id="engravingCheckbox" name="engravingEnabled" value="1" style="margin-right: 8px;" onchange="toggleEngravingInput()">
-                            <span><% If FEATURE_I18N Then Response.Write T("product_option_label_checkbox", Empty) Else %>添加瓶身刻字<% End If %></span>
+                            <span><% If FEATURE_I18N Then %><%= T("product_option_label_checkbox", Empty) %><% Else %>添加瓶身刻字<% End If %></span>
                         </label>
                     </div>
                     <div id="engravingInputWrapper" style="display: none;">
                         <div class="label-input">
-                            <input type="text" name="customLabel" id="customLabel" maxlength="20" placeholder="<% If FEATURE_I18N Then Response.Write T("product_option_label_placeholder", Empty) Else %>输入您想刻印的文字（最多20字）<% End If %>">
+                            <input type="text" name="customLabel" id="customLabel" maxlength="20" placeholder="<% If FEATURE_I18N Then %><%= T("product_option_label_placeholder", Empty) %><% Else %>输入您想刻印的文字（最多20字）<% End If %>">
                             <span class="char-count"><span id="charCount">0</span>/20</span>
                         </div>
                         <% If productEngravingPrice > 0 Then %>
-                        <small style="color:#888;"><% If FEATURE_I18N Then Response.Write T("product_option_label_fee", Empty) Else %>刻字附加费用<% End If %>: <%= FormatMoney(productEngravingPrice) %></small>
+                        <small style="color:#888;"><% If FEATURE_I18N Then %><%= T("product_option_label_fee", Empty) %><% Else %>刻字附加费用<% End If %>: <%= FormatMoney(productEngravingPrice) %></small>
                         <% End If %>
                     </div>
                     <% If productEngravingPrice > 0 Then %>
@@ -494,7 +493,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
 
                 <!-- 数量选择 -->
                 <div class="quantity-section">
-                    <label><% If FEATURE_I18N Then Response.Write T("product_quantity_label", Empty) Else %>数量<% End If %>:</label>
+                    <label><% If FEATURE_I18N Then %><%= T("product_quantity_label", Empty) %><% Else %>数量<% End If %>:</label>
                     <div class="quantity-input">
                         <button type="button" class="qty-btn minus" onclick="changeQty(-1)">-</button>
                         <input type="number" name="quantity" id="quantity" value="1" min="1" max="99" readonly>
@@ -507,7 +506,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                     <% If productType = "standard" Then %>
                     <!-- 品牌定香价格摘要 -->
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_fixed_spec", Empty) Else %>选择规格<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_fixed_spec", Empty) %><% Else %>选择规格<% End If %>:</span>
                         <span id="summaryBase"><%= FormatMoney(rsProduct("BasePrice")) %></span>
                     </div>
                     <% If CBool(productEngravable & "") And productEngravingPrice > 0 Then %>
@@ -519,31 +518,31 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                     <% ElseIf productType = "kol" Then %>
                     <!-- KOL商品价格摘要 -->
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_base_price", Empty) Else %>基础价格<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_base_price", Empty) %><% Else %>基础价格<% End If %>:</span>
                         <span id="summaryBase"><%= FormatMoney(rsProduct("BasePrice")) %></span>
                     </div>
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_bottle", Empty) Else %>瓶身附加<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_bottle", Empty) %><% Else %>瓶身附加<% End If %>:</span>
                         <span id="summaryBottle">¥0.00</span>
                     </div>
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_volume", Empty) Else %>容量系数<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_volume", Empty) %><% Else %>容量系数<% End If %>:</span>
                         <span id="summaryMultiplier">×1.0</span>
                     </div>
                     <% If CBool(productEngravable) And productEngravingPrice > 0 Then %>
                     <div class="summary-row" id="engravingSummaryRow" style="display:none;">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_engraving", Empty) Else %>刻字费用<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_engraving", Empty) %><% Else %>刻字费用<% End If %>:</span>
                         <span id="summaryEngraving"><%= FormatMoney(productEngravingPrice) %></span>
                     </div>
                     <% End If %>
                     <% Else %>
                     <!-- 定制香水价格摘要 -->
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_base_price", Empty) Else %>基础价格<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_base_price", Empty) %><% Else %>基础价格<% End If %>:</span>
                         <span id="summaryBase"><%= FormatMoney(rsProduct("BasePrice")) %></span>
                     </div>
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_notes", Empty) Else %>香调附加<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_notes", Empty) %><% Else %>香调附加<% End If %>:</span>
                         <span id="summaryNotes">¥0.00</span>
                     </div>
                     <div class="summary-row">
@@ -555,7 +554,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                         <span id="summaryMultiplier">×1.0</span>
                     </div>
                     <div class="summary-row">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_ratio", Empty) Else %>配比总和<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_ratio", Empty) %><% Else %>配比总和<% End If %>:</span>
                         <span id="totalPercentDisplay">0%</span>
                     </div>
                     <% If CBool(productEngravable) And productEngravingPrice > 0 Then %>
@@ -566,7 +565,7 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                     <% End If %>
                     <% End If %>
                     <div class="summary-total">
-                        <span><% If FEATURE_I18N Then Response.Write T("product_summary_total", Empty) Else %>合计<% End If %>:</span>
+                        <span><% If FEATURE_I18N Then %><%= T("product_summary_total", Empty) %><% Else %>合计<% End If %>:</span>
                         <span class="total-price" id="totalPrice"><%= FormatMoney(rsProduct("BasePrice")) %></span>
                     </div>
                 </div>
@@ -574,13 +573,13 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
                 <!-- 操作按钮 -->
                 <div class="action-buttons">
                     <button type="submit" class="btn btn-primary btn-lg btn-block" id="btnAddToCart">
-                        <i class="fas fa-shopping-cart"></i> <% If FEATURE_I18N Then Response.Write T("product_btn_cart", Empty) Else %>加入购物车<% End If %>
+                        <i class="fas fa-shopping-cart"></i> <% If FEATURE_I18N Then %><%= T("product_btn_cart", Empty) %><% Else %>加入购物车<% End If %>
                     </button>
                     <button type="button" class="btn btn-secondary btn-lg btn-block" id="btnBuyNow">
-                        <i class="fas fa-bolt"></i> <% If FEATURE_I18N Then Response.Write T("product_btn_buy", Empty) Else %>立即购买<% End If %>
+                        <i class="fas fa-bolt"></i> <% If FEATURE_I18N Then %><%= T("product_btn_buy", Empty) %><% Else %>立即购买<% End If %>
                     </button>
                     <button type="button" class="btn btn-outline btn-lg btn-block" id="favoriteBtn" onclick="toggleFavorite()">
-                        <i class="fas fa-heart"></i> <span id="favoriteText"><% If FEATURE_I18N Then Response.Write T("product_btn_favorite", Empty) Else %>收藏<% End If %></span>
+                        <i class="fas fa-heart"></i> <span id="favoriteText"><% If FEATURE_I18N Then %><%= T("product_btn_favorite", Empty) %><% Else %>收藏<% End If %></span>
                     </button>
                 </div>
             </form>
@@ -590,49 +589,49 @@ amphtmlLink = "<link rel=""amphtml"" href=""" & ampProtocol & Request.ServerVari
     <!-- 产品详情标签页 -->
     <div class="product-tabs">
         <div class="tabs-header">
-            <button class="tab-btn active" data-tab="details"><% If FEATURE_I18N Then Response.Write T("product_tab_details", Empty) Else %>产品详情<% End If %></button>
-            <button class="tab-btn" data-tab="notes"><% If FEATURE_I18N Then Response.Write T("product_tab_notes", Empty) Else %>香调说明<% End If %></button>
-            <button class="tab-btn" data-tab="shipping"><% If FEATURE_I18N Then Response.Write T("product_tab_shipping", Empty) Else %>配送说明<% End If %></button>
+            <button class="tab-btn active" data-tab="details"><% If FEATURE_I18N Then %><%= T("product_tab_details", Empty) %><% Else %>产品详情<% End If %></button>
+            <button class="tab-btn" data-tab="notes"><% If FEATURE_I18N Then %><%= T("product_tab_notes", Empty) %><% Else %>香调说明<% End If %></button>
+            <button class="tab-btn" data-tab="shipping"><% If FEATURE_I18N Then %><%= T("product_tab_shipping", Empty) %><% Else %>配送说明<% End If %></button>
         </div>
         <div class="tabs-content">
             <div class="tab-pane active" id="details">
-                <h3><% If FEATURE_I18N Then Response.Write T("product_details_title", Empty) Else %>产品介绍<% End If %></h3>
+                <h3><% If FEATURE_I18N Then %><%= T("product_details_title", Empty) %><% Else %>产品介绍<% End If %></h3>
                 <p><%= HTMLEncode(rsProduct("Description")) %></p>
-                <h4><% If FEATURE_I18N Then Response.Write T("product_details_usage", Empty) Else %>使用建议<% End If %></h4>
+                <h4><% If FEATURE_I18N Then %><%= T("product_details_usage", Empty) %><% Else %>使用建议<% End If %></h4>
                 <ul>
-                    <li><% If FEATURE_I18N Then Response.Write T("product_details_usage_1", Empty) Else %>喷洒于手腕、颈部、耳后等脉搏点<% End If %></li>
-                    <li><% If FEATURE_I18N Then Response.Write T("product_details_usage_2", Empty) Else %>距离皮肤15-20厘米喷洒<% End If %></li>
-                    <li><% If FEATURE_I18N Then Response.Write T("product_details_usage_3", Empty) Else %>避免阳光直射，存放于阴凉处<% End If %></li>
-                    <li><% If FEATURE_I18N Then Response.Write T("product_details_usage_4", Empty) Else %>开封后建议12个月内使用完毕<% End If %></li>
+                    <li><% If FEATURE_I18N Then %><%= T("product_details_usage_1", Empty) %><% Else %>喷洒于手腕、颈部、耳后等脉搏点<% End If %></li>
+                    <li><% If FEATURE_I18N Then %><%= T("product_details_usage_2", Empty) %><% Else %>距离皮肤15-20厘米喷洒<% End If %></li>
+                    <li><% If FEATURE_I18N Then %><%= T("product_details_usage_3", Empty) %><% Else %>避免阳光直射，存放于阴凉处<% End If %></li>
+                    <li><% If FEATURE_I18N Then %><%= T("product_details_usage_4", Empty) %><% Else %>开封后建议12个月内使用完毕<% End If %></li>
                 </ul>
             </div>
             <div class="tab-pane" id="notes">
-                <h3><% If FEATURE_I18N Then Response.Write T("product_notes_title", Empty) Else %>香调层次<% End If %></h3>
+                <h3><% If FEATURE_I18N Then %><%= T("product_notes_title", Empty) %><% Else %>香调层次<% End If %></h3>
                 <div class="notes-pyramid">
                     <div class="pyramid-level top">
-                        <h4><i class="fas fa-wind"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_top_title", Empty) Else %>前调<% End If %></h4>
-                        <p><% If FEATURE_I18N Then Response.Write T("product_notes_top_desc", Empty) Else %>香水的第一印象，通常持续15-30分钟。包含较轻的香调，如柑橘、薰衣草等。<% End If %></p>
+                        <h4><i class="fas fa-wind"></i> <% If FEATURE_I18N Then %><%= T("product_notes_top_title", Empty) %><% Else %>前调<% End If %></h4>
+                        <p><% If FEATURE_I18N Then %><%= T("product_notes_top_desc", Empty) %><% Else %>香水的第一印象，通常持续15-30分钟。包含较轻的香调，如柑橘、薰衣草等。<% End If %></p>
                     </div>
                     <div class="pyramid-level middle">
-                        <h4><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_mid_title", Empty) Else %>中调<% End If %></h4>
-                        <p><% If FEATURE_I18N Then Response.Write T("product_notes_mid_desc", Empty) Else %>香水的核心，持续2-4小时。花香、果香等构成香水的主体。<% End If %></p>
+                        <h4><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("product_notes_mid_title", Empty) %><% Else %>中调<% End If %></h4>
+                        <p><% If FEATURE_I18N Then %><%= T("product_notes_mid_desc", Empty) %><% Else %>香水的核心，持续2-4小时。花香、果香等构成香水的主体。<% End If %></p>
                     </div>
                     <div class="pyramid-level base">
-                        <h4><i class="fas fa-moon"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_base_title", Empty) Else %>后调<% End If %></h4>
-                        <p><% If FEATURE_I18N Then Response.Write T("product_notes_base_desc", Empty) Else %>最持久的部分，可持续数小时。木质香、麝香等提供深度和持久力。<% End If %></p>
+                        <h4><i class="fas fa-moon"></i> <% If FEATURE_I18N Then %><%= T("product_notes_base_title", Empty) %><% Else %>后调<% End If %></h4>
+                        <p><% If FEATURE_I18N Then %><%= T("product_notes_base_desc", Empty) %><% Else %>最持久的部分，可持续数小时。木质香、麝香等提供深度和持久力。<% End If %></p>
                     </div>
                 </div>
             </div>
             <div class="tab-pane" id="shipping">
-                <h3><% If FEATURE_I18N Then Response.Write T("product_shipping_title", Empty) Else %>配送说明<% End If %></h3>
+                <h3><% If FEATURE_I18N Then %><%= T("product_shipping_title", Empty) %><% Else %>配送说明<% End If %></h3>
                 <ul>
-                    <li><% If FEATURE_I18N Then Response.Write T("product_shipping_1", Empty) Else %>订单满299元包邮，未满299元收取15元运费<% End If %></li>
-                    <li><% If FEATURE_I18N Then Response.Write T("product_shipping_2", Empty) Else %>定制产品需要3-5个工作日制作<% End If %></li>
-                    <li><% If FEATURE_I18N Then Response.Write T("product_shipping_3", Empty) Else %>发货后一般2-5天送达<% End If %></li>
-                    <li><% If FEATURE_I18N Then Response.Write T("product_shipping_4", Empty) Else %>提供顺丰快递配送，支持全国配送<% End If %></li>
+                    <li><% If FEATURE_I18N Then %><%= T("product_shipping_1", Empty) %><% Else %>订单满299元包邮，未满299元收取15元运费<% End If %></li>
+                    <li><% If FEATURE_I18N Then %><%= T("product_shipping_2", Empty) %><% Else %>定制产品需要3-5个工作日制作<% End If %></li>
+                    <li><% If FEATURE_I18N Then %><%= T("product_shipping_3", Empty) %><% Else %>发货后一般2-5天送达<% End If %></li>
+                    <li><% If FEATURE_I18N Then %><%= T("product_shipping_4", Empty) %><% Else %>提供顺丰快递配送，支持全国配送<% End If %></li>
                 </ul>
-                <h3><% If FEATURE_I18N Then Response.Write T("product_return_title", Empty) Else %>退换政策<% End If %></h3>
-                <p><% If FEATURE_I18N Then Response.Write T("product_return_desc", Empty) Else %>由于香水为个人定制产品，非质量问题不支持退换。如收到产品有质量问题，请在签收后7天内联系客服。<% End If %></p>
+                <h3><% If FEATURE_I18N Then %><%= T("product_return_title", Empty) %><% Else %>退换政策<% End If %></h3>
+                <p><% If FEATURE_I18N Then %><%= T("product_return_desc", Empty) %><% Else %>由于香水为个人定制产品，非质量问题不支持退换。如收到产品有质量问题，请在签收后7天内联系客服。<% End If %></p>
             </div>
         </div>
     </div>
@@ -657,28 +656,28 @@ Set rsProduct = Nothing
 
 <script>
 // i18n 预编译变量
-var i18nAlertMaxNotes = '<% If FEATURE_I18N Then Response.Write T("product_alert_max_notes", Empty) Else %>每类香调最多选择3种基香<% End If %>';
-var i18nAlertRatioTotal = '<% If FEATURE_I18N Then Response.Write T("product_alert_ratio_total", Empty) Else %>前、中、后调所选基香的百分比总和必须等于100%（当前：{0}%）<% End If %>';
-var i18nAlertRatioTop = '<% If FEATURE_I18N Then Response.Write T("product_alert_ratio_top", Empty) Else %>前调比例不能低于{0}%，当前为{1}%<% End If %>';
-var i18nAlertRatioMid = '<% If FEATURE_I18N Then Response.Write T("product_alert_ratio_mid", Empty) Else %>中调比例不能低于{0}%，当前为{1}%<% End If %>';
-var i18nAlertRatioBase = '<% If FEATURE_I18N Then Response.Write T("product_alert_ratio_base", Empty) Else %>后调比例不能低于{0}%，当前为{1}%<% End If %>';
-var i18nAlertNoId = '<% If FEATURE_I18N Then Response.Write T("product_alert_no_id", Empty) Else %>错误：未找到产品ID<% End If %>';
-var i18nAlertAddedFav = '<% If FEATURE_I18N Then Response.Write T("product_alert_added_fav", Empty) Else %>收藏成功！<% End If %>';
-var i18nAlertRemovedFav = '<% If FEATURE_I18N Then Response.Write T("product_alert_removed_fav", Empty) Else %>已取消收藏！<% End If %>';
-var i18nAlertOpFailed = '<% If FEATURE_I18N Then Response.Write T("product_alert_op_failed", Empty) Else %>操作失败<% End If %>';
-var i18nAlertNetworkErr = '<% If FEATURE_I18N Then Response.Write T("product_alert_network_err", Empty) Else %>网络错误: {0}<% End If %>';
-var i18nAlertApi404 = '<% If FEATURE_I18N Then Response.Write T("product_alert_api_404", Empty) Else %>错误: API接口未找到 (404)<% End If %>';
-var i18nAlertServerErr = '<% If FEATURE_I18N Then Response.Write T("product_alert_server_err", Empty) Else %>错误: 服务器内部错误 (500)<% End If %>';
-var i18nAlertCheckConsole = '<% If FEATURE_I18N Then Response.Write T("product_alert_check_console", Empty) Else %>请打开浏览器控制台查看详细错误信息<% End If %>';
-var i18nConfirmLoginFav = '<% If FEATURE_I18N Then Response.Write T("product_confirm_login_fav", Empty) Else %>您需要先登录才能收藏商品，是否前往登录？<% End If %>';
-var i18nRatioValidOk = '<% If FEATURE_I18N Then Response.Write T("product_ratio_valid_ok", Empty) Else %>✓ 配比设置正确，可以提交订单<% End If %>';
-var i18nRatioIssueTop = '<% If FEATURE_I18N Then Response.Write T("product_ratio_issue_top", Empty) Else %>前调比例不足（需≥{0}%）<% End If %>';
-var i18nRatioIssueMid = '<% If FEATURE_I18N Then Response.Write T("product_ratio_issue_mid", Empty) Else %>中调比例不足（需≥{0}%）<% End If %>';
-var i18nRatioIssueBase = '<% If FEATURE_I18N Then Response.Write T("product_ratio_issue_base", Empty) Else %>后调比例不足（需≥{0}%）<% End If %>';
-var i18nRatioIssueUnder = '<% If FEATURE_I18N Then Response.Write T("product_ratio_issue_under", Empty) Else %>总配比不足100%（还差{0}%）<% End If %>';
-var i18nRatioIssueOver = '<% If FEATURE_I18N Then Response.Write T("product_ratio_issue_over", Empty) Else %>总配比超过100%（超出{0}%）<% End If %>';
-var i18nBtnFavorite = '<% If FEATURE_I18N Then Response.Write T("product_btn_favorite", Empty) Else %>收藏<% End If %>';
-var i18nBtnFavorited = '<% If FEATURE_I18N Then Response.Write T("product_btn_favorited", Empty) Else %>已收藏<% End If %>';
+var i18nAlertMaxNotes = '<% If FEATURE_I18N Then %><%= T("product_alert_max_notes", Empty) %><% Else %>每类香调最多选择3种基香<% End If %>';
+var i18nAlertRatioTotal = '<% If FEATURE_I18N Then %><%= T("product_alert_ratio_total", Empty) %><% Else %>前、中、后调所选基香的百分比总和必须等于100%（当前：{0}%）<% End If %>';
+var i18nAlertRatioTop = '<% If FEATURE_I18N Then %><%= T("product_alert_ratio_top", Empty) %><% Else %>前调比例不能低于{0}%，当前为{1}%<% End If %>';
+var i18nAlertRatioMid = '<% If FEATURE_I18N Then %><%= T("product_alert_ratio_mid", Empty) %><% Else %>中调比例不能低于{0}%，当前为{1}%<% End If %>';
+var i18nAlertRatioBase = '<% If FEATURE_I18N Then %><%= T("product_alert_ratio_base", Empty) %><% Else %>后调比例不能低于{0}%，当前为{1}%<% End If %>';
+var i18nAlertNoId = '<% If FEATURE_I18N Then %><%= T("product_alert_no_id", Empty) %><% Else %>错误：未找到产品ID<% End If %>';
+var i18nAlertAddedFav = '<% If FEATURE_I18N Then %><%= T("product_alert_added_fav", Empty) %><% Else %>收藏成功！<% End If %>';
+var i18nAlertRemovedFav = '<% If FEATURE_I18N Then %><%= T("product_alert_removed_fav", Empty) %><% Else %>已取消收藏！<% End If %>';
+var i18nAlertOpFailed = '<% If FEATURE_I18N Then %><%= T("product_alert_op_failed", Empty) %><% Else %>操作失败<% End If %>';
+var i18nAlertNetworkErr = '<% If FEATURE_I18N Then %><%= T("product_alert_network_err", Empty) %><% Else %>网络错误: {0}<% End If %>';
+var i18nAlertApi404 = '<% If FEATURE_I18N Then %><%= T("product_alert_api_404", Empty) %><% Else %>错误: API接口未找到 (404)<% End If %>';
+var i18nAlertServerErr = '<% If FEATURE_I18N Then %><%= T("product_alert_server_err", Empty) %><% Else %>错误: 服务器内部错误 (500)<% End If %>';
+var i18nAlertCheckConsole = '<% If FEATURE_I18N Then %><%= T("product_alert_check_console", Empty) %><% Else %>请打开浏览器控制台查看详细错误信息<% End If %>';
+var i18nConfirmLoginFav = '<% If FEATURE_I18N Then %><%= T("product_confirm_login_fav", Empty) %><% Else %>您需要先登录才能收藏商品，是否前往登录？<% End If %>';
+var i18nRatioValidOk = '<% If FEATURE_I18N Then %><%= T("product_ratio_valid_ok", Empty) %><% Else %>✓ 配比设置正确，可以提交订单<% End If %>';
+var i18nRatioIssueTop = '<% If FEATURE_I18N Then %><%= T("product_ratio_issue_top", Empty) %><% Else %>前调比例不足（需≥{0}%）<% End If %>';
+var i18nRatioIssueMid = '<% If FEATURE_I18N Then %><%= T("product_ratio_issue_mid", Empty) %><% Else %>中调比例不足（需≥{0}%）<% End If %>';
+var i18nRatioIssueBase = '<% If FEATURE_I18N Then %><%= T("product_ratio_issue_base", Empty) %><% Else %>后调比例不足（需≥{0}%）<% End If %>';
+var i18nRatioIssueUnder = '<% If FEATURE_I18N Then %><%= T("product_ratio_issue_under", Empty) %><% Else %>总配比不足100%（还差{0}%）<% End If %>';
+var i18nRatioIssueOver = '<% If FEATURE_I18N Then %><%= T("product_ratio_issue_over", Empty) %><% Else %>总配比超过100%（超出{0}%）<% End If %>';
+var i18nBtnFavorite = '<% If FEATURE_I18N Then %><%= T("product_btn_favorite", Empty) %><% Else %>收藏<% End If %>';
+var i18nBtnFavorited = '<% If FEATURE_I18N Then %><%= T("product_btn_favorited", Empty) %><% Else %>已收藏<% End If %>';
 
 // 全局变量
 var basePrice = 0;
@@ -1204,8 +1203,8 @@ Set rsRelated = RE_GetRelatedProducts(productId, productType, 6)
 %>
 <div class="recommendation-section">
     <div class="container">
-        <h2 class="section-title"><i class="fas fa-magic"></i> <% If FEATURE_I18N Then Response.Write T("product_recommend_title", Empty) Else %>猜你喜欢<% End If %></h2>
-        <p class="section-desc"><% If FEATURE_I18N Then Response.Write T("product_recommend_desc", Empty) Else %>相似香氛推荐<% End If %></p>
+        <h2 class="section-title"><i class="fas fa-magic"></i> <% If FEATURE_I18N Then %><%= T("product_recommend_title", Empty) %><% Else %>猜你喜欢<% End If %></h2>
+        <p class="section-desc"><% If FEATURE_I18N Then %><%= T("product_recommend_desc", Empty) %><% Else %>相似香氛推荐<% End If %></p>
         <% Call RE_RenderRecommendations(rsRelated, "related-rec", True) %>
         <%
         If Not rsRelated Is Nothing Then
