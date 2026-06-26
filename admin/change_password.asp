@@ -7,6 +7,7 @@ Response.ContentType = "text/html"
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <%
 Call OpenConnection()
 
@@ -18,12 +19,12 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     
     ' 验证输入
     If newPassword <> confirmPassword Then
-        Response.Write "<script>alert('新密码与确认密码不匹配'); history.go(-1);</script>"
+        Response.Write "<script>alert('" & T("admin_chpwd_mismatch", Empty) & "'); history.go(-1);</script>"
         Response.End
     End If
     
     If Len(newPassword) < 6 Then
-        Response.Write "<script>alert('新密码长度至少为6位'); history.go(-1);</script>"
+        Response.Write "<script>alert('" & T("admin_chpwd_too_short", Empty) & "'); history.go(-1);</script>"
         Response.End
     End If
     
@@ -33,7 +34,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     
     Set rsAdmin = ExecuteQuery("SELECT PasswordHash FROM AdminUsers WHERE AdminID = " & adminId)
     If rsAdmin Is Nothing Or rsAdmin.EOF Then
-        Response.Write "<script>alert('管理员账户不存在'); history.go(-1);</script>"
+        Response.Write "<script>alert('" & T("admin_chpwd_account_not_found", Empty) & "'); history.go(-1);</script>"
         Response.End
     End If
     
@@ -44,7 +45,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     inputHash = GenerateSimpleHash(currentPassword)
     
     If inputHash <> currentHash Then
-        Response.Write "<script>alert('当前密码不正确'); history.go(-1);</script>"
+        Response.Write "<script>alert('" & T("admin_chpwd_wrong_current", Empty) & "'); history.go(-1);</script>"
         Response.End
     End If
     
@@ -56,9 +57,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     updateSql = "UPDATE AdminUsers SET PasswordHash = '" & newHash & "' WHERE AdminID = " & adminId
     
     If ExecuteNonQuery(updateSql) Then
-        Response.Write "<script>alert('密码修改成功'); location.href='settings.asp';</script>"
+        Response.Write "<script>alert('" & T("admin_chpwd_success", Empty) & "'); location.href='settings.asp';</script>"
     Else
-        Response.Write "<script>alert('密码修改失败'); history.go(-1);</script>"
+        Response.Write "<script>alert('" & T("admin_chpwd_failed", Empty) & "'); history.go(-1);</script>"
     End If
 End If
 

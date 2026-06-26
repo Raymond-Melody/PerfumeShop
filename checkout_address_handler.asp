@@ -10,7 +10,7 @@ Call EnsureCSRFToken()
 ' CSRF验证
 If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     If Not ValidateCSRFToken() Then
-        Response.Write "<script>alert('安全验证失败，请刷新页面重试'); history.back();</script>"
+        Response.Write "<script>alert('" & T("checkout_address_csrf_fail", Empty) & "'); history.back();</script>"
         Response.End
     End If
 End If
@@ -34,7 +34,7 @@ If Request.Form("action") = "add" Then
 
     ' 验证收货信息
     If consignee = "" Or phoneNum = "" Or provinceName = "" Or cityName = "" Or districtName = "" Or detailAddress = "" Then
-        Session("ErrorMessage") = "请填写完整的收货信息"
+        Session("ErrorMessage") = T("checkout_address_incomplete", Empty)
     Else
         ' V17: 如果设为默认地址，先取消其他默认地址
         If isDefaultAddr <> 0 Then
@@ -74,7 +74,7 @@ If Request.Form("action") = "add" Then
             Response.Redirect redirectUrl
             Response.End
         Else
-            Session("ErrorMessage") = "地址保存失败，请重试"
+            Session("ErrorMessage") = T("checkout_address_save_fail", Empty)
         End If
     End If
 End If

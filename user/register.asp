@@ -9,6 +9,7 @@ If Session("UserID") <> "" Then
 End If
 %>
 <!--#include file="../includes/config.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <!--#include file="../includes/member_utils.asp"-->
@@ -46,7 +47,7 @@ End If
 If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     ' CSRF验证
     If Not ValidateCSRFToken() Then
-        errorMsg = "安全验证失败，请刷新页面重试"
+        errorMsg = T("user_register_csrf_fail", Empty)
     Else
         ' V14: 重新验证Token（防止篡改）
         Dim postToken, postTokenValidation
@@ -61,11 +62,11 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                 postReferrerUserId = postTokenValidation("referrerUserId")
                 postTokenHash = postTokenValidation("tokenHash")
             Else
-                errorMsg = "推荐Token已失效: " & postTokenValidation("message")
+                errorMsg = T("user_register_token_expired", Empty) & ": " & postTokenValidation("message")
                 Set postTokenValidation = Nothing
             End If
         Else
-            errorMsg = "本平台采用会员推荐制，需要有效的推荐链接才能注册"
+            errorMsg = T("user_register_referral_required", Empty)
         End If
         
         If errorMsg = "" Then
@@ -94,25 +95,25 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             
             ' 验证
             If username = "" Or email = "" Or password = "" Then
-                errorMsg = "请填写所有必填项"
+                errorMsg = T("user_register_fill_all", Empty)
             ElseIf Len(username) < 3 Or Len(username) > 20 Then
-                errorMsg = "用户名长度应为3-20个字符"
+                errorMsg = T("user_register_username_len", Empty)
             ElseIf Len(password) < 6 Then
-                errorMsg = "密码长度至少6个字符"
+                errorMsg = T("user_register_pwd_len", Empty)
             ElseIf password <> confirmPwd Then
-                errorMsg = "两次输入的密码不一致"
+                errorMsg = T("user_register_pwd_mismatch", Empty)
             ElseIf InStr(email, "@") = 0 Then
-                errorMsg = "请输入有效的邮箱地址"
+                errorMsg = T("user_register_invalid_email", Empty)
             Else
                 ' 检查用户名是否已存在
                 Dim existCount
                 existCount = GetScalar("SELECT COUNT(*) FROM Users WHERE Username = '" & SafeSQL(username) & "'")
                 If existCount > 0 Then
-                    errorMsg = "用户名已被使用"
+                    errorMsg = T("user_register_username_taken", Empty)
                 Else
                     existCount = GetScalar("SELECT COUNT(*) FROM Users WHERE Email = '" & SafeSQL(email) & "'")
                     If existCount > 0 Then
-                        errorMsg = "邮箱已被注册"
+                        errorMsg = T("user_register_email_taken", Empty)
                     Else
                         ' V15: 使用安全的密码哈希存储
                         Dim sql, hashedPassword
@@ -140,12 +141,12 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                             ' V14: 记录成功注册（速率限制）
                             Call MU_RecordRegistrationAttempt(clientIP, deviceFingerprint, True, postTokenHash)
                             
-                            successMsg = "注册成功！请登录"
+                            successMsg = T("user_register_success", Empty)
                             Response.Redirect "/user/login.asp?msg=registered"
                         Else
                             ' 记录失败尝试
                             Call MU_RecordRegistrationAttempt(clientIP, deviceFingerprint, False, postTokenHash)
-                            errorMsg = "注册失败: " & Session("LastDBError")
+                            errorMsg = T("user_register_failed", Empty) & ": " & Session("LastDBError")
                         End If
                     End If
                 End If
@@ -174,20 +175,20 @@ Call EnsureCSRFToken()
             <% If hasValidToken Then %>
             <!-- V14: 有效Token，显示注册表单 -->
             <div class="auth-header">
-                <h1>会员推荐注册</h1>
+                <h1><% If FEATURE_I18N Then Response.Write T("user_register_title_referral", Empty) Else %>会员推荐注册<% End If %></h1>
                 <div style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border-radius:10px;padding:14px 18px;margin-top:12px;border:1px solid #c8e6c9;">
                     <div style="display:flex;align-items:center;gap:10px;">
                         <div style="width:40px;height:40px;background:#4CAF50;border-radius:50%;display:flex;align-items:center;justify-content:center;">
                             <i class="fas fa-user-check" style="color:#fff;font-size:18px;"></i>
                         </div>
                         <div>
-                            <div style="font-size:13px;color:#666;">推荐人</div>
+                            <div style="font-size:13px;color:#666;"><% If FEATURE_I18N Then Response.Write T("user_register_referrer_label", Empty) Else %>推荐人<% End If %></div>
                             <div style="font-size:16px;font-weight:bold;color:#2e7d32;"><%= HTMLEncode(referrerName) %></div>
                         </div>
                     </div>
                     <% If expiryDate <> "" Then %>
                     <div style="margin-top:8px;font-size:12px;color:#689f38;">
-                        <i class="fas fa-clock"></i> 推荐链接有效期至 <%= expiryDate %>
+                        <i class="fas fa-clock"></i> <% If FEATURE_I18N Then Response.Write T("user_register_referral_valid_until", Empty) Else %>推荐链接有效期至<% End If %> <%= expiryDate %>
                     </div>
                     <% End If %>
                 </div>
@@ -211,54 +212,54 @@ Call EnsureCSRFToken()
                 <input type="hidden" name="device_fp" id="deviceFingerprint" value="">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="username"><i class="fas fa-user"></i> 用户名 *</label>
-                        <input type="text" id="username" name="username" placeholder="3-20个字符" required minlength="3" maxlength="20">
+                        <label for="username"><i class="fas fa-user"></i> <% If FEATURE_I18N Then Response.Write T("user_register_username", Empty) Else %>用户名<% End If %> *</label>
+                        <input type="text" id="username" name="username" placeholder="<% If FEATURE_I18N Then Response.Write T("user_register_username_placeholder", Empty) Else %>3-20个字符<% End If %>" required minlength="3" maxlength="20">
                     </div>
                     <div class="form-group">
-                        <label for="email"><i class="fas fa-envelope"></i> 邮箱 *</label>
-                        <input type="email" id="email" name="email" placeholder="用于登录和接收通知" required>
-                    </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="password"><i class="fas fa-lock"></i> 密码 *</label>
-                        <input type="password" id="password" name="password" placeholder="至少6个字符" required minlength="6">
-                    </div>
-                    <div class="form-group">
-                        <label for="confirmPassword"><i class="fas fa-lock"></i> 确认密码 *</label>
-                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="再次输入密码" required>
+                        <label for="email"><i class="fas fa-envelope"></i> <% If FEATURE_I18N Then Response.Write T("user_register_email", Empty) Else %>邮箱<% End If %> *</label>
+                        <input type="email" id="email" name="email" placeholder="<% If FEATURE_I18N Then Response.Write T("user_register_email_placeholder", Empty) Else %>用于登录和接收通知<% End If %>" required>
                     </div>
                 </div>
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="fullName"><i class="fas fa-id-card"></i> 姓名</label>
-                        <input type="text" id="fullName" name="fullName" placeholder="您的真实姓名（选填）">
+                        <label for="password"><i class="fas fa-lock"></i> <% If FEATURE_I18N Then Response.Write T("user_register_password", Empty) Else %>密码<% End If %> *</label>
+                        <input type="password" id="password" name="password" placeholder="<% If FEATURE_I18N Then Response.Write T("user_register_password_placeholder", Empty) Else %>至少6个字符<% End If %>" required minlength="6">
                     </div>
                     <div class="form-group">
-                        <label for="phone"><i class="fas fa-phone"></i> 手机号</label>
-                        <input type="tel" id="phone" name="phone" placeholder="用于订单通知（选填）">
+                        <label for="confirmPassword"><i class="fas fa-lock"></i> <% If FEATURE_I18N Then Response.Write T("user_register_confirm", Empty) Else %>确认密码<% End If %> *</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="<% If FEATURE_I18N Then Response.Write T("user_register_confirm_placeholder", Empty) Else %>再次输入密码<% End If %>" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName"><i class="fas fa-id-card"></i> <% If FEATURE_I18N Then Response.Write T("user_register_fullname", Empty) Else %>姓名<% End If %></label>
+                        <input type="text" id="fullName" name="fullName" placeholder="<% If FEATURE_I18N Then Response.Write T("user_register_fullname_placeholder", Empty) Else %>您的真实姓名（选填）<% End If %>">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone"><i class="fas fa-phone"></i> <% If FEATURE_I18N Then Response.Write T("user_register_phone", Empty) Else %>手机号<% End If %></label>
+                        <input type="tel" id="phone" name="phone" placeholder="<% If FEATURE_I18N Then Response.Write T("user_register_phone_placeholder", Empty) Else %>用于订单通知（选填）<% End If %>">
                     </div>
                 </div>
                 
                 <div class="form-group">
                     <label class="checkbox-label">
                         <input type="checkbox" name="agree" required>
-                        我已阅读并同意 <a href="/terms.asp" target="_blank">服务条款</a> 和 <a href="/privacy.asp" target="_blank">隐私政策</a>
+                        <% If FEATURE_I18N Then Response.Write T("user_register_agree_prefix", Empty) Else %>我已阅读并同意<% End If %> <a href="/terms.asp" target="_blank"><% If FEATURE_I18N Then Response.Write T("user_register_agree_terms", Empty) Else %>服务条款<% End If %></a> 和 <a href="/privacy.asp" target="_blank"><% If FEATURE_I18N Then Response.Write T("user_register_agree_privacy", Empty) Else %>隐私政策<% End If %></a>
                     </label>
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-lg btn-block">
-                    <i class="fas fa-user-plus"></i> 立即注册
+                    <i class="fas fa-user-plus"></i> <% If FEATURE_I18N Then Response.Write T("user_register_btn", Empty) Else %>立即注册<% End If %>
                 </button>
             </form>
             
             <% Else %>
             <!-- V14: 无有效Token，显示推荐制说明 -->
             <div class="auth-header">
-                <h1>会员推荐制</h1>
-                <p style="color:#888;">本平台采用会员推荐制注册</p>
+                <h1><% If FEATURE_I18N Then Response.Write T("user_register_title_no_token", Empty) Else %>会员推荐制<% End If %></h1>
+                <p style="color:#888;"><% If FEATURE_I18N Then Response.Write T("user_register_subtitle_no_token", Empty) Else %>本平台采用会员推荐制注册<% End If %></p>
             </div>
             
             <% If errorMsg <> "" Then %>
@@ -271,36 +272,36 @@ Call EnsureCSRFToken()
                 <div style="width:80px;height:80px;background:linear-gradient(135deg,#fff8e1,#fff3e0);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
                     <i class="fas fa-user-shield" style="font-size:36px;color:#e0a800;"></i>
                 </div>
-                <h3 style="color:#333;margin-bottom:10px;">仅限受邀注册</h3>
-                <p style="color:#666;line-height:1.8;">感谢您对香氛定制的关注！</p>
-                <p style="color:#666;line-height:1.8;">为确保社区品质，本平台采用<strong>会员邀请制</strong>，</p>
-                <p style="color:#666;line-height:1.8;">新用户需通过现有会员的专属推荐链接完成注册。</p>
+                <h3 style="color:#333;margin-bottom:10px;"><% If FEATURE_I18N Then Response.Write T("user_register_only_invited", Empty) Else %>仅限受邀注册<% End If %></h3>
+                <p style="color:#666;line-height:1.8;"><% If FEATURE_I18N Then Response.Write T("user_register_thanks", Empty) Else %>感谢您对香氛定制的关注！<% End If %></p>
+                <p style="color:#666;line-height:1.8;"><% If FEATURE_I18N Then Response.Write T("user_register_community_quality", Empty) Else %>为确保社区品质，本平台采用<strong>会员邀请制</strong>，<% End If %></p>
+                <p style="color:#666;line-height:1.8;"><% If FEATURE_I18N Then Response.Write T("user_register_new_user_need_link", Empty) Else %>新用户需通过现有会员的专属推荐链接完成注册。<% End If %></p>
                 <div style="margin-top:20px;padding:15px;background:#f8f9fa;border-radius:8px;text-align:left;">
-                    <p style="color:#333;font-weight:bold;margin-bottom:8px;"><i class="fas fa-info-circle"></i> 如何获得注册资格？</p>
+                    <p style="color:#333;font-weight:bold;margin-bottom:8px;"><i class="fas fa-info-circle"></i> <% If FEATURE_I18N Then Response.Write T("user_register_how_to_get", Empty) Else %>如何获得注册资格？<% End If %></p>
                     <ul style="color:#666;font-size:14px;line-height:2;padding-left:20px;">
-                        <li>请已经是我们会员的朋友发送推荐链接给您</li>
-                        <li>推荐链接将引导您进入专属注册页面</li>
-                        <li>链接有效期为30天，请在有效期内完成注册</li>
+                        <li><% If FEATURE_I18N Then Response.Write T("user_register_how_step1", Empty) Else %>请已经是我们会员的朋友发送推荐链接给您<% End If %></li>
+                        <li><% If FEATURE_I18N Then Response.Write T("user_register_how_step2", Empty) Else %>推荐链接将引导您进入专属注册页面<% End If %></li>
+                        <li><% If FEATURE_I18N Then Response.Write T("user_register_how_step3", Empty) Else %>链接有效期为30天，请在有效期内完成注册<% End If %></li>
                     </ul>
                 </div>
             </div>
             <% End If %>
             
             <div class="auth-footer">
-                <p>已有账户？ <a href="/user/login.asp">立即登录</a></p>
+                <p><% If FEATURE_I18N Then Response.Write T("user_register_has_account", Empty) Else %>已有账户？<% End If %> <a href="/user/login.asp"><% If FEATURE_I18N Then Response.Write T("user_register_login_now", Empty) Else %>立即登录<% End If %></a></p>
             </div>
         </div>
         
         <div class="auth-side">
             <div class="auth-promo">
                 <i class="fas fa-gift"></i>
-                <h2>会员专属权益</h2>
-                <p>成为会员即享多重特权</p>
+                <h2><% If FEATURE_I18N Then Response.Write T("user_register_member_benefits", Empty) Else %>会员专属权益<% End If %></h2>
+                <p><% If FEATURE_I18N Then Response.Write T("user_register_member_subtitle", Empty) Else %>成为会员即享多重特权<% End If %></p>
                 <ul class="promo-features">
-                    <li><i class="fas fa-check"></i> 首单立减50元</li>
-                    <li><i class="fas fa-check"></i> 免费香水小样</li>
-                    <li><i class="fas fa-check"></i> 生日专属优惠</li>
-                    <li><i class="fas fa-check"></i> 推荐新会员获积分</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("user_register_benefit1", Empty) Else %>首单立减50元<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("user_register_benefit2", Empty) Else %>免费香水小样<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("user_register_benefit3", Empty) Else %>生日专属优惠<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("user_register_benefit4", Empty) Else %>推荐新会员获积分<% End If %></li>
                 </ul>
             </div>
         </div>
@@ -322,7 +323,7 @@ $('#registerForm').submit(function(e) {
     var pwd = $('#password').val();
     var confirmPwd = $('#confirmPassword').val();
     if (pwd !== confirmPwd) {
-        alert('两次输入的密码不一致');
+        alert('<% If FEATURE_I18N Then Response.Write T("user_register_pwd_mismatch", Empty) Else %>两次输入的密码不一致<% End If %>');
         e.preventDefault();
         return false;
     }

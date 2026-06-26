@@ -7,6 +7,7 @@
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <!--#include file="../includes/email_utils.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <%
 Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
@@ -15,7 +16,7 @@ Response.ContentType = "text/html"
 On Error Resume Next
 OpenConnection
 If Err.Number <> 0 Then
-    Response.Write "<div class='error'>数据库连接错误: " & Err.Description & " 错误号: " & Err.Number & "</div>"
+    Response.Write "<div class='error'>" & T("admin_forgot_db_conn_error", Empty) & Err.Description & " (Error: " & Err.Number & ")</div>"
     Response.End
 End If
 On Error GoTo 0
@@ -28,7 +29,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     usernameOrEmail = Trim(Request.Form("username_or_email"))
     
     If usernameOrEmail = "" Then
-        errorMessage = "请输入用户名或邮箱地址"
+        errorMessage = T("admin_forgot_empty", Empty)
     Else
         ' 查找用户
         Dim rsUser
@@ -50,12 +51,12 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                 ' 发送密码重置邮件
                 Call SendPasswordResetEmail(rsUser("Email"), rsUser("FullName"), resetToken)
                 
-                successMessage = "密码重置链接已发送到您的邮箱。请检查您的收件箱。"
+                successMessage = T("admin_forgot_success", Empty)
             Else
-                errorMessage = "发生错误，请稍后重试"
+                errorMessage = T("admin_forgot_error", Empty)
             End If
         Else
-            errorMessage = "找不到与输入匹配的管理员账户"
+            errorMessage = T("admin_forgot_not_found", Empty)
         End If
         
         If Not rsUser Is Nothing Then
@@ -70,7 +71,7 @@ End If
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>忘记密码 - 管理员登录</title>
+    <title><% If FEATURE_I18N Then Response.Write T("admin_forgot_page_title", Empty) Else %>忘记密码 - 管理员登录<% End If %></title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
         .admin-login-container {
@@ -136,7 +137,7 @@ End If
 </head>
 <body>
     <div class="admin-login-container">
-        <h2>重置密码</h2>
+        <h2><% If FEATURE_I18N Then Response.Write T("admin_forgot_heading", Empty) Else %>重置密码<% End If %></h2>
         
         <% If errorMessage <> "" Then %>
         <div class="error-message"><%= errorMessage %></div>
@@ -148,15 +149,15 @@ End If
         
         <form method="post">
             <div class="form-group">
-                <label for="username_or_email">用户名或邮箱地址</label>
+                <label for="username_or_email"><% If FEATURE_I18N Then Response.Write T("admin_forgot_label", Empty) Else %>用户名或邮箱地址<% End If %></label>
                 <input type="text" id="username_or_email" name="username_or_email" value="<%= usernameOrEmail %>" required>
             </div>
             
-            <button type="submit" class="btn">发送重置链接</button>
+            <button type="submit" class="btn"><% If FEATURE_I18N Then Response.Write T("admin_forgot_btn", Empty) Else %>发送重置链接<% End If %></button>
         </form>
         
         <div class="back-to-login">
-            <a href="login.asp">&larr; 返回登录页面</a>
+            <a href="login.asp">&larr; <% If FEATURE_I18N Then Response.Write T("admin_forgot_back", Empty) Else %>返回登录页面<% End If %></a>
         </div>
     </div>
 </body>

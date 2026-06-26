@@ -32,17 +32,17 @@ End If
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp">首页</a>
+        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <a href="/cart.asp">购物车</a>
+        <a href="/cart.asp"><% If FEATURE_I18N Then Response.Write T("cart_breadcrumb", Empty) Else %>购物车<% End If %></a>
         <span class="separator">/</span>
-        <span>结算</span>
+        <span><% If FEATURE_I18N Then Response.Write T("checkout_breadcrumb", Empty) Else %>结算<% End If %></span>
     </div>
 </div>
 
 <div class="container">
     <div class="checkout-page">
-        <h1 class="page-title"><i class="fas fa-credit-card"></i> 订单结算</h1>
+        <h1 class="page-title"><i class="fas fa-credit-card"></i> <% If FEATURE_I18N Then Response.Write T("checkout_title", Empty) Else %>订单结算<% End If %></h1>
         
         <% If Session("ErrorMessage") <> "" Then %>
         <div class="alert alert-error">

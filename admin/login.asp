@@ -16,6 +16,7 @@ End If
 <!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/dal_users.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <%
 
 ' === 打开数据库连接 ===
@@ -23,7 +24,7 @@ End If
 On Error Resume Next
 OpenConnection
 If Err.Number <> 0 Then
-    Response.Write "<div class='error'>数据库连接错误: " & Err.Description & " 错误号: " & Err.Number & "</div>"
+    Response.Write "<div class='error'>" & T("admin_login_db_conn_error", Empty) & Err.Description & " (Error: " & Err.Number & ")</div>"
     
     Response.End
 End If
@@ -37,7 +38,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     If Not ValidateCSRFToken() Then
         ' V17.2: 验证失败时强制刷新令牌，允许用户立即重试
         Call GenerateCSRFToken()
-        errorMessage = "安全验证失败，请刷新页面重试"
+        errorMessage = T("admin_login_csrf_error", Empty)
     Else
         username = Trim(Request.Form("username"))
         password = Request.Form("password")
@@ -45,9 +46,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         
         ' 速率限制检查
         If IsLoginLocked("Admin") Then
-            errorMessage = "登录失败次数过多，请15分钟后再试"
+            errorMessage = T("admin_login_locked", Empty)
         ElseIf username = "" Or password = "" Then
-            errorMessage = "请输入用户名和密码"
+            errorMessage = T("admin_login_empty_fields", Empty)
         Else
         ' 检查AdminUsers表是否存在（简化检测）
         Dim tableExists
@@ -66,7 +67,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         On Error GoTo 0
         
         If Not tableExists Then
-            errorMessage = "错误：管理员表 AdminUsers 不存在，请先运行初始化脚本 admin/init_admin_table.asp 创建表。"
+            errorMessage = T("admin_login_table_missing", Empty)
         Else
             ' V17: 使用参数化查询防止SQL注入
             Dim rsUser, sqlParams(0)
@@ -120,11 +121,11 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         Response.Redirect "portal.asp"
                     Else
                         Call RecordLoginFailure("Admin")
-                        errorMessage = "用户名或密码错误"
+                        errorMessage = T("admin_login_wrong_credentials", Empty)
                     End If
                 Else
                     Call RecordLoginFailure("Admin")
-                    errorMessage = "用户名或密码错误"
+                    errorMessage = T("admin_login_wrong_credentials", Empty)
                 End If
                                 
                 If Not rsUser Is Nothing Then
@@ -132,7 +133,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                     Set rsUser = Nothing
                 End If
             Else
-                errorMessage = "数据库查询失败: " & DAL_GetLastError()
+                errorMessage = T("admin_login_db_error", Empty) & DAL_GetLastError()
             End If
         End If
         End If
@@ -146,7 +147,7 @@ Call EnsureCSRFToken()
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理员登录 - 香氛定制电商网站</title>
+    <title><% If FEATURE_I18N Then Response.Write T("admin_login_page_title", Empty) Else %>管理员登录 - 香氛定制电商网站<% End If %></title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
         .admin-login-container {
@@ -235,11 +236,11 @@ Call EnsureCSRFToken()
 </head>
 <body>
     <div class="admin-login-container">
-        <h2>管理员登录</h2>
+        <h2><% If FEATURE_I18N Then Response.Write T("admin_login_heading", Empty) Else %>管理员登录<% End If %></h2>
         
         
         <div class="login-info">
-            请输入管理员账户信息登录<br>
+            <% If FEATURE_I18N Then Response.Write T("admin_login_info", Empty) Else %>请输入管理员账户信息登录<% End If %><br>
         </div>
         
         <% If errorMessage <> "" Then %>
@@ -249,27 +250,27 @@ Call EnsureCSRFToken()
         <form method="post">
             <%= GetCSRFTokenField() %>
             <div class="form-group">
-                <label for="username">用户名</label>
+                <label for="username"><% If FEATURE_I18N Then Response.Write T("admin_login_username", Empty) Else %>用户名<% End If %></label>
                 <input type="text" id="username" name="username" value="<%= username %>" required>
             </div>
             
             <div class="form-group">
-                <label for="password">密码</label>
+                <label for="password"><% If FEATURE_I18N Then Response.Write T("admin_login_password", Empty) Else %>密码<% End If %></label>
                 <input type="password" id="password" name="password" required>
             </div>
             
             <div class="remember-forgot-container">
                 <div class="remember-me">
                     <input type="checkbox" id="remember_me" name="remember_me" value="1">
-                    <label for="remember_me">记住我</label>
+                    <label for="remember_me"><% If FEATURE_I18N Then Response.Write T("admin_login_remember", Empty) Else %>记住我<% End If %></label>
                 </div>
                 
                 <div class="forgot-password">
-                    <a href="forgot_password.asp">忘记密码？</a>
+                    <a href="forgot_password.asp"><% If FEATURE_I18N Then Response.Write T("admin_login_forgot", Empty) Else %>忘记密码？<% End If %></a>
                 </div>
             </div>
             
-            <button type="submit" class="btn">登录</button>
+            <button type="submit" class="btn"><% If FEATURE_I18N Then Response.Write T("admin_login_btn", Empty) Else %>登录<% End If %></button>
         </form>
     </div>
 </body>

@@ -4,6 +4,7 @@ Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
 %>
 <!--#include file="../includes/config.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <%
@@ -16,7 +17,7 @@ successMsg = ""
 step = "verify"  ' verify | reset | done
 
 If token = "" Then
-    errorMsg = "无效的重置链接，缺少令牌参数"
+    errorMsg = T("user_reset_missing_token", Empty)
     step = "error"
 Else
     ' 验证令牌有效性
@@ -24,7 +25,7 @@ Else
     Set rsToken = ExecuteQuery("SELECT UserID, Username, Email, FullName, ResetTokenExpiry FROM Users WHERE ResetToken = '" & SafeSQL(token) & "' AND ResetTokenExpiry IS NOT NULL")
     
     If rsToken Is Nothing Or rsToken.EOF Then
-        errorMsg = "无效的重置链接，令牌不存在或已被使用"
+        errorMsg = T("user_reset_token_invalid", Empty)
         step = "error"
     Else
         ' 检查是否过期
@@ -37,7 +38,7 @@ Else
             If dotPos > 0 Then expiryStr = Left(expiryStr, dotPos - 1)
             If IsDate(expiryStr) Then
                 If CDate(expiryStr) < Now() Then
-                    errorMsg = "重置链接已过期（有效期为1小时），请重新申请"
+                    errorMsg = T("user_reset_token_expired", Empty)
                     step = "error"
                 End If
             End If
@@ -52,11 +53,11 @@ If step = "verify" And Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     confirmPassword = Trim(Request.Form("confirm_password"))
     
     If newPassword = "" Or confirmPassword = "" Then
-        errorMsg = "请填写所有密码字段"
+        errorMsg = T("user_settings_pwd_fill_all", Empty)
     ElseIf Len(newPassword) < 6 Then
-        errorMsg = "新密码至少需要6个字符"
+        errorMsg = T("user_settings_pwd_len", Empty)
     ElseIf newPassword <> confirmPassword Then
-        errorMsg = "两次输入的密码不一致"
+        errorMsg = T("user_settings_pwd_mismatch", Empty)
     Else
         ' 生成新密码哈希并更新
         Dim newHash
@@ -65,10 +66,10 @@ If step = "verify" And Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         userId = rsToken("UserID")
         
         If ExecuteNonQuery("UPDATE Users SET [Password] = '" & SafeSQL(newHash) & "', ResetToken = NULL, ResetTokenExpiry = NULL WHERE UserID = " & userId) Then
-            successMsg = "密码重置成功！请使用新密码登录"
+            successMsg = T("user_reset_success", Empty)
             step = "done"
         Else
-            errorMsg = "密码更新失败，请稍后重试"
+            errorMsg = T("user_settings_pwd_fail", Empty)
         End If
     End If
 End If
@@ -87,27 +88,27 @@ Set rsToken = Nothing
         <div class="auth-card">
             <% If step = "error" Then %>
             <div class="auth-header">
-                <h1>链接无效</h1>
+                <h1><% If FEATURE_I18N Then Response.Write T("user_reset_link_invalid", Empty) Else %>链接无效<% End If %></h1>
                 <p><%= HTMLEncode(errorMsg) %></p>
             </div>
             <div class="auth-footer">
-                <p><a href="/user/forgot.asp" class="btn btn-primary">重新申请重置</a></p>
-                <p><a href="/user/login.asp">返回登录</a></p>
+                <p><a href="/user/forgot.asp" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("user_reset_reapply", Empty) Else %>重新申请重置<% End If %></a></p>
+                <p><a href="/user/login.asp"><% If FEATURE_I18N Then Response.Write T("user_forgot_back_link", Empty) Else %>返回登录<% End If %></a></p>
             </div>
             
             <% ElseIf step = "done" Then %>
             <div class="auth-header">
-                <h1>重置成功</h1>
+                <h1><% If FEATURE_I18N Then Response.Write T("user_reset_success_title", Empty) Else %>重置成功<% End If %></h1>
                 <p><%= HTMLEncode(successMsg) %></p>
             </div>
             <div class="auth-footer">
-                <p><a href="/user/login.asp" class="btn btn-primary">前往登录</a></p>
+                <p><a href="/user/login.asp" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("user_reset_goto_login", Empty) Else %>前往登录<% End If %></a></p>
             </div>
             
             <% Else %>
             <div class="auth-header">
-                <h1>设置新密码</h1>
-                <p>为账户 <strong><%= HTMLEncode(rsToken("Username")) %></strong> 设置新密码</p>
+                <h1><% If FEATURE_I18N Then Response.Write T("user_reset_set_new", Empty) Else %>设置新密码<% End If %></h1>
+                <p><% If FEATURE_I18N Then Response.Write T("user_reset_set_for_account", Array(rsToken("Username"))) Else %>为账户 <strong><%= HTMLEncode(rsToken("Username")) %></strong> 设置新密码<% End If %></p>
             </div>
             
             <% If errorMsg <> "" Then %>
@@ -118,22 +119,22 @@ Set rsToken = Nothing
             
             <form method="post" class="auth-form">
                 <div class="form-group">
-                    <label for="new_password"><i class="fas fa-lock"></i> 新密码</label>
-                    <input type="password" id="new_password" name="new_password" placeholder="至少6个字符" required minlength="6">
+                    <label for="new_password"><i class="fas fa-lock"></i> <% If FEATURE_I18N Then Response.Write T("user_reset_new", Empty) Else %>新密码<% End If %></label>
+                    <input type="password" id="new_password" name="new_password" placeholder="<% If FEATURE_I18N Then Response.Write T("user_reset_new_placeholder", Empty) Else %>至少6个字符<% End If %>" required minlength="6">
                 </div>
                 
                 <div class="form-group">
-                    <label for="confirm_password"><i class="fas fa-lock"></i> 确认新密码</label>
-                    <input type="password" id="confirm_password" name="confirm_password" placeholder="再次输入新密码" required minlength="6">
+                    <label for="confirm_password"><i class="fas fa-lock"></i> <% If FEATURE_I18N Then Response.Write T("user_reset_confirm", Empty) Else %>确认新密码<% End If %></label>
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="<% If FEATURE_I18N Then Response.Write T("user_reset_confirm_placeholder", Empty) Else %>再次输入新密码<% End If %>" required minlength="6">
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-lg btn-block">
-                    <i class="fas fa-key"></i> 重置密码
+                    <i class="fas fa-key"></i> <% If FEATURE_I18N Then Response.Write T("user_reset_btn", Empty) Else %>重置密码<% End If %>
                 </button>
             </form>
             
             <div class="auth-footer">
-                <p><a href="/user/login.asp">返回登录</a></p>
+                <p><a href="/user/login.asp"><% If FEATURE_I18N Then Response.Write T("user_forgot_back_link", Empty) Else %>返回登录<% End If %></a></p>
             </div>
             <% End If %>
         </div>

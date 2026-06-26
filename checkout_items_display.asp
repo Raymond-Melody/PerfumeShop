@@ -4,7 +4,7 @@
      ============================================ -->
         <div class="checkout-content">
             <div class="checkout-items">
-                <h3>订单商品</h3>
+                <h3><% If FEATURE_I18N Then Response.Write T("checkout_items_title", Empty) Else %>订单商品<% End If %></h3>
                 
                 <%
                 Set rsCart = ExecuteQuery("SELECT c.*, p.ProductName, p.ImageURL, p.EngravingPrice, p.ProductType, " & _
@@ -63,28 +63,28 @@
                             End If
                             
                             If chkProductTypeLC = "custom" And chkTopList <> "" Then %>
-                            <span><i class="fas fa-wind"></i> 前调: <%= chkTopList %></span>
+                            <span><i class="fas fa-wind"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_top_title", Empty) Else %>前调<% End If %>: <%= chkTopList %></span>
                             <% ElseIf chkProductTypeLC = "custom" And Not IsNull(rsCart("TopNoteName")) Then %>
-                            <span><i class="fas fa-wind"></i> 前调: <%= HTMLEncode(rsCart("TopNoteName")) %></span>
+                            <span><i class="fas fa-wind"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_top_title", Empty) Else %>前调<% End If %>: <%= HTMLEncode(rsCart("TopNoteName")) %></span>
                             <% End If %>
                             <% If chkProductTypeLC = "custom" And chkMidList <> "" Then %>
-                            <span><i class="fas fa-heart"></i> 中调: <%= chkMidList %></span>
+                            <span><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_mid_title", Empty) Else %>中调<% End If %>: <%= chkMidList %></span>
                             <% ElseIf chkProductTypeLC = "custom" And Not IsNull(rsCart("MiddleNoteName")) Then %>
-                            <span><i class="fas fa-heart"></i> 中调: <%= HTMLEncode(rsCart("MiddleNoteName")) %></span>
+                            <span><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_mid_title", Empty) Else %>中调<% End If %>: <%= HTMLEncode(rsCart("MiddleNoteName")) %></span>
                             <% End If %>
                             <% If chkProductTypeLC = "custom" And chkBaseList <> "" Then %>
-                            <span><i class="fas fa-moon"></i> 后调: <%= chkBaseList %></span>
+                            <span><i class="fas fa-moon"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_base_title", Empty) Else %>后调<% End If %>: <%= chkBaseList %></span>
                             <% ElseIf chkProductTypeLC = "custom" And Not IsNull(rsCart("BaseNoteName")) Then %>
-                            <span><i class="fas fa-moon"></i> 后调: <%= HTMLEncode(rsCart("BaseNoteName")) %></span>
+                            <span><i class="fas fa-moon"></i> <% If FEATURE_I18N Then Response.Write T("product_notes_base_title", Empty) Else %>后调<% End If %>: <%= HTMLEncode(rsCart("BaseNoteName")) %></span>
                             <% End If %>
                             <% If Not IsNull(rsCart("VolumeName")) Then %>
-                            <span><i class="fas fa-tint"></i> 容量: <%= rsCart("VolumeML") %>ml (<%= HTMLEncode(rsCart("VolumeName")) %>)</span>
+                            <span><i class="fas fa-tint"></i> <% If FEATURE_I18N Then Response.Write T("product_option_volume", Empty) Else %>容量<% End If %>: <%= rsCart("VolumeML") %>ml (<%= HTMLEncode(rsCart("VolumeName")) %>)</span>
                             <% End If %>
                             <% If Not IsNull(rsCart("BottleName")) Then %>
-                            <span><i class="fas fa-wine-bottle"></i> 瓶身: <%= HTMLEncode(rsCart("BottleName")) %></span>
+                            <span><i class="fas fa-wine-bottle"></i> <% If FEATURE_I18N Then Response.Write T("product_option_bottle", Empty) Else %>瓶身<% End If %>: <%= HTMLEncode(rsCart("BottleName")) %></span>
                             <% End If %>
                             <% If Not IsNull(rsCart("CustomLabel")) And rsCart("CustomLabel") <> "" Then %>
-                            <span><i class="fas fa-pen-fancy"></i> 刻字: <%= HTMLEncode(rsCart("CustomLabel")) %></span>
+                            <span><i class="fas fa-pen-fancy"></i> <% If FEATURE_I18N Then Response.Write T("order_ingredients_engraving", Empty) Else %>刻字<% End If %>: <%= HTMLEncode(rsCart("CustomLabel")) %></span>
                             <% End If %>
                             <% 
                             ' 显示刻字费用
@@ -96,7 +96,7 @@
                             On Error GoTo 0
                             If Not IsNull(rsCart("CustomLabel")) And rsCart("CustomLabel") <> "" And checkoutItemEngravingPrice > 0 Then 
                             %>
-                            <span style="color:#e91e63;"><i class="fas fa-tag"></i> 刻字费用: <%= FormatMoney(checkoutItemEngravingPrice) %></span>
+                            <span style="color:#e91e63;"><i class="fas fa-tag"></i> <% If FEATURE_I18N Then Response.Write T("cart_summary_engraving", Empty) Else %>刻字费用<% End If %>: <%= FormatMoney(checkoutItemEngravingPrice) %></span>
                             <% End If %>
                         </div>
                     </div>

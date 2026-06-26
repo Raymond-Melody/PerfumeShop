@@ -43,6 +43,7 @@ End Function
 %>
 <!--#include file="includes/config.asp"-->
 <!--#include file="includes/connection.asp"-->
+<!--#include file="includes/i18n.asp"-->
 <%
 Call OpenConnection()
 
@@ -57,7 +58,7 @@ Dim orderId
 orderId = Request.QueryString("order_id")
 
 If orderId = "" Or Not IsNumeric(orderId) Then
-    Response.Write "无效的订单ID"
+    Response.Write T("order_invalid_id", Empty)
     Response.End
 End If
 
@@ -66,7 +67,7 @@ Dim rsOrder
 Set rsOrder = ExecuteQuery("SELECT o.*, u.Username FROM Orders o LEFT JOIN Users u ON o.UserID = u.UserID WHERE o.OrderID = " & CLng(orderId))
 
 If rsOrder Is Nothing Or rsOrder.EOF Then
-    Response.Write "订单不存在"
+    Response.Write T("order_not_found", Empty)
     Response.End
 End If
 
@@ -198,7 +199,7 @@ End If
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>订单成分表 - <%= orderNo %></title>
+    <title><% If FEATURE_I18N Then Response.Write T("order_ingredients_title", Empty) Else %>订单成分表<% End If %> - <%= orderNo %></title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: "Microsoft YaHei", Arial, sans-serif; padding: 40px; background: white; }
@@ -244,42 +245,42 @@ End If
 <body>
     <div class="container">
         <div class="no-print" style="margin-bottom: 20px;">
-            <button class="btn-print" onclick="window.print()">🖨️ 打印成分表</button>
-            <button class="btn-print btn--neutral" onclick="window.close()">← 关闭</button>
+            <button class="btn-print" onclick="window.print()">🖨️ <% If FEATURE_I18N Then Response.Write T("order_ingredients_print", Empty) Else %>打印成分表<% End If %></button>
+            <button class="btn-print btn--neutral" onclick="window.close()">← <% If FEATURE_I18N Then Response.Write T("order_ingredients_close", Empty) Else %>关闭<% End If %></button>
         </div>
         
         <div class="header">
-            <h1>产品成分表 / Ingredients List</h1>
+            <h1><% If FEATURE_I18N Then Response.Write T("order_ingredients_main_title", Empty) Else %>产品成分表 / Ingredients List<% End If %></h1>
             <div class="subtitle">Product Ingredients List</div>
         </div>
         
         <div class="info-section">
             <div class="info-row">
-                <div class="label">订单编号：</div>
+                <div class="label"><% If FEATURE_I18N Then Response.Write T("order_ingredients_label_order_no", Empty) Else %>订单编号<% End If %>：</div>
                 <div class="value"><%= orderNo %></div>
             </div>
             <div class="info-row">
-                <div class="label">订单日期：</div>
+                <div class="label"><% If FEATURE_I18N Then Response.Write T("order_ingredients_label_date", Empty) Else %>订单日期<% End If %>：</div>
                 <div class="value"><%= SafeFormatDateTime(orderDate, 2) %></div>
             </div>
             <div class="info-row">
-                <div class="label">客户姓名：</div>
+                <div class="label"><% If FEATURE_I18N Then Response.Write T("order_ingredients_label_customer", Empty) Else %>客户姓名<% End If %>：</div>
                 <div class="value"><%= HTMLEncode(customerName) %></div>
             </div>
             <div class="info-row">
-                <div class="label">打印时间：</div>
+                <div class="label"><% If FEATURE_I18N Then Response.Write T("order_ingredients_label_print_time", Empty) Else %>打印时间<% End If %>：</div>
                 <div class="value"><%= Now() %></div>
             </div>
         </div>
         
-        <div class="section-title">📦 订单商品明细</div>
+        <div class="section-title">📦 <% If FEATURE_I18N Then Response.Write T("order_ingredients_section_products", Empty) Else %>订单商品明细<% End If %></div>
         <table class="products-table">
             <thead>
                 <tr>
-                    <th>商品名称</th>
-                    <th>容量规格</th>
-                    <th>数量</th>
-                    <th>定制备注</th>
+                    <th><% If FEATURE_I18N Then Response.Write T("product_name", Empty) Else %>商品名称<% End If %></th>
+                    <th><% If FEATURE_I18N Then Response.Write T("product_option_volume", Empty) Else %>容量规格<% End If %></th>
+                    <th><% If FEATURE_I18N Then Response.Write T("quantity", Empty) Else %>数量<% End If %></th>
+                    <th><% If FEATURE_I18N Then Response.Write T("product_option_label", Empty) Else %>定制备注<% End If %></th>
                 </tr>
             </thead>
             <tbody>
@@ -297,7 +298,11 @@ End If
                         Dim customInfo
                         customInfo = ""
                         If Not IsNull(rsDetails("CustomLabel")) And rsDetails("CustomLabel") <> "" Then
-                            customInfo = "刻字: " & HTMLEncode(rsDetails("CustomLabel"))
+                            If FEATURE_I18N Then
+                                customInfo = T("order_ingredients_engraving", Empty) & ": " & HTMLEncode(rsDetails("CustomLabel"))
+                            Else
+                                customInfo = "刻字: " & HTMLEncode(rsDetails("CustomLabel"))
+                            End If
                         End If
                         If customInfo <> "" Then
                             Response.Write customInfo
@@ -311,20 +316,28 @@ End If
                             rsDetails.MoveNext
                         Loop
                     Else
-                        Response.Write "<tr><td colspan='4' style='text-align:center;color:#999;'>无商品数据</td></tr>"
+                        If FEATURE_I18N Then
+                            Response.Write "<tr><td colspan='4' style='text-align:center;color:#999;'>" & T("order_ingredients_no_data", Empty) & "</td></tr>"
+                        Else
+                            Response.Write "<tr><td colspan='4' style='text-align:center;color:#999;'>无商品数据</td></tr>"
+                        End If
                     End If
                     rsDetails.Close
                 Else
-                    Response.Write "<tr><td colspan='4' style='text-align:center;color:#999;'>无法读取商品数据</td></tr>"
+                    If FEATURE_I18N Then
+                        Response.Write "<tr><td colspan='4' style='text-align:center;color:#999;'>" & T("order_ingredients_cannot_read", Empty) & "</td></tr>"
+                    Else
+                        Response.Write "<tr><td colspan='4' style='text-align:center;color:#999;'>无法读取商品数据</td></tr>"
+                    End If
                 End If
                 Set rsDetails = Nothing
                 %>
             </tbody>
         </table>
         
-        <div class="section-title">🧪 产品成分清单 / Ingredients</div>
+        <div class="section-title">🧪 <% If FEATURE_I18N Then Response.Write T("order_ingredients_section_ingredients", Empty) Else %>产品成分清单 / Ingredients<% End If %></div>
         <div style="font-size: 13px; color: #666; margin-bottom: 15px;">
-            本产品由以下成分配制而成（按字母顺序排列）。如您对某些成分过敏，请在使用前咨询专业人士。
+            <% If FEATURE_I18N Then Response.Write T("order_ingredients_ing_desc", Empty) Else %>本产品由以下成分配制而成（按字母顺序排列）。如您对某些成分过敏，请在使用前咨询专业人士。<% End If %>
         </div>
         
         <%
@@ -370,7 +383,7 @@ End If
         If Not hasOrderIngredients And uniqueIngredients.Count > 0 Then
         %>
         <div style="font-size: 12px; color: #999; margin-top: 8px; font-style: italic;">
-            * 成分数据从基香配置链路实时计算生成
+            <% If FEATURE_I18N Then Response.Write T("order_ingredients_fallback_note", Empty) Else %>* 成分数据从基香配置链路实时计算生成<% End If %>
         </div>
         <%
         End If
@@ -379,26 +392,26 @@ End If
             Else
         %>
         <div style="padding: 20px; background: #fff3cd; border: 1px solid #ffc107; color: #856404; text-align: center;">
-            ⚠️ 此订单暂无成分信息记录。可能原因：基香成分尚未配置，或产品未关联配方。请联系技术人员完善基香数据。
+            ⚠️ <% If FEATURE_I18N Then Response.Write T("order_ingredients_empty_warn", Empty) Else %>此订单暂无成分信息记录。可能原因：基香成分尚未配置，或产品未关联配方。请联系技术人员完善基香数据。<% End If %>
         </div>
         <%
             End If
         %>
         
         <div class="notes-section">
-            <div class="title">📋 重要说明</div>
+            <div class="title">📋 <% If FEATURE_I18N Then Response.Write T("order_ingredients_notes_title", Empty) Else %>重要说明<% End If %></div>
             <ul>
-                <li>本成分表仅供识别产品成分，用于过敏原检查</li>
-                <li>成分列表不包含具体数量或比例信息</li>
-                <li>所有成分均符合相关国家标准和行业规范</li>
-                <li>产品制作详情（包括香调配比、瓶身规格等）请参考商家生产工单</li>
-                <li>如有疑问请联系客服部门</li>
+                <li><% If FEATURE_I18N Then Response.Write T("order_ingredients_notes_1", Empty) Else %>本成分表仅供识别产品成分，用于过敏原检查<% End If %></li>
+                <li><% If FEATURE_I18N Then Response.Write T("order_ingredients_notes_2", Empty) Else %>成分列表不包含具体数量或比例信息<% End If %></li>
+                <li><% If FEATURE_I18N Then Response.Write T("order_ingredients_notes_3", Empty) Else %>所有成分均符合相关国家标准和行业规范<% End If %></li>
+                <li><% If FEATURE_I18N Then Response.Write T("order_ingredients_notes_4", Empty) Else %>产品制作详情（包括香调配比、瓶身规格等）请参考商家生产工单<% End If %></li>
+                <li><% If FEATURE_I18N Then Response.Write T("order_ingredients_notes_5", Empty) Else %>如有疑问请联系客服部门<% End If %></li>
             </ul>
         </div>
         
         <div class="footer">
-            <p>本文档由系统自动生成，供客户参考</p>
-            <p>打印时间: <%= Now() %> | 订单编号: <%= orderNo %></p>
+            <p><% If FEATURE_I18N Then Response.Write T("order_ingredients_footer", Empty) Else %>本文档由系统自动生成，供客户参考<% End If %></p>
+            <p><% If FEATURE_I18N Then Response.Write T("order_ingredients_label_print_time", Empty) Else %>打印时间<% End If %>: <%= Now() %> | <% If FEATURE_I18N Then Response.Write T("order_ingredients_label_order_no", Empty) Else %>订单编号<% End If %>: <%= orderNo %></p>
         </div>
     </div>
 </body>

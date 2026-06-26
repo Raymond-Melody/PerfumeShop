@@ -1,4 +1,6 @@
 <%@ Language="VBScript" CodePage="65001" %>
+<!--#include file="includes/config.asp"-->
+<!--#include file="includes/i18n.asp"-->
 <%
 ' ============================================
 ' V17.0 统一错误处理页面
@@ -18,15 +20,31 @@ logError = Request.QueryString("log")
 
 If errCode = "" Then errCode = "500"
 If errMsg = "" Then
-    Select Case errCode
-        Case "403": errMsg = "抱歉，您没有权限访问此页面"
-        Case "404": errMsg = "抱歉，您访问的页面不存在"
-        Case "500": errMsg = "系统遇到了一个意外错误，请稍后重试"
-        Case "503": errMsg = "系统正在维护中，请稍后访问"
-        Case "400": errMsg = "请求参数错误"
-        Case "429": errMsg = "请求过于频繁，请稍后再试"
-        Case Else:  errMsg = "系统遇到了一个意外错误"
-    End Select
+    If FEATURE_I18N Then
+        errMsg = T("error_msg_" & errCode, Empty)
+        ' Fallback: if key not found, use default
+        If Left(errMsg, 1) = "[" Then
+            Select Case errCode
+                Case "403": errMsg = "抱歉，您没有权限访问此页面"
+                Case "404": errMsg = "抱歉，您访问的页面不存在"
+                Case "500": errMsg = "系统遇到了一个意外错误，请稍后重试"
+                Case "503": errMsg = "系统正在维护中，请稍后访问"
+                Case "400": errMsg = "请求参数错误"
+                Case "429": errMsg = "请求过于频繁，请稍后再试"
+                Case Else:  errMsg = T("error_msg_default", Empty)
+            End Select
+        End If
+    Else
+        Select Case errCode
+            Case "403": errMsg = "抱歉，您没有权限访问此页面"
+            Case "404": errMsg = "抱歉，您访问的页面不存在"
+            Case "500": errMsg = "系统遇到了一个意外错误，请稍后重试"
+            Case "503": errMsg = "系统正在维护中，请稍后访问"
+            Case "400": errMsg = "请求参数错误"
+            Case "429": errMsg = "请求过于频繁，请稍后再试"
+            Case Else:  errMsg = "系统遇到了一个意外错误"
+        End Select
+    End If
 End If
 
 ' 设置HTTP状态码
@@ -42,25 +60,25 @@ End Select
 ' 设置标题和图标
 Select Case errCode
     Case "403"
-        errTitle = "权限不足"
+        If FEATURE_I18N Then errTitle = T("error_title_403", Empty) Else errTitle = "权限不足"
         errIcon = "&#x1F512;"
     Case "404"
-        errTitle = "页面未找到"
+        If FEATURE_I18N Then errTitle = T("error_title_404", Empty) Else errTitle = "页面未找到"
         errIcon = "&#x1F50D;"
     Case "500"
-        errTitle = "服务器错误"
+        If FEATURE_I18N Then errTitle = T("error_title_500", Empty) Else errTitle = "服务器错误"
         errIcon = "&#x26A0;&#xFE0F;"
     Case "503"
-        errTitle = "服务不可用"
+        If FEATURE_I18N Then errTitle = T("error_title_503", Empty) Else errTitle = "服务不可用"
         errIcon = "&#x1F527;"
     Case "400"
-        errTitle = "请求错误"
+        If FEATURE_I18N Then errTitle = T("error_title_400", Empty) Else errTitle = "请求错误"
         errIcon = "&#x274C;"
     Case "429"
-        errTitle = "请求过多"
+        If FEATURE_I18N Then errTitle = T("error_title_429", Empty) Else errTitle = "请求过多"
         errIcon = "&#x23F3;"
     Case Else
-        errTitle = "系统错误"
+        If FEATURE_I18N Then errTitle = T("error_title_default", Empty) Else errTitle = "系统错误"
         errIcon = "&#x26A0;&#xFE0F;"
 End Select
 
@@ -84,11 +102,11 @@ If logError <> "0" Then
 End If
 %>
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="<%= I18N_HtmlLang() %>">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><%= errTitle %> - 香氛定制</title>
+<title><%= errTitle %> - <% If FEATURE_I18N Then Response.Write T("site_name", Empty) Else %>香氛定制<% End If %></title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
@@ -124,11 +142,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
     <div class="action-buttons">
         <a href="javascript:history.back()" class="btn btn-secondary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            返回上页
+            <% If FEATURE_I18N Then Response.Write T("error_btn_back", Empty) Else %>返回上页<% End If %>
         </a>
         <a href="/" class="btn btn-primary">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-            返回首页
+            <% If FEATURE_I18N Then Response.Write T("error_btn_home", Empty) Else %>返回首页<% End If %>
         </a>
     </div>
 </div>

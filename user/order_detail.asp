@@ -33,6 +33,7 @@ Function SplitIngredients(rawStr)
 End Function
 %>
 <!--#include file="../includes/config.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/payment_config.asp"-->
 <%
@@ -61,14 +62,14 @@ reviewSubmitSuccess = False
 If Request.ServerVariables("REQUEST_METHOD") = "POST" And Request.Form("action") = "submit_review" Then
     ' 验证CSRF Token
     If Not ValidateCSRFToken() Then
-        reviewSubmitMessage = "安全验证失败，请刷新页面后重试"
+        reviewSubmitMessage = T("user_order_detail_review_csrf", Empty)
     Else
         ' 验证订单归属
         Dim checkOrderRs
         Set checkOrderRs = ExecuteQuery("SELECT Status FROM Orders WHERE OrderID = " & orderId & " AND UserID = " & userId)
         
         If checkOrderRs Is Nothing Or checkOrderRs.EOF Then
-            reviewSubmitMessage = "订单不存在或无权限评价"
+            reviewSubmitMessage = T("user_order_detail_review_no_order", Empty)
         Else
             Dim orderStatusForReview
             orderStatusForReview = checkOrderRs("Status")
@@ -77,7 +78,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" And Request.Form("action")
             
             ' 检查订单状态是否允许评价（Paid, Delivered, Completed）
             If orderStatusForReview <> "Paid" And orderStatusForReview <> "Completed" Then
-                reviewSubmitMessage = "当前订单状态不允许评价"
+                reviewSubmitMessage = T("user_order_detail_cannot_review", Empty)
             Else
                 ' 检查是否已评价
                 Dim checkReviewRs
@@ -94,7 +95,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" And Request.Form("action")
                 Set checkReviewRs = Nothing
                 
                 If hasReviewed Then
-                    reviewSubmitMessage = "您已评价过此订单"
+                    reviewSubmitMessage = T("user_order_detail_review_already", Empty)
                 Else
                     ' 获取表单数据
                     Dim rating, comment
@@ -103,9 +104,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" And Request.Form("action")
                     
                     ' 验证评分
                     If rating = "" Or Not IsNumeric(rating) Then
-                        reviewSubmitMessage = "请选择评分星级"
+                        reviewSubmitMessage = T("user_order_detail_review_no_rating", Empty)
                     ElseIf CInt(rating) < 1 Or CInt(rating) > 5 Then
-                        reviewSubmitMessage = "评分必须在1-5星之间"
+                        reviewSubmitMessage = T("user_order_detail_review_invalid_rating", Empty)
                     Else
                         ' 插入评价
                         Dim reviewSql
@@ -114,9 +115,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" And Request.Form("action")
                         
                         If ExecuteNonQuery(reviewSql) Then
                             reviewSubmitSuccess = True
-                            reviewSubmitMessage = "评价已提交，等待审核"
+                            reviewSubmitMessage = T("user_order_detail_review_submitted", Empty)
                         Else
-                            reviewSubmitMessage = "评价提交失败，请稍后重试"
+                            reviewSubmitMessage = T("user_order_detail_review_failed", Empty)
                         End If
                     End If
                 End If
@@ -186,13 +187,13 @@ End If
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp">首页</a>
+        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <a href="/user/index.asp">个人中心</a>
+        <a href="/user/index.asp"><% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
         <span class="separator">/</span>
-        <a href="/user/orders.asp">我的订单</a>
+        <a href="/user/orders.asp"><% If FEATURE_I18N Then Response.Write T("user_orders_title", Empty) Else %>我的订单<% End If %></a>
         <span class="separator">/</span>
-        <span>订单详情</span>
+        <span><% If FEATURE_I18N Then Response.Write T("user_order_detail_title", Empty) Else %>订单详情<% End If %></span>
     </div>
 </div>
 
@@ -206,102 +207,102 @@ End If
             </div>
             
             <nav class="user-nav">
-                <a href="/user/index.asp"><i class="fas fa-home"></i> 个人中心</a>
-                <a href="/user/orders.asp"><i class="fas fa-list"></i> 我的订单</a>
-                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> 账户设置</a>
-                <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> 收货地址</a>
-                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> 我的收藏</a>
-                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> 退出登录</a>
+                <a href="/user/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
+                <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then Response.Write T("user_orders_title", Empty) Else %>我的订单<% End If %></a>
+                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_settings", Empty) Else %>账户设置<% End If %></a>
+                <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_addresses", Empty) Else %>收货地址<% End If %></a>
+                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_favorites", Empty) Else %>我的收藏<% End If %></a>
+                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then Response.Write T("user_nav_logout", Empty) Else %>退出登录<% End If %></a>
             </nav>
         </aside>
         
         <!-- 主内容 -->
         <div class="user-main">
             <div class="user-card">
-                <h2 class="card-title"><i class="fas fa-file-invoice"></i> 订单详情</h2>
+                <h2 class="card-title"><i class="fas fa-file-invoice"></i> <% If FEATURE_I18N Then Response.Write T("user_order_detail_title", Empty) Else %>订单详情<% End If %></h2>
                 
                 <div class="order-detail">
                     <!-- 订单基本信息 -->
                     <div class="order-basic-info">
                         <div class="info-row">
-                            <span class="label">订单号:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_order_no", Empty) Else %>订单号<% End If %>:</span>
                             <span class="value"><%= orderNo %></span>
                         </div>
                         <div class="info-row">
-                            <span class="label">订单金额:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_amount", Empty) Else %>订单金额<% End If %>:</span>
                             <span class="value amount"><%= FormatMoney(totalAmount) %></span>
                         </div>
                         <div class="info-row">
-                            <span class="label">支付方式:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_payment", Empty) Else %>支付方式<% End If %>:</span>
                             <span class="value">
                                 <% Dim pmVal
                                 If IsNumeric(paymentMethod) Then pmVal = CInt(paymentMethod) Else pmVal = -1
                                 Select Case pmVal
                                     Case PAYMENT_METHOD_WECHAT
-                                        Response.Write "微信支付"
+                                        Response.Write T("user_orders_pm_wechat", Empty)
                                     Case PAYMENT_METHOD_ALIPAY
-                                        Response.Write "支付宝"
+                                        Response.Write T("user_orders_pm_alipay", Empty)
                                     Case PAYMENT_METHOD_PAYPAL
-                                        Response.Write "PayPal"
+                                        Response.Write T("user_orders_pm_paypal", Empty)
                                     Case PAYMENT_METHOD_COD
-                                        Response.Write "货到付款"
+                                        Response.Write T("user_orders_pm_cod", Empty)
                                     Case Else
-                                        Response.Write "未知"
+                                        Response.Write T("user_orders_pm_unknown", Empty)
                                 End Select %>
                             </span>
                         </div>
                         <div class="info-row">
-                            <span class="label">订单状态:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_status", Empty) Else %>订单状态<% End If %>:</span>
                             <span class="value status-<%= orderStatus %>">
                                 <% Select Case orderStatus
                                     Case "Pending"
-                                        Response.Write "待支付"
+                                        Response.Write T("user_orders_status_pending", Empty)
                                     Case "Paid"
-                                        Response.Write "已支付"
+                                        Response.Write T("user_orders_status_paid", Empty)
                                     Case "Failed"
-                                        Response.Write "支付失败"
+                                        Response.Write T("user_orders_status_failed", Empty)
                                     Case "Refunded"
-                                        Response.Write "已退款"
+                                        Response.Write T("user_orders_status_refunded", Empty)
                                     Case Else
-                                        Response.Write "未知状态"
+                                        Response.Write T("user_orders_status_unknown", Empty)
                                 End Select %>
                             </span>
                         </div>
                         <div class="info-row">
-                            <span class="label">下单时间:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_order_time", Empty) Else %>下单时间<% End If %>:</span>
                             <span class="value"><%= createdAt %></span>
                         </div>
                         <% If Not IsNull(updatedAt) And updatedAt <> "" Then %>
                         <div class="info-row">
-                            <span class="label">支付时间:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_pay_time", Empty) Else %>支付时间<% End If %>:</span>
                             <span class="value"><%= updatedAt %></span>
                         </div>
                         <% End If %>
                         <% If Not IsNull(notes) And notes <> "" Then %>
                         <div class="info-row">
-                            <span class="label">交易信息:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_transaction", Empty) Else %>交易信息<% End If %>:</span>
                             <span class="value"><%= HTMLEncode(notes) %></span>
                         </div>
                         <% End If %>
                         <!-- 收货信息 -->
                         <!-- 使用订单表中保存的收货人信息，而不是从用户表获取实时信息 -->
                         <div class="info-row">
-                            <span class="label">收货人:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_consignee", Empty) Else %>收货人<% End If %>:</span>
                             <span class="value"><%= HTMLEncode(shippingName) %></span>
                         </div>
                         <div class="info-row">
-                            <span class="label">联系电话:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_phone", Empty) Else %>联系电话<% End If %>:</span>
                             <span class="value"><%= HTMLEncode(shippingPhone) %></span>
                         </div>
                         <div class="info-row">
-                            <span class="label">收货地址:</span>
+                            <span class="label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_address", Empty) Else %>收货地址<% End If %>:</span>
                             <span class="value"><%= HTMLEncode(shippingAddress) %></span>
                         </div>
                     </div>
                     
                     <!-- 订单商品列表 -->
                     <div class="order-products">
-                        <h3>订单商品</h3>
+                        <h3><% If FEATURE_I18N Then Response.Write T("user_order_detail_products", Empty) Else %>订单商品<% End If %></h3>
                         <div class="products-list">
                             <%
                             ' 从OrderDetails和OrderDetailNoteSelections查询订单商品详情
@@ -328,7 +329,7 @@ End If
                             %>
                             <div class="order-item">
                                 <div class="item-info">
-                                    <div class="base-info"><strong><%= HTMLEncode(odProductName) %></strong> ×<%= odQuantity %> | 单价: <%= FormatMoney(odUnitPrice) %> | 小计: <%= FormatMoney(odSubtotal) %></div>
+                                    <div class="base-info"><strong><%= HTMLEncode(odProductName) %></strong> ×<%= odQuantity %> | <% If FEATURE_I18N Then Response.Write T("user_order_detail_unit_price", Empty) Else %>单价<% End If %>: <%= FormatMoney(odUnitPrice) %> | <% If FEATURE_I18N Then Response.Write T("subtotal", Empty) Else %>小计<% End If %>: <%= FormatMoney(odSubtotal) %></div>
                                     <%
                                     ' KOL推荐产品与品牌定香产品不显示香调配比信息
                                     Dim rsOrderNotes, odTopList, odMidList, odBaseList, odNoteType, odNoteName, odPercent
@@ -358,23 +359,23 @@ End If
                                     End If
                                     
                                     If odProductTypeLC = "custom" And odTopList <> "" Then
-                                        Response.Write "<div class='custom-info'>前调: " & odTopList & "</div>"
+                                        Response.Write "<div class='custom-info'>" & T("user_order_detail_note_top", Empty) & ": " & odTopList & "</div>"
                                     End If
                                     If odProductTypeLC = "custom" And odMidList <> "" Then
-                                        Response.Write "<div class='custom-info'>中调: " & odMidList & "</div>"
+                                        Response.Write "<div class='custom-info'>" & T("user_order_detail_note_mid", Empty) & ": " & odMidList & "</div>"
                                     End If
                                     If odProductTypeLC = "custom" And odBaseList <> "" Then
-                                        Response.Write "<div class='custom-info'>后调: " & odBaseList & "</div>"
+                                        Response.Write "<div class='custom-info'>" & T("user_order_detail_note_base", Empty) & ": " & odBaseList & "</div>"
                                     End If
                                     
                                     If odVolumeName <> "" Then
-                                        Response.Write "<div class='custom-info'>容量: " & odVolumeML & "ml (" & HTMLEncode(odVolumeName) & ")</div>"
+                                        Response.Write "<div class='custom-info'>" & T("user_order_detail_volume", Empty) & ": " & odVolumeML & "ml (" & HTMLEncode(odVolumeName) & ")</div>"
                                     End If
                                     If odBottleName <> "" Then
-                                        Response.Write "<div class='custom-info'>瓶身: " & HTMLEncode(odBottleName) & "</div>"
+                                        Response.Write "<div class='custom-info'>" & T("user_order_detail_bottle", Empty) & ": " & HTMLEncode(odBottleName) & "</div>"
                                     End If
                                     If odCustomLabel <> "" Then
-                                        Response.Write "<div class='custom-info'>刻字: " & HTMLEncode(odCustomLabel) & "</div>"
+                                        Response.Write "<div class='custom-info'>" & T("user_order_detail_engraving", Empty) & ": " & HTMLEncode(odCustomLabel) & "</div>"
                                     End If
                                     
                                     ' 显示成分/过敏原信息（仅对定制和KOL产品可见，品牌定香产品随包装附成分说明书）
@@ -422,7 +423,7 @@ End If
                                             If odIngrList <> "" Then odIngrList = odIngrList & ", "
                                             odIngrList = odIngrList & HTMLEncode(odIngrArr(odI))
                                         Next
-                                        Response.Write "<div class='custom-info' style='color:#888;font-size:12px;margin-top:4px;'><i class='fas fa-flask'></i> 成分: " & odIngrList & "</div>"
+                                        Response.Write "<div class='custom-info' style='color:#888;font-size:12px;margin-top:4px;'><i class='fas fa-flask'></i> " & T("user_order_detail_ingredients_label", Empty) & ": " & odIngrList & "</div>"
                                     End If
                                     End If
                                     Set odUniqueIngr = Nothing
@@ -438,7 +439,7 @@ End If
                             %>
                             <div class="order-item">
                                 <div class="item-info">
-                                    <p>暂无订单商品详情</p>
+                                    <p><% If FEATURE_I18N Then Response.Write T("user_order_detail_no_products", Empty) Else %>暂无订单商品详情<% End If %></p>
                                 </div>
                             </div>
                             <% End If %>
@@ -449,7 +450,7 @@ End If
                     <!-- 操作按钮 -->
                     <div class="order-actions">
                         <% If orderStatus = "Pending" Then %>
-                        <a href="/checkout.asp?order_id=<%= orderId %>" class="btn btn-primary">立即支付</a>
+                        <a href="/checkout.asp?order_id=<%= orderId %>" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("user_order_detail_pay_now", Empty) Else %>立即支付<% End If %></a>
                         <% End If %>
                         
                         <%
@@ -471,18 +472,18 @@ End If
                         If hasCustomOrKOL Then
                         %>
                         <a href="/order_ingredients.asp?order_id=<%= orderId %>" class="btn btn-success" target="_blank">
-                            <i class="fas fa-list-ul"></i> 查看所有产品成分
+                            <i class="fas fa-list-ul"></i> <% If FEATURE_I18N Then Response.Write T("user_order_detail_ingredients", Empty) Else %>查看所有产品成分<% End If %>
                         </a>
                         <%
                         End If
                         %>
                         
-                        <a href="/user/orders.asp" class="btn btn-outline">返回订单列表</a>
+                        <a href="/user/orders.asp" class="btn btn-outline"><% If FEATURE_I18N Then Response.Write T("user_order_detail_back_list", Empty) Else %>返回订单列表<% End If %></a>
                     </div>
                     
                     <!-- 评价区域 -->
                     <div id="review-section" class="review-section">
-                        <h3><i class="fas fa-star"></i> 订单评价</h3>
+                        <h3><i class="fas fa-star"></i> <% If FEATURE_I18N Then Response.Write T("user_order_detail_review_title", Empty) Else %>订单评价<% End If %></h3>
                         
                         <% If reviewSubmitMessage <> "" Then %>
                         <div class="review-message <%= IIF(reviewSubmitSuccess, "success", "error") %>">
@@ -494,7 +495,7 @@ End If
                         <!-- 已评价显示 -->
                         <div class="review-display">
                             <div class="review-rating">
-                                <span class="rating-label">评分：</span>
+                                <span class="rating-label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_rating_label", Empty) Else %>评分：<% End If %></span>
                                 <span class="rating-stars">
                                     <% 
                                     Dim starIdx
@@ -507,11 +508,11 @@ End If
                                     Next
                                     %>
                                 </span>
-                                <span class="rating-text"><%= reviewRating %> 星</span>
+                                <span class="rating-text"><%= reviewRating %> <% If FEATURE_I18N Then Response.Write T("user_order_detail_star_hint", Empty) Else %>星<% End If %></span>
                             </div>
                             <% If reviewComment <> "" Then %>
                             <div class="review-comment">
-                                <span class="comment-label">评价内容：</span>
+                                <span class="comment-label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_comment_label", Empty) Else %>评价内容：<% End If %></span>
                                 <p class="comment-text"><%= HTMLEncode(reviewComment) %></p>
                             </div>
                             <% End If %>
@@ -519,52 +520,52 @@ End If
                                 <span class="review-status status-<%= reviewStatus %>">
                                     <% 
                                     Select Case reviewStatus
-                                        Case "Pending": Response.Write "待审核"
-                                        Case "Approved": Response.Write "已通过"
-                                        Case "Rejected": Response.Write "未通过"
+                                        Case "Pending": Response.Write T("user_order_detail_review_pending", Empty)
+                                        Case "Approved": Response.Write T("user_order_detail_review_approved", Empty)
+                                        Case "Rejected": Response.Write T("user_order_detail_review_rejected", Empty)
                                         Case Else: Response.Write reviewStatus
                                     End Select
                                     %>
                                 </span>
-                                <span class="review-date">提交时间：<%= reviewCreatedAt %></span>
+                                <span class="review-date"><% If FEATURE_I18N Then Response.Write T("user_order_detail_submitted_at", Empty) Else %>提交时间：<% End If %><%= reviewCreatedAt %></span>
                             </div>
                         </div>
                         <% ElseIf canReview Then %>
                         <!-- 评价表单 -->
                         <div class="review-form-container">
-                            <p class="review-hint">请对本次购物体验进行评价：</p>
+                            <p class="review-hint"><% If FEATURE_I18N Then Response.Write T("user_order_detail_review_hint", Empty) Else %>请对本次购物体验进行评价：<% End If %></p>
                             <form method="post" action="" class="review-form">
                                 <%= GetCSRFTokenField() %>
                                 <input type="hidden" name="action" value="submit_review">
                                 
                                 <div class="rating-input">
-                                    <span class="rating-label">评分：</span>
+                                    <span class="rating-label"><% If FEATURE_I18N Then Response.Write T("user_order_detail_rating_label", Empty) Else %>评分：<% End If %></span>
                                     <div class="star-rating">
                                         <% For starIdx = 5 To 1 Step -1 %>
                                         <input type="radio" id="star<%= starIdx %>" name="rating" value="<%= starIdx %>" <%= IIF(starIdx = 5, "checked", "") %>>
-                                        <label for="star<%= starIdx %>" title="<%= starIdx %> 星"><i class="fas fa-star"></i></label>
+                                        <label for="star<%= starIdx %>" title="<%= starIdx %> <% If FEATURE_I18N Then Response.Write T("user_order_detail_star_hint", Empty) Else %>星<% End If %>"><i class="fas fa-star"></i></label>
                                         <% Next %>
                                     </div>
                                 </div>
                                 
                                 <div class="comment-input">
-                                    <label for="comment">评价内容（选填）：</label>
-                                    <textarea id="comment" name="comment" rows="4" maxlength="500" placeholder="请输入您的评价内容，最多500字..."></textarea>
+                                    <label for="comment"><% If FEATURE_I18N Then Response.Write T("user_order_detail_comment_label", Empty) Else %>评价内容（选填）：<% End If %></label>
+                                    <textarea id="comment" name="comment" rows="4" maxlength="500" placeholder="<% If FEATURE_I18N Then Response.Write T("user_order_detail_comment_placeholder", Empty) Else %>请输入您的评价内容，最多500字...<% End If %>"></textarea>
                                     <span class="char-count">0/500</span>
                                 </div>
                                 
                                 <div class="form-actions">
-                                    <button type="submit" class="btn btn-primary">提交评价</button>
+                                    <button type="submit" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("user_order_detail_submit_review", Empty) Else %>提交评价<% End If %></button>
                                 </div>
                             </form>
                         </div>
                         <% ElseIf orderStatus = "Pending" Then %>
                         <div class="review-notice">
-                            <p><i class="fas fa-info-circle"></i> 订单支付完成后可进行评价</p>
+                            <p><i class="fas fa-info-circle"></i> <% If FEATURE_I18N Then Response.Write T("user_order_detail_wait_payment", Empty) Else %>订单支付完成后可进行评价<% End If %></p>
                         </div>
                         <% Else %>
                         <div class="review-notice">
-                            <p><i class="fas fa-info-circle"></i> 当前订单状态不支持评价</p>
+                            <p><i class="fas fa-info-circle"></i> <% If FEATURE_I18N Then Response.Write T("user_order_detail_cannot_review", Empty) Else %>当前订单状态不支持评价<% End If %></p>
                         </div>
                         <% End If %>
                     </div>

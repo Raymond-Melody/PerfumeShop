@@ -6,6 +6,7 @@ Response.ContentType = "text/html"
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="includes/role_auth.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <%
 Call OpenConnection()
 
@@ -41,7 +42,7 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理中心入口 - 香氛电商系统</title>
+    <title><% If FEATURE_I18N Then Response.Write T("admin_portal_page_title", Empty) Else %>管理中心入口 - 香氛电商系统<% End If %></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -247,8 +248,8 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fas fa-cubes"></i> <span>管理中心</span></h1>
-            <p>V9.0 全模块统一入口 · 请选择要进入的管理后台</p>
+            <h1><i class="fas fa-cubes"></i> <span><% If FEATURE_I18N Then Response.Write T("admin_portal_heading", Empty) Else %>管理中心<% End If %></span></h1>
+            <p><% If FEATURE_I18N Then Response.Write T("admin_portal_subtitle", Empty) Else %>V9.0 全模块统一入口 · 请选择要进入的管理后台<% End If %></p>
         </div>
         
         <div class="user-info">
@@ -272,15 +273,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-chart-line"></i></div>
                     <div class="card-title">
-                        <h3>运营管理中心</h3>
-                        <p>订单、客户、商品、评价</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_operation", Empty) Else %>运营管理中心<% End If %></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_operation_desc", Empty) Else %>订单、客户、商品、评价<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> 订单管理</li>
-                    <li><i class="fas fa-check"></i> 客户CRM画像</li>
-                    <li><i class="fas fa-check"></i> 售后管理</li>
-                    <li><i class="fas fa-check"></i> 评价审核</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_operation_f1", Empty) Else %>订单管理<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_operation_f2", Empty) Else %>客户CRM画像<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_operation_f3", Empty) Else %>售后管理<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_operation_f4", Empty) Else %>评价审核<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -290,15 +291,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-vial"></i></div>
                     <div class="card-title">
-                        <h3>半成品生产中心 <span class="badge-new">NEW</span></h3>
-                        <p>原料、基香、香调生产</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_semifinished", Empty) Else %>半成品生产中心<% End If %> <span class="badge-new">NEW</span></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_semifinished_desc", Empty) Else %>原料、基香、香调生产<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> Accord生产</li>
-                    <li><i class="fas fa-check"></i> 原料库存</li>
-                    <li><i class="fas fa-check"></i> 基香&香调库存</li>
-                    <li><i class="fas fa-check"></i> 车间调拨</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_semifinished_f1", Empty) Else %>Accord生产<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_semifinished_f2", Empty) Else %>原料库存<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_semifinished_f3", Empty) Else %>基香&香调库存<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_semifinished_f4", Empty) Else %>车间调拨<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -308,15 +309,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-industry"></i></div>
                     <div class="card-title">
-                        <h3>产品生产管理中心 <span class="badge-new">NEW</span></h3>
-                        <p>工单、排产、质检、入库</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_prodcenter", Empty) Else %>产品生产管理中心<% End If %> <span class="badge-new">NEW</span></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_prodcenter_desc", Empty) Else %>工单、排产、质检、入库<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> 生产工单</li>
-                    <li><i class="fas fa-check"></i> 排产调度</li>
-                    <li><i class="fas fa-check"></i> 质量检验</li>
-                    <li><i class="fas fa-check"></i> 成品库存</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_prodcenter_f1", Empty) Else %>生产工单<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_prodcenter_f2", Empty) Else %>排产调度<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_prodcenter_f3", Empty) Else %>质量检验<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_prodcenter_f4", Empty) Else %>成品库存<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -326,15 +327,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-truck"></i></div>
                     <div class="card-title">
-                        <h3>物流管理中心 <span class="badge-new">NEW</span></h3>
-                        <p>发货、在途、签收、退货</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_logistics", Empty) Else %>物流管理中心<% End If %> <span class="badge-new">NEW</span></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_logistics_desc", Empty) Else %>发货、在途、签收、退货<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> 发货单管理</li>
-                    <li><i class="fas fa-check"></i> 在途跟踪</li>
-                    <li><i class="fas fa-check"></i> 签收确认</li>
-                    <li><i class="fas fa-check"></i> 退货入库</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_logistics_f1", Empty) Else %>发货单管理<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_logistics_f2", Empty) Else %>在途跟踪<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_logistics_f3", Empty) Else %>签收确认<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_logistics_f4", Empty) Else %>退货入库<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -344,15 +345,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-shopping-cart"></i></div>
                     <div class="card-title">
-                        <h3>采购管理中心</h3>
-                        <p>品牌定香产品采购与管理、供应商管理、价格管理</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_purchase", Empty) Else %>采购管理中心<% End If %></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_purchase_desc", Empty) Else %>品牌定香产品采购与管理、供应商管理、价格管理<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> 采购订单</li>
-                    <li><i class="fas fa-check"></i> 供应商管理</li>
-                    <li><i class="fas fa-check"></i> 价格管理</li>
-                    <li><i class="fas fa-check"></i> 采购分析</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_purchase_f1", Empty) Else %>采购订单<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_purchase_f2", Empty) Else %>供应商管理<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_purchase_f3", Empty) Else %>价格管理<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_purchase_f4", Empty) Else %>采购分析<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -362,15 +363,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-dollar-sign"></i></div>
                     <div class="card-title">
-                        <h3>财务管理中心</h3>
-                        <p>应收应付、成本、总账</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_finance", Empty) Else %>财务管理中心<% End If %></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_finance_desc", Empty) Else %>应收应付、成本、总账<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> 应收应付</li>
-                    <li><i class="fas fa-check"></i> 付款凭证</li>
-                    <li><i class="fas fa-check"></i> 总账报表</li>
-                    <li><i class="fas fa-check"></i> 现金流预测</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_finance_f1", Empty) Else %>应收应付<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_finance_f2", Empty) Else %>付款凭证<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_finance_f3", Empty) Else %>总账报表<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_finance_f4", Empty) Else %>现金流预测<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -380,15 +381,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-flask"></i></div>
                     <div class="card-title">
-                        <h3>产品技术管理中心</h3>
-                        <p>配方、基香、规格设置</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_techcenter", Empty) Else %>产品技术管理中心<% End If %></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_techcenter_desc", Empty) Else %>配方、基香、规格设置<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> 配方工艺</li>
-                    <li><i class="fas fa-check"></i> 基香管理</li>
-                    <li><i class="fas fa-check"></i> 香调调整</li>
-                    <li><i class="fas fa-check"></i> 产品规格</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_techcenter_f1", Empty) Else %>配方工艺<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_techcenter_f2", Empty) Else %>基香管理<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_techcenter_f3", Empty) Else %>香调调整<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_techcenter_f4", Empty) Else %>产品规格<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -398,15 +399,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-shield-alt"></i></div>
                     <div class="card-title">
-                        <h3>站点技术管理</h3>
-                        <p>权限、安全、备份、日志</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_system", Empty) Else %>站点技术管理<% End If %></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_system_desc", Empty) Else %>权限、安全、备份、日志<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> 管理员&角色</li>
-                    <li><i class="fas fa-check"></i> 安全审计</li>
-                    <li><i class="fas fa-check"></i> 备份中心</li>
-                    <li><i class="fas fa-check"></i> 站点设置</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_system_f1", Empty) Else %>管理员&角色<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_system_f2", Empty) Else %>安全审计<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_system_f3", Empty) Else %>备份中心<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_system_f4", Empty) Else %>站点设置<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -416,15 +417,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-warehouse"></i></div>
                     <div class="card-title">
-                        <h3>库存管理中心 <span class="badge-new">NEW</span></h3>
-                        <p>全品类统一库存管控</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_inventory", Empty) Else %>库存管理中心<% End If %> <span class="badge-new">NEW</span></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_inventory_desc", Empty) Else %>全品类统一库存管控<% End If %></p>
                     </div>
                 </div>
                 <ul class="portal-features">
-                    <li><i class="fas fa-check"></i> 库存仪表盘</li>
-                    <li><i class="fas fa-check"></i> 全品类预警</li>
-                    <li><i class="fas fa-check"></i> 库存流水</li>
-                    <li><i class="fas fa-check"></i> 快捷入口</li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_inventory_f1", Empty) Else %>库存仪表盘<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_inventory_f2", Empty) Else %>全品类预警<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_inventory_f3", Empty) Else %>库存流水<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then Response.Write T("admin_portal_inventory_f4", Empty) Else %>快捷入口<% End If %></li>
                 </ul>
             </a>
             <% End If %>
@@ -433,15 +434,15 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-sign-out-alt"></i></div>
                     <div class="card-title">
-                        <h3>安全退出</h3>
-                        <p>结束本次管理会话</p>
+                        <h3><% If FEATURE_I18N Then Response.Write T("admin_portal_logout", Empty) Else %>安全退出<% End If %></h3>
+                        <p><% If FEATURE_I18N Then Response.Write T("admin_portal_logout_desc", Empty) Else %>结束本次管理会话<% End If %></p>
                     </div>
                 </div>
             </a>
         </div>
 
         <div class="footer-info">
-            香氛电商系统 <span>V9.0</span> · 全模块统一管理平台
+            <% If FEATURE_I18N Then Response.Write T("admin_portal_footer", Empty) Else %>香氛电商系统 <span>V9.0</span> · 全模块统一管理平台<% End If %>
         </div>
     </div>
 </body>

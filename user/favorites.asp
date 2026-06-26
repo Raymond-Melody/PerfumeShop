@@ -4,6 +4,7 @@ Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
 %>
 <!--#include file="../includes/config.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <%
 Call OpenConnection()
@@ -36,11 +37,11 @@ End Select
 <!-- 面包屑导航 -->
 <div class="breadcrumb">
     <div class="container">
-        <a href="/index.asp">首页</a>
+        <a href="/index.asp"><% If FEATURE_I18N Then Response.Write T("breadcrumb_home", Empty) Else %>首页<% End If %></a>
         <span class="separator">/</span>
-        <a href="/user/index.asp">个人中心</a>
+        <a href="/user/index.asp"><% If FEATURE_I18N Then Response.Write T("user_nav_center", Empty) Else %>个人中心<% End If %></a>
         <span class="separator">/</span>
-        <span>我的收藏</span>
+        <span><% If FEATURE_I18N Then Response.Write T("user_favorites_title", Empty) Else %>我的收藏<% End If %></span>
     </div>
 </div>
 
@@ -49,16 +50,16 @@ End Select
         <!-- 侧边栏筛选 -->
         <aside class="sidebar">
             <div class="filter-section">
-                <h3>收藏管理</h3>
+                <h3><% If FEATURE_I18N Then Response.Write T("user_favorites_management", Empty) Else %>收藏管理<% End If %></h3>
                 <ul class="filter-list">
-                    <li><a href="/user/favorites.asp" class="active">我的收藏</a></li>
+                    <li><a href="/user/favorites.asp" class="active"><% If FEATURE_I18N Then Response.Write T("user_favorites_title", Empty) Else %>我的收藏<% End If %></a></li>
                 </ul>
             </div>
             
             <div class="filter-section">
-                <h3>香调分类</h3>
+                <h3><% If FEATURE_I18N Then Response.Write T("user_favorites_category", Empty) Else %>香调分类<% End If %></h3>
                 <ul class="filter-list">
-                    <li><a href="/user/favorites.asp?sort=<%= sortBy %>">全部</a></li>
+                    <li><a href="/user/favorites.asp?sort=<%= sortBy %>"><% If FEATURE_I18N Then Response.Write T("user_favorites_all", Empty) Else %>全部<% End If %></a></li>
                     <li><a href="/user/favorites.asp?category=花香调&sort=<%= sortBy %>">花香调</a></li>
                     <li><a href="/user/favorites.asp?category=东方调&sort=<%= sortBy %>">东方调</a></li>
                     <li><a href="/user/favorites.asp?category=木质调&sort=<%= sortBy %>">木质调</a></li>
@@ -69,9 +70,9 @@ End Select
             </div>
             
             <div class="filter-section cta-box">
-                <h3>继续探索</h3>
-                <p>发现更多心仪香水</p>
-                <a href="/products.asp" class="btn btn-primary btn-block">浏览商品</a>
+                <h3><% If FEATURE_I18N Then Response.Write T("user_favorites_continue", Empty) Else %>继续探索<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("user_favorites_discover", Empty) Else %>发现更多心仪香水<% End If %></p>
+                <a href="/products.asp" class="btn btn-primary btn-block"><% If FEATURE_I18N Then Response.Write T("user_favorites_browse", Empty) Else %>浏览商品<% End If %></a>
             </div>
         </aside>
 
@@ -79,15 +80,15 @@ End Select
         <div class="products-main">
             <div class="products-header">
                 <div class="results-info">
-                    <span>我的收藏</span>
+                    <span><% If FEATURE_I18N Then Response.Write T("user_favorites_title", Empty) Else %>我的收藏<% End If %></span>
                 </div>
                 <div class="sort-options">
-                    <label>排序:</label>
+                    <label><% If FEATURE_I18N Then Response.Write T("user_favorites_sort", Empty) Else %>排序<% End If %>:</label>
                     <select id="sortSelect" onchange="changeSort(this.value)">
-                        <option value="newest" <% If sortBy = "" Or sortBy = "newest" Then Response.Write "selected" End If %>>最新收藏</option>
-                        <option value="price_asc" <% If sortBy = "price_asc" Then Response.Write "selected" End If %>>价格从低到高</option>
-                        <option value="price_desc" <% If sortBy = "price_desc" Then Response.Write "selected" End If %>>价格从高到低</option>
-                        <option value="name" <% If sortBy = "name" Then Response.Write "selected" End If %>>名称排序</option>
+                        <option value="newest" <% If sortBy = "" Or sortBy = "newest" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then Response.Write T("user_favorites_sort_newest", Empty) Else %>最新收藏<% End If %></option>
+                        <option value="price_asc" <% If sortBy = "price_asc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then Response.Write T("user_favorites_sort_price_asc", Empty) Else %>价格从低到高<% End If %></option>
+                        <option value="price_desc" <% If sortBy = "price_desc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then Response.Write T("user_favorites_sort_price_desc", Empty) Else %>价格从高到低<% End If %></option>
+                        <option value="name" <% If sortBy = "name" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then Response.Write T("user_favorites_sort_name", Empty) Else %>名称排序<% End If %></option>
                     </select>
                 </div>
             </div>
@@ -151,9 +152,9 @@ End Select
             %>
             <div class="no-results">
                 <i class="fas fa-heart"></i>
-                <h3>暂无收藏商品</h3>
-                <p>收藏喜欢的商品，方便以后快速找到</p>
-                <a href="/products.asp" class="btn btn-primary">去逛逛</a>
+                <h3><% If FEATURE_I18N Then Response.Write T("user_favorites_empty_title", Empty) Else %>暂无收藏商品<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("user_favorites_empty_desc", Empty) Else %>收藏喜欢的商品，方便以后快速找到<% End If %></p>
+                <a href="/products.asp" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("user_favorites_go_browse", Empty) Else %>去逛逛<% End If %></a>
             </div>
             <%
                 End If
@@ -168,11 +169,11 @@ function removeFromFavorites(productId) {
     // 确保productId是数字
     productId = parseInt(productId);
     if (isNaN(productId)) {
-        alert('无效的商品ID');
+        alert('<% If FEATURE_I18N Then Response.Write T("user_favorites_invalid_id", Empty) Else %>无效的商品ID<% End If %>');
         return;
     }
     
-    if (confirm('确定要取消收藏这个商品吗？')) {
+    if (confirm('<% If FEATURE_I18N Then Response.Write T("user_favorites_remove_confirm", Empty) Else %>确定要取消收藏这个商品吗？<% End If %>')) {
         // 发送AJAX请求取消收藏
         var xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/favorites.asp', true);
@@ -190,10 +191,10 @@ function removeFromFavorites(productId) {
                             alert(response.message || '操作失败');
                         }
                     } catch (e) {
-                        alert('操作失败');
+                        alert('<% If FEATURE_I18N Then Response.Write T("user_favorites_operation_failed", Empty) Else %>操作失败<% End If %>');
                     }
                 } else {
-                    alert('网络错误');
+                    alert('<% If FEATURE_I18N Then Response.Write T("user_favorites_network_error", Empty) Else %>网络错误<% End If %>');
                 }
             }
         };

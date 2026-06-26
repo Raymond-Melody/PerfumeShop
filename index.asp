@@ -20,23 +20,23 @@ activeTypes = GetActiveProductTypes()
     <div class="banner-slider">
         <div class="slide active">
             <div class="slide-content">
-                <h1>定制你的专属香氛</h1>
-                <p>从前调到后调，每一个选择都是你的独特表达</p>
-                <a href="/customize.asp" class="btn btn-primary btn-lg">开始定制</a>
+                <h1><% If FEATURE_I18N Then Response.Write T("home_hero_title_1", Empty) Else %>定制你的专属香氛<% End If %></h1>
+                <p><% If FEATURE_I18N Then Response.Write T("home_hero_desc_1", Empty) Else %>从前调到后调，每一个选择都是你的独特表达<% End If %></p>
+                <a href="/customize.asp" class="btn btn-primary btn-lg"><% If FEATURE_I18N Then Response.Write T("home_hero_btn_1", Empty) Else %>开始定制<% End If %></a>
             </div>
         </div>
         <div class="slide">
             <div class="slide-content">
-                <h1>新品上市 - 皇室典藏</h1>
-                <p>顶级原料，匠心之作，尊享奢华体验</p>
-                <a href="/product.asp?id=6" class="btn btn-primary btn-lg">立即查看</a>
+                <h1><% If FEATURE_I18N Then Response.Write T("home_hero_title_2", Empty) Else %>新品上市 - 皇室典藏<% End If %></h1>
+                <p><% If FEATURE_I18N Then Response.Write T("home_hero_desc_2", Empty) Else %>顶级原料，匠心之作，尊享奢华体验<% End If %></p>
+                <a href="/product.asp?id=6" class="btn btn-primary btn-lg"><% If FEATURE_I18N Then Response.Write T("home_hero_btn_2", Empty) Else %>立即查看<% End If %></a>
             </div>
         </div>
         <div class="slide">
             <div class="slide-content">
-                <h1>满299免运费</h1>
-                <p>首单立减50元，开启香氛之旅</p>
-                <a href="/products.asp" class="btn btn-primary btn-lg">立即选购</a>
+                <h1><% If FEATURE_I18N Then Response.Write T("home_hero_title_3", Empty) Else %>满299免运费<% End If %></h1>
+                <p><% If FEATURE_I18N Then Response.Write T("home_hero_desc_3", Empty) Else %>首单立减50元，开启香氛之旅<% End If %></p>
+                <a href="/products.asp" class="btn btn-primary btn-lg"><% If FEATURE_I18N Then Response.Write T("home_hero_btn_3", Empty) Else %>立即选购<% End If %></a>
             </div>
         </div>
     </div>
@@ -53,23 +53,23 @@ activeTypes = GetActiveProductTypes()
         <div class="features-grid">
             <div class="feature-item">
                 <i class="fas fa-magic"></i>
-                <h3>个性定制</h3>
-                <p>自由搭配香调，创造专属香水</p>
+                <h3><% If FEATURE_I18N Then Response.Write T("home_feature_custom", Empty) Else %>个性定制<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("home_feature_custom_desc", Empty) Else %>自由搭配香调，创造专属香水<% End If %></p>
             </div>
             <div class="feature-item">
                 <i class="fas fa-leaf"></i>
-                <h3>天然原料</h3>
-                <p>精选全球优质天然香料</p>
+                <h3><% If FEATURE_I18N Then Response.Write T("home_feature_natural", Empty) Else %>天然原料<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("home_feature_natural_desc", Empty) Else %>精选全球优质天然香料<% End If %></p>
             </div>
             <div class="feature-item">
                 <i class="fas fa-truck"></i>
-                <h3>快速配送</h3>
-                <p>下单后48小时内发货</p>
+                <h3><% If FEATURE_I18N Then Response.Write T("home_feature_shipping", Empty) Else %>快速配送<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("home_feature_shipping_desc", Empty) Else %>下单后48小时内发货<% End If %></p>
             </div>
             <div class="feature-item">
                 <i class="fas fa-undo"></i>
-                <h3>无忧退换</h3>
-                <p>7天无理由退换货</p>
+                <h3><% If FEATURE_I18N Then Response.Write T("home_feature_return", Empty) Else %>无忧退换<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("home_feature_return_desc", Empty) Else %>7天无理由退换货<% End If %></p>
             </div>
         </div>
     </div>
@@ -130,15 +130,15 @@ If IsArray(activeTypes) Then
                     <img src="<%= rsSection("ImageURL") %>" alt="<%= HTMLEncode(rsSection("ProductName")) %>" onerror="this.src='<%= DEFAULT_PRODUCT_IMAGE %>'">
                     <% If secTypeCode = "standard" Then %>
                     <div class="product-badges">
-                        <span class="badge badge-fixed">品牌定香</span>
+                        <span class="badge badge-fixed"><% If FEATURE_I18N Then Response.Write T("home_badge_fixed", Empty) Else %>品牌定香<% End If %></span>
                     </div>
                     <% ElseIf secTypeCode = "KOL" Then %>
                     <div class="product-badges">
-                        <span class="badge badge-kol">KOL推荐</span>
+                        <span class="badge badge-kol"><% If FEATURE_I18N Then Response.Write T("home_badge_kol", Empty) Else %>KOL推荐<% End If %></span>
                     </div>
                     <% End If %>
                     <div class="product-overlay">
-                        <a href="/product.asp?id=<%= pId %>" class="btn btn-white"><% If secTypeCode = "Custom" Then %>开始定制<% Else %>查看详情<% End If %></a>
+                        <a href="/product.asp?id=<%= pId %>" class="btn btn-white"><% If secTypeCode = "Custom" Then %><% If FEATURE_I18N Then Response.Write T("start_customize", Empty) Else %>开始定制<% End If %><% Else %><% If FEATURE_I18N Then Response.Write T("view_detail", Empty) Else %>查看详情<% End If %><% End If %></a>
                     </div>
                 </div>
                 <div class="product-info">
@@ -147,7 +147,7 @@ If IsArray(activeTypes) Then
                     <p class="product-desc"><%= HTMLEncode(Left(rsSection("Description") & "", 50)) %>...</p>
                     <div class="product-price">
                         <span class="price"><%= FormatMoney(pPrice) %></span>
-                        <span class="price-label">起</span>
+                        <span class="price-label"><% If FEATURE_I18N Then Response.Write T("price_from", Empty) Else %>起<% End If %></span>
                     </div>
                 </div>
             </div>
@@ -157,7 +157,7 @@ If IsArray(activeTypes) Then
             %>
         </div>
         <div class="section-footer">
-            <a href="/products.asp?type=<%= Server.URLEncode(secTypeCode) %>" class="btn btn-outline">查看更多<%= Server.HTMLEncode(secDisplayName) %></a>
+            <a href="/products.asp?type=<%= Server.URLEncode(secTypeCode) %>" class="btn btn-outline"><% If FEATURE_I18N Then Response.Write T("home_section_more", Array(Server.HTMLEncode(secDisplayName))) Else %>查看更多<%= Server.HTMLEncode(secDisplayName) %><% End If %></a>
         </div>
     </div>
 </section>
@@ -174,40 +174,40 @@ End If
 <section class="process-section">
     <div class="container">
         <div class="section-header">
-            <h2>定制流程</h2>
-            <p>简单四步，打造专属于你的香水</p>
+            <h2><% If FEATURE_I18N Then Response.Write T("home_process_title", Empty) Else %>定制流程<% End If %></h2>
+            <p><% If FEATURE_I18N Then Response.Write T("home_process_desc", Empty) Else %>简单四步，打造专属于你的香水<% End If %></p>
         </div>
         <div class="process-steps">
             <div class="step">
                 <div class="step-number">1</div>
                 <div class="step-icon"><i class="fas fa-flask"></i></div>
-                <h3>选择基调</h3>
-                <p>从花香、东方、木质等风格中选择</p>
+                <h3><% If FEATURE_I18N Then Response.Write T("home_process_step1_title", Empty) Else %>选择基调<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("home_process_step1_desc", Empty) Else %>从花香、东方、木质等风格中选择<% End If %></p>
             </div>
             <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
             <div class="step">
                 <div class="step-number">2</div>
                 <div class="step-icon"><i class="fas fa-palette"></i></div>
-                <h3>搭配香调</h3>
-                <p>选择前调、中调、后调的香料组合</p>
+                <h3><% If FEATURE_I18N Then Response.Write T("home_process_step2_title", Empty) Else %>搭配香调<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("home_process_step2_desc", Empty) Else %>选择前调、中调、后调的香料组合<% End If %></p>
             </div>
             <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
             <div class="step">
                 <div class="step-number">3</div>
                 <div class="step-icon"><i class="fas fa-wine-bottle"></i></div>
-                <h3>选择瓶型</h3>
-                <p>挑选心仪的瓶身款式和容量</p>
+                <h3><% If FEATURE_I18N Then Response.Write T("home_process_step3_title", Empty) Else %>选择瓶型<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("home_process_step3_desc", Empty) Else %>挑选心仪的瓶身款式和容量<% End If %></p>
             </div>
             <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
             <div class="step">
                 <div class="step-number">4</div>
                 <div class="step-icon"><i class="fas fa-pen-fancy"></i></div>
-                <h3>专属标签</h3>
-                <p>添加个性化文字，完成专属定制</p>
+                <h3><% If FEATURE_I18N Then Response.Write T("home_process_step4_title", Empty) Else %>专属标签<% End If %></h3>
+                <p><% If FEATURE_I18N Then Response.Write T("home_process_step4_desc", Empty) Else %>添加个性化文字，完成专属定制<% End If %></p>
             </div>
         </div>
         <div class="section-footer">
-            <a href="/customize.asp" class="btn btn-primary btn-lg">立即开始定制</a>
+            <a href="/customize.asp" class="btn btn-primary btn-lg"><% If FEATURE_I18N Then Response.Write T("home_process_btn", Empty) Else %>立即开始定制<% End If %></a>
         </div>
     </div>
 </section>
@@ -216,36 +216,36 @@ End If
 <section class="categories-section">
     <div class="container">
         <div class="section-header">
-            <h2>探索香调</h2>
-            <p>找到属于你的香氛风格</p>
+            <h2><% If FEATURE_I18N Then Response.Write T("home_categories_title", Empty) Else %>探索香调<% End If %></h2>
+            <p><% If FEATURE_I18N Then Response.Write T("home_categories_desc", Empty) Else %>找到属于你的香氛风格<% End If %></p>
         </div>
         <div class="categories-grid">
             <a href="/products.asp?category=花香调" class="category-card">
                 <div class="category-bg category-bg-floral"></div>
                 <div class="category-content">
-                    <h3>花香调</h3>
-                    <p>浪漫优雅，女性魅力</p>
+                    <h3><% If FEATURE_I18N Then Response.Write T("home_cat_floral", Empty) Else %>花香调<% End If %></h3>
+                    <p><% If FEATURE_I18N Then Response.Write T("home_cat_floral_desc", Empty) Else %>浪漫优雅，女性魅力<% End If %></p>
                 </div>
             </a>
             <a href="/products.asp?category=东方调" class="category-card">
                 <div class="category-bg category-bg-oriental"></div>
                 <div class="category-content">
-                    <h3>东方调</h3>
-                    <p>神秘深邃，异域风情</p>
+                    <h3><% If FEATURE_I18N Then Response.Write T("home_cat_oriental", Empty) Else %>东方调<% End If %></h3>
+                    <p><% If FEATURE_I18N Then Response.Write T("home_cat_oriental_desc", Empty) Else %>神秘深邃，异域风情<% End If %></p>
                 </div>
             </a>
             <a href="/products.asp?category=木质调" class="category-card">
                 <div class="category-bg category-bg-woody"></div>
                 <div class="category-content">
-                    <h3>木质调</h3>
-                    <p>沉稳内敛，自然气息</p>
+                    <h3><% If FEATURE_I18N Then Response.Write T("home_cat_woody", Empty) Else %>木质调<% End If %></h3>
+                    <p><% If FEATURE_I18N Then Response.Write T("home_cat_woody_desc", Empty) Else %>沉稳内敛，自然气息<% End If %></p>
                 </div>
             </a>
             <a href="/products.asp?category=海洋调" class="category-card">
                 <div class="category-bg category-bg-oceanic"></div>
                 <div class="category-content">
-                    <h3>海洋调</h3>
-                    <p>清新自由，活力四射</p>
+                    <h3><% If FEATURE_I18N Then Response.Write T("home_cat_oceanic", Empty) Else %>海洋调<% End If %></h3>
+                    <p><% If FEATURE_I18N Then Response.Write T("home_cat_oceanic_desc", Empty) Else %>清新自由，活力四射<% End If %></p>
                 </div>
             </a>
         </div>
@@ -257,10 +257,10 @@ End If
     <div class="container">
         <div class="story-content">
             <div class="story-text">
-                <h2>我们的故事</h2>
-                <p>香氛定制诞生于对香水艺术的热爱与追求。我们相信，每个人都值得拥有一款独一无二的香水，它不仅是一种气味，更是个性与情感的表达。</p>
-                <p>我们的调香师团队拥有超过20年的行业经验，精选来自世界各地的优质天然香料，为您打造专属的香氛体验。</p>
-                <a href="/about.asp" class="btn btn-outline">了解更多</a>
+                <h2><% If FEATURE_I18N Then Response.Write T("home_story_title", Empty) Else %>我们的故事<% End If %></h2>
+                <p><% If FEATURE_I18N Then Response.Write T("home_story_text_1", Empty) Else %>香氛定制诞生于对香水艺术的热爱与追求。我们相信，每个人都值得拥有一款独一无二的香水，它不仅是一种气味，更是个性与情感的表达。<% End If %></p>
+                <p><% If FEATURE_I18N Then Response.Write T("home_story_text_2", Empty) Else %>我们的调香师团队拥有超过20年的行业经验，精选来自世界各地的优质天然香料，为您打造专属的香氛体验。<% End If %></p>
+                <a href="/about.asp" class="btn btn-outline"><% If FEATURE_I18N Then Response.Write T("home_story_btn", Empty) Else %>了解更多<% End If %></a>
             </div>
             <div class="story-image">
                 <div class="story-image-placeholder"></div>
@@ -273,8 +273,8 @@ End If
 <section class="reviews-section">
     <div class="container">
         <div class="section-header">
-            <h2>客户评价</h2>
-            <p>听听他们怎么说</p>
+            <h2><% If FEATURE_I18N Then Response.Write T("home_reviews_title", Empty) Else %>客户评价<% End If %></h2>
+            <p><% If FEATURE_I18N Then Response.Write T("home_reviews_desc", Empty) Else %>听听他们怎么说<% End If %></p>
         </div>
         <div class="reviews-slider">
             <div class="review-card">
@@ -285,10 +285,10 @@ End If
                     <i class="fas fa-star"></i>
                     <i class="fas fa-star"></i>
                 </div>
-                <p class="review-text">"定制的香水太惊艳了！调香师的建议非常专业，成品完全符合我想要的感觉，独一无二的气味让我收到很多赞美。"</p>
+                <p class="review-text">"<% If FEATURE_I18N Then Response.Write T("home_review_1_text", Empty) Else %>定制的香水太惊艳了！调香师的建议非常专业，成品完全符合我想要的感觉，独一无二的气味让我收到很多赞美。<% End If %>"</p>
                 <div class="review-author">
-                    <span class="author-name">李女士</span>
-                    <span class="author-info">购买了花漾年华定制款</span>
+                    <span class="author-name"><% If FEATURE_I18N Then Response.Write T("home_review_1_author", Empty) Else %>李女士<% End If %></span>
+                    <span class="author-info"><% If FEATURE_I18N Then Response.Write T("home_review_1_info", Empty) Else %>购买了花漾年华定制款<% End If %></span>
                 </div>
             </div>
             <div class="review-card">
@@ -299,10 +299,10 @@ End If
                     <i class="fas fa-star"></i>
                     <i class="fas fa-star"></i>
                 </div>
-                <p class="review-text">"第一次尝试定制香水，整个过程很有趣！选香调的时候就像在创作艺术品，最后的成品留香时间也很长。"</p>
+                <p class="review-text">"<% If FEATURE_I18N Then Response.Write T("home_review_2_text", Empty) Else %>第一次尝试定制香水，整个过程很有趣！选香调的时候就像在创作艺术品，最后的成品留香时间也很长。<% End If %>"</p>
                 <div class="review-author">
-                    <span class="author-name">王先生</span>
-                    <span class="author-info">购买了东方秘境定制款</span>
+                    <span class="author-name"><% If FEATURE_I18N Then Response.Write T("home_review_2_author", Empty) Else %>王先生<% End If %></span>
+                    <span class="author-info"><% If FEATURE_I18N Then Response.Write T("home_review_2_info", Empty) Else %>购买了东方秘境定制款<% End If %></span>
                 </div>
             </div>
             <div class="review-card">
@@ -313,10 +313,10 @@ End If
                     <i class="fas fa-star"></i>
                     <i class="fas fa-star-half-alt"></i>
                 </div>
-                <p class="review-text">"送给闺蜜的生日礼物，她超级喜欢！瓶身还可以刻字，非常有心意。下次还会再来定制！"</p>
+                <p class="review-text">"<% If FEATURE_I18N Then Response.Write T("home_review_3_text", Empty) Else %>送给闺蜜的生日礼物，她超级喜欢！瓶身还可以刻字，非常有心意。下次还会再来定制！<% End If %>"</p>
                 <div class="review-author">
-                    <span class="author-name">张小姐</span>
-                    <span class="author-info">购买了清新森林定制款</span>
+                    <span class="author-name"><% If FEATURE_I18N Then Response.Write T("home_review_3_author", Empty) Else %>张小姐<% End If %></span>
+                    <span class="author-info"><% If FEATURE_I18N Then Response.Write T("home_review_3_info", Empty) Else %>购买了清新森林定制款<% End If %></span>
                 </div>
             </div>
         </div>
@@ -327,11 +327,11 @@ End If
 <section class="subscribe-section">
     <div class="container">
         <div class="subscribe-content">
-            <h2>订阅我们</h2>
-            <p>获取最新产品资讯和独家优惠</p>
+            <h2><% If FEATURE_I18N Then Response.Write T("home_subscribe_title", Empty) Else %>订阅我们<% End If %></h2>
+            <p><% If FEATURE_I18N Then Response.Write T("home_subscribe_desc", Empty) Else %>获取最新产品资讯和独家优惠<% End If %></p>
             <form class="subscribe-form" id="subscribeForm">
-                <input type="email" name="email" placeholder="请输入您的邮箱地址" required>
-                <button type="submit" class="btn btn-primary">订阅</button>
+                <input type="email" name="email" placeholder="<% If FEATURE_I18N Then Response.Write T("home_subscribe_placeholder", Empty) Else %>请输入您的邮箱地址<% End If %>" required>
+                <button type="submit" class="btn btn-primary"><% If FEATURE_I18N Then Response.Write T("home_subscribe_btn", Empty) Else %>订阅<% End If %></button>
             </form>
         </div>
     </div>
@@ -367,7 +367,7 @@ $(document).ready(function() {
     // 订阅表单
     $('#subscribeForm').submit(function(e) {
         e.preventDefault();
-        alert('感谢您的订阅！');
+        alert('<% If FEATURE_I18N Then Response.Write T("home_subscribe_thanks", Empty) Else %>感谢您的订阅！<% End If %>');
         $(this).find('input[type="email"]').val('');
     });
 });

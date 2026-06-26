@@ -9,6 +9,7 @@ If Session("UserID") <> "" Then
 End If
 %>
 <!--#include file="../includes/config.asp"-->
+<!--#include file="../includes/i18n.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <!--#include file="../includes/email_utils.asp"-->
@@ -24,7 +25,7 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     usernameOrEmail = Trim(Request.Form("username_or_email"))
     
     If usernameOrEmail = "" Then
-        errorMessage = "请输入用户名或邮箱地址"
+        errorMessage = T("user_forgot_empty", Empty)
     Else
         ' 查找用户
         Dim rsUser
@@ -48,12 +49,12 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                 Call SendUserPasswordResetEmail(rsUser("Email"), rsUser("FullName"), resetToken)
                 On Error GoTo 0
                 
-                successMessage = "密码重置链接已发送到您的邮箱。请检查您的收件箱。"
+                successMessage = T("user_forgot_email_sent", Empty)
             Else
-                errorMessage = "发生错误，请稍后重试"
+                errorMessage = T("user_forgot_error", Empty)
             End If
         Else
-            errorMessage = "找不到与输入匹配的用户账户"
+            errorMessage = T("user_forgot_not_found", Empty)
         End If
         
         If Not rsUser Is Nothing Then
@@ -69,8 +70,8 @@ End If
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
-                <h1>找回密码</h1>
-                <p>输入您的用户名或邮箱，我们将发送密码重置链接</p>
+                <h1><% If FEATURE_I18N Then Response.Write T("user_forgot_title", Empty) Else %>找回密码<% End If %></h1>
+                <p><% If FEATURE_I18N Then Response.Write T("user_forgot_subtitle", Empty) Else %>输入您的用户名或邮箱，我们将发送密码重置链接<% End If %></p>
             </div>
             
             <% If errorMessage <> "" Then %>
@@ -86,18 +87,18 @@ End If
             <% Else %>
             <form method="post" class="auth-form">
                 <div class="form-group">
-                    <label for="username_or_email"><i class="fas fa-user"></i> 用户名或邮箱</label>
-                    <input type="text" id="username_or_email" name="username_or_email" value="<%= HTMLEncode(usernameOrEmail) %>" placeholder="请输入注册时使用的用户名或邮箱" required>
+                    <label for="username_or_email"><i class="fas fa-user"></i> <% If FEATURE_I18N Then Response.Write T("user_forgot_email_label", Empty) Else %>用户名或邮箱<% End If %></label>
+                    <input type="text" id="username_or_email" name="username_or_email" value="<%= HTMLEncode(usernameOrEmail) %>" placeholder="<% If FEATURE_I18N Then Response.Write T("user_forgot_email_placeholder", Empty) Else %>请输入注册时使用的用户名或邮箱<% End If %>" required>
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-lg btn-block">
-                    <i class="fas fa-paper-plane"></i> 发送重置链接
+                    <i class="fas fa-paper-plane"></i> <% If FEATURE_I18N Then Response.Write T("user_forgot_btn", Empty) Else %>发送重置链接<% End If %>
                 </button>
             </form>
             <% End If %>
             
             <div class="auth-footer">
-                <p>想起密码了？ <a href="/user/login.asp">返回登录</a></p>
+                <p><% If FEATURE_I18N Then Response.Write T("user_forgot_back_to_login", Empty) Else %>想起密码了？<% End If %> <a href="/user/login.asp"><% If FEATURE_I18N Then Response.Write T("user_forgot_back_link", Empty) Else %>返回登录<% End If %></a></p>
             </div>
         </div>
         
