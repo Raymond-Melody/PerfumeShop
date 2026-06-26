@@ -90,6 +90,15 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                     sessionId = Session.SessionID
                     Call ExecuteNonQuery("UPDATE Cart SET UserID = " & rsUser("UserID") & ", SessionID = NULL WHERE SessionID = '" & SafeSQL(sessionId) & "' AND UserID IS NULL")
                     
+                    ' V17.2: 密码含全角字符时自动升级为标准化哈希
+                    Dim normalizedPwd
+                    normalizedPwd = NormalizePasswordInput(password)
+                    If normalizedPwd <> password Then
+                        Dim newNormalizedHash
+                        newNormalizedHash = HashPassword(password)  ' HashPassword内部已标准化
+                        Call ExecuteNonQuery("UPDATE Users SET [Password] = '" & SafeSQL(newNormalizedHash) & "' WHERE UserID = " & rsUser("UserID"))
+                    End If
+                    
                     ' V15: 检查是否需要升级密码哈希
                     If NeedsPasswordUpgrade(storedHash) Then
                         Dim newHash

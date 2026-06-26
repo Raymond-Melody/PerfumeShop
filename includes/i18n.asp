@@ -66,7 +66,7 @@ End Function
 ' 加载语言包到内存
 ' ============================================
 Function I18N_LoadDictionary(locale)
-    Dim cacheKey, dict, fso, filePath, file, line, pos
+    Dim cacheKey, dict, fso, filePath, line, pos
     
     cacheKey = "I18N_DICT_" & locale
     
@@ -76,7 +76,7 @@ Function I18N_LoadDictionary(locale)
         Exit Function
     End If
     
-    ' 从文件加载
+    ' 从文件加载（使用 ADODB.Stream 读取 UTF-8 文件）
     Set dict = Server.CreateObject("Scripting.Dictionary")
     
     On Error Resume Next
@@ -84,9 +84,23 @@ Function I18N_LoadDictionary(locale)
     Set fso = CreateObject("Scripting.FileSystemObject")
     
     If Err.Number = 0 And fso.FileExists(filePath) Then
-        Set file = fso.OpenTextFile(filePath, 1)
-        Do While Not file.AtEndOfStream
-            line = Trim(file.ReadLine())
+        ' V17.2: 使用 ADODB.Stream 以 UTF-8 编码读取 locale 文件
+        ' FSO.OpenTextFile 在中文系统默认以 GBK 读取，导致 UTF-8 中文丢失
+        Dim stream, content, lines, lineIdx
+        Set stream = Server.CreateObject("ADODB.Stream")
+        stream.Type = 2  ' adTypeText
+        stream.Charset = "UTF-8"
+        stream.Open
+        stream.LoadFromFile filePath
+        content = stream.ReadText
+        stream.Close
+        Set stream = Nothing
+        
+        ' 按行分割（兼容 CRLF 和 LF）
+        lines = Split(content, vbCrLf)
+        If UBound(lines) < 0 Then lines = Split(content, vbLf)
+        For lineIdx = 0 To UBound(lines)
+            line = Trim(lines(lineIdx))
             ' 格式: key=value
             If line <> "" And Left(line, 1) <> "#" Then
                 pos = InStr(line, "=")
@@ -94,9 +108,7 @@ Function I18N_LoadDictionary(locale)
                     dict.Add Trim(Left(line, pos - 1)), Trim(Mid(line, pos + 1))
                 End If
             End If
-        Loop
-        file.Close
-        Set file = Nothing
+        Next
     End If
     
     Set fso = Nothing
