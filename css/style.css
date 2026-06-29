@@ -1,28 +1,32 @@
 /* ============================================
-   香氛定制电商网站 - 主样式文件
+   香氛定制电商网站 - 主样式文件 V17.0
+   CSS变量已统一映射到 design-tokens.css (V2.0)
    ============================================ */
 
-/* CSS变量 */
+/* ============================================
+   V17.0: CSS变量统一映射到 design-tokens.css
+   旧变量名保留向下兼容，值取自设计令牌
+   ============================================ */
 :root {
-    --primary-color: #8B4513;
-    --primary-hover: #6B3410;
-    --secondary-color: #D4AF37;
-    --accent-color: #F5DEB3;
-    --text-color: #333333;
-    --text-light: #666666;
-    --text-muted: #999999;
-    --bg-color: #FFFFFF;
-    --bg-light: #F8F6F3;
-    --bg-dark: #2C1810;
-    --border-color: #E5E5E5;
-    --success-color: #28a745;
-    --warning-color: #ffc107;
-    --danger-color: #dc3545;
-    --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 5px 25px rgba(0, 0, 0, 0.15);
-    --transition: all 0.3s ease;
-    --radius: 8px;
-    --radius-lg: 12px;
+    --primary-color: var(--dt-color-primary, #8B4513);
+    --primary-hover: var(--dt-color-primary-hover, #6B3410);
+    --secondary-color: var(--dt-color-secondary, #D4AF37);
+    --accent-color: var(--dt-color-accent, #F5DEB3);
+    --text-color: var(--dt-color-text, #333333);
+    --text-light: var(--dt-color-text-light, #666666);
+    --text-muted: var(--dt-color-text-muted, #999999);
+    --bg-color: var(--dt-color-bg, #FFFFFF);
+    --bg-light: var(--dt-color-bg-light, #F8F6F3);
+    --bg-dark: var(--dt-color-bg-dark, #2C1810);
+    --border-color: var(--dt-color-border, #E5E5E5);
+    --success-color: var(--dt-color-success, #28a745);
+    --warning-color: var(--dt-color-warning, #ffc107);
+    --danger-color: var(--dt-color-danger, #dc3545);
+    --shadow: var(--dt-shadow-sm, 0 2px 10px rgba(0,0,0,0.1));
+    --shadow-lg: var(--dt-shadow-lg, 0 5px 25px rgba(0,0,0,0.15));
+    --transition: var(--dt-transition-base, all 0.3s ease);
+    --radius: var(--dt-radius-md, 8px);
+    --radius-lg: var(--dt-radius-xl, 12px);
 }
 
 /* 基础重置 */
@@ -1005,6 +1009,40 @@ input, button, textarea, select {
 .breadcrumb .separator {
     margin: 0 10px;
     color: var(--text-muted);
+}
+
+/* ============================================
+   V17.0: Toast消息提示样式（从 main.js 内联迁移）
+   ============================================ */
+.toast-message {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    padding: 15px 30px;
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+.toast-message.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+.toast-message.success {
+    border-left: 4px solid var(--success-color);
+}
+.toast-message.success i {
+    color: var(--success-color);
+}
+.toast-message.error {
+    border-left: 4px solid var(--danger-color);
+}
+.toast-message.error i {
+    color: var(--danger-color);
 }
 
 /* 响应式设计 */

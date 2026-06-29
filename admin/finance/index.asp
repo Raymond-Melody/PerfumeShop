@@ -124,6 +124,58 @@ On Error GoTo 0
 Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
 End Function
+
+' ========== V17: Chart.js 图表数据 ==========
+' 月度营收趋势（最近12个月）
+Dim revenueMonths, revenueData, profitData
+revenueMonths = "["
+revenueData = "["
+profitData = "["
+Dim m, monthLabel, monthStart, monthEnd, monthRev, monthProfit
+For m = 11 To 0 Step -1
+    monthStart = DateAdd("m", -m, DateSerial(Year(Now), Month(Now), 1))
+    monthEnd = DateAdd("d", -1, DateAdd("m", 1, monthStart))
+    monthLabel = Right("0" & Month(monthStart), 2) & "月"
+    monthRev = CDbl("0" & GetScalar("SELECT CAST(ISNULL(SUM(TotalAmount),0) AS FLOAT) FROM Orders WHERE Status IN ('Paid','Processing','Shipped','Completed') AND OrderDate >= '" & Year(monthStart) & "-" & Right("0" & Month(monthStart), 2) & "-01' AND OrderDate < '" & Year(DateAdd("m",1,monthStart)) & "-" & Right("0" & Month(DateAdd("m",1,monthStart)), 2) & "-01'")) / 10000
+    monthProfit = CDbl("0" & GetScalar("SELECT CAST(ISNULL(SUM(TotalAmount)-SUM(CostAmount),0) AS FLOAT) FROM Orders WHERE Status IN ('Paid','Processing','Shipped','Completed') AND OrderDate >= '" & Year(monthStart) & "-" & Right("0" & Month(monthStart), 2) & "-01' AND OrderDate < '" & Year(DateAdd("m",1,monthStart)) & "-" & Right("0" & Month(DateAdd("m",1,monthStart)), 2) & "-01'")) / 10000
+    If m < 11 Then
+        revenueMonths = revenueMonths & ","
+        revenueData = revenueData & ","
+        profitData = profitData & ","
+    End If
+    revenueMonths = revenueMonths & """" & monthLabel & """"
+    revenueData = revenueData & Replace(FormatNumber(monthRev, 2), ",", "")
+    profitData = profitData & Replace(FormatNumber(monthProfit, 2), ",", "")
+Next
+revenueMonths = revenueMonths & "]"
+revenueData = revenueData & "]"
+profitData = profitData & "]"
+
+' 品类销售占比
+Dim categoryLabels, categoryData, rsCat, catName, catAmount
+categoryLabels = "["
+categoryData = "["
+Dim catIdx : catIdx = 0
+Set rsCat = ExecuteQuery("SELECT TOP 8 p.ProductType, ISNULL(pt.DisplayName, p.ProductType) AS TypeName, CAST(ISNULL(SUM(o.TotalAmount), 0) AS FLOAT) AS SalesAmount FROM Orders o INNER JOIN OrderDetails od ON o.OrderID=od.OrderID INNER JOIN Products p ON od.ProductID=p.ProductID LEFT JOIN ProductTypeConfig pt ON p.ProductType=pt.TypeCode AND pt.IsActive=1 WHERE o.Status IN ('Paid','Processing','Shipped','Completed') GROUP BY p.ProductType, pt.DisplayName ORDER BY SUM(o.TotalAmount) DESC")
+If Not rsCat Is Nothing Then
+    Do While Not rsCat.EOF
+        catName = rsCat("TypeName")
+        If IsNull(catName) Or catName = "" Then catName = rsCat("ProductType")
+        catAmount = CDbl("0" & rsCat("SalesAmount"))
+        If catIdx > 0 Then
+            categoryLabels = categoryLabels & ","
+            categoryData = categoryData & ","
+        End If
+        categoryLabels = categoryLabels & """" & Replace(catName, """", "\""") & """"
+        categoryData = categoryData & Replace(FormatNumber(catAmount, 0), ",", "")
+        catIdx = catIdx + 1
+        rsCat.MoveNext
+    Loop
+    rsCat.Close
+End If
+Set rsCat = Nothing
+categoryLabels = categoryLabels & "]"
+categoryData = categoryData & "]"
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -133,6 +185,8 @@ End Function
     <link rel="stylesheet" href="/css/admin.css">
     <link rel="stylesheet" href="../operation/css/operation-dark.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- V17: Chart.js 可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         /* 暗色主题基础 */
         body {
@@ -417,6 +471,22 @@ End Function
             </div>
         </div>
         
+        <!-- V17: 图表可视化区域 -->
+        <div class="chart-section" style="display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:30px;">
+            <div class="kpi-card" style="grid-column:1;">
+                <div class="section-title" style="margin-bottom:15px;"><i class="fas fa-chart-line" style="color:#4CAF50;"></i> 月度营收趋势</div>
+                <div style="position:relative;height:300px;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+            <div class="kpi-card" style="grid-column:2;">
+                <div class="section-title" style="margin-bottom:15px;"><i class="fas fa-chart-pie" style="color:#FF9800;"></i> 品类销售占比</div>
+                <div style="position:relative;height:300px;">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
         <!-- 供应链对接：库存价值看板 -->
         <div class="kpi-section">
             <div class="section-title"><i class="fas fa-link" style="color:#00bcd4;"></i> 供应链对接</div>
@@ -575,6 +645,75 @@ End Function
             </div>
         </div>
     </div>
+    
+    <!-- V17: Chart.js 图表初始化 -->
+    <script>
+    (function() {
+        // 月度营收趋势（柱状图+折线图）
+        var revCtx = document.getElementById('revenueChart');
+        if (revCtx) {
+            new Chart(revCtx, {
+                type: 'bar',
+                data: {
+                    labels: <%= revenueMonths %>,
+                    datasets: [{
+                        label: '<% If FEATURE_I18N Then %><%= T("finance_revenue_label", Empty) %><% Else %>营收(万元)<% End If %>',
+                        data: <%= revenueData %>,
+                        backgroundColor: 'rgba(76,175,80,0.5)',
+                        borderColor: '#4CAF50',
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        yAxisID: 'y'
+                    }, {
+                        label: '<% If FEATURE_I18N Then %><%= T("finance_profit_label", Empty) %><% Else %>利润(万元)<% End If %>',
+                        data: <%= profitData %>,
+                        type: 'line',
+                        borderColor: '#2196F3',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#2196F3',
+                        pointRadius: 4,
+                        tension: 0.3,
+                        yAxisID: 'y'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#e0e0e0', usePointStyle: true } } },
+                    scales: {
+                        x: { ticks: { color: '#999' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { ticks: { color: '#999', callback: function(v) { return v + 'w'; } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+        
+        // 品类销售占比（饼图）
+        var catCtx = document.getElementById('categoryChart');
+        if (catCtx) {
+            new Chart(catCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: <%= categoryLabels %>,
+                    datasets: [{
+                        data: <%= categoryData %>,
+                        backgroundColor: ['#4CAF50','#2196F3','#FF9800','#9C27B0','#F44336','#00BCD4','#FFEB3B','#795548'],
+                        borderColor: '#1e1e32',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#e0e0e0', padding: 15, usePointStyle: true } }
+                    }
+                }
+            });
+        }
+    })();
+    </script>
 </body>
 </html>
 <%

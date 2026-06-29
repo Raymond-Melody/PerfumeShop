@@ -50,21 +50,20 @@ End Function
 ' 用户注册
 ' ============================================
 Function DAL_Users_Register(username, email, passwordHash, fullName, phone)
-    Dim sql, fields(4), params(4), newId
+    Dim sql, params(4), newId
     
-    fields(0) = "Username"
-    fields(1) = "Email"
-    fields(2) = "PasswordHash"
-    fields(3) = "FullName"
-    fields(4) = "Phone"
+    ' V17.2: 修正列名 PasswordHash→[Password]，使用直接参数化SQL而非DAL_Insert
+    ' (DAL_Insert的fields数组不支持方括号列名)
+    sql = "INSERT INTO Users (Username, Email, [Password], FullName, Phone, CreatedAt, IsActive) " & _
+          "VALUES (@Username, @Email, @Password, @FullName, @Phone, GETDATE(), 1); SELECT SCOPE_IDENTITY();"
     
     params(0) = Array("@Username", DAL_adVarChar, 50, username)
     params(1) = Array("@Email", DAL_adVarChar, 100, email)
-    params(2) = Array("@PasswordHash", DAL_adVarChar, 255, passwordHash)
+    params(2) = Array("@Password", DAL_adVarChar, 255, passwordHash)
     params(3) = Array("@FullName", DAL_adVarChar, 100, fullName)
     params(4) = Array("@Phone", DAL_adVarChar, 20, phone)
     
-    newId = DAL_Insert("Users", fields, params)
+    newId = CLng(DAL_GetScalar(sql, params, 0))
     DAL_Users_Register = newId
 End Function
 
@@ -83,8 +82,9 @@ End Sub
 ' ============================================
 Function DAL_Users_UpdatePassword(userId, newPasswordHash)
     Dim sql, params(1)
-    sql = "UPDATE Users SET PasswordHash=@PasswordHash WHERE UserID=@UserID"
-    params(0) = Array("@PasswordHash", DAL_adVarChar, 255, newPasswordHash)
+    ' V17.2: 修正列名 PasswordHash→[Password]
+    sql = "UPDATE Users SET [Password]=@Password WHERE UserID=@UserID"
+    params(0) = Array("@Password", DAL_adVarChar, 255, newPasswordHash)
     params(1) = Array("@UserID", DAL_adInteger, 0, CLng(userId))
     DAL_Users_UpdatePassword = (DAL_Execute(sql, params) >= 0)
 End Function

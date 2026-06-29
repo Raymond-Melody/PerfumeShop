@@ -10,6 +10,7 @@ End If
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <!--#include file="../includes/member_utils.asp"-->
 <%
@@ -104,33 +105,35 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             ElseIf InStr(email, "@") = 0 Then
                 errorMsg = T("user_register_invalid_email", Empty)
             Else
-                ' 检查用户名是否已存在
-                Dim existCount
-                existCount = GetScalar("SELECT COUNT(*) FROM Users WHERE Username = '" & SafeSQL(username) & "'")
+                ' V17: 使用DAL参数化查询检查用户名/邮箱是否已存在
+            Dim existCount, existParams(0)
+            existParams(0) = Array("@Username", DAL_adVarChar, 50, username)
+            existCount = CLng(DAL_GetScalar("SELECT COUNT(*) FROM Users WHERE Username = @Username", existParams, 0))
+            If existCount > 0 Then
+                errorMsg = T("user_register_username_taken", Empty)
+            Else
+                existParams(0) = Array("@Email", DAL_adVarChar, 100, email)
+                existCount = CLng(DAL_GetScalar("SELECT COUNT(*) FROM Users WHERE Email = @Email", existParams, 0))
                 If existCount > 0 Then
-                    errorMsg = T("user_register_username_taken", Empty)
+                    errorMsg = T("user_register_email_taken", Empty)
                 Else
-                    existCount = GetScalar("SELECT COUNT(*) FROM Users WHERE Email = '" & SafeSQL(email) & "'")
-                    If existCount > 0 Then
-                        errorMsg = T("user_register_email_taken", Empty)
-                    Else
-                        ' V15: 使用安全的密码哈希存储
-                        Dim sql, hashedPassword
-                        hashedPassword = HashPassword(password)
-                        sql = "INSERT INTO Users (Username, [Password], Email, FullName, Phone, ReferrerUserID, DeviceFingerprint, CreatedAt, IsActive) VALUES (" & _
-                            "'" & SafeSQL(username) & "', '" & SafeSQL(hashedPassword) & "', '" & SafeSQL(email) & "', " & _
-                            "'" & SafeSQL(fullName) & "', '" & SafeSQL(phone) & "', " & postReferrerUserId & ", " & _
-                            "'" & SafeSQL(deviceFingerprint) & "', GETDATE(), 1)"
-                        
-                        If ExecuteNonQuery(sql) Then
-                            ' 获取新用户ID
-                            Dim newUserId
-                            newUserId = GetLastInsertID("Users")
+                    ' V17: 使用DAL参数化INSERT，杜绝SQL注入
+                    Dim hashedPassword, insertSql, insertParams(7)
+                    hashedPassword = HashPassword(password)
+                    insertSql = "INSERT INTO Users (Username, [Password], Email, FullName, Phone, ReferrerUserID, DeviceFingerprint, CreatedAt, IsActive) " & _
+                        "VALUES (@Username, @Password, @Email, @FullName, @Phone, @ReferrerUserID, @DeviceFingerprint, GETDATE(), 1); SELECT SCOPE_IDENTITY();"
+                    insertParams(0) = Array("@Username", DAL_adVarChar, 50, username)
+                    insertParams(1) = Array("@Password", DAL_adVarChar, 255, hashedPassword)
+                    insertParams(2) = Array("@Email", DAL_adVarChar, 100, email)
+                    insertParams(3) = Array("@FullName", DAL_adVarChar, 100, fullName)
+                    insertParams(4) = Array("@Phone", DAL_adVarChar, 20, phone)
+                    insertParams(5) = Array("@ReferrerUserID", DAL_adInteger, 0, postReferrerUserId)
+                    insertParams(6) = Array("@DeviceFingerprint", DAL_adVarChar, 200, deviceFingerprint)
+                    
+                    newUserId = CLng(DAL_GetScalar(insertSql, insertParams, 0))
                             
-                            ' V14: 写入推荐关系祖先链条
-                            If newUserId > 0 And postReferrerUserId > 0 Then
+                    If newUserId > 0 Then
                                 Call MU_RecordReferralChain(newUserId, postReferrerUserId)
-                            End If
                             
                             ' V14: 标记Token已使用
                             If postTokenHash <> "" Then
@@ -142,11 +145,11 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                             
                             successMsg = T("user_register_success", Empty)
                             Response.Redirect "/user/login.asp?msg=registered"
-                        Else
+                    Else
                             ' 记录失败尝试
                             Call MU_RecordRegistrationAttempt(clientIP, deviceFingerprint, False, postTokenHash)
-                            errorMsg = T("user_register_failed", Empty) & ": " & Session("LastDBError")
-                        End If
+                            errorMsg = T("user_register_failed", Empty) & ": " & DAL_GetLastError()
+                    End If
                     End If
                 End If
             End If

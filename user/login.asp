@@ -85,25 +85,32 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                     Session("Email") = rsUser("Email")
                     Session("FullName") = rsUser("FullName")
                     
-                    ' 合并匿名购物车到用户购物车
+                    ' V17: 使用DAL参数化查询合并匿名购物车
                     Dim sessionId
                     sessionId = Session.SessionID
-                    Call ExecuteNonQuery("UPDATE Cart SET UserID = " & rsUser("UserID") & ", SessionID = NULL WHERE SessionID = '" & SafeSQL(sessionId) & "' AND UserID IS NULL")
+                    Dim cartParams(1)
+                    cartParams(0) = Array("@UserID", DAL_adInteger, 0, CLng(rsUser("UserID")))
+                    cartParams(1) = Array("@SessionID", DAL_adVarChar, 50, sessionId)
+                    DAL_Execute "UPDATE Cart SET UserID = @UserID, SessionID = NULL WHERE SessionID = @SessionID AND UserID IS NULL", cartParams
                     
-                    ' V17.2: 密码含全角字符时自动升级为标准化哈希
+                    ' V17.2: 密码含全角字符时自动升级为标准化哈希 (DAL参数化)
                     Dim normalizedPwd
                     normalizedPwd = NormalizePasswordInput(password)
                     If normalizedPwd <> password Then
-                        Dim newNormalizedHash
-                        newNormalizedHash = HashPassword(password)  ' HashPassword内部已标准化
-                        Call ExecuteNonQuery("UPDATE Users SET [Password] = '" & SafeSQL(newNormalizedHash) & "' WHERE UserID = " & rsUser("UserID"))
+                        Dim newNormalizedHash, normPwdParams(1)
+                        newNormalizedHash = HashPassword(password)
+                        normPwdParams(0) = Array("@Password", DAL_adVarChar, 255, newNormalizedHash)
+                        normPwdParams(1) = Array("@UserID", DAL_adInteger, 0, CLng(rsUser("UserID")))
+                        DAL_Execute "UPDATE Users SET [Password] = @Password WHERE UserID = @UserID", normPwdParams
                     End If
                     
-                    ' V15: 检查是否需要升级密码哈希
+                    ' V15: 检查是否需要升级密码哈希 (DAL参数化)
                     If NeedsPasswordUpgrade(storedHash) Then
-                        Dim newHash
+                        Dim newHash, upgPwdParams(1)
                         newHash = HashPassword(password)
-                        Call ExecuteNonQuery("UPDATE Users SET [Password] = '" & SafeSQL(newHash) & "' WHERE UserID = " & rsUser("UserID"))
+                        upgPwdParams(0) = Array("@Password", DAL_adVarChar, 255, newHash)
+                        upgPwdParams(1) = Array("@UserID", DAL_adInteger, 0, CLng(rsUser("UserID")))
+                        DAL_Execute "UPDATE Users SET [Password] = @Password WHERE UserID = @UserID", upgPwdParams
                     End If
                     
                     rsUser.Close

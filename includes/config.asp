@@ -88,7 +88,7 @@ Response.AddHeader "X-Content-Type-Options", "nosniff"
 Response.AddHeader "X-Frame-Options", "SAMEORIGIN"
 Response.AddHeader "X-XSS-Protection", "1; mode=block"
 Response.AddHeader "Referrer-Policy", "strict-origin-when-cross-origin"
-Response.AddHeader "Content-Security-Policy", "default-src 'self'; script-src 'self' 'nonce-" & Session("csp_nonce") & "' https://cdnjs.cloudflare.com https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+Response.AddHeader "Content-Security-Policy", "default-src 'self'; script-src 'self' 'nonce-" & Session("csp_nonce") & "' https://cdnjs.cloudflare.com https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; media-src 'self'; upgrade-insecure-requests"
 Response.AddHeader "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
 Response.AddHeader "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
 

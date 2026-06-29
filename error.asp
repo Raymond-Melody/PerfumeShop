@@ -1,5 +1,7 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <!--#include file="includes/config.asp"-->
+<!--#include file="includes/connection.asp"-->
+<!--#include file="includes/dal.asp"-->
 <%
 ' ============================================
 ' V17.0 统一错误处理页面
@@ -84,18 +86,23 @@ End Select
 ' 记录错误日志（如果启用了结构化日志）
 If logError <> "0" Then
     On Error Resume Next
-    Dim logConn, logSql
-    Set logConn = Server.CreateObject("ADODB.Connection")
-    logConn.Open "Provider=SQLOLEDB;Server=localhost\YOURPERFUME;Database=PerfumeShop;Integrated Security=SSPI;"
-    If Err.Number = 0 Then
-        logSql = "INSERT INTO AppLogs (LogLevel, LogMessage, LogSource, IPAddress, PageURL) VALUES (" & _
-                 "'ERROR', '错误页面(代码:" & errCode & "): " & Replace(errMsg, "'", "''") & "', " & _
-                 "'error.asp', '" & Replace(Request.ServerVariables("REMOTE_ADDR"), "'", "''") & "', " & _
-                 "'" & Replace(Request.ServerVariables("SCRIPT_NAME"), "'", "''") & "')"
-        logConn.Execute logSql
+    ' V17: 使用DAL参数化查询记录错误日志，杜绝SQL注入
+    Call OpenConnection()
+    If conn Is Nothing Or conn.State <> 1 Then
+        ' DB连接失败时静默跳过日志
+        Err.Clear
+    Else
+        Dim logSql, logParams(4)
+        logSql = "INSERT INTO AppLogs (LogLevel, LogMessage, LogSource, IPAddress, PageURL) " & _
+                 "VALUES (@LogLevel, @LogMessage, @LogSource, @IPAddress, @PageURL)"
+        logParams(0) = Array("@LogLevel", DAL_adVarChar, 10, "ERROR")
+        logParams(1) = Array("@LogMessage", DAL_adVarChar, 2000, "错误页面(代码:" & errCode & "): " & errMsg)
+        logParams(2) = Array("@LogSource", DAL_adVarChar, 100, "error.asp")
+        logParams(3) = Array("@IPAddress", DAL_adVarChar, 50, Left(Request.ServerVariables("REMOTE_ADDR"), 50))
+        logParams(4) = Array("@PageURL", DAL_adVarChar, 500, Left(Request.ServerVariables("SCRIPT_NAME"), 500))
+        DAL_Execute logSql, logParams
     End If
-    logConn.Close
-    Set logConn = Nothing
+    Call CloseConnection()
     Err.Clear
     On Error GoTo 0
 End If

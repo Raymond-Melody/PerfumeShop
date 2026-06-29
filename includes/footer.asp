@@ -81,7 +81,7 @@
     <script src="/js/skeleton-loader.js?v=15.0"></script>
     <!-- V14.6 PWA 安装提示 -->
     <script src="/js/pwa-install.js?v=15.0" defer></script>
-    <script src="/js/main.js?v=15.0"></script>
+    <script src="/js/main.js?v=17.0"></script>
     
     <script nonce="<%= Session("csp_nonce") %>">
     // 更新购物车数量

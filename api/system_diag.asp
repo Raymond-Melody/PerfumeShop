@@ -3,13 +3,13 @@
 <%
 Response.Charset = "UTF-8"
 On Error Resume Next
-Response.Write "<html><body><h2>V16 系统配置诊断报告</h2><pre>"
+Response.Write "<html><body><h2>V17 系统配置诊断报告</h2><pre>"
 Response.Write "时间: " & Now() & vbCrLf
 Response.Write "版本: " & SYS_VERSION & vbCrLf & vbCrLf
 
 ' ====== 1. 数据库连接测试 (独立连接，避免OpenConnection的Response.End) ======
 Response.Write "=== 1. 数据库连接 ===" & vbCrLf
-Response.Write "[当前驱动] Provider=SQLOLEDB;Server=localhost\YOURPERFUME" & vbCrLf
+Response.Write "[当前驱动] " & IIf(FEATURE_MSOLEDBSQL, "MSOLEDBSQL", "SQLOLEDB") & " (FEATURE_MSOLEDBSQL=" & FEATURE_MSOLEDBSQL & ")" & vbCrLf
 
 Dim diagConn, diagRs, connOK
 connOK = False
@@ -64,14 +64,34 @@ Set diagConn = Nothing
 
 ' ====== 2. MSOLEDBSQL 驱动状态 ======
 Response.Write vbCrLf & "=== 2. MSOLEDBSQL 驱动 ===" & vbCrLf
-Response.Write "[安装状态] 已安装 (Provider=MSOLEDBSQL 和 MSOLEDBSQL19 均已检测到)" & vbCrLf
-Response.Write "[连接状态] 不可用 - SQL Server实例YOURPERFUME未启用TCP/IP协议" & vbCrLf
-Response.Write "[解决方案] SQL Server配置管理器 → YOURPERFUME协议 → 启用TCP/IP → 重启服务" & vbCrLf
-Response.Write "[当前策略] FEATURE_MSOLEDBSQL=False, 使用SQLOLEDB (已加固回退机制)" & vbCrLf
+Response.Write "[FEATURE_MSOLEDBSQL] True (P0-已激活)" & vbCrLf
+If FEATURE_MSOLEDBSQL Then
+    Response.Write "[首选驱动] MSOLEDBSQL (V17推荐)" & vbCrLf
+    Dim msDiagConn
+    On Error Resume Next
+    Set msDiagConn = Server.CreateObject("ADODB.Connection")
+    If Err.Number = 0 Then
+        msDiagConn.Open "Provider=MSOLEDBSQL;Server=localhost\YOURPERFUME;Database=PerfumeShop;Integrated Security=SSPI;TrustServerCertificate=yes;"
+        If Err.Number = 0 Then
+            Response.Write "[连接状态] OK - MSOLEDBSQL连接成功" & vbCrLf
+            msDiagConn.Close
+        Else
+            Response.Write "[连接状态] FAIL - " & Err.Description & " (将回退SQLOLEDB)" & vbCrLf
+            Err.Clear
+        End If
+    Else
+        Response.Write "[连接状态] FAIL - 无法创建连接对象" & vbCrLf
+        Err.Clear
+    End If
+    Set msDiagConn = Nothing
+    On Error GoTo 0
+Else
+    Response.Write "[当前策略] FEATURE_MSOLEDBSQL=False, 使用SQLOLEDB" & vbCrLf
+End If
 
 ' ====== 3. Feature Flags ======
 Response.Write vbCrLf & "=== 3. Feature Flags ===" & vbCrLf
-Response.Write "FEATURE_MSOLEDBSQL          = " & FEATURE_MSOLEDBSQL & " (P0-待TCP/IP启用)" & vbCrLf
+Response.Write "FEATURE_MSOLEDBSQL          = " & FEATURE_MSOLEDBSQL & " (P0-已激活)" & vbCrLf
 Response.Write "FEATURE_DAL_ENABLED         = " & FEATURE_DAL_ENABLED & " (P0-已激活)" & vbCrLf
 Response.Write "FEATURE_PASSWORD_V3         = " & FEATURE_PASSWORD_V3 & " (P0-已激活)" & vbCrLf
 Response.Write "FEATURE_STRUCTURED_LOGGING  = " & FEATURE_STRUCTURED_LOGGING & " (P1-已激活)" & vbCrLf
@@ -81,7 +101,7 @@ Response.Write "FEATURE_SSE_NOTIFICATIONS   = " & FEATURE_SSE_NOTIFICATIONS & " 
 Response.Write "FEATURE_EMAIL_NOTIFICATIONS = " & FEATURE_EMAIL_NOTIFICATIONS & " (P2-已激活)" & vbCrLf
 Response.Write "FEATURE_ANALYTICS_DASHBOARD = " & FEATURE_ANALYTICS_DASHBOARD & " (P2-已激活)" & vbCrLf
 Response.Write "FEATURE_PWA_ENHANCED        = " & FEATURE_PWA_ENHANCED & " (P2-已激活)" & vbCrLf
-Response.Write "FEATURE_I18N                = " & FEATURE_I18N & " (P3-未启用)" & vbCrLf
+Response.Write "FEATURE_I18N                = " & FEATURE_I18N & " (P2-已激活)" & vbCrLf
 
 ' ====== 4. Session 状态 ======
 Response.Write vbCrLf & "=== 4. Session ===" & vbCrLf

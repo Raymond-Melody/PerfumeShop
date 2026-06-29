@@ -1,7 +1,8 @@
 /* ============================================
-   全站设计令牌 (Design Tokens) — V1.0
+   全站设计令牌 (Design Tokens) — V2.0
+   V17: 统一CSS变量来源，style.css/responsive.css 均映射至此
    单一事实来源: 所有颜色、间距、圆角、阴影
-   通过 data-theme 属性切换主题
+   通过 data-theme 属性切换主题（frontend/admin-light/purchase-dark/operation-dark）
    ============================================ */
 
 /* === 基础令牌（前台默认） === */
