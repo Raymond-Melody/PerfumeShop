@@ -92,6 +92,26 @@ Function MU_GetLevelDiscount(levelCode)
 End Function
 
 ' ============================================
+' V18: 获取有效折扣率（自动适配新旧等级系统）
+' ============================================
+Function MU_GetEffectiveDiscountRate(userId)
+    If FEATURE_MEMBER_TIERS Then
+        Dim tier
+        Set tier = MU_V18_CalcUserTier(userId)
+        If Not tier Is Nothing Then
+            MU_GetEffectiveDiscountRate = CDbl(tier("discountRate"))
+            Set tier = Nothing
+        Else
+            MU_GetEffectiveDiscountRate = 1.0
+        End If
+    Else
+        Dim level
+        level = MU_CalcUserLevel(userId)
+        MU_GetEffectiveDiscountRate = MU_GetLevelDiscount(level)
+    End If
+End Function
+
+' ============================================
 ' 获取会员等级名称
 ' ============================================
 Function MU_GetLevelName(levelCode)
@@ -211,19 +231,37 @@ End Function
 ' 渲染会员等级徽章（在用户中心使用）
 ' ============================================
 Sub MU_RenderLevelBadge(userId)
-    Dim level, levelName, discount
-    level = MU_CalcUserLevel(userId)
-    levelName = MU_GetLevelName(level)
-    discount = MU_GetLevelDiscount(level)
+    Dim level, levelName, discount, badgeClass, icon
     
-    Dim badgeClass, icon
-    Select Case level
-        Case "L0": badgeClass = "level-0": icon = "fa-user"
-        Case "L1": badgeClass = "level-1": icon = "fa-star"
-        Case "L2": badgeClass = "level-2": icon = "fa-gem"
-        Case "L3": badgeClass = "level-3": icon = "fa-crown"
-        Case "L4": badgeClass = "level-4": icon = "fa-crown"
-    End Select
+    ' V18: 使用新等级系统
+    If FEATURE_MEMBER_TIERS Then
+        Dim tier
+        Set tier = MU_V18_CalcUserTier(userId)
+        If Not tier Is Nothing Then
+            levelName = tier("tierName")
+            discount = CDbl(tier("discountRate"))
+            icon = tier("iconClass")
+            badgeClass = "level-" & tier("tierCode")
+            Set tier = Nothing
+        Else
+            levelName = "普通会员"
+            discount = 1.0
+            icon = "fa-user"
+            badgeClass = "level-0"
+        End If
+    Else
+        ' 旧等级系统
+        level = MU_CalcUserLevel(userId)
+        levelName = MU_GetLevelName(level)
+        discount = MU_GetLevelDiscount(level)
+        Select Case level
+            Case "L0": badgeClass = "level-0": icon = "fa-user"
+            Case "L1": badgeClass = "level-1": icon = "fa-star"
+            Case "L2": badgeClass = "level-2": icon = "fa-gem"
+            Case "L3": badgeClass = "level-3": icon = "fa-crown"
+            Case "L4": badgeClass = "level-4": icon = "fa-crown"
+        End Select
+    End If
 %>
 <span class="level-badge <%= badgeClass %>">
     <i class="fas <%= icon %>"></i> <%= levelName %>
@@ -232,10 +270,19 @@ Sub MU_RenderLevelBadge(userId)
 <style>
 .level-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:12px; font-size:13px; font-weight:600; }
 .level-0 { background:#f0f0f0; color:#666; }
+.level-L0 { background:#f0f0f0; color:#666; }
 .level-1 { background:#e8f4f8; color:#2196F3; }
+.level-L1 { background:#e8f4f8; color:#2196F3; }
 .level-2 { background:#fff3e0; color:#FF9800; }
+.level-L2 { background:#fff3e0; color:#FF9800; }
 .level-3 { background:#fce4ec; color:#e91e63; }
+.level-L3 { background:#fce4ec; color:#e91e63; }
 .level-4 { background:#e8f5e9; color:#4CAF50; }
+.level-L4 { background:#e8f5e9; color:#4CAF50; }
+.level-silver { background:#f5f5f5; color:#9E9E9E; }
+.level-gold { background:#fff3e0; color:#FF9800; }
+.level-diamond { background:#e3f2fd; color:#2196F3; }
+.level-black { background:#fafafa; color:#212121; border:1px solid #212121; }
 .level-badge small { opacity:0.7; font-weight:400; }
 </style>
 <%
@@ -650,4 +697,256 @@ Function MU_GetTokenURL(tokenStr)
     End If
     MU_GetTokenURL = Server.URLEncode(tokenStr)
 End Function
+
+' ============================================
+' V18 会员等级体系 (Member Tiers V2)
+' 基于 MemberTiers/MemberBenefits 数据库表
+' 等级: 银卡(0-3000) → 金卡(3000-10000) → 钻石(10000-30000) → 黑金(30000+)
+' ============================================
+
+' 获取 V18 等级配置（从 MemberTiers 表读取）
+' 返回: Recordset（按 SortOrder 排序）
+Function MU_V18_GetAllTiers()
+    If Not FEATURE_MEMBER_TIERS Then
+        Set MU_V18_GetAllTiers = Nothing
+        Exit Function
+    End If
+    
+    On Error Resume Next
+    Dim sql
+    sql = "SELECT * FROM MemberTiers WHERE IsActive = 1 ORDER BY SortOrder ASC"
+    Set MU_V18_GetAllTiers = conn.Execute(sql)
+    On Error GoTo 0
+End Function
+
+' 从 MemberTiers 表获取单个等级信息
+' 返回: Dictionary {tierCode, tierName, minSpent, maxSpent, discountRate, freeShipping, ...}
+Function MU_V18_GetTierByCode(tierCode)
+    If Not FEATURE_MEMBER_TIERS Then
+        Set MU_V18_GetTierByCode = Nothing
+        Exit Function
+    End If
+    
+    On Error Resume Next
+    Dim sql, rs, dict
+    sql = "SELECT * FROM MemberTiers WHERE TierCode = '" & SafeSQL(tierCode) & "' AND IsActive = 1"
+    Set rs = conn.Execute(sql)
+    If Not rs Is Nothing And Not rs.EOF Then
+        Set dict = Server.CreateObject("Scripting.Dictionary")
+        dict.Add "tierCode", CStr(rs("TierCode"))
+        dict.Add "tierName", CStr(rs("TierName") & "")
+        dict.Add "tierNameEN", CStr(rs("TierNameEN") & "")
+        dict.Add "minSpent", CDbl(rs("MinSpent"))
+        If Not IsNull(rs("MaxSpent")) Then
+            dict.Add "maxSpent", CDbl(rs("MaxSpent"))
+        Else
+            dict.Add "maxSpent", 99999999
+        End If
+        dict.Add "discountRate", CDbl(rs("DiscountRate"))
+        dict.Add "freeShipping", CBool(rs("FreeShipping"))
+        dict.Add "priorityShipping", CBool(rs("PriorityShipping"))
+        dict.Add "birthdayGift", CBool(rs("BirthdayGift"))
+        dict.Add "dedicatedSupport", CBool(rs("DedicatedSupport"))
+        dict.Add "iconClass", CStr(rs("IconClass") & "")
+        dict.Add "color", CStr(rs("Color") & "")
+        dict.Add "badgeBg", CStr(rs("BadgeBg") & "")
+        rs.Close
+        Set MU_V18_GetTierByCode = dict
+    Else
+        Set MU_V18_GetTierByCode = Nothing
+    End If
+    Set rs = Nothing
+    On Error GoTo 0
+End Function
+
+' 计算用户当前会员等级（V18新算法）
+' 返回: Dictionary {tierCode, tierName, discountRate, totalSpent, ...}
+Function MU_V18_CalcUserTier(userId)
+    Dim tier, totalSpent, rs, rsTiers, currentTier
+    
+    Set currentTier = Nothing
+    totalSpent = 0
+    
+    If Not FEATURE_MEMBER_TIERS Then
+        ' 回退到旧等级系统
+        Dim oldLevel
+        oldLevel = MU_CalcUserLevel(userId)
+        Set currentTier = Server.CreateObject("Scripting.Dictionary")
+        currentTier.Add "tierCode", oldLevel
+        currentTier.Add "tierName", MU_GetLevelName(oldLevel)
+        currentTier.Add "discountRate", MU_GetLevelDiscount(oldLevel)
+        currentTier.Add "totalSpent", 0
+        currentTier.Add "iconClass", "fa-user"
+        currentTier.Add "color", "#666"
+        currentTier.Add "badgeBg", "#f0f0f0"
+        currentTier.Add "freeShipping", False
+        currentTier.Add "priorityShipping", False
+        currentTier.Add "birthdayGift", False
+        currentTier.Add "dedicatedSupport", False
+        Set MU_V18_CalcUserTier = currentTier
+        Exit Function
+    End If
+    
+    On Error Resume Next
+    
+    ' 获取累计消费金额
+    Set rs = conn.Execute("SELECT ISNULL(SUM(TotalAmount), 0) FROM Orders WHERE UserID = " & userId & " AND Status IN ('Paid','Shipped','Completed')")
+    If Not rs Is Nothing Then
+        If Not rs.EOF Then totalSpent = CDbl(rs(0))
+        rs.Close
+    End If
+    Set rs = Nothing
+    
+    ' 查找对应等级
+    Set rsTiers = conn.Execute("SELECT * FROM MemberTiers WHERE IsActive = 1 AND MinSpent <= " & totalSpent & " ORDER BY SortOrder DESC")
+    If Not rsTiers Is Nothing And Not rsTiers.EOF Then
+        Set currentTier = Server.CreateObject("Scripting.Dictionary")
+        currentTier.Add "tierCode", CStr(rsTiers("TierCode"))
+        currentTier.Add "tierName", CStr(rsTiers("TierName") & "")
+        currentTier.Add "tierNameEN", CStr(rsTiers("TierNameEN") & "")
+        currentTier.Add "discountRate", CDbl(rsTiers("DiscountRate"))
+        currentTier.Add "totalSpent", totalSpent
+        currentTier.Add "iconClass", CStr(rsTiers("IconClass") & "")
+        currentTier.Add "color", CStr(rsTiers("Color") & "")
+        currentTier.Add "badgeBg", CStr(rsTiers("BadgeBg") & "")
+        currentTier.Add "freeShipping", CBool(rsTiers("FreeShipping"))
+        currentTier.Add "priorityShipping", CBool(rsTiers("PriorityShipping"))
+        currentTier.Add "birthdayGift", CBool(rsTiers("BirthdayGift"))
+        currentTier.Add "dedicatedSupport", CBool(rsTiers("DedicatedSupport"))
+        rsTiers.Close
+    Else
+        ' 无匹配等级，返回默认
+        Set currentTier = Server.CreateObject("Scripting.Dictionary")
+        currentTier.Add "tierCode", "silver"
+        currentTier.Add "tierName", "银卡会员"
+        currentTier.Add "tierNameEN", "Silver"
+        currentTier.Add "discountRate", 0.95
+        currentTier.Add "totalSpent", totalSpent
+        currentTier.Add "iconClass", "fa-medal"
+        currentTier.Add "color", "#9E9E9E"
+        currentTier.Add "badgeBg", "#f5f5f5"
+        currentTier.Add "freeShipping", False
+        currentTier.Add "priorityShipping", False
+        currentTier.Add "birthdayGift", False
+        currentTier.Add "dedicatedSupport", False
+    End If
+    Set rsTiers = Nothing
+    
+    On Error GoTo 0
+    Set MU_V18_CalcUserTier = currentTier
+End Function
+
+' 获取下一等级信息（用于进度条）
+' 返回: Dictionary {nextTierCode, nextTierName, needSpent, progress, iconClass, color, ...}
+Function MU_V18_GetNextTierInfo(userId)
+    If Not FEATURE_MEMBER_TIERS Then
+        Set MU_V18_GetNextTierInfo = Nothing
+        Exit Function
+    End If
+    
+    Dim currentTier, tierCode, totalSpent, rs, nextInfo
+    Set currentTier = MU_V18_CalcUserTier(userId)
+    tierCode = currentTier("tierCode")
+    totalSpent = currentTier("totalSpent")
+    
+    On Error Resume Next
+    
+    ' 查找下一个等级
+    Dim sql
+    sql = "SELECT TOP 1 * FROM MemberTiers WHERE IsActive = 1 AND MinSpent > (SELECT ISNULL(MinSpent, 0) FROM MemberTiers WHERE TierCode = '" & SafeSQL(tierCode) & "') ORDER BY SortOrder ASC"
+    Set rs = conn.Execute(sql)
+    
+    If Not rs Is Nothing And Not rs.EOF Then
+        Set nextInfo = Server.CreateObject("Scripting.Dictionary")
+        Dim nextMinSpent, currentMinSpent
+        nextMinSpent = CDbl(rs("MinSpent"))
+        
+        ' 获取当前等级门槛
+        Dim rsCur
+        Set rsCur = conn.Execute("SELECT ISNULL(MinSpent, 0) AS MinSpent FROM MemberTiers WHERE TierCode = '" & SafeSQL(tierCode) & "'")
+        If Not rsCur Is Nothing And Not rsCur.EOF Then
+            currentMinSpent = CDbl(rsCur("MinSpent"))
+            rsCur.Close
+        Else
+            currentMinSpent = 0
+        End If
+        Set rsCur = Nothing
+        
+        Dim needSpent, progressPct
+        needSpent = nextMinSpent - totalSpent
+        If needSpent < 0 Then needSpent = 0
+        
+        ' 进度百分比
+        Dim rangeTotal
+        rangeTotal = nextMinSpent - currentMinSpent
+        If rangeTotal > 0 Then
+            progressPct = Round((totalSpent - currentMinSpent) / rangeTotal * 100, 1)
+            If progressPct < 0 Then progressPct = 0
+            If progressPct > 100 Then progressPct = 100
+        Else
+            progressPct = 100
+        End If
+        
+        nextInfo.Add "nextTierCode", CStr(rs("TierCode"))
+        nextInfo.Add "nextTierName", CStr(rs("TierName") & "")
+        nextInfo.Add "nextTierNameEN", CStr(rs("TierNameEN") & "")
+        nextInfo.Add "nextMinSpent", nextMinSpent
+        nextInfo.Add "needSpent", needSpent
+        nextInfo.Add "progress", progressPct
+        nextInfo.Add "iconClass", CStr(rs("IconClass") & "")
+        nextInfo.Add "color", CStr(rs("Color") & "")
+        nextInfo.Add "currentMinSpent", currentMinSpent
+        rs.Close
+    Else
+        ' 已是最高等级
+        Set nextInfo = Server.CreateObject("Scripting.Dictionary")
+        nextInfo.Add "isMax", True
+        nextInfo.Add "progress", 100
+    End If
+    Set rs = Nothing
+    
+    On Error GoTo 0
+    Set MU_V18_GetNextTierInfo = nextInfo
+End Function
+
+' 获取某等级的权益列表
+' 返回: Recordset
+Function MU_V18_GetTierBenefits(tierCode)
+    If Not FEATURE_MEMBER_TIERS Then
+        Set MU_V18_GetTierBenefits = Nothing
+        Exit Function
+    End If
+    
+    On Error Resume Next
+    Dim sql
+    sql = "SELECT * FROM MemberBenefits WHERE TierCode = '" & SafeSQL(tierCode) & "' AND IsActive = 1 ORDER BY SortOrder ASC"
+    Set MU_V18_GetTierBenefits = conn.Execute(sql)
+    On Error GoTo 0
+End Function
+
+' 获取所有等级列表（用于展示全部等级对比）
+' 返回: Recordset
+Function MU_V18_GetAllTiersWithBenefits()
+    If Not FEATURE_MEMBER_TIERS Then
+        Set MU_V18_GetAllTiersWithBenefits = Nothing
+        Exit Function
+    End If
+    
+    On Error Resume Next
+    Dim sql
+    sql = "SELECT t.*, (SELECT COUNT(*) FROM MemberBenefits b WHERE b.TierCode = t.TierCode AND b.IsActive = 1) AS BenefitCount " & _
+          "FROM MemberTiers t WHERE t.IsActive = 1 ORDER BY t.SortOrder ASC"
+    Set MU_V18_GetAllTiersWithBenefits = conn.Execute(sql)
+    On Error GoTo 0
+End Function
+
+' 格式化金额为可读字符串
+Function MU_V18_FormatSpent(amount)
+    If amount >= 10000 Then
+        MU_V18_FormatSpent = FormatNumber(amount / 10000, 1) & "万"
+    Else
+        MU_V18_FormatSpent = FormatNumber(amount, 0)
+    End If
+End Function
+
 %>

@@ -1,6 +1,6 @@
 <%
 ' ============================================
-' PerfumeShop Configuration V17.0
+' PerfumeShop Configuration V18.0
 ' ============================================
 
 ' V17.2: 强制 UTF-8 编码，解决中文乱码问题
@@ -21,8 +21,8 @@ Function GetSiteURL()
     GetSiteURL = proto & Request.ServerVariables("HTTP_HOST")
 End Function
 
-Const SYS_VERSION = "V17.0"
-Const SYS_VERSION_NAME = "PerfumeShop V17.0"
+Const SYS_VERSION = "V18.0"
+Const SYS_VERSION_NAME = "PerfumeShop V18.0"
 Const COOKIE_SECRET = "PerfumeShop_SecKey_2026_X9K3m"
 Const COOKIE_SECRET_V10 = "PF_V10_SHA256_Salt_7kM2xP9qR4vN8wL3jH6fD1sA5gK0"
 Const PASSWORD_PEPPER = "P3rfum3Sh0p_S@lt_2026!"
@@ -61,6 +61,56 @@ Const FEATURE_EMAIL_NOTIFICATIONS = True ' P2: 启用邮件通知 (V16激活)
 Const FEATURE_ANALYTICS_DASHBOARD = True ' P2: 启用数据分析仪表盘 (V16激活)
 Const FEATURE_PWA_ENHANCED = True       ' P2: 启用PWA增强 (V16激活)
 Const FEATURE_I18N = True              ' P2: 启用国际化 (V17激活)
+' ============================================
+' V18 Feature Flags - 渐进式架构现代化 + 运营功能
+' 说明: 所有V18 Flags默认开启，可按需关闭回退
+' 依赖: V18数据库Schema（v18_*.sql）需先执行
+' ============================================
+Const FEATURE_API_AUTH = True           ' P0: 启用API认证 (V18新增)
+                                        ' 依赖: includes/api_auth.asp + includes/api_guard.asp
+                                        ' 功能: Session认证 + API Key/HMAC-SHA256签名验证
+                                        ' 影响: 12个API端点统一认证，关闭后API无需认证
+Const FEATURE_RATE_LIMITER = True       ' P0: 启用速率限制 (V18新增)
+                                        ' 依赖: includes/rate_limiter.asp + includes/api_guard.asp
+                                        ' 功能: 令牌桶算法限流 60req/60s，超限返回429
+                                        ' 配置: RL_DEFAULT_MAX=60, RL_DEFAULT_WINDOW=60 (rate_limiter.asp)
+Const FEATURE_GDPR_COMPLIANCE = True    ' P0: 启用GDPR隐私合规 (V18新增)
+                                        ' 依赖: api/cookie_consent.asp + 隐私政策页面
+                                        ' 功能: Cookie同意弹窗 + 数据导出/删除请求 + 隐私政策
+Const FEATURE_AI_RECOMMENDATIONS = False ' P1: 启用AI推荐引擎 (V18新增) - AI微服务未部署，暂时禁用
+                                        ' 依赖: includes/recommendation_engine.asp
+                                        ' 功能: 首页个性化推荐 + "猜你喜欢"模块
+Const FEATURE_AI_FRAGRANCE_MATCH = True  ' P1: 启用智能香氛匹配 (V18新增)
+                                        ' 依赖: api/fragrance_match.asp + fragrance_quiz.asp
+                                        ' 功能: 香氛测试问答 → 智能匹配产品推荐
+Const FEATURE_AI_SEARCH = True          ' P1: 启用智能搜索升级 (V18新增)
+                                        ' 依赖: api/search_suggestions.asp
+                                        ' 功能: 模糊搜索 + 自动补全 + 搜索历史 + 加权排序
+Const FEATURE_AI_CHATBOT = True         ' P1: 启用智能客服机器人 (V18新增)
+                                        ' 依赖: api/chatbot.asp
+                                        ' 功能: 智能客服对话 + 订单查询 + 产品推荐
+Const FEATURE_MEMBER_TIERS = True     ' P2: 启用会员等级体系 (V18新增) - 已创建MemberTiers表
+                                        ' 依赖: database/v18_member_tiers.sql
+                                        ' 功能: 青铜/白银/黄金/钻石等级 + 权益差异化
+Const FEATURE_POINTS_SYSTEM = True   ' P2: 启用积分与奖励系统 (V18新增)
+                                        ' 依赖: database/v18_points_system.sql + database/v18_member_tiers.sql
+                                        ' 功能: 积分获取/消耗 + 奖励兑换商城
+Const FEATURE_COUPON_SYSTEM = True   ' P2: 启用优惠券与促销引擎 (V18新增)
+                                        ' 依赖: database/v18_coupon_system.sql + api/coupon_validate.asp
+                                        ' 功能: 优惠券模板 + 发放/核销 + 满减/折扣/免邮
+Const FEATURE_FLASH_SALE = True     ' P2: 启用限时秒杀引擎 (V18新增)
+                                        ' 依赖: database/v18_flash_group_activities.sql + flash_sale.asp
+                                        ' 功能: 限时秒杀商品 + 倒计时 + 库存扣减
+Const FEATURE_GROUP_BUY = True      ' P2: 启用拼团活动引擎 (V18新增)
+                                        ' 依赖: database/v18_flash_group_activities.sql + group_buy.asp
+                                        ' 功能: 拼团发起/参与 + 人数进度 + 自动成团
+Const FEATURE_SUBSCRIPTION = True   ' P2: 启用订阅制香氛盒 (V18新增)
+                                        ' 依赖: database/v18_subscription.sql + subscribe.asp
+                                        ' 功能: 月度/季度/年度订阅计划 + 自动续费
+Const FEATURE_COMMUNITY = True      ' P2: 启用会员社区UGC (V18新增)
+                                        ' 依赖: database/v18_community_ugc.sql + community.asp
+                                        ' 功能: 帖子发布/评论/点赞 + 香评分享 + 关注体系
+' ============================================
 
 ' V15 DAL配置
 Const DAL_QUERY_TIMEOUT = 30            ' DAL查询超时(秒)
@@ -88,7 +138,7 @@ Response.AddHeader "X-Content-Type-Options", "nosniff"
 Response.AddHeader "X-Frame-Options", "SAMEORIGIN"
 Response.AddHeader "X-XSS-Protection", "1; mode=block"
 Response.AddHeader "Referrer-Policy", "strict-origin-when-cross-origin"
-Response.AddHeader "Content-Security-Policy", "default-src 'self'; script-src 'self' 'nonce-" & Session("csp_nonce") & "' https://cdnjs.cloudflare.com https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; media-src 'self'; upgrade-insecure-requests"
+Response.AddHeader "Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; media-src 'self'; upgrade-insecure-requests"
 Response.AddHeader "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
 Response.AddHeader "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
 

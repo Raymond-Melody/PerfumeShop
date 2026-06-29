@@ -81,6 +81,10 @@
     <script src="/js/skeleton-loader.js?v=15.0"></script>
     <!-- V14.6 PWA 安装提示 -->
     <script src="/js/pwa-install.js?v=15.0" defer></script>
+    <!-- V18.0 Web Components -->
+    <script src="/js/components/product-card.js?v=18.0" defer></script>
+    <script src="/js/components/review-stars.js?v=18.0" defer></script>
+    <script src="/js/components/search-autocomplete.js?v=18.0" defer></script>
     <script src="/js/main.js?v=17.0"></script>
     
     <script nonce="<%= Session("csp_nonce") %>">
@@ -103,5 +107,9 @@
         updateCartCount();
     });
     </script>
+
+<!-- V18: 智能客服悬浮组件 -->
+<!--#include file="../chatbot_widget.asp"-->
+
 </body>
 </html>

@@ -21,6 +21,7 @@
             <li><a href="portal.asp"><i class="fas fa-th-large"></i> <span><% If FEATURE_I18N Then %><%= T("admin_nav_back", Empty) %><% Else %>返回入口<% End If %></span></a></li>
             <li class="sidebar-section-title"><% If FEATURE_I18N Then %><%= T("admin_nav_business", Empty) %><% Else %>业务模块<% End If %></li>
             <li><a href="operation/index.asp"><i class="fas fa-chart-line"></i> <span><% If FEATURE_I18N Then %><%= T("admin_nav_operation", Empty) %><% Else %>运营管理<% End If %></span></a></li>
+            <li><a href="operation/tier_management.asp"><i class="fas fa-layer-group"></i> <span>会员等级</span></a></li>
             <li><a href="semifinished/index.asp"><i class="fas fa-vial"></i> <span><% If FEATURE_I18N Then %><%= T("admin_nav_semifinished", Empty) %><% Else %>半成品生产<% End If %></span></a></li>
             <li><a href="prodcenter/index.asp"><i class="fas fa-industry"></i> <span><% If FEATURE_I18N Then %><%= T("admin_nav_prodcenter", Empty) %><% Else %>产品生产<% End If %></span></a></li>
             <li><a href="logistics/index.asp"><i class="fas fa-truck"></i> <span><% If FEATURE_I18N Then %><%= T("admin_nav_logistics", Empty) %><% Else %>物流管理<% End If %></span></a></li>

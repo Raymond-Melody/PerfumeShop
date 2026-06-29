@@ -1,5 +1,7 @@
 <%@ Language="VBScript" CodePage="65001" %>
+<!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/api_guard.asp"-->
 <%
 ' ============================================
 ' 风控校验API - Risk Check API
@@ -165,6 +167,10 @@ End Function
 ' ============================================
 ' 处理请求
 ' ============================================
+
+' V18: API 守卫（速率限制）
+If Not API_Guard("api", False) Then Response.End
+
 Dim userId, orderTotal, productIds, shippingAddress, shippingPhone
 userId = CLng(Request("userId"))
 orderTotal = RC_SafeNum(Request("orderTotal"))

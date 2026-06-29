@@ -72,8 +72,8 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                     "'" & email & "', " & _
                     "'" & department & "', " & _
                     CLng(roleId) & ", " & _
-                    IIF(isActive = "1", "True", "False") & ", " & _
-                    "False, " & _
+                    IIF(isActive = "1", "1", "0") & ", " & _
+                    "0, " & _
                     "GETDATE())"
                 
                 If ExecuteNonQuery(insertSql) Then

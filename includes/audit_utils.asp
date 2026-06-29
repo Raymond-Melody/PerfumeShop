@@ -24,6 +24,14 @@ Const AUDIT_TARGET_FINANCE = "finance"
 Const AUDIT_TARGET_INVENTORY = "inventory"
 Const AUDIT_TARGET_SYSTEM = "system"
 
+' V18: 隐私操作类型
+Const AUDIT_ACTION_PRIVACY_EXPORT = "privacy_export"
+Const AUDIT_ACTION_PRIVACY_DELETE = "privacy_delete"
+Const AUDIT_ACTION_PRIVACY_CONSENT = "privacy_consent"
+Const AUDIT_ACTION_PRIVACY_ACCESS = "privacy_access"
+Const AUDIT_ACTION_PRIVACY_RECTIFY = "privacy_rectify"
+Const AUDIT_TARGET_PRIVACY = "privacy"
+
 ' 确保审计日志表存在
 Sub EnsureAuditLogTable()
     On Error Resume Next
@@ -131,6 +139,77 @@ Sub AuditBatch(actionName, totalCount, successCount, failCount, details)
     batchDetail = actionName & " | 总计:" & totalCount & " 成功:" & successCount & " 失败:" & failCount
     If details <> "" Then batchDetail = batchDetail & " | " & details
     Call AuditLog(AUDIT_ACTION_BATCH, AUDIT_TARGET_SYSTEM, 0, actionName, batchDetail)
+End Sub
+
+' ============================================
+' V18: LogPrivacyAction - GDPR 隐私操作审计
+' 记录所有隐私相关操作（数据导出、账户注销、数据访问等）
+' 参数:
+'   actionType - 操作类型 (privacy_export/privacy_delete/privacy_consent/privacy_access/privacy_rectify)
+'   userID     - 用户ID
+'   userName   - 用户名
+'   details    - 操作详情
+' ============================================
+Sub LogPrivacyAction(actionType, userID, userName, details)
+    On Error Resume Next
+    
+    If Not FEATURE_GDPR_COMPLIANCE Then Exit Sub
+    
+    Dim ipAddr, sql, params(5)
+    ipAddr = Left(Request.ServerVariables("REMOTE_ADDR"), 50)
+    
+    ' 使用 AppLogs 表记录隐私操作（与现有日志系统统一）
+    params(0) = Array("@LogLevel", DAL_adVarChar, 10, "PRIVACY")
+    params(1) = Array("@LogMessage", DAL_adVarChar, 2000, _
+        actionType & " | UserID:" & userID & " | UserName:" & userName & " | " & details)
+    params(2) = Array("@LogSource", DAL_adVarChar, 100, "privacy_action")
+    params(3) = Array("@IPAddress", DAL_adVarChar, 50, ipAddr)
+    params(4) = Array("@PageURL", DAL_adVarChar, 500, Left(Request.ServerVariables("SCRIPT_NAME"), 500))
+    
+    sql = "INSERT INTO AppLogs (LogLevel, LogMessage, LogSource, IPAddress, PageURL) " & _
+          "VALUES (@LogLevel, @LogMessage, @LogSource, @IPAddress, @PageURL)"
+    DAL_Execute sql, params
+    
+    ' 同时写入 AdminAuditLog（如果用户是管理员操作自己数据）
+    If Session("AdminID") <> "" Then
+        Call AuditLog(actionType, AUDIT_TARGET_PRIVACY, CLng(userID), userName, details)
+    End If
+    
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+' ============================================
+' V18: LogCookieConsent - 记录 Cookie 同意
+' ============================================
+Sub LogCookieConsent(consentGiven, consentLevel)
+    If Not FEATURE_GDPR_COMPLIANCE Then Exit Sub
+    
+    On Error Resume Next
+    Dim userId, userName, details, ipAddr, sql, params(4)
+    userId = "0"
+    userName = "anonymous"
+    If Session("UserID") <> "" Then
+        userId = Session("UserID")
+        userName = Session("Username")
+    End If
+    
+    details = "CookieConsent: " & consentLevel & " | Accepted: " & LCase(CStr(consentGiven))
+    ipAddr = Left(Request.ServerVariables("REMOTE_ADDR"), 50)
+    
+    params(0) = Array("@LogLevel", DAL_adVarChar, 10, "PRIVACY")
+    params(1) = Array("@LogMessage", DAL_adVarChar, 2000, _
+        "COOKIE_CONSENT | UserID:" & userId & " | " & details)
+    params(2) = Array("@LogSource", DAL_adVarChar, 100, "cookie_consent")
+    params(3) = Array("@IPAddress", DAL_adVarChar, 50, ipAddr)
+    params(4) = Array("@PageURL", DAL_adVarChar, 500, Left(Request.ServerVariables("SCRIPT_NAME"), 500))
+    
+    sql = "INSERT INTO AppLogs (LogLevel, LogMessage, LogSource, IPAddress, PageURL) " & _
+          "VALUES (@LogLevel, @LogMessage, @LogSource, @IPAddress, @PageURL)"
+    DAL_Execute sql, params
+    
+    Err.Clear
+    On Error GoTo 0
 End Sub
 
 ' V17: 获取审计日志（分页）使用参数化查询

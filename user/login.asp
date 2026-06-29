@@ -12,6 +12,7 @@ End If
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
+<!--#include file="../includes/rate_limiter.asp"-->
 <%
 Call OpenConnection()
 
@@ -33,7 +34,10 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         ' V17.2: 验证失败时强制刷新令牌，允许用户立即重试
         Call GenerateCSRFToken()
         errorMsg = T("user_login_csrf_fail", Empty)
-    ' 速率限制检查
+    ' V18: 令牌桶速率限制（IP级别防暴力破解）
+    ElseIf FEATURE_RATE_LIMITER And Not RateLimitCheck("login") Then
+        errorMsg = T("user_login_locked_15min", Empty)
+    ' 会话级锁定检查（V17兼容）
     ElseIf IsLoginLocked("User") Then
         errorMsg = T("user_login_locked_15min", Empty)
     Else

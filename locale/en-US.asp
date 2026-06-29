@@ -130,6 +130,7 @@ use_points=Use Points
 
 # === Product Common ===
 product_detail=Product Details
+product_type_standard=Standard Fragrance
 product_description=Description
 customer_reviews=Customer Reviews
 related_products=Related Products
@@ -174,6 +175,10 @@ nav_customize=Custom Fragrance
 nav_about_us=About Us
 nav_search_result=Search Results
 nav_checkout=Checkout
+nav_standard=Standard
+nav_custom=Custom
+nav_kol=KOL
+nav_fixed=Signature
 
 # === Breadcrumb ===
 breadcrumb_home=Home
@@ -307,6 +312,20 @@ home_subscribe_thanks=Thank you for subscribing!
 home_see_more=See More
 home_section_more=See More {0}
 
+# === Homepage Promo Cards (V18) ===
+home_promo_flash_title=Flash Sale
+home_promo_flash_desc=Limited-time deals, up to 70% off
+home_promo_group_title=Group Buy
+home_promo_group_desc=Invite friends to unlock group discount prices
+home_promo_sub_title=Subscription Box
+home_promo_sub_desc=Monthly fragrance delivery, AI personalized selection
+home_promo_go=Learn More
+
+# === Customize (V18) ===
+customize_quiz_title=Not sure what to choose? Take our fragrance quiz
+customize_quiz_desc=AI analyzes your preferences and recommends the perfect scent combination. Just 6 simple questions, about 1 minute.
+customize_quiz_btn=Start Quiz
+
 # === About Page ===
 about_breadcrumb=Our Story
 about_hero_title=About Custom Fragrance
@@ -413,7 +432,7 @@ products_quick_view=Quick View
 # === Product Detail Page ===
 product_breadcrumb_all=All Fragrances
 product_type_fixed=Signature Collection
-product_type_kol=KOL Pick
+product_type_kol=KOL Collaboration
 product_type_custom=Custom Fragrance
 product_price_fixed=Fixed Price
 product_price_from=from (price varies with customization)
@@ -1107,3 +1126,9 @@ tip_select=Please select
 tip_no_selection=No selection
 product_name=Product Name
 cart_discount=Discount
+
+# === Cookie Banner (V18 GDPR) ===
+cookie_banner_text=This website uses cookies to enhance your browsing experience, analyze traffic, and provide personalized recommendations. By continuing to use this site, you agree to our Cookie Policy.
+cookie_accept_all=Accept All
+cookie_accept_essential=Essential Only
+cookie_learn_more=Learn More

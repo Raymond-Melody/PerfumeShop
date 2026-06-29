@@ -64,8 +64,8 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                 "Email = '" & email & "', " & _
                 "Department = '" & department & "', " & _
                 "RoleID = " & CLng(roleId) & ", " & _
-                "IsLocked = " & IIF(isLocked = "1", "True", "False") & ", " & _
-                "IsActive = " & IIF(isActive = "1", "True", "False") & _
+                "IsLocked = " & IIF(isLocked = "1", "1", "0") & ", " & _
+                "IsActive = " & IIF(isActive = "1", "1", "0") & _
                 " WHERE AdminID = " & CLng(editAdminId)
             
             If ExecuteNonQuery(updateSql) Then

@@ -114,12 +114,18 @@ Call EnsureCSRFToken()
                 </div>
                 <div style="margin-top:5px;font-size:12px;color:#888;">
                     <% If FEATURE_I18N Then %><%= T("user_index_points_label", Empty) %><% Else %>积分<% End If %>: <strong><%= userPoints %></strong> | 
-                    <% If FEATURE_I18N Then %><%= T("user_index_level_discount", Empty) %><% Else %>等级折扣<% End If %>: <strong><%= FormatPercent(1 - MU_GetLevelDiscount(userLevel), 0) %></strong>
+                    <% If FEATURE_I18N Then %><%= T("user_index_level_discount", Empty) %><% Else %>等级折扣<% End If %>: <strong><%= FormatPercent(1 - MU_GetEffectiveDiscountRate(userId), 0) %></strong>
                 </div>
             </div>
             
             <nav class="user-nav">
                 <a href="/user/index.asp" class="active"><i class="fas fa-home"></i> <% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
+                <% If FEATURE_POINTS_SYSTEM Then %>
+                <a href="/user/points.asp" style="color:#ff8f00;"><i class="fas fa-coins"></i> 积分中心</a>
+                <% End If %>
+                <% If FEATURE_COUPON_SYSTEM Then %>
+                <a href="/user/coupons.asp" style="color:#2e7d32;"><i class="fas fa-ticket-alt"></i> 优惠券</a>
+                <% End If %>
                 <% If Not rsUser Is Nothing Then %>
                     <% If rsUser("UserRole") = "KOL" Then %>
                         <a href="/user/kol_products.asp" style="background: #fff0f6; color: #eb2f96; font-weight: bold;"><i class="fas fa-star"></i> <% If FEATURE_I18N Then %><%= T("user_nav_kol", Empty) %><% Else %>KOL推荐管理<% End If %></a>

@@ -13,6 +13,7 @@ End If
 <!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
 <!--#include file="../includes/member_utils.asp"-->
+<!--#include file="../includes/promotion_engine.asp"-->
 <%
 Call OpenConnection()
 
@@ -134,6 +135,11 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                             
                     If newUserId > 0 Then
                                 Call MU_RecordReferralChain(newUserId, postReferrerUserId)
+                            
+                            ' V18: 新人优惠券礼包
+                            If FEATURE_COUPON_SYSTEM Then
+                                Call PE_CouponIssueWelcome(newUserId)
+                            End If
                             
                             ' V14: 标记Token已使用
                             If postTokenHash <> "" Then

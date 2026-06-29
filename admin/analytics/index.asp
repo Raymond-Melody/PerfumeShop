@@ -1,7 +1,7 @@
 <%@ Language="VBScript" CodePage="65001" %>
 <!--#include file="../includes/auth.asp"-->
-<!--#include file="../../includes/connection.asp"-->
 <!--#include file="../../includes/config.asp"-->
+<!--#include file="../../includes/connection.asp"-->
 <%
 ' ============================================
 ' V15.0 数据分析仪表盘 (Analytics Dashboard)
@@ -47,7 +47,6 @@ todayVisits = CLng(GetScalar("SELECT COUNT(*) FROM TrackingEvents WHERE EventTyp
 todayNewUsers = CLng(GetScalar("SELECT COUNT(*) FROM Users WHERE CAST(CreatedAt AS DATE)=CAST(GETDATE() AS DATE)"))
 pendingOrders = CLng(GetScalar("SELECT COUNT(*) FROM Orders WHERE Status='Pending'"))
 
-Call CloseConnection()
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -143,14 +142,14 @@ Call CloseConnection()
             <%
             Dim funnelSteps(3), funnelLabels(3), funnelWidths(3), funnelColors(3)
             funnelLabels(0) = "访问": funnelSteps(0) = totalVisits: funnelWidths(0) = 100: funnelColors(0) = "#2196f3"
-            funnelLabels(1) = "加购": funnelSteps(1) = addToCartCount: funnelWidths(1) = IIf(totalVisits>0,Round(addToCartCount/totalVisits*100,0),0): funnelColors(1) = "#4caf50"
-            funnelLabels(2) = "结账": funnelSteps(2) = checkoutCount: funnelWidths(2) = IIf(totalVisits>0,Round(checkoutCount/totalVisits*100,0),0): funnelColors(2) = "#ff9800"
-            funnelLabels(3) = "下单": funnelSteps(3) = orderCount: funnelWidths(3) = IIf(totalVisits>0,Round(orderCount/totalVisits*100,0),0): funnelColors(3) = "#f44336"
+            funnelLabels(1) = "加购": funnelSteps(1) = addToCartCount: If totalVisits>0 Then funnelWidths(1) = Round(addToCartCount/totalVisits*100,0) Else funnelWidths(1) = 0: funnelColors(1) = "#4caf50"
+            funnelLabels(2) = "结账": funnelSteps(2) = checkoutCount: If totalVisits>0 Then funnelWidths(2) = Round(checkoutCount/totalVisits*100,0) Else funnelWidths(2) = 0: funnelColors(2) = "#ff9800"
+            funnelLabels(3) = "下单": funnelSteps(3) = orderCount: If totalVisits>0 Then funnelWidths(3) = Round(orderCount/totalVisits*100,0) Else funnelWidths(3) = 0: funnelColors(3) = "#f44336"
             Dim fi
             For fi = 0 To 3
             %>
             <div style="text-align:center;flex:1;">
-                <div style="background:<%= funnelColors(fi) %>;color:#fff;padding:12px;border-radius:8px;margin:4px;width:<%= funnelWidths(fi) %>%!;min-width:80px;margin:0 auto;">
+                <div style="background:<%= funnelColors(fi) %>;color:#fff;padding:12px;border-radius:8px;margin:4px;width:<%= funnelWidths(fi) %>%;min-width:80px;margin:0 auto;">
                     <div style="font-size:22px;font-weight:700;"><%= funnelSteps(fi) %></div>
                     <div style="font-size:11px;opacity:0.9;"><%= funnelLabels(fi) %></div>
                 </div>
@@ -278,3 +277,6 @@ function changePeriod(days) {
 </script>
 </body>
 </html>
+<%
+Call CloseConnection()
+%>

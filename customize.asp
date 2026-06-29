@@ -54,6 +54,22 @@ End If
             </div>
         </section>
 
+        <!-- V18 AI 香氛测试入口 -->
+        <section class="customize-section">
+            <div class="quiz-entry-card">
+                <div class="quiz-entry-content">
+                    <div class="quiz-entry-icon"><i class="fas fa-magic"></i></div>
+                    <div class="quiz-entry-text">
+                        <h3><% If FEATURE_I18N Then %><%= T("customize_quiz_title", Empty) %><% Else %>不确定选什么？先做香氛测试<% End If %></h3>
+                        <p><% If FEATURE_I18N Then %><%= T("customize_quiz_desc", Empty) %><% Else %>AI 智能分析你的偏好，推荐最适合的香调组合。只需回答 6 个简单问题，约 1 分钟完成。<% End If %></p>
+                    </div>
+                    <a href="/fragrance_quiz.asp" class="btn btn-primary btn-lg quiz-entry-btn">
+                        <i class="fas fa-clipboard-check"></i> <% If FEATURE_I18N Then %><%= T("customize_quiz_btn", Empty) %><% Else %>开始测试<% End If %>
+                    </a>
+                </div>
+            </div>
+        </section>
+
         <!-- 选择基础香型 -->
         <section class="customize-section">
             <div class="section-header">
@@ -586,6 +602,72 @@ End If
 .customize-cta p {
     opacity: 0.9;
     margin-bottom: 25px;
+}
+
+/* V18 香氛测试入口卡片 */
+.quiz-entry-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+.quiz-entry-content {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 30px 36px;
+}
+.quiz-entry-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.quiz-entry-icon i {
+    font-size: 28px;
+    color: #fff;
+}
+.quiz-entry-text {
+    flex: 1;
+    min-width: 200px;
+}
+.quiz-entry-text h3 {
+    color: #fff;
+    font-size: 20px;
+    margin-bottom: 6px;
+}
+.quiz-entry-text p {
+    color: rgba(255,255,255,0.85);
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.6;
+}
+.quiz-entry-btn {
+    flex-shrink: 0;
+    background: #fff !important;
+    color: #667eea !important;
+    border: none !important;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.quiz-entry-btn:hover {
+    background: rgba(255,255,255,0.9) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+@media (max-width: 768px) {
+    .quiz-entry-content {
+        flex-direction: column;
+        text-align: center;
+        padding: 24px 20px;
+    }
+    .quiz-entry-icon {
+        margin: 0 auto;
+    }
 }
 
 @media (max-width: 992px) {

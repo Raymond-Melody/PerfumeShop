@@ -443,6 +443,56 @@ Sub CM_Warmup()
 End Sub
 
 ' ============================================
+' V18: CM_GetOrEmpty - 获取缓存值或返回 Empty
+' ============================================
+Function CM_GetOrEmpty(key)
+    Dim val : val = CM_Get(key)
+    If IsEmpty(val) Then
+        CM_GetOrEmpty = Empty
+    Else
+        CM_GetOrEmpty = val
+    End If
+End Function
+
+' ============================================
+' V18: CM_CacheProductQuery - 缓存产品查询结果
+' 用法: 先尝试缓存，未命中时由调用方查询并 CM_Set
+' ============================================
+Function CM_CacheProductQuery(cacheKey, ttlSeconds)
+    If Not FEATURE_CACHE_MANAGER Then
+        CM_CacheProductQuery = Empty
+        Exit Function
+    End If
+    If IsNull(ttlSeconds) Or ttlSeconds <= 0 Then ttlSeconds = CM_DEFAULT_TTL
+    CM_CacheProductQuery = CM_Get(cacheKey)
+End Function
+
+' ============================================
+' V18: CM_ClearProductCaches - 清除所有产品相关缓存
+' ============================================
+Sub CM_ClearProductCaches()
+    If Not FEATURE_CACHE_MANAGER Then Exit Sub
+    Call CM_Clear("home_section_")
+    Call CM_Clear("products_list_")
+    Call CM_Clear("product_detail_")
+    Call CM_Clear("recommend_")
+    Call CM_Clear("search_suggest_")
+End Sub
+
+' ============================================
+' V18: CM_RecordCacheHeaders - 添加缓存状态响应头
+' ============================================
+Sub CM_RecordCacheHeaders(isHit)
+    If isHit Then
+        Response.AddHeader "X-Cache", "HIT"
+        Call CM_RecordHit()
+    Else
+        Response.AddHeader "X-Cache", "MISS"
+        Call CM_RecordMiss()
+    End If
+End Sub
+
+' ============================================
 ' 初始化
 ' ============================================
 If Not Application("CM_Initialized") Then

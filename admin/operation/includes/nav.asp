@@ -39,6 +39,10 @@
             <li class="sidebar-section-title">营销与推广</li>
             <li><a href="order_reviews.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/order_reviews.asp", "active", "") %>"><i class="fas fa-star-half-alt"></i> <span>评价管理</span></a></li>
             <li><a href="marketing.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/marketing.asp", "active", "") %>"><i class="fas fa-bullhorn"></i> <span>营销活动</span></a></li>
+            <li><a href="coupon_management.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/coupon_management.asp", "active", "") %>"><i class="fas fa-ticket-alt"></i> <span>优惠券管理</span></a></li>
+            <li><a href="flash_sale.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/flash_sale.asp", "active", "") %>"><i class="fas fa-bolt"></i> <span>秒杀管理</span></a></li>
+            <li><a href="group_buy.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/group_buy.asp", "active", "") %>"><i class="fas fa-users"></i> <span>拼团管理</span></a></li>
+            <li><a href="subscription_plans.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/subscription_plans.asp", "active", "") %>"><i class="fas fa-box-open"></i> <span>订阅管理</span></a></li>
             <li><a href="referral_codes.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/referral_codes.asp", "active", "") %>"><i class="fas fa-user-friends"></i> <span>推荐码管理</span></a></li>
             <li><a href="payment_switch.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/payment_switch.asp", "active", "") %>"><i class="fas fa-toggle-on"></i> <span>支付开关</span></a></li>
         </ul>

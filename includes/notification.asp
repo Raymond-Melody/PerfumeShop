@@ -22,15 +22,93 @@ Const NF_TYPE_PROMOTION = "promotion"
 Const NF_TYPE_SYSTEM = "system"
 
 ' ============================================
-' 初始化通知队列
+' 内部辅助：序列化通知为管道分隔字符串
+' 格式: id|type|targetId|message|link|data|createdAt|isRead
+' ============================================
+Function NF_Serialize(nf)
+    NF_Serialize = nf("id") & "|" & nf("type") & "|" & nf("targetId") & "|" & _
+                   Replace(nf("message"), "|", "&#124;") & "|" & _
+                   Replace(nf("link"), "|", "&#124;") & "|" & _
+                   Replace(nf("data"), "|", "&#124;") & "|" & _
+                   nf("createdAt") & "|" & nf("isRead")
+End Function
+
+' ============================================
+' 内部辅助：从管道分隔字符串反序列化为Dictionary
+' ============================================
+Function NF_Deserialize(str)
+    Dim parts, nf
+    parts = Split(str, "|")
+    If UBound(parts) < 7 Then Set NF_Deserialize = Nothing : Exit Function
+    Set nf = Server.CreateObject("Scripting.Dictionary")
+    nf.Add "id", CLng(parts(0))
+    nf.Add "type", parts(1)
+    nf.Add "targetId", CLng(parts(2))
+    nf.Add "message", Replace(parts(3), "&#124;", "|")
+    nf.Add "link", Replace(parts(4), "&#124;", "|")
+    nf.Add "data", Replace(parts(5), "&#124;", "|")
+    nf.Add "createdAt", CDbl(parts(6))
+    If UBound(parts) >= 7 Then
+        nf.Add "isRead", CBool(parts(7))
+    Else
+        nf.Add "isRead", False
+    End If
+    Set NF_Deserialize = nf
+End Function
+
+' ============================================
+' 内部辅助：注册/注销通知ID到键列表
+' ============================================
+Sub NF_RegisterKey(nfId)
+    Dim keyList
+    keyList = Application("NF_KeyList")
+    If IsEmpty(keyList) Or keyList = "" Then
+        Application("NF_KeyList") = CStr(nfId)
+    Else
+        Application("NF_KeyList") = keyList & "|" & CStr(nfId)
+    End If
+End Sub
+
+Function NF_GetKeyArray()
+    Dim keyList, keys
+    keyList = Application("NF_KeyList")
+    If IsEmpty(keyList) Or keyList = "" Then
+        NF_GetKeyArray = Array()
+    Else
+        NF_GetKeyArray = Split(keyList, "|")
+    End If
+End Function
+
+' ============================================
+' 内部辅助：安全检查数组是否包含有效键
+' VBScript的And/Or运算符不会短路，必须嵌套If
+' ============================================
+Function NF_HasKeys(keys)
+    If Not IsArray(keys) Then
+        NF_HasKeys = False
+        Exit Function
+    End If
+    If UBound(keys) < 0 Then
+        NF_HasKeys = False
+        Exit Function
+    End If
+    If keys(0) = "" Then
+        NF_HasKeys = False
+        Exit Function
+    End If
+    NF_HasKeys = True
+End Function
+
+' ============================================
+' 初始化通知队列（使用Application字符串变量）
 ' ============================================
 Sub NF_Init()
-    If Not IsObject(Application("NF_Queue")) Then
+    If IsEmpty(Application("NF_NextID")) Then
         Application.Lock
-        If Not IsObject(Application("NF_Queue")) Then
-            Set Application("NF_Queue") = Server.CreateObject("Scripting.Dictionary")
+        If IsEmpty(Application("NF_NextID")) Then
             Application("NF_NextID") = 1
             Application("NF_LastCleanup") = CDbl(Now())
+            Application("NF_KeyList") = ""
         End If
         Application.UnLock
     End If
@@ -58,14 +136,14 @@ End Function
 '   data     - 附加数据JSON（可选）
 ' ============================================
 Sub NF_Push(nfType, targetId, message, link, data)
-    Dim queue, nf, nfId, nowTs
+    Dim nf, nfId, nowTs, serialized
     
     Call NF_Init()
     
     nfId = NF_NextID()
     nowTs = CDbl(Now())
     
-    ' 构建通知对象
+    ' 构建通知对象（内存中Dictionary，不存入Application）
     Set nf = Server.CreateObject("Scripting.Dictionary")
     nf.Add "id", nfId
     nf.Add "type", nfType
@@ -78,15 +156,17 @@ Sub NF_Push(nfType, targetId, message, link, data)
     nf.Add "createdAt", nowTs
     nf.Add "isRead", False
     
-    ' 存入Application队列
+    ' 序列化为字符串存入Application
+    serialized = NF_Serialize(nf)
+    
     Application.Lock
     
-    Set queue = Application("NF_Queue")
-    queue.Add CStr(nfId), nf
+    Application("NF_" & nfId) = serialized
+    Call NF_RegisterKey(nfId)
     
     ' 超过最大数量时清理旧消息
-    If queue.Count > NF_MAX_TOTAL Then
-        NF_CleanupInternal(queue)
+    If NF_GetKeyCount() > NF_MAX_TOTAL Then
+        NF_CleanupInternal()
     End If
     
     Application.UnLock
@@ -112,48 +192,66 @@ Sub NF_PushAnnouncement(message, link)
 End Sub
 
 ' ============================================
+' 获取键列表数量
+' ============================================
+Function NF_GetKeyCount()
+    Dim keys
+    keys = NF_GetKeyArray()
+    If NF_HasKeys(keys) Then
+        NF_GetKeyCount = UBound(keys) + 1
+    Else
+        NF_GetKeyCount = 0
+    End If
+End Function
+
+' ============================================
 ' 获取用户的通知（自lastCheckId之后的新通知）
 ' ============================================
 Function NF_GetForUser(userId, lastCheckId)
-    Dim queue, keys, key, nf, result, i, count
+    Dim keys, key, nf, result, i, count, serialized
     
     Call NF_Init()
     
     Set result = Server.CreateObject("Scripting.Dictionary")
-    Set queue = Application("NF_Queue")
     
     If IsNull(lastCheckId) Or lastCheckId = "" Then lastCheckId = 0
     lastCheckId = CLng(lastCheckId)
     
     count = 0
-    keys = queue.Keys()
+    keys = NF_GetKeyArray()
     
-    For Each key In keys
-        Set nf = queue.Item(key)
-        If IsObject(nf) Then
-            ' 检查目标用户（targetId=0或-1为广播，匹配当前用户）
-            Dim target
-            target = CLng(nf("targetId"))
-            If target = 0 Or target = -1 Or target = CLng(userId) Then
-                If CLng(nf("id")) > lastCheckId Then
-                    ' 添加到结果
-                    Dim item
-                    Set item = Server.CreateObject("Scripting.Dictionary")
-                    item.Add "id", CLng(nf("id"))
-                    item.Add "type", nf("type")
-                    item.Add "message", nf("message")
-                    item.Add "link", nf("link")
-                    item.Add "data", nf("data")
-                    item.Add "createdAt", nf("createdAt")
-                    
-                    result.Add CStr(count), item
-                    count = count + 1
-                    
-                    If count >= 50 Then Exit For ' 最多返回50条
+    If NF_HasKeys(keys) Then
+        For i = 0 To UBound(keys)
+            key = keys(i)
+            If key <> "" Then
+                serialized = Application("NF_" & key)
+                If Not IsEmpty(serialized) And serialized <> "" Then
+                    Set nf = NF_Deserialize(serialized)
+                    If Not nf Is Nothing Then
+                        target = CLng(nf("targetId"))
+                        If target = 0 Or target = -1 Or target = CLng(userId) Then
+                            If CLng(nf("id")) > lastCheckId Then
+                                ' 添加到结果
+                                Dim item
+                                Set item = Server.CreateObject("Scripting.Dictionary")
+                                item.Add "id", CLng(nf("id"))
+                                item.Add "type", nf("type")
+                                item.Add "message", nf("message")
+                                item.Add "link", nf("link")
+                                item.Add "data", nf("data")
+                                item.Add "createdAt", nf("createdAt")
+                                
+                                result.Add CStr(count), item
+                                count = count + 1
+                                
+                                If count >= 50 Then Exit For ' 最多返回50条
+                            End If
+                        End If
+                    End If
                 End If
             End If
-        End If
-    Next
+        Next
+    End If
     
     Set NF_GetForUser = result
 End Function
@@ -162,24 +260,33 @@ End Function
 ' 获取未读通知数量
 ' ============================================
 Function NF_GetUnreadCount(userId)
-    Dim queue, keys, key, nf, count
+    Dim keys, key, nf, count, i, serialized
     
     Call NF_Init()
-    Set queue = Application("NF_Queue")
     
     count = 0
-    keys = queue.Keys()
+    keys = NF_GetKeyArray()
     
-    For Each key In keys
-        Set nf = queue.Item(key)
-        If IsObject(nf) Then
-            Dim target
-            target = CLng(nf("targetId"))
-            If (target = 0 Or target = -1 Or target = CLng(userId)) And Not nf("isRead") Then
-                count = count + 1
+    If NF_HasKeys(keys) Then
+        For i = 0 To UBound(keys)
+            key = keys(i)
+            If key <> "" Then
+                serialized = Application("NF_" & key)
+                If Not IsEmpty(serialized) And serialized <> "" Then
+                    Set nf = NF_Deserialize(serialized)
+                    If Not nf Is Nothing Then
+                        Dim unreadTarget
+                        unreadTarget = CLng(nf("targetId"))
+                        If unreadTarget = 0 Or unreadTarget = -1 Or unreadTarget = CLng(userId) Then
+                            If Not nf("isRead") Then
+                                count = count + 1
+                            End If
+                        End If
+                    End If
+                End If
             End If
-        End If
-    Next
+        Next
+    End If
     
     NF_GetUnreadCount = count
 End Function
@@ -188,13 +295,17 @@ End Function
 ' 标记通知为已读
 ' ============================================
 Sub NF_MarkRead(notificationId)
-    Dim queue, key
-    Call NF_Init()
-    Set queue = Application("NF_Queue")
-    
-    key = CStr(notificationId)
-    If queue.Exists(key) Then
-        queue.Item(key)("isRead") = True
+    Dim nfKey, serialized, nf
+    nfKey = "NF_" & CStr(notificationId)
+    serialized = Application(nfKey)
+    If Not IsEmpty(serialized) And serialized <> "" Then
+        Set nf = NF_Deserialize(serialized)
+        If Not nf Is Nothing Then
+            nf("isRead") = True
+            Application.Lock
+            Application(nfKey) = NF_Serialize(nf)
+            Application.UnLock
+        End If
     End If
 End Sub
 
@@ -202,21 +313,20 @@ End Sub
 ' 获取最近的通知（管理端用，不限用户）
 ' ============================================
 Function NF_GetRecent(count)
-    Dim queue, keys, key, nf, result, i, total, startIdx
+    Dim keys, key, nf, result, i, total, startIdx, serialized
     
     If IsNull(count) Or count < 1 Then count = 20
     
     Call NF_Init()
-    Set queue = Application("NF_Queue")
     Set result = Server.CreateObject("Scripting.Dictionary")
     
-    keys = queue.Keys()
-    total = queue.Count
-    
-    If total = 0 Then
+    keys = NF_GetKeyArray()
+    If Not NF_HasKeys(keys) Then
         Set NF_GetRecent = result
         Exit Function
     End If
+    
+    total = UBound(keys) + 1
     
     ' 取最后count条
     startIdx = total - count
@@ -224,18 +334,23 @@ Function NF_GetRecent(count)
     
     For i = startIdx To total - 1
         key = keys(i)
-        Set nf = queue.Item(key)
-        If IsObject(nf) Then
-            Dim item
-            Set item = Server.CreateObject("Scripting.Dictionary")
-            item.Add "id", CLng(nf("id"))
-            item.Add "type", nf("type")
-            item.Add "targetId", CLng(nf("targetId"))
-            item.Add "message", nf("message")
-            item.Add "link", nf("link")
-            item.Add "isRead", nf("isRead")
-            item.Add "createdAt", nf("createdAt")
-            result.Add CStr(result.Count), item
+        If key <> "" Then
+            serialized = Application("NF_" & key)
+            If Not IsEmpty(serialized) And serialized <> "" Then
+                Set nf = NF_Deserialize(serialized)
+                If Not nf Is Nothing Then
+                    Dim item
+                    Set item = Server.CreateObject("Scripting.Dictionary")
+                    item.Add "id", CLng(nf("id"))
+                    item.Add "type", nf("type")
+                    item.Add "targetId", CLng(nf("targetId"))
+                    item.Add "message", nf("message")
+                    item.Add "link", nf("link")
+                    item.Add "isRead", nf("isRead")
+                    item.Add "createdAt", nf("createdAt")
+                    result.Add CStr(result.Count), item
+                End If
+            End If
         End If
     Next
     
@@ -245,22 +360,40 @@ End Function
 ' ============================================
 ' 内部清理函数（需持有Application锁）
 ' ============================================
-Sub NF_CleanupInternal(queue)
-    Dim keys, key, nf, nowTs, i
+Sub NF_CleanupInternal()
+    Dim keys, key, nf, nowTs, i, serialized
     nowTs = CDbl(Now())
-    keys = queue.Keys()
+    keys = NF_GetKeyArray()
+    
+    If Not NF_HasKeys(keys) Then Exit Sub
     
     ' 删除过期消息
-    For i = queue.Count - 1 To 0 Step -1
+    Dim newKeyList : newKeyList = ""
+    For i = 0 To UBound(keys)
         key = keys(i)
-        Set nf = queue.Item(key)
-        If IsObject(nf) Then
-            Dim age : age = (nowTs - CDbl(nf("createdAt"))) * 86400
-            If age > NF_RETENTION_SECONDS Then
-                queue.Remove key
+        If key <> "" Then
+            serialized = Application("NF_" & key)
+            If Not IsEmpty(serialized) And serialized <> "" Then
+                Set nf = NF_Deserialize(serialized)
+                If Not nf Is Nothing Then
+                    Dim age : age = (nowTs - CDbl(nf("createdAt"))) * 86400
+                    If age > NF_RETENTION_SECONDS Then
+                        Application.Contents.Remove "NF_" & key
+                    Else
+                        If newKeyList = "" Then
+                            newKeyList = key
+                        Else
+                            newKeyList = newKeyList & "|" & key
+                        End If
+                    End If
+                End If
+            Else
+                ' 已损坏的数据，删除
+                Application.Contents.Remove "NF_" & key
             End If
         End If
     Next
+    Application("NF_KeyList") = newKeyList
 End Sub
 
 ' ============================================

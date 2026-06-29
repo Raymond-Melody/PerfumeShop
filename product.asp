@@ -1,11 +1,13 @@
-<%@ Language="VBScript" CodePage="65001" %>
+﻿<%@ Language="VBScript" CodePage="65001" %>
 <%
 Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
 %>
 <!--#include file="includes/config.asp"-->
 <!--#include file="includes/connection.asp"-->
+<!--#include file="includes/dal.asp"-->
 <!--#include file="includes/product_type_utils.asp"-->
+<!--#include file="includes/ai_client.asp"-->
 <!--#include file="includes/recommendation_engine.asp"-->
 <!--#include file="includes/share_utils.asp"-->
 <%
@@ -37,7 +39,7 @@ Set rsType = Nothing
 If productType = "" Then productType = "custom"
 
 ' 获取类型显示名称（此时没有其他Recordset打开）
-typeDisplayName = GetProductTypeDisplayName(productType)
+typeDisplayName = GetProductTypeI18nName(productType, GetProductTypeDisplayName(productType), "display")
 
 Set rsProduct = ExecuteQuery("SELECT * FROM Products WHERE ProductID = " & CInt(productId) & " AND IsActive <> 0")
 If rsProduct Is Nothing Or rsProduct.EOF Then
@@ -1040,9 +1042,24 @@ function submitCustomCart() {
     }
     
     var $form = $('#customizeForm');
-    $form.attr('action', '/api/cart_add.asp');
-    $form.attr('method', 'post');
-    $form[0].submit();
+    var formData = $form.serialize() + '&csrf_token=' + encodeURIComponent(csrfToken);
+    
+    $.ajax({
+        url: '/api/cart_add.asp',
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.code === 0) {
+                window.location.href = '/cart.asp';
+            } else {
+                alert(response.message || '添加失败，请重试');
+            }
+        },
+        error: function() {
+            alert('请求失败，请刷新页面重试');
+        }
+    });
 }
 
 function submitCustomBuyNow() {
@@ -1076,12 +1093,24 @@ function submitCustomBuyNow() {
     }
     
     var $form = $('#customizeForm');
-    if ($('#buyNowAction').length === 0) {
-        $form.append('<input type="hidden" id="buyNowAction" name="buyNow" value="1">');
-    }
-    $form.attr('action', '/api/cart_add.asp');
-    $form.attr('method', 'post');
-    $form[0].submit();
+    var formData = $form.serialize() + '&buyNow=1&csrf_token=' + encodeURIComponent(csrfToken);
+    
+    $.ajax({
+        url: '/api/cart_add.asp',
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.code === 0) {
+                window.location.href = '/checkout.asp';
+            } else {
+                alert(response.message || '操作失败，请重试');
+            }
+        },
+        error: function() {
+            alert('请求失败，请刷新页面重试');
+        }
+    });
 }
 
 function toggleFavorite() {
@@ -1195,11 +1224,11 @@ $(document).ready(function() {
 <!-- 社交分享 -->
 <% Call SU_RenderShareSection(shareUrl, shareTitle, shareDesc, shareImage) %>
 
-<!-- 推荐区域：猜你喜欢 -->
+<!-- 推荐区域：猜你喜欢 (V18 AI升级) -->
 <%
-' 获取同类产品推荐
+' 获取AI相似产品推荐，AI不可用时自动回退到传统同类推荐
 Dim rsRelated
-Set rsRelated = RE_GetRelatedProducts(productId, productType, 6)
+Set rsRelated = RE_GetSimilarFragrances(productId, 6)
 %>
 <div class="recommendation-section">
     <div class="container">
@@ -1215,88 +1244,401 @@ Set rsRelated = RE_GetRelatedProducts(productId, productType, 6)
     </div>
 </div>
 
-<style>
-.recommendation-section {
-    padding: 40px 0;
-    background: #f8f9fa;
-    margin-top: 30px;
-}
-.recommendation-section .section-title {
-    font-size: 22px;
-    color: #333;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.recommendation-section .section-title i { color: #ff6f61; }
-.recommendation-section .section-desc {
-    color: #888;
-    font-size: 14px;
-    margin-bottom: 25px;
-}
-.recommendation-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
-}
-.rec-card {
-    background: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-    text-decoration: none;
-    border: 1px solid #eee;
-    transition: all 0.3s ease;
-    display: block;
-}
-.rec-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-.rec-img-wrapper {
-    position: relative;
-    height: 180px;
-    background: #f5f5f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-.rec-img-wrapper img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    transition: transform 0.3s;
-}
-.rec-card:hover .rec-img-wrapper img { transform: scale(1.05); }
-.rec-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: #ff6f61;
-    color: #fff;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-}
-.rec-info {
-    padding: 12px;
-}
-.rec-info h4 {
-    font-size: 14px;
-    color: #333;
-    margin: 0 0 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.rec-price {
-    font-size: 16px;
-    font-weight: 700;
-    color: #e74c3c;
-}
+
+<!-- ============================================ -->
+<!-- V18: 产品评价模块 (Product Reviews)           -->
+<!-- ============================================ -->
+<%
+If FEATURE_COMMUNITY Then
+	Dim reviewAction, reviewMsg, reviewErr, reviewRating, reviewTitle, reviewContent
+	Dim hasPurchased, hasReviewed, newReviewID, alreadyLiked, likeReviewID
+	reviewAction = Request.Form("review_action")
+	reviewMsg = ""
+	reviewErr = ""
+
+	' ---- 处理评价提交 ----
+	If reviewAction = "submit" Then
+		reviewRating = CInt(Request.Form("rating"))
+		reviewTitle = Trim(Request.Form("title"))
+		reviewContent = Trim(Request.Form("content"))
+
+		If reviewRating < 1 Or reviewRating > 5 Then
+			reviewErr = "请选择评分（1-5星）"
+		ElseIf Len(reviewContent) < 10 Then
+			reviewErr = "评价内容至少10个字符"
+		Else
+			hasReviewed = DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE ProductID=@PID AND UserID=@UID AND IsActive=1", _
+				Array(Array("@PID", DAL_adInteger, 0, productId), Array("@UID", DAL_adInteger, 0, Session("UserID"))), 0)
+			If CLng(hasReviewed) > 0 Then
+				reviewErr = "您已评价过该产品"
+			Else
+				hasPurchased = DAL_GetScalar("SELECT COUNT(*) FROM Orders o JOIN OrderItems oi ON o.OrderID=oi.OrderID WHERE o.UserID=@UID AND oi.ProductID=@PID AND o.Status IN ('delivered','completed')", _
+					Array(Array("@UID", DAL_adInteger, 0, Session("UserID")), Array("@PID", DAL_adInteger, 0, productId)), 0)
+				newReviewID = DAL_Insert("ProductReviews", _
+					Array("ProductID","UserID","Rating","Title","Content","IsVerifiedPurchase"), _
+					Array(Array("@ProductID", DAL_adInteger, 0, productId), _
+					      Array("@UserID", DAL_adInteger, 0, Session("UserID")), _
+					      Array("@Rating", DAL_adInteger, 0, reviewRating), _
+					      Array("@Title", DAL_adVarChar, 100, reviewTitle), _
+					      Array("@Content", DAL_adVarChar, 2000, reviewContent), _
+					      Array("@IsVerifiedPurchase", DAL_adBoolean, 0, IIf(CLng(hasPurchased) > 0, 1, 0))))
+				If newReviewID > 0 Then
+					reviewMsg = "评价发布成功！感谢您的分享。"
+				Else
+					reviewErr = "评价提交失败，请稍后重试"
+				End If
+			End If
+		End If
+	End If
+
+	' ---- 处理点赞/取消点赞 ----
+	If reviewAction = "like" Or reviewAction = "unlike" Then
+		likeReviewID = CLng(Request.Form("review_id"))
+		If likeReviewID > 0 Then
+			If reviewAction = "like" Then
+				alreadyLiked = DAL_GetScalar("SELECT COUNT(*) FROM ReviewLikes WHERE ReviewID=@RID AND UserID=@UID", _
+					Array(Array("@RID", DAL_adInteger, 0, likeReviewID), Array("@UID", DAL_adInteger, 0, Session("UserID"))), 0)
+				If CLng(alreadyLiked) = 0 Then
+					DAL_Execute "INSERT INTO ReviewLikes (ReviewID, UserID) VALUES (@RID, @UID)", _
+						Array(Array("@RID", DAL_adInteger, 0, likeReviewID), Array("@UID", DAL_adInteger, 0, Session("UserID")))
+					DAL_Execute "UPDATE ProductReviews SET LikeCount = LikeCount + 1 WHERE ReviewID = @RID", _
+						Array(Array("@RID", DAL_adInteger, 0, likeReviewID))
+				End If
+			Else
+				DAL_Execute "DELETE FROM ReviewLikes WHERE ReviewID=@RID AND UserID=@UID", _
+					Array(Array("@RID", DAL_adInteger, 0, likeReviewID), Array("@UID", DAL_adInteger, 0, Session("UserID")))
+				DAL_Execute "UPDATE ProductReviews SET LikeCount = CASE WHEN LikeCount > 0 THEN LikeCount - 1 ELSE 0 END WHERE ReviewID = @RID", _
+					Array(Array("@RID", DAL_adInteger, 0, likeReviewID))
+			End If
+		End If
+	End If
+
+	' ---- 获取评价统计 ----
+	Dim avgRating, totalReviews, ratingDist(5), iRD
+	For iRD = 1 To 5 : ratingDist(iRD) = 0 : Next
+
+	Dim rsStats
+	Set rsStats = DAL_GetRow("SELECT COUNT(*) AS TotalReviews, ISNULL(AVG(CAST(Rating AS DECIMAL(3,2))), 0) AS AvgRating FROM ProductReviews WHERE ProductID=@PID AND IsActive=1", _
+		Array(Array("@PID", DAL_adInteger, 0, productId)))
+	If Not rsStats Is Nothing Then
+		totalReviews = CLng(rsStats("TotalReviews"))
+		avgRating = CDbl(rsStats("AvgRating"))
+		rsStats.Close : Set rsStats = Nothing
+	Else
+		totalReviews = 0 : avgRating = 0
+	End If
+
+	If totalReviews > 0 Then
+		Dim rsDist
+		Set rsDist = DAL_GetList("SELECT Rating, COUNT(*) AS Cnt FROM ProductReviews WHERE ProductID=@PID AND IsActive=1 GROUP BY Rating", _
+			Array(Array("@PID", DAL_adInteger, 0, productId)))
+		If Not rsDist Is Nothing Then
+			Do While Not rsDist.EOF
+				ratingDist(CLng(rsDist("Rating"))) = CLng(rsDist("Cnt"))
+				rsDist.MoveNext
+			Loop
+			rsDist.Close : Set rsDist = Nothing
+		End If
+	End If
+
+	' ---- 获取评价列表（分页）----
+	Dim reviewPage, reviewPageSize, reviewPageInfo, rsReviews, reviewSQL
+	reviewPage = CLng(Request.QueryString("review_page"))
+	If reviewPage < 1 Then reviewPage = 1
+	reviewPageSize = 5
+
+	reviewSQL = "SELECT pr.*, u.Username, u.FullName FROM ProductReviews pr LEFT JOIN Users u ON pr.UserID=u.UserID WHERE pr.ProductID=@PID AND pr.IsActive=1 ORDER BY pr.CreatedAt DESC"
+	Set rsReviews = DAL_GetListPaged(reviewSQL, _
+		Array(Array("@PID", DAL_adInteger, 0, productId)), reviewPage, reviewPageSize, reviewPageInfo)
+
+	' ---- 当前用户是否已评价 ----
+	Dim userHasReviewed
+	userHasReviewed = (CLng(DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE ProductID=@PID AND UserID=@UID AND IsActive=1", _
+		Array(Array("@PID", DAL_adInteger, 0, productId), Array("@UID", DAL_adInteger, 0, Session("UserID"))), 0)) > 0)
+%>
+<section class="product-reviews-section">
+<div class="container">
+	<h2 class="section-title"><i class="fas fa-star-half-alt"></i> <% If FEATURE_I18N Then %><%= T("customer_reviews", Empty) %><% Else %>产品评价<% End If %></h2>
+
+	<!-- 评价统计 + 表单布局 -->
+	<div class="reviews-layout">
+		<!-- 左侧：评分统计 -->
+		<div class="reviews-stats">
+			<div class="stats-avg">
+				<span class="avg-number"><%= FormatNumber(avgRating, 1) %></span>
+				<span class="avg-total">/ 5</span>
+			</div>
+			<div class="stats-stars"><%= String(Int(avgRating), "★") %><%= IIf(avgRating - Int(avgRating) >= 0.5, "☆", "") %></div>
+			<div class="stats-count"><% If FEATURE_I18N Then %><%= totalReviews & " " & T("customer_reviews", Empty) %><% Else %><%= totalReviews %> 条评价<% End If %></div>
+			<div class="rating-bars">
+				<% Dim starLevel, barWidth, bar5, bar4, bar3, bar2, bar1 %>
+				<% For starLevel = 5 To 1 Step -1 %>
+				<%
+					If totalReviews > 0 Then
+						barWidth = Int(ratingDist(starLevel) / totalReviews * 100)
+					Else
+						barWidth = 0
+					End If
+				%>
+				<div class="rating-bar-row">
+					<span class="bar-label"><%= starLevel %>星</span>
+					<span class="bar-track"><span class="bar-fill" style="width:<%= barWidth %>%"></span></span>
+					<span class="bar-count"><%= ratingDist(starLevel) %></span>
+				</div>
+				<% Next %>
+			</div>
+		</div>
+
+		<!-- 右侧：评价表单 + 列表 -->
+		<div class="reviews-main">
+			<!-- 提交成功/失败提示 -->
+			<% If reviewMsg <> "" Then %>
+			<div class="review-alert review-alert-success"><%= reviewMsg %></div>
+			<% End If %>
+			<% If reviewErr <> "" Then %>
+			<div class="review-alert review-alert-error"><%= reviewErr %></div>
+			<% End If %>
+
+			<!-- 评价表单（未评价时显示）-->
+			<% If Not userHasReviewed Then %>
+			<div class="review-form-card">
+				<h4 class="form-title"><% If FEATURE_I18N Then %>写评价<% Else %>写评价<% End If %></h4>
+				<form method="post" action="<%= Request.ServerVariables("SCRIPT_NAME") & "?id=" & productId %>" id="reviewForm">
+					<input type="hidden" name="review_action" value="submit">
+					<div class="form-group">
+						<label>评分</label>
+						<!-- V18: Web Component 星级评分 -->
+						<review-stars data-value="0" data-name="rating" id="reviewStars"></review-stars>
+						<noscript>
+						<div class="star-selector" id="starSelector">
+							<% Dim si %>
+							<% For si = 1 To 5 %>
+							<span class="star-option" data-value="<%= si %>" onclick="setRating(<%= si %>)"><i class="far fa-star"></i></span>
+							<% Next %>
+							<input type="hidden" name="rating" id="ratingInput" value="0">
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="revTitle">标题（可选）</label>
+						<input type="text" name="title" id="revTitle" class="form-input" maxlength="100" placeholder="用一句话总结你的体验">
+					</div>
+					<div class="form-group">
+						<label for="revContent">评价内容 <span class="required">*</span></label>
+						<textarea name="content" id="revContent" class="form-textarea" rows="3" maxlength="2000" placeholder="分享你的使用感受，至少10个字符" required></textarea>
+						<small class="char-count">0/2000</small>
+					</div>
+					<button type="submit" class="btn btn-primary" id="submitReviewBtn"><i class="fas fa-paper-plane"></i> 提交评价</button>
+				</form>
+			</div>
+			<% End If %>
+
+			<!-- 评价列表 -->
+			<% If Not rsReviews Is Nothing And Not rsReviews.EOF Then %>
+			<div class="review-list">
+				<% 
+				Dim revUserID, revLiked
+				Do While Not rsReviews.EOF
+					revUserID = rsReviews("UserID")
+					' 检查当前用户是否已点赞该评价
+					revLiked = (CLng(DAL_GetScalar("SELECT COUNT(*) FROM ReviewLikes WHERE ReviewID=@RID AND UserID=@UID", _
+						Array(Array("@RID", DAL_adInteger, 0, rsReviews("ReviewID")), Array("@UID", DAL_adInteger, 0, Session("UserID"))), 0)) > 0)
+				%>
+				<div class="review-card" id="review-<%= rsReviews("ReviewID") %>">
+					<div class="review-header">
+						<div class="reviewer-info">
+							<span class="reviewer-avatar"><%= Left(GetReviewerName(rsReviews), 1) %></span>
+							<div>
+								<span class="reviewer-name"><%= GetReviewerName(rsReviews) %></span>
+								<span class="review-date"><%= FormatDateTime(rsReviews("CreatedAt"), 2) %></span>
+							</div>
+						</div>
+						<div class="review-stars"><%= String(rsReviews("Rating"), "★") %><%= String(5 - CInt(rsReviews("Rating")), "☆") %></div>
+					</div>
+					<% If rsReviews("IsVerifiedPurchase") Then %>
+					<span class="verified-badge"><i class="fas fa-check-circle"></i> 已验证购买</span>
+					<% End If %>
+					<% If Not IsNull(rsReviews("Title")) And rsReviews("Title") <> "" Then %>
+					<h5 class="review-title"><%= Server.HTMLEncode(rsReviews("Title")) %></h5>
+					<% End If %>
+					<p class="review-content"><%= Server.HTMLEncode(rsReviews("Content")) %></p>
+					<div class="review-footer">
+						<button class="btn-like <%= IIf(revLiked, "liked", "") %>" onclick="toggleReviewLike(<%= rsReviews("ReviewID") %>, <%= IIf(revLiked, "true", "false") %>)">
+							<i class="<%= IIf(revLiked, "fas", "far") %> fa-heart"></i>
+							<span class="like-count"><%= rsReviews("LikeCount") %></span>
+						</button>
+				</div>
+				</div>
+				<%
+					rsReviews.MoveNext
+				Loop
+				%>
+			</div>
+
+			<!-- 分页 -->
+			<% If reviewPageInfo("totalPages") > 1 Then %>
+			<div class="review-pagination">
+				<% If reviewPageInfo("hasPrev") Then %>
+				<a href="?id=<%= productId %>&review_page=<%= reviewPage - 1 %>" class="page-btn">&laquo; 上一页</a>
+				<% End If %>
+				<span class="page-info"><%= reviewPage %> / <%= reviewPageInfo("totalPages") %></span>
+				<% If reviewPageInfo("hasNext") Then %>
+				<a href="?id=<%= productId %>&review_page=<%= reviewPage + 1 %>" class="page-btn">下一页 &raquo;</a>
+				<% End If %>
+			</div>
+			<% End If %>
+
+			<% Else %>
+			<div class="review-empty">
+				<i class="far fa-comment-dots"></i>
+				<p>暂无评价，快来成为第一个评价的人吧！</p>
+			</div>
+			<% End If %>
+
+			<%
+			If Not rsReviews Is Nothing Then
+				rsReviews.Close
+				Set rsReviews = Nothing
+			End If
+			%>
+		</div>
+	</div>
+</div>
+</section>
+
+<!-- 评价模块辅助函数 -->
+<%
+Function GetReviewerName(rsRev)
+	If Not IsNull(rsRev("FullName")) And rsRev("FullName") <> "" Then
+		GetReviewerName = rsRev("FullName")
+	ElseIf Not IsNull(rsRev("Username")) Then
+		GetReviewerName = rsRev("Username")
+	Else
+		GetReviewerName = "匿名用户"
+	End If
+End Function
+%>
+
+<!-- 评价模块内联样式 -->
+<style nonce="<%= Session("csp_nonce") %>">
+.product-reviews-section { padding: 40px 0; background: #fafafa; border-top: 1px solid #eee; }
+.product-reviews-section .section-title { font-size: 1.4rem; margin-bottom: 24px; color: #333; }
+.reviews-layout { display: grid; grid-template-columns: 280px 1fr; gap: 32px; align-items: start; }
+@media (max-width: 768px) { .reviews-layout { grid-template-columns: 1fr; } }
+
+/* 左侧统计 */
+.reviews-stats { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.06); text-align: center; }
+.stats-avg { margin-bottom: 8px; }
+.avg-number { font-size: 3rem; font-weight: 700; color: #e91e63; line-height: 1; }
+.avg-total { font-size: 1rem; color: #999; }
+.stats-stars { font-size: 1.2rem; color: #ff9800; margin-bottom: 6px; }
+.stats-count { font-size: .85rem; color: #888; margin-bottom: 16px; }
+.rating-bars { text-align: left; }
+.rating-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: .8rem; }
+.bar-label { width: 28px; color: #666; text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+.bar-fill { display: block; height: 100%; background: linear-gradient(90deg, #ff9800, #ffc107); border-radius: 4px; transition: width .3s; }
+.bar-count { width: 20px; color: #999; text-align: right; flex-shrink: 0; }
+
+/* 右侧主区 */
+.reviews-main { min-width: 0; }
+
+/* 提示消息 */
+.review-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: .9rem; }
+.review-alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+.review-alert-error { background: #fce4ec; color: #c62828; border: 1px solid #f8bbd0; }
+
+/* 评价表单 */
+.review-form-card { background: #fff; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.form-title { font-size: 1.05rem; margin: 0 0 14px; color: #333; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: .85rem; color: #555; margin-bottom: 4px; font-weight: 500; }
+.form-group .required { color: #e91e63; }
+.star-selector { display: flex; gap: 4px; margin-bottom: 2px; }
+.star-option { font-size: 1.6rem; color: #ccc; cursor: pointer; transition: color .15s, transform .15s; }
+.star-option:hover, .star-option.active { color: #ff9800; transform: scale(1.1); }
+.form-input, .form-textarea { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: .9rem; font-family: inherit; box-sizing: border-box; transition: border-color .2s; }
+.form-input:focus, .form-textarea:focus { outline: none; border-color: #e91e63; box-shadow: 0 0 0 2px rgba(233,30,99,.1); }
+.form-textarea { resize: vertical; min-height: 70px; }
+.char-count { font-size: .75rem; color: #aaa; }
+
+/* 评价卡片 */
+.review-card { background: #fff; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+.review-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.reviewer-info { display: flex; align-items: center; gap: 10px; }
+.reviewer-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #e91e63, #9c27b0); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: .95rem; flex-shrink: 0; }
+.reviewer-name { font-weight: 600; font-size: .9rem; color: #333; display: block; }
+.review-date { font-size: .75rem; color: #999; }
+.review-stars { font-size: .9rem; color: #ff9800; flex-shrink: 0; }
+.verified-badge { display: inline-block; background: #e8f5e9; color: #2e7d32; font-size: .75rem; padding: 2px 8px; border-radius: 10px; margin-bottom: 6px; }
+.review-title { font-size: .95rem; font-weight: 600; color: #444; margin: 4px 0 6px; }
+.review-content { font-size: .9rem; color: #555; line-height: 1.6; margin: 0 0 10px; }
+.review-footer { display: flex; align-items: center; }
+.btn-like { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid #ddd; border-radius: 20px; padding: 4px 12px; font-size: .8rem; color: #999; cursor: pointer; transition: all .2s; }
+.btn-like:hover { border-color: #e91e63; color: #e91e63; }
+.btn-like.liked { background: #fce4ec; border-color: #e91e63; color: #e91e63; }
+
+/* 空状态 */
+.review-empty { text-align: center; padding: 40px 20px; color: #bbb; }
+.review-empty i { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+.review-empty p { font-size: .9rem; margin: 0; }
+
+/* 分页 */
+.review-pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; }
+.page-btn { display: inline-block; padding: 6px 14px; background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: .85rem; color: #666; text-decoration: none; transition: all .2s; }
+.page-btn:hover { border-color: #e91e63; color: #e91e63; }
+.page-info { font-size: .85rem; color: #888; }
 </style>
+
+<!-- 评价模块脚本 -->
+<script nonce="<%= Session("csp_nonce") %>">
+function setRating(val) {
+	document.getElementById('ratingInput').value = val;
+	var stars = document.querySelectorAll('#starSelector .star-option');
+	stars.forEach(function(s, i) {
+		s.classList.toggle('active', i < val);
+		s.querySelector('i').className = i < val ? 'fas fa-star' : 'far fa-star';
+	});
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+	var textarea = document.getElementById('revContent');
+	var charCount = document.querySelector('.char-count');
+	if (textarea && charCount) {
+		textarea.addEventListener('input', function() {
+			charCount.textContent = this.value.length + '/2000';
+			if (this.value.length > 1900) charCount.style.color = '#e91e63';
+			else charCount.style.color = '#aaa';
+		});
+	}
+});
+
+function toggleReviewLike(reviewId, isLiked) {
+	var btn = document.querySelector('#review-' + reviewId + ' .btn-like');
+	var countSpan = btn.querySelector('.like-count');
+	var icon = btn.querySelector('i');
+	var action = isLiked ? 'unlike' : 'like';
+
+	var formData = new FormData();
+	formData.append('review_action', action);
+	formData.append('review_id', reviewId);
+
+	fetch(window.location.href, { method: 'POST', body: formData })
+		.then(function(r) { return r.text(); })
+		.then(function() {
+			if (action === 'like') {
+				btn.classList.add('liked');
+				icon.className = 'fas fa-heart';
+				countSpan.textContent = parseInt(countSpan.textContent) + 1;
+			} else {
+				btn.classList.remove('liked');
+				icon.className = 'far fa-heart';
+				countSpan.textContent = Math.max(0, parseInt(countSpan.textContent) - 1);
+			}
+			btn.setAttribute('onclick', 'toggleReviewLike(' + reviewId + ', ' + (action !== 'like') + ')');
+		});
+}
+</script>
+<% End If %>
 
 <!--#include file="includes/footer.asp"-->
 <%

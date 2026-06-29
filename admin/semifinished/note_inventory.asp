@@ -6,6 +6,8 @@ Response.ContentType = "text/html"
 <!--#include file="includes/auth.asp"-->
 <!--#include file="../../includes/config.asp"-->
 <!--#include file="../../includes/connection.asp"-->
+<!--#include file="../../includes/dal.asp"-->
+<!--#include file="../../includes/dal_techcenter.asp"-->
 <%
 Call OpenConnection()
 
@@ -49,9 +51,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         nNotes = Trim(Request.Form("notes"))
         
         If nID > 0 Then
-            conn.Execute "UPDATE NoteInventory SET StockQuantity=" & nQty & ", MinStockLevel=" & nMinLevel & ", UpdatedAt=GETDATE() WHERE NoteID=" & nID
-            conn.Execute "INSERT INTO InventoryTransactions (NoteID, Quantity, TransactionType, TransactionDirection, Notes, CreatedBy, CreatedAt) VALUES (" & _
-                nID & "," & nQty & ",'手动调整','ADJUST','" & SafeSQL(nNotes) & "','" & SafeSQL(Session("AdminUsername")) & "',GETDATE())"
+            ' V18: 使用 DAL 参数化查询，杜绝 SQL 注入
+            Call DAL_TC_UpdateNoteStock(nID, nQty, nMinLevel)
+            Call DAL_TC_CreateInvTransaction(nID, nQty, "手动调整", "ADJUST", nNotes, Session("AdminUsername"))
             Response.Redirect "note_inventory.asp?msg=库存更新成功"
             Response.End
         End If
@@ -63,9 +65,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         rNotes = Trim(Request.Form("notes"))
         
         If rNoteID > 0 And rAddQty > 0 Then
-            conn.Execute "UPDATE NoteInventory SET StockQuantity=StockQuantity+" & rAddQty & ", LastRestockDate=GETDATE(), UpdatedAt=GETDATE() WHERE NoteID=" & rNoteID
-            conn.Execute "INSERT INTO InventoryTransactions (NoteID, Quantity, TransactionType, TransactionDirection, Notes, CreatedBy, CreatedAt) VALUES (" & _
-                rNoteID & "," & rAddQty & ",'入库','IN','" & SafeSQL(rNotes) & "','" & SafeSQL(Session("AdminUsername")) & "',GETDATE())"
+            ' V18: 使用 DAL 参数化查询，杜绝 SQL 注入
+            Call DAL_TC_RestockNote(rNoteID, rAddQty)
+            Call DAL_TC_CreateInvTransaction(rNoteID, rAddQty, "入库", "IN", rNotes, Session("AdminUsername"))
             Response.Redirect "note_inventory.asp?msg=入库成功"
             Response.End
         End If

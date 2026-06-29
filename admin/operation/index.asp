@@ -263,6 +263,10 @@ completedOrders = GetScalar("SELECT COUNT(*) FROM Orders WHERE Status = 'Paid'")
                         <i class="fas fa-users"></i>
                         <span>客户管理</span>
                     </a>
+                    <a href="tier_management.asp" class="action-btn">
+                        <i class="fas fa-layer-group"></i>
+                        <span>会员等级</span>
+                    </a>
                     <a href="points.asp" class="action-btn">
                         <i class="fas fa-coins"></i>
                         <span>积分管理</span>

@@ -16,6 +16,8 @@ End Function
 <!--#include file="includes/connection.asp"-->
 <!--#include file="includes/dal.asp"-->
 <!--#include file="includes/dal_cart.asp"-->
+<!--#include file="includes/ai_client.asp"-->
+<!--#include file="includes/recommendation_engine.asp"-->
 <%
 Call OpenConnection()
 
@@ -514,6 +516,32 @@ function goCheckout() {
     window.location.href = '/checkout.asp?cart_ids=' + selectedIds.join(',');
 }
 </script>
+
+<!-- V18 AI 搭配推荐 -->
+<%
+If FEATURE_AI_RECOMMENDATIONS Then
+    Dim cartUserId, cartRsRecommend
+    cartUserId = Session("UserID")
+    If cartUserId <> "" And Not IsNull(cartUserId) And IsNumeric(cartUserId) Then
+        Set cartRsRecommend = RE_GetPersonalizedProducts(CLng(cartUserId), 6)
+    Else
+        Set cartRsRecommend = RE_GetTrendingNow(6)
+    End If
+%>
+<div class="recommendation-section">
+    <div class="container">
+        <h2 class="section-title"><i class="fas fa-gem"></i> <% If FEATURE_I18N Then %><%= T("cart_recommend_title", Empty) %><% Else %>搭配推荐<% End If %></h2>
+        <p class="section-desc"><% If FEATURE_I18N Then %><%= T("cart_recommend_desc", Empty) %><% Else %>这些香氛可能与您的购物车搭配得宜<% End If %></p>
+        <% Call RE_RenderRecommendationsSafe(cartRsRecommend, "cart-rec-grid", True, "添加商品后为您推荐搭配~") %>
+        <%
+        If Not cartRsRecommend Is Nothing Then
+            cartRsRecommend.Close
+            Set cartRsRecommend = Nothing
+        End If
+        %>
+    </div>
+</div>
+<% End If %>
 
 <!--#include file="includes/footer.asp"-->
 <%

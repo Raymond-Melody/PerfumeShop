@@ -17,6 +17,66 @@ Set rsAdmins = ExecuteQuery(_
     "LEFT JOIN AdminRoles r ON a.RoleID = r.RoleID " & _
     "ORDER BY a.AdminID")
 
+' V18: 处理删除管理员
+Dim deleteMsg, deleteError
+deleteMsg = ""
+deleteError = ""
+
+If Request.ServerVariables("REQUEST_METHOD") = "POST" And Request.Form("action") = "delete_admin" Then
+    If Not ValidateCSRFToken() Then
+        deleteError = "安全验证失败，请刷新页面后重试"
+    Else
+        Dim delAdminId
+        delAdminId = Trim(Request.Form("admin_id"))
+        
+        If delAdminId = "" Or Not IsNumeric(delAdminId) Then
+            deleteError = "无效的管理员ID"
+        ElseIf CLng(delAdminId) = CLng(Session("AdminID")) Then
+            deleteError = "不能删除自己的账号"
+        Else
+            ' 获取待删除管理员信息
+            Dim rsDel
+            Set rsDel = ExecuteQuery("SELECT AdminID, Username, FullName FROM AdminUsers WHERE AdminID = " & CLng(delAdminId))
+            If rsDel Is Nothing Or rsDel.EOF Then
+                deleteError = "管理员不存在"
+            Else
+                Dim delUsername, delFullName
+                delUsername = rsDel("Username")
+                delFullName = rsDel("FullName")
+                rsDel.Close : Set rsDel = Nothing
+                
+                ' 检查是否为最后一个管理员
+                Dim rsCount
+                Set rsCount = ExecuteQuery("SELECT COUNT(*) AS Cnt FROM AdminUsers")
+                If Not rsCount Is Nothing And Not rsCount.EOF Then
+                    If CLng(rsCount("Cnt")) <= 1 Then
+                        deleteError = "不能删除最后一个管理员"
+                        rsCount.Close : Set rsCount = Nothing
+                    End If
+                End If
+                
+                If deleteError = "" Then
+                    Dim delSql
+                    delSql = "DELETE FROM AdminUsers WHERE AdminID = " & CLng(delAdminId)
+                    If ExecuteNonQuery(delSql) Then
+                        Call LogAdminAction("删除管理员", "system", "AdminUsers", delAdminId, delFullName & "(" & delUsername & ")")
+                        deleteMsg = "管理员 " & delUsername & " 已删除"
+                        ' 刷新列表
+                        Set rsAdmins = Nothing
+                        Set rsAdmins = ExecuteQuery(_
+                            "SELECT a.*, r.RoleName, r.RoleCode " & _
+                            "FROM AdminUsers a " & _
+                            "LEFT JOIN AdminRoles r ON a.RoleID = r.RoleID " & _
+                            "ORDER BY a.AdminID")
+                    Else
+                        deleteError = "删除失败：" & Session("LastDBError")
+                    End If
+                End If
+            End If
+        End If
+    End If
+End If
+
 Call LogAdminAction("查看管理员列表", "system", "AdminUsers", "", "")
 %>
 <!DOCTYPE html>
@@ -54,6 +114,17 @@ Call LogAdminAction("查看管理员列表", "system", "AdminUsers", "", "")
                 <a href="index.asp">系统中心</a> / <span>管理员管理</span>
             </div>
         </div>
+        
+        <% If deleteMsg <> "" Then %>
+        <div style="background:rgba(46,125,50,0.2);color:#81c784;border:1px solid rgba(46,125,50,0.3);padding:12px 20px;border-radius:8px;margin-bottom:16px;">
+            <i class="fas fa-check-circle"></i> <%= deleteMsg %>
+        </div>
+        <% End If %>
+        <% If deleteError <> "" Then %>
+        <div style="background:rgba(198,40,40,0.2);color:#ef9a9a;border:1px solid rgba(198,40,40,0.3);padding:12px 20px;border-radius:8px;margin-bottom:16px;">
+            <i class="fas fa-exclamation-circle"></i> <%= deleteError %>
+        </div>
+        <% End If %>
         
         <div style="margin-bottom: 20px;">
             <a href="admin_add.asp" class="admin-btn admin-btn-primary"><i class="fas fa-plus"></i> 添加管理员</a>
@@ -112,6 +183,14 @@ Call LogAdminAction("查看管理员列表", "system", "AdminUsers", "", "")
                     <td>
                         <a href="admin_edit.asp?id=<%= rsAdmins("AdminID") %>" class="btn btn--primary btn--sm"><i class="fas fa-edit"></i> 编辑</a>
                         <a href="admin_reset.asp?id=<%= rsAdmins("AdminID") %>" class="btn btn--warning btn--sm"><i class="fas fa-key"></i> 重置密码</a>
+                        <% If CInt(rsAdmins("AdminID")) <> CInt(Session("AdminID")) Then %>
+                        <form method="post" action="admins.asp" style="display:inline" onsubmit="return confirm('确定要删除管理员 <%= rsAdmins("Username") %> 吗？此操作不可恢复！')">
+                            <%= GetCSRFTokenField() %>
+                            <input type="hidden" name="action" value="delete_admin">
+                            <input type="hidden" name="admin_id" value="<%= rsAdmins("AdminID") %>">
+                            <button type="submit" class="btn btn--danger btn--sm"><i class="fas fa-trash"></i> 删除</button>
+                        </form>
+                        <% End If %>
                     </td>
                 </tr>
                 <% rsAdmins.MoveNext %>

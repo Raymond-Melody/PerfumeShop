@@ -496,8 +496,8 @@ Set rsOrders = ExecuteQuery(finalSql)
                             <% End If %> 
                             <a href="/user/order_detail.asp?order_id=<%= rsOrders("OrderID") %>" class="btn btn-outline"><% If FEATURE_I18N Then %><%= T("user_orders_view_detail", Empty) %><% Else %>查看详情<% End If %></a>
                             
+                            <%
                             ' 评价状态显示
-                            <% 
                             orderStatusForReview = rsOrders("Status")
                             hasReviewId = Not IsNull(rsOrders("ReviewID"))
                             reviewStatusVal = ""

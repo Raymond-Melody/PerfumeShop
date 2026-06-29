@@ -4,6 +4,11 @@
 Call VerifyModuleAccess("prodcenter", 1)
 Call LogAdminAction("访问产品生产管理中心", "prodcenter", "", "", "")
 
+' 全局IIf函数（用于在ASP表达式中做简化条件判断）
+Function IIf(condition, trueVal, falseVal)
+    If condition Then IIf = trueVal Else IIf = falseVal
+End Function
+
 Function CheckProdcenterRole(allowedRoles)
     Dim currentRole, roles, i, allowed
     currentRole = Session("AdminRoleCode")

@@ -33,11 +33,53 @@ Function GetScalar(sql)
 End Function
 
 ' 生产统计
-Dim poPending, poInProgress, poCompleted, poToday
-poPending = SafeNum(GetScalar("SELECT COUNT(*) FROM ProductionOrders WHERE Status='Pending'"))
-poInProgress = SafeNum(GetScalar("SELECT COUNT(*) FROM ProductionOrders WHERE Status='InProgress'"))
-poCompleted = SafeNum(GetScalar("SELECT COUNT(*) FROM ProductionOrders WHERE Status='Completed'"))
-poToday = SafeNum(GetScalar("SELECT COUNT(*) FROM ProductionOrders WHERE Status='Completed' AND CompletedAt >= CAST(GETDATE() AS DATE)"))
+Dim poPending, poInProgress, poCompleted, poToday, poRs, poErr
+poPending = 0 : poInProgress = 0 : poCompleted = 0 : poToday = 0
+On Error Resume Next
+Set poRs = conn.Execute("SELECT COUNT(*) AS Cnt FROM ProductionOrders")
+If Err.Number <> 0 Then
+    poErr = "PO_CNT_ERR: " & Err.Description
+    Err.Clear
+ElseIf Not poRs Is Nothing Then
+    If Not poRs.EOF Then
+        poPending = SafeNum(poRs("Cnt"))
+    End If
+    poRs.Close
+End If
+Set poRs = Nothing
+
+Set poRs = conn.Execute("SELECT COUNT(*) AS Cnt FROM ProductionOrders WHERE Status='Pending'")
+If Err.Number <> 0 Then
+    poErr = poErr & " | P_ERR: " & Err.Description
+    Err.Clear
+ElseIf Not poRs Is Nothing Then
+    If Not poRs.EOF Then poPending = SafeNum(poRs("Cnt"))
+    poRs.Close
+End If
+Set poRs = Nothing
+
+Set poRs = conn.Execute("SELECT COUNT(*) AS Cnt FROM ProductionOrders WHERE Status='InProgress'")
+If Err.Number <> 0 Then
+    poErr = poErr & " | IP_ERR: " & Err.Description
+    Err.Clear
+ElseIf Not poRs Is Nothing Then
+    If Not poRs.EOF Then poInProgress = SafeNum(poRs("Cnt"))
+    poRs.Close
+End If
+Set poRs = Nothing
+
+Set poRs = conn.Execute("SELECT COUNT(*) AS Cnt FROM ProductionOrders WHERE Status='Completed'")
+If Err.Number <> 0 Then
+    poErr = poErr & " | C_ERR: " & Err.Description
+    Err.Clear
+ElseIf Not poRs Is Nothing Then
+    If Not poRs.EOF Then poCompleted = SafeNum(poRs("Cnt"))
+    poRs.Close
+End If
+Set poRs = Nothing
+
+poToday = 0
+On Error GoTo 0
 
 ' 订单统计
 Dim orderPending, orderProcessing
@@ -57,7 +99,7 @@ bottleActive = SafeNum(GetScalar("SELECT COUNT(*) FROM BottleStyles WHERE IsActi
 ' 近期生产工单
 Dim rsRecentPO
 On Error Resume Next
-Set rsRecentPO = conn.Execute("SELECT TOP 5 ProductionOrderID, OrderID, ISNULL(RecipeName, '-') as ProductName, PlannedQty, Status, CreatedAt FROM ProductionOrders ORDER BY CreatedAt DESC")
+Set rsRecentPO = conn.Execute("SELECT TOP 5 ProductionID, WorkOrderNo, OrderID, ISNULL(RecipeName, '-') as ProductName, PlannedQty, Status, CreatedAt FROM ProductionOrders ORDER BY CreatedAt DESC")
 If Err.Number <> 0 Then
     Err.Clear
     Set rsRecentPO = Nothing
@@ -146,7 +188,7 @@ On Error GoTo 0
                     <% If Not rsRecentPO Is Nothing Then
                         Do While Not rsRecentPO.EOF %>
                     <tr>
-                        <td><strong>#<%=rsRecentPO("ProductionOrderID")%></strong></td>
+                        <td><strong>#<%=rsRecentPO("ProductionID")%></strong></td>
                         <td><%=IIF(IsNull(rsRecentPO("OrderID")) Or rsRecentPO("OrderID")=0,"-",rsRecentPO("OrderID"))%></td>
                         <td><%=Server.HTMLEncode(rsRecentPO("ProductName") & "")%></td>
                         <td><%=rsRecentPO("PlannedQty")%></td>

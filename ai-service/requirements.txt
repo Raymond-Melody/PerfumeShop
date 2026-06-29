@@ -1,0 +1,25 @@
+# ============================================
+# PerfumeShop V18 AI Microservice Dependencies
+# Python 3.10+
+# Install: pip install -r requirements.txt
+# ============================================
+
+# Web Framework
+flask>=3.0,<4.0
+flask-cors>=4.0
+
+# Machine Learning
+scikit-learn>=1.3
+numpy>=1.24
+
+# Chinese Text Processing
+jieba>=0.42
+
+# AI / LLM (optional - use environment variable to configure)
+# openai>=1.0
+
+# HTTP Client (for ASP bridge debugging)
+requests>=2.31
+
+# Production WSGI Server
+gunicorn>=21.2

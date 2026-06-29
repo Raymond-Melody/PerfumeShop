@@ -129,6 +129,7 @@ use_coupon=使用优惠券
 use_points=使用积分
 
 # === 产品通用 ===
+product_type_standard=标准香氛
 product_detail=产品详情
 product_description=产品描述
 customer_reviews=用户评价
@@ -174,6 +175,11 @@ nav_customize=定制香水
 nav_about_us=关于我们
 nav_search_result=搜索结果
 nav_checkout=结算
+
+nav_standard=标准
+nav_custom=定制
+nav_kol=KOL
+nav_fixed=定香
 
 # === 面包屑 (breadcrumb) ===
 breadcrumb_home=首页
@@ -307,6 +313,20 @@ home_subscribe_thanks=感谢您的订阅！
 home_see_more=查看更多
 home_section_more=查看更多{0}
 
+# === 首页促销卡片 (V18) ===
+home_promo_flash_title=限时秒杀
+home_promo_flash_desc=超值好物限时抢购，最低至3折
+home_promo_group_title=拼团惠购
+home_promo_group_desc=邀请好友一起拼，享超低团购价
+home_promo_sub_title=香氛订阅盒
+home_promo_sub_desc=每月新香到家，AI个性化选品
+home_promo_go=立即查看
+
+# === 定制服务 (V18) ===
+customize_quiz_title=不确定选什么？先做香氛测试
+customize_quiz_desc=AI智能分析你的偏好，推荐最适合的香调组合。只需回答6个简单问题，约1分钟完成。
+customize_quiz_btn=开始测试
+
 # === 关于页面 (about) ===
 about_breadcrumb=品牌故事
 about_hero_title=关于香氛定制
@@ -413,7 +433,7 @@ products_quick_view=快速预览
 # === 产品详情页 (product) ===
 product_breadcrumb_all=全部香水
 product_type_fixed=品牌定香
-product_type_kol=KOL推荐
+product_type_kol=KOL联名
 product_type_custom=定制香水
 product_price_fixed=固定价格
 product_price_from=起 (根据定制选项价格会有所变化)
@@ -1107,3 +1127,9 @@ tip_select=请选择
 tip_no_selection=暂无选择
 product_name=商品名称
 cart_discount=折扣
+
+# === Cookie 横幅 (V18 GDPR) ===
+cookie_banner_text=本网站使用 Cookie 来提升您的浏览体验、分析网站流量并提供个性化推荐。继续使用即表示您同意我们的 Cookie 政策。
+cookie_accept_all=全部接受
+cookie_accept_essential=仅必要
+cookie_learn_more=了解更多

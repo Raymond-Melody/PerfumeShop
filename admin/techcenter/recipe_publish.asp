@@ -6,6 +6,8 @@ Response.ContentType = "text/html"
 <!--#include file="includes/auth.asp"-->
 <!--#include file="../../includes/config.asp"-->
 <!--#include file="../../includes/connection.asp"-->
+<!--#include file="../../includes/dal.asp"-->
+<!--#include file="../../includes/dal_techcenter.asp"-->
 <%
 Call OpenConnection()
 
@@ -41,9 +43,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         pubMaterialCount = SafeNum(Request.Form("material_count"))
         
         If pubRecipeID > 0 And pubNoteID > 0 And pubMaterialCount > 0 Then
-            ' 数据完整性校验：检查RecipeIngredients是否有数据
+            ' V18: 数据完整性校验（DAL参数化）
             Dim checkIngCount
-            checkIngCount = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeIngredients WHERE RecipeID=" & pubRecipeID & " AND NoteID=" & pubNoteID))
+            checkIngCount = DAL_TC_CountIngredientsByNote(pubRecipeID, pubNoteID)
             If checkIngCount = 0 Then
                 msg = "发布失败：该配方+香调在RecipeIngredients中无数据，请先在配方管理中生成成分数据"
                 msgType = "error"
@@ -52,38 +54,26 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             Err.Clear
             Call BeginTransaction()
             
-            ' 获取配方和香调名称
+            ' V18: 使用 DAL 参数化查询
             Dim pubRecipeName, pubNoteName
             pubRecipeName = ""
             pubNoteName = ""
-            Dim rsInfo
-            Set rsInfo = conn.Execute("SELECT RecipeName FROM Recipes WHERE RecipeID=" & pubRecipeID)
-            If Not rsInfo Is Nothing Then
-                If Not rsInfo.EOF Then pubRecipeName = CStr(rsInfo("RecipeName") & "")
-                rsInfo.Close
-            End If
-            Set rsInfo = Nothing
+            Dim dictInfo
+            Set dictInfo = DAL_TC_GetRecipeByID(pubRecipeID)
+            If Not dictInfo Is Nothing Then pubRecipeName = CStr(dictInfo("RecipeName") & "")
+            Set dictInfo = Nothing
             
-            Set rsInfo = conn.Execute("SELECT NoteName FROM FragranceNotes WHERE NoteID=" & pubNoteID)
-            If Not rsInfo Is Nothing Then
-                If Not rsInfo.EOF Then pubNoteName = CStr(rsInfo("NoteName") & "")
-                rsInfo.Close
-            End If
-            Set rsInfo = Nothing
+            Dim dictNote
+            Set dictNote = DAL_GetRow("SELECT NoteName FROM FragranceNotes WHERE NoteID=@NoteID", Array(Array("@NoteID", DAL_adInteger, 0, pubNoteID)))
+            If Not dictNote Is Nothing Then pubNoteName = CStr(dictNote("NoteName") & "")
+            Set dictNote = Nothing
             
             ' 创建 RecipeAccords 记录
             Dim newAccordID
-            conn.Execute "INSERT INTO RecipeAccords (RecipeID, NoteID, BatchSize, Status, PublishedBy, PublishedAt, CreatedAt, RecipeName) VALUES (" & _
-                pubRecipeID & ", " & pubNoteID & ", " & pubBatchSize & ", 'Published', '" & SafeSQL(Session("AdminUsername")) & "', GETDATE(), GETDATE(), '" & SafeSQL(pubRecipeName & "→" & pubNoteName) & "')"
+            Call DAL_TC_CreateAccord(pubRecipeID, pubNoteID, pubBatchSize, Session("AdminUsername"), pubRecipeName & "→" & pubNoteName)
             
             If Err.Number = 0 Then
-                Set rsInfo = conn.Execute("SELECT @@Identity")
-                newAccordID = 0
-                If Not rsInfo Is Nothing Then
-                    If Not rsInfo.EOF Then newAccordID = CLng(rsInfo(0))
-                    rsInfo.Close
-                End If
-                Set rsInfo = Nothing
+                newAccordID = DAL_TC_GetLastIdentity()
                 
                 If newAccordID > 0 Then
                     Dim anyAccordError, mi
@@ -97,22 +87,20 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         matQty = SafeNum(Request.Form("material_qty_" & mi))
                         
                         If matID >= 0 And matName <> "" And matPct > 0 Then
-                            conn.Execute "INSERT INTO RecipeAccordMaterials (AccordRecipeID, MaterialID, MaterialName, Percentage, PlannedQty) VALUES (" & _
-                                newAccordID & ", " & matID & ", '" & SafeSQL(matName) & "', " & matPct & ", " & matQty & ")"
-                            If Err.Number <> 0 Then
+                            ' V18: DAL 参数化
+                            Dim matResult : matResult = DAL_TC_CreateAccordMaterial(newAccordID, matID, matName, matPct, matQty)
+                            If Not matResult Then
                                 anyAccordError = True
-                                Err.Clear
                             End If
                         End If
                     Next
                     
                     If Not anyAccordError Then
-                        ' 审计日志
-                        conn.Execute "INSERT INTO RecipePublishLog (RecipeID, PublishType, TargetRecipeID, PublishedBy, PublishedAt, IPAddress) VALUES (" & _
-                            pubRecipeID & ", 'Accord', " & newAccordID & ", '" & SafeSQL(Session("AdminUsername")) & "', GETDATE(), '" & SafeSQL(Request.ServerVariables("REMOTE_ADDR")) & "')"
+                        ' V18: DAL 审计日志
+                        Call DAL_TC_CreatePublishLog(pubRecipeID, "Accord", newAccordID, Session("AdminUsername"), Request.ServerVariables("REMOTE_ADDR"))
                         
                         ' 标记旧版本为 Deprecated（同一 RecipeID+NoteID 的旧发布版本）
-                        conn.Execute "UPDATE RecipeAccords SET Status='Deprecated' WHERE AccordRecipeID<>" & newAccordID & " AND RecipeID=" & pubRecipeID & " AND NoteID=" & pubNoteID & " AND Status='Published'"
+                        Call DAL_TC_DeprecateAccord(newAccordID, pubRecipeID, pubNoteID)
                         
                         Call CommitTransaction()
                         Response.Redirect "recipe_publish.asp?msg=香调配方发布成功！" & pubRecipeName & "→" & pubNoteName
@@ -151,8 +139,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         
         If ppRecipeID > 0 And ppNoteCount > 0 Then
             ' 数据完整性校验：检查RecipeNotes百分比总和是否接近100%
+            ' V18: DAL 参数化
             Dim checkPctSum
-            checkPctSum = SafeNum(GetScalar("SELECT SUM(Percentage) FROM RecipeNotes WHERE RecipeID=" & ppRecipeID))
+            checkPctSum = DAL_TC_GetNotesPercentSum(ppRecipeID)
             If Abs(checkPctSum - 100) > 1 Then
                 ' 发出警告但不阻断
                 msg = "警告：配方香调百分比总和为" & FormatNumber(checkPctSum,1) & "%，偏离100%超过1%。发布已继续。"
@@ -162,38 +151,27 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
             Err.Clear
             Call BeginTransaction()
             
+            ' V18: DAL 参数化
             Dim ppRecipeName, ppProductName
             ppRecipeName = ""
             ppProductName = ""
-            Set rsInfo = conn.Execute("SELECT RecipeName FROM Recipes WHERE RecipeID=" & ppRecipeID)
-            If Not rsInfo Is Nothing Then
-                If Not rsInfo.EOF Then ppRecipeName = CStr(rsInfo("RecipeName") & "")
-                rsInfo.Close
-            End If
-            Set rsInfo = Nothing
+            Dim dictInfo2
+            Set dictInfo2 = DAL_TC_GetRecipeByID(ppRecipeID)
+            If Not dictInfo2 Is Nothing Then ppRecipeName = CStr(dictInfo2("RecipeName") & "")
+            Set dictInfo2 = Nothing
             
             If ppProductID > 0 Then
-                Set rsInfo = conn.Execute("SELECT ProductName FROM Products WHERE ProductID=" & ppProductID)
-                If Not rsInfo Is Nothing Then
-                    If Not rsInfo.EOF Then ppProductName = CStr(rsInfo("ProductName") & "")
-                    rsInfo.Close
-                End If
-                Set rsInfo = Nothing
+                Set dictInfo2 = DAL_GetRow("SELECT ProductName FROM Products WHERE ProductID=@ProductID", Array(Array("@ProductID", DAL_adInteger, 0, ppProductID)))
+                If Not dictInfo2 Is Nothing Then ppProductName = CStr(dictInfo2("ProductName") & "")
+                Set dictInfo2 = Nothing
             End If
             
             ' 创建 RecipeProducts 记录
             Dim newProductRID
-            conn.Execute "INSERT INTO RecipeProducts (RecipeID, ProductID, BatchSize, Status, PublishedBy, PublishedAt, CreatedAt) VALUES (" & _
-                ppRecipeID & ", " & ppProductID & ", " & ppBatchSize & ", 'Published', '" & SafeSQL(Session("AdminUsername")) & "', GETDATE(), GETDATE())"
+            Call DAL_TC_CreateProduct(ppRecipeID, ppProductID, ppBatchSize, Session("AdminUsername"))
             
             If Err.Number = 0 Then
-                Set rsInfo = conn.Execute("SELECT @@Identity")
-                newProductRID = 0
-                If Not rsInfo Is Nothing Then
-                    If Not rsInfo.EOF Then newProductRID = CLng(rsInfo(0))
-                    rsInfo.Close
-                End If
-                Set rsInfo = Nothing
+                newProductRID = DAL_TC_GetLastIdentity()
                 
                 If newProductRID > 0 Then
                     Dim anyProdError, ni
@@ -207,20 +185,20 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         pnQty = SafeNum(Request.Form("pnote_qty_" & ni))
                         
                         If pnNoteID > 0 And pnPct > 0 Then
-                            conn.Execute "INSERT INTO RecipeProductNotes (ProductRecipeID, NoteID, NoteName, Percentage, PlannedQty) VALUES (" & _
-                                newProductRID & ", " & pnNoteID & ", '" & SafeSQL(pnNoteName) & "', " & pnPct & ", " & pnQty & ")"
-                            If Err.Number <> 0 Then
+                            ' V18: DAL 参数化
+                            Dim pnResult : pnResult = DAL_TC_CreateProductNote(newProductRID, pnNoteID, pnNoteName, pnPct, pnQty)
+                            If Not pnResult Then
                                 anyProdError = True
-                                Err.Clear
                             End If
                         End If
                     Next
                     
                     If Not anyProdError Then
-                        conn.Execute "INSERT INTO RecipePublishLog (RecipeID, PublishType, TargetRecipeID, PublishedBy, PublishedAt, IPAddress) VALUES (" & _
-                            ppRecipeID & ", 'Product', " & newProductRID & ", '" & SafeSQL(Session("AdminUsername")) & "', GETDATE(), '" & SafeSQL(Request.ServerVariables("REMOTE_ADDR")) & "')"
+                        ' V18: DAL 审计日志
+                        Call DAL_TC_CreatePublishLog(ppRecipeID, "Product", newProductRID, Session("AdminUsername"), Request.ServerVariables("REMOTE_ADDR"))
                         
-                        conn.Execute "UPDATE RecipeProducts SET Status='Deprecated' WHERE ProductRecipeID<>" & newProductRID & " AND RecipeID=" & ppRecipeID & " AND Status='Published'"
+                        ' 废弃旧版本
+                        Call DAL_TC_DeprecateProductVersions(newProductRID, ppRecipeID)
                         
                         Call CommitTransaction()
                         Response.Redirect "recipe_publish.asp?msg=产品配方发布成功！" & ppRecipeName
@@ -251,8 +229,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         Dim depID
         depID = SafeNum(Request.Form("accord_recipe_id"))
         If depID > 0 Then
-            conn.Execute "UPDATE RecipeAccords SET Status='Deprecated' WHERE AccordRecipeID=" & depID
-            conn.Execute "INSERT INTO RecipePublishLog (RecipeID, PublishType, TargetRecipeID, PublishedBy, PublishedAt, IPAddress) VALUES (0, 'Accord', " & depID & ", '" & SafeSQL(Session("AdminUsername")) & "', GETDATE(), '" & SafeSQL(Request.ServerVariables("REMOTE_ADDR")) & "')"
+            ' V18: DAL 参数化
+            Call DAL_TC_DeprecateAccordSingle(depID)
+            Call DAL_TC_CreatePublishLog(0, "Accord", depID, Session("AdminUsername"), Request.ServerVariables("REMOTE_ADDR"))
             Response.Redirect "recipe_publish.asp?msg=香调配方已废弃"
             Response.End
         End If
@@ -261,8 +240,9 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         Dim depPID
         depPID = SafeNum(Request.Form("product_recipe_id"))
         If depPID > 0 Then
-            conn.Execute "UPDATE RecipeProducts SET Status='Deprecated' WHERE ProductRecipeID=" & depPID
-            conn.Execute "INSERT INTO RecipePublishLog (RecipeID, PublishType, TargetRecipeID, PublishedBy, PublishedAt, IPAddress) VALUES (0, 'Product', " & depPID & ", '" & SafeSQL(Session("AdminUsername")) & "', GETDATE(), '" & SafeSQL(Request.ServerVariables("REMOTE_ADDR")) & "')"
+            ' V18: DAL 参数化
+            Call DAL_TC_DeprecateProductSingle(depPID)
+            Call DAL_TC_CreatePublishLog(0, "Product", depPID, Session("AdminUsername"), Request.ServerVariables("REMOTE_ADDR"))
             Response.Redirect "recipe_publish.asp?msg=产品配方已废弃"
             Response.End
         End If
@@ -271,13 +251,10 @@ End If
 
 ' ========== 统计数据 ==========
 Dim statTotalRecipes, statAccordPublished, statProductPublished, statPublishLogs
-statTotalRecipes = 0 : statAccordPublished = 0 : statProductPublished = 0 : statPublishLogs = 0
-On Error Resume Next
-statTotalRecipes = SafeNum(GetScalar("SELECT COUNT(*) FROM Recipes WHERE IsActive=1"))
-statAccordPublished = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeAccords WHERE Status='Published'"))
-statProductPublished = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeProducts WHERE Status='Published'"))
-statPublishLogs = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipePublishLog"))
-On Error GoTo 0
+statTotalRecipes = DAL_TC_CountActiveRecipes()
+statAccordPublished = DAL_TC_CountPublishedAccords()
+statProductPublished = DAL_TC_CountPublishedProducts()
+statPublishLogs = DAL_TC_CountPublishLogs()
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -384,7 +361,8 @@ On Error GoTo 0
                     <tbody>
                     <%
                     Dim rsRecipes
-                    Set rsRecipes = conn.Execute("SELECT RecipeID, RecipeName, RecipeCode, ProductType FROM Recipes WHERE IsActive=1 ORDER BY RecipeCode")
+                    ' V18: 使用 DAL 函数
+                    Set rsRecipes = DAL_TC_GetActiveRecipes()
                     If Not rsRecipes Is Nothing Then
                         Do While Not rsRecipes.EOF
                             Dim rID, rName, rCode, rType
@@ -395,12 +373,13 @@ On Error GoTo 0
                             
                             ' 统计香调数量
                             Dim noteCount
-                            noteCount = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeNotes WHERE RecipeID=" & rID))
+                            ' V18: 使用 DAL 函数
+                            noteCount = DAL_TC_CountNotesByRecipe(rID)
                             
                             ' 检查是否已有已发布的香调/产品配方
                             Dim hasAccord, hasProduct
-                            hasAccord = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeAccords WHERE RecipeID=" & rID & " AND Status='Published'"))
-                            hasProduct = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeProducts WHERE RecipeID=" & rID & " AND Status='Published'"))
+                            hasAccord = DAL_TC_CountAccordsByRecipe(rID)
+                            hasProduct = DAL_TC_CountProductsByRecipe(rID)
                     %>
                         <tr>
                             <td><strong><%=rCode%></strong></td>
@@ -450,7 +429,8 @@ On Error GoTo 0
                     <tbody>
                     <%
                     Dim rsAccords
-                    Set rsAccords = conn.Execute("SELECT ra.AccordRecipeID, ra.BatchSize, ra.Status, ra.PublishedBy, ra.PublishedAt, ra.RecipeName, r.RecipeName AS FullRecipeName, fn.NoteName FROM RecipeAccords ra LEFT JOIN Recipes r ON ra.RecipeID=r.RecipeID LEFT JOIN FragranceNotes fn ON ra.NoteID=fn.NoteID ORDER BY ra.PublishedAt DESC")
+                    ' V18: 使用 DAL 函数
+                    Set rsAccords = DAL_TC_GetPublishedAccords()
                     If Not rsAccords Is Nothing Then
                         Dim accordRowCount : accordRowCount = 0
                         Do While Not rsAccords.EOF
@@ -508,7 +488,8 @@ On Error GoTo 0
                     <tbody>
                     <%
                     Dim rsProducts
-                    Set rsProducts = conn.Execute("SELECT rp.ProductRecipeID, rp.BatchSize, rp.Status, rp.PublishedBy, rp.PublishedAt, r.RecipeName, p.ProductName FROM RecipeProducts rp LEFT JOIN Recipes r ON rp.RecipeID=r.RecipeID LEFT JOIN Products p ON rp.ProductID=p.ProductID ORDER BY rp.PublishedAt DESC")
+                    ' V18: 使用 DAL 函数
+                    Set rsProducts = DAL_TC_GetPublishedProducts()
                     If Not rsProducts Is Nothing Then
                         Dim prodRowCount : prodRowCount = 0
                         Do While Not rsProducts.EOF
@@ -566,7 +547,8 @@ On Error GoTo 0
                     <tbody>
                     <%
                     Dim rsLogs
-                    Set rsLogs = conn.Execute("SELECT TOP 20 PublishedAt, PublishType, TargetRecipeID, PublishedBy, IPAddress FROM RecipePublishLog ORDER BY PublishedAt DESC")
+                    ' V18: 使用 DAL 函数
+                    Set rsLogs = DAL_TC_GetRecentPublishLogs(20)
                     If Not rsLogs Is Nothing Then
                         Dim logCount : logCount = 0
                         Do While Not rsLogs.EOF
@@ -897,7 +879,8 @@ If ajaxAction = "accord_notes" Then
     ajRecipeID = SafeNum(Request.QueryString("recipe_id"))
     If ajRecipeID > 0 Then
         Dim rsAN
-        Set rsAN = conn.Execute("SELECT DISTINCT rn.NoteID, fn.NoteName, fn.NoteType FROM RecipeNotes rn INNER JOIN FragranceNotes fn ON rn.NoteID=fn.NoteID WHERE rn.RecipeID=" & ajRecipeID & " ORDER BY fn.NoteType, fn.NoteName")
+        ' V18: DAL 参数化
+        Set rsAN = DAL_TC_GetRecipeNotesForAccord(ajRecipeID)
         If Not rsAN Is Nothing Then
             Do While Not rsAN.EOF
                 Response.Write "<option value='" & rsAN("NoteID") & "'>" & Server.HTMLEncode(rsAN("NoteName") & " (" & rsAN("NoteType") & ")") & "</option>"
@@ -917,7 +900,8 @@ ElseIf ajaxAction = "accord_ingredients" Then
     If aiRecipeID > 0 And aiNoteID > 0 Then
         Dim rsAI, aiIdx
         aiIdx = 0
-        Set rsAI = conn.Execute("SELECT IngredientName, Percentage FROM RecipeIngredients WHERE RecipeID=" & aiRecipeID & " AND NoteID=" & aiNoteID & " ORDER BY ID")
+        ' V18: DAL 参数化
+        Set rsAI = DAL_TC_GetAccordIngredients(aiRecipeID, aiNoteID)
         If Not rsAI Is Nothing Then
             Do While Not rsAI.EOF
                 aiIdx = aiIdx + 1
@@ -925,15 +909,8 @@ ElseIf ajaxAction = "accord_ingredients" Then
                 aiName = CStr(rsAI("IngredientName") & "")
                 aiPct = SafeNum(rsAI("Percentage"))
                 
-                ' 尝试在 RawMaterialInventory 中匹配
-                aiMatID = 0
-                Dim rsMat
-                Set rsMat = conn.Execute("SELECT TOP 1 MaterialID FROM RawMaterialInventory WHERE ItemName='" & SafeSQL(aiName) & "'")
-                If Not rsMat Is Nothing Then
-                    If Not rsMat.EOF Then aiMatID = SafeNum(rsMat("MaterialID"))
-                    rsMat.Close
-                End If
-                Set rsMat = Nothing
+                ' V18: DAL 参数化匹配
+                aiMatID = DAL_TC_MatchRawMaterial(aiName)
                 
                 Response.Write "<div class='material-row'>" & _
                     "<input type='hidden' name='material_id_" & aiIdx & "' value='" & aiMatID & "'>" & _
@@ -961,7 +938,8 @@ ElseIf ajaxAction = "product_notes" Then
     If pnRecipeID > 0 Then
         Dim rsPN, pnIdx
         pnIdx = 0
-        Set rsPN = conn.Execute("SELECT rn.NoteID, rn.Percentage, fn.NoteName, fn.NoteType FROM RecipeNotes rn INNER JOIN FragranceNotes fn ON rn.NoteID=fn.NoteID WHERE rn.RecipeID=" & pnRecipeID & " ORDER BY rn.ID")
+        ' V18: DAL 参数化
+        Set rsPN = DAL_TC_GetRecipeNotesForProduct(pnRecipeID)
         If Not rsPN Is Nothing Then
             Do While Not rsPN.EOF
                 pnIdx = pnIdx + 1
@@ -986,7 +964,8 @@ ElseIf ajaxAction = "product_notes" Then
 ElseIf ajaxAction = "product_list" Then
     ' 返回产品列表
     Dim rsPL
-    Set rsPL = conn.Execute("SELECT ProductID, ProductName FROM Products ORDER BY ProductName")
+    ' V18: DAL 参数化
+    Set rsPL = DAL_TC_GetAllProducts()
     If Not rsPL Is Nothing Then
         Do While Not rsPL.EOF
             Response.Write "<option value='" & rsPL("ProductID") & "'>" & Server.HTMLEncode(rsPL("ProductName") & "") & "</option>"
@@ -1003,25 +982,24 @@ ElseIf ajaxAction = "recipe_preview" Then
     prvRecipeID = SafeNum(Request.QueryString("recipe_id"))
     If prvRecipeID > 0 Then
         Dim rsPrv, prvName, prvType, prvCode
-        Set rsPrv = conn.Execute("SELECT RecipeName, RecipeCode, ProductType FROM Recipes WHERE RecipeID=" & prvRecipeID)
-        If Not rsPrv Is Nothing Then
-            If Not rsPrv.EOF Then
-                prvName = CStr(rsPrv("RecipeName") & "")
-                prvCode = CStr(rsPrv("RecipeCode") & "")
-                prvType = CStr(rsPrv("ProductType") & "")
-            End If
-            rsPrv.Close
+        ' V18: DAL 参数化
+        Dim dictPrv
+        Set dictPrv = DAL_TC_GetRecipeByID(prvRecipeID)
+        If Not dictPrv Is Nothing Then
+            prvName = CStr(dictPrv("RecipeName") & "")
+            prvCode = CStr(dictPrv("RecipeCode") & "")
+            prvType = CStr(dictPrv("ProductType") & "")
         End If
-        Set rsPrv = Nothing
+        Set dictPrv = Nothing
         
         Response.Write "<div style='margin-bottom:12px;'>"
         Response.Write "<h3 style='color:#fff;margin:0 0 4px;'>配方：" & Server.HTMLEncode(prvName) & "</h3>"
         Response.Write "<p class='text-muted' style='margin:0;'>编号：" & Server.HTMLEncode(prvCode) & " | 类型：" & Server.HTMLEncode(prvType) & "</p>"
         Response.Write "</div>"
         
-        ' 获取香调组成
+        ' V18: DAL 参数化获取香调组成
         Dim rsPrvNotes
-        Set rsPrvNotes = conn.Execute("SELECT rn.NoteID, rn.Percentage, fn.NoteName, fn.NoteType FROM RecipeNotes rn INNER JOIN FragranceNotes fn ON rn.NoteID=fn.NoteID WHERE rn.RecipeID=" & prvRecipeID & " ORDER BY fn.NoteType, fn.NoteName")
+        Set rsPrvNotes = DAL_TC_GetRecipeNotesForProduct(prvRecipeID)
         If Not rsPrvNotes Is Nothing Then
             Dim prvNoteIdx
             prvNoteIdx = 0
@@ -1039,9 +1017,9 @@ ElseIf ajaxAction = "recipe_preview" Then
                 Response.Write "<span class='text-muted'>" & prvNoteType & " | " & FormatNumber(prvNotePct,1) & "%</span>"
                 Response.Write "</div>"
                 
-                ' 获取该香调的成分
+                ' V18: DAL 参数化获取成分
                 Dim rsPrvIng
-                Set rsPrvIng = conn.Execute("SELECT IngredientName, Percentage FROM RecipeIngredients WHERE RecipeID=" & prvRecipeID & " AND NoteID=" & prvNoteID & " ORDER BY ID")
+                Set rsPrvIng = DAL_TC_GetAccordIngredients(prvRecipeID, prvNoteID)
                 If Not rsPrvIng Is Nothing Then
                     Dim hasIng
                     hasIng = False
@@ -1081,7 +1059,7 @@ ElseIf ajaxAction = "check_ingredients" Then
     chkRecipeID = SafeNum(Request.QueryString("recipe_id"))
     chkCount = 0
     If chkRecipeID > 0 Then
-        chkCount = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeIngredients WHERE RecipeID=" & chkRecipeID))
+        chkCount = DAL_TC_CountIngredients(chkRecipeID)
     End If
     If chkCount > 0 Then
         Response.Write "{""hasData"": true, ""count"": " & chkCount & "}"

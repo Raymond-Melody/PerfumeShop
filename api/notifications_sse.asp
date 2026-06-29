@@ -13,8 +13,53 @@ Response.AddHeader "X-Accel-Buffering", "no"
 %>
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
+<!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/api_response.asp"-->
 <%
+' ---- V18: Push订阅管理（POST请求）----
+If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
+	Call OpenConnection()
+	Dim pushAction, pushEndpoint, pushP256dh, pushAuth, pushUserId
+	pushAction = Request.Form("push_action")
+	pushEndpoint = Request.Form("endpoint")
+	pushP256dh = Request.Form("p256dh")
+	pushAuth = Request.Form("auth")
+	pushUserId = Session("UserID")
+
+	If pushUserId = "" Or IsNull(pushUserId) Then
+		Response.ContentType = "application/json"
+		Response.Write """error"":""请先登录"""
+		Call CloseConnection()
+		Response.End
+	End If
+
+	If pushAction = "subscribe" And pushEndpoint <> "" Then
+		' 删除旧订阅（同一用户+端点）
+		DAL_Execute "DELETE FROM PushSubscriptions WHERE UserID = @UID AND Endpoint = @EP", _
+			Array(Array("@UID", DAL_adInteger, 0, CLng(pushUserId)), Array("@EP", DAL_adVarChar, 500, pushEndpoint))
+		' 插入新订阅
+		DAL_Execute "INSERT INTO PushSubscriptions (UserID, Endpoint, P256dh, AuthKey) VALUES (@UID, @EP, @P256, @Auth)", _
+			Array(Array("@UID", DAL_adInteger, 0, CLng(pushUserId)), _
+			      Array("@EP", DAL_adVarChar, 500, pushEndpoint), _
+			      Array("@P256", DAL_adVarChar, 200, pushP256dh), _
+			      Array("@Auth", DAL_adVarChar, 100, pushAuth))
+		Response.ContentType = "application/json"
+		Response.Write """success"":true"
+	ElseIf pushAction = "unsubscribe" And pushEndpoint <> "" Then
+		DAL_Execute "DELETE FROM PushSubscriptions WHERE UserID = @UID AND Endpoint = @EP", _
+			Array(Array("@UID", DAL_adInteger, 0, CLng(pushUserId)), Array("@EP", DAL_adVarChar, 500, pushEndpoint))
+		Response.ContentType = "application/json"
+		Response.Write """success"":true"
+	Else
+		Response.ContentType = "application/json"
+		Response.Write """error"":""无效的请求"""
+	End If
+
+	Call CloseConnection()
+	Response.End
+End If
+
+' ---- 以下为SSE流式推送（GET请求）----
 Server.ScriptTimeout = 600  ' SSE长连接需要更长超时
 Call OpenConnection()
 

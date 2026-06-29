@@ -3,6 +3,7 @@
 Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
 %>
+<!--#include file="includes/auth.asp"-->
 <!--#include file="../../includes/config.asp"-->
 <!--#include file="../../includes/connection.asp"-->
 <!--#include file="../../includes/dal.asp"-->

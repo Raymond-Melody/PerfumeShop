@@ -6,8 +6,12 @@ Response.ContentType = "application/json"
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/api_response.asp"-->
+<!--#include file="../includes/api_guard.asp"-->
 <%
 Call OpenConnection()
+
+' V18: API 守卫（速率限制）
+If Not API_Guard("api", False) Then Response.End
 
 ' V16: CSRF验证 (使用API标准)
 If Not API_CheckCSRF() Then

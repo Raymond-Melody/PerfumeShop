@@ -6,6 +6,8 @@ Response.ContentType = "text/html"
 <!--#include file="includes/config.asp"-->
 <!--#include file="includes/connection.asp"-->
 <!--#include file="includes/product_type_utils.asp"-->
+<!--#include file="includes/ai_client.asp"-->
+<!--#include file="includes/recommendation_engine.asp"-->
 <%
 Call OpenConnection()
 
@@ -48,6 +50,58 @@ activeTypes = GetActiveProductTypes()
 </section>
 
 <!-- 特色服务 -->
+
+<% ' V18: 限时活动推荐区块 %>
+<% If FEATURE_FLASH_SALE Or FEATURE_GROUP_BUY Or FEATURE_SUBSCRIPTION Or FEATURE_COMMUNITY Then %>
+<% Dim promoCount : promoCount = 0 %>
+<section class="promo-section">
+    <div class="container">
+        <div class="promo-grid">
+            <% If FEATURE_FLASH_SALE Then %>
+            <a href="/flash_sale.asp" class="promo-card promo-flash">
+                <div class="promo-icon"><i class="fas fa-bolt"></i></div>
+                <div class="promo-content">
+                    <h3><% If FEATURE_I18N Then %><%= T("home_promo_flash_title", Empty) %><% Else %>限时秒杀<% End If %></h3>
+                    <p><% If FEATURE_I18N Then %><%= T("home_promo_flash_desc", Empty) %><% Else %>超值好物限时抢购，最低至3折<% End If %></p>
+                    <span class="promo-link"><% If FEATURE_I18N Then %><%= T("home_promo_go", Empty) %><% Else %>立即抢购<% End If %> <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+            <% End If %>
+            <% If FEATURE_GROUP_BUY Then %>
+            <a href="/group_buy.asp" class="promo-card promo-group">
+                <div class="promo-icon"><i class="fas fa-users"></i></div>
+                <div class="promo-content">
+                    <h3><% If FEATURE_I18N Then %><%= T("home_promo_group_title", Empty) %><% Else %>拼团惠购<% End If %></h3>
+                    <p><% If FEATURE_I18N Then %><%= T("home_promo_group_desc", Empty) %><% Else %>邀请好友一起拼，享超低团购价<% End If %></p>
+                    <span class="promo-link"><% If FEATURE_I18N Then %><%= T("home_promo_go", Empty) %><% Else %>去拼团<% End If %> <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+            <% End If %>
+            <% If FEATURE_SUBSCRIPTION Then %>
+            <a href="/subscribe.asp" class="promo-card promo-subscribe">
+                <div class="promo-icon"><i class="fas fa-box-open"></i></div>
+                <div class="promo-content">
+                    <h3><% If FEATURE_I18N Then %><%= T("home_promo_sub_title", Empty) %><% Else %>香氛订阅盒<% End If %></h3>
+                    <p><% If FEATURE_I18N Then %><%= T("home_promo_sub_desc", Empty) %><% Else %>每月新香到家，AI个性化选品<% End If %></p>
+                    <span class="promo-link"><% If FEATURE_I18N Then %><%= T("home_promo_go", Empty) %><% Else %>了解详情<% End If %> <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+            <% End If %>
+            <% If FEATURE_COMMUNITY Then %>
+            <a href="/community.asp" class="promo-card promo-community">
+                <div class="promo-icon"><i class="fas fa-comments"></i></div>
+                <div class="promo-content">
+                    <h3><% If FEATURE_I18N Then %>香氛社区<% Else %>香氛社区<% End If %></h3>
+                    <p><% If FEATURE_I18N Then %>分享配方、交流心得、发现同好<% Else %>分享配方、交流心得、发现同好<% End If %></p>
+                    <span class="promo-link"><% If FEATURE_I18N Then %><%= T("home_promo_go", Empty) %><% Else %>加入社区<% End If %> <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+            <% End If %>
+        </div>
+    </div>
+</section>
+<% End If %>
+
 <section class="features-section">
     <div class="container">
         <div class="features-grid">
@@ -109,8 +163,8 @@ If IsArray(activeTypes) Then
 <section class="products-section">
     <div class="container">
         <div class="section-header">
-            <h2><i class="<%= Server.HTMLEncode(secIcon) %>"></i> <%= Server.HTMLEncode(secDisplayName) %></h2>
-            <p><%= Server.HTMLEncode(secNavName) %></p>
+            <h2><i class="<%= Server.HTMLEncode(secIcon) %>"></i> <%= Server.HTMLEncode(GetProductTypeI18nName(secTypeCode, secDisplayName, "display")) %></h2>
+            <p><%= Server.HTMLEncode(GetProductTypeI18nName(secTypeCode, secNavName, "nav")) %></p>
         </div>
         <div class="products-grid">
             <%
@@ -157,7 +211,7 @@ If IsArray(activeTypes) Then
             %>
         </div>
         <div class="section-footer">
-            <a href="/products.asp?type=<%= Server.URLEncode(secTypeCode) %>" class="btn btn-outline"><% If FEATURE_I18N Then %><%= T("home_section_more", Array(Server.HTMLEncode(secDisplayName))) %><% Else %>查看更多<%= Server.HTMLEncode(secDisplayName) %><% End If %></a>
+            <a href="/products.asp?type=<%= Server.URLEncode(secTypeCode) %>" class="btn btn-outline"><% If FEATURE_I18N Then %><%= T("home_section_more", Array(GetProductTypeI18nName(secTypeCode, secDisplayName, "display"))) %><% Else %>查看更多<%= Server.HTMLEncode(secDisplayName) %><% End If %></a>
         </div>
     </div>
 </section>
@@ -249,6 +303,32 @@ End If
                 </div>
             </a>
         </div>
+    </div>
+</section>
+
+<!-- V18 AI 为你推荐 -->
+<%
+Dim idxUserId, idxRsRecommend
+idxUserId = Session("UserID")
+If idxUserId <> "" And Not IsNull(idxUserId) And IsNumeric(idxUserId) Then
+    Set idxRsRecommend = RE_GetPersonalizedProducts(CLng(idxUserId), 8)
+Else
+    Set idxRsRecommend = RE_GetTrendingNow(8)
+End If
+%>
+<section class="recommend-section">
+    <div class="container">
+        <div class="section-header">
+            <h2><i class="fas fa-magic"></i> <% If FEATURE_I18N Then %><%= T("home_recommend_title", Empty) %><% Else %>为你推荐<% End If %></h2>
+            <p><% If FEATURE_I18N Then %><%= T("home_recommend_desc", Empty) %><% Else %>基于AI智能分析，为您精选好物<% End If %></p>
+        </div>
+        <% Call RE_RenderRecommendationsSafe(idxRsRecommend, "ai-recommend-grid", True, "正在为您准备个性化推荐...") %>
+        <%
+        If Not idxRsRecommend Is Nothing Then
+            idxRsRecommend.Close
+            Set idxRsRecommend = Nothing
+        End If
+        %>
     </div>
 </section>
 

@@ -40,17 +40,15 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     currentHash = rsAdmin("PasswordHash")
     If IsNull(currentHash) Then currentHash = ""
     
-    Dim inputHash
-    inputHash = GenerateSimpleHash(currentPassword)
-    
-    If inputHash <> currentHash Then
+    ' V17.2: 使用VerifyPassword支持V1/V2/V3全格式 + 全角/半角双向兼容
+    If Not VerifyPassword(currentPassword, currentHash) Then
         Response.Write "<script>alert('" & T("admin_chpwd_wrong_current", Empty) & "'); history.go(-1);</script>"
         Response.End
     End If
     
-    ' 更新密码
+    ' 更新密码 - 使用当前推荐哈希算法(V3/V2)
     Dim newHash
-    newHash = GenerateSimpleHash(newPassword)
+    newHash = HashPassword(newPassword)
     
     Dim updateSql
     updateSql = "UPDATE AdminUsers SET PasswordHash = '" & newHash & "' WHERE AdminID = " & adminId

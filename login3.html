@@ -1,0 +1,1423 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- V17.0 资源预加载 -->
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="//code.jquery.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://code.jquery.com" crossorigin>
+    <link rel="preload" href="/css/design-tokens.css?v=17.0" as="style">
+    <link rel="preload" href="/css/style.css?v=17.0" as="style">
+    <link rel="preload" href="https://code.jquery.com/jquery-3.6.0.min.js" as="script" crossorigin>
+    <!-- V14.6 PWA 增强 -->
+    <meta name="color-scheme" content="light only">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="香氛定制">
+    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png">
+    <meta name="description" content="专业个性化定制香水，打造专属于你的独特香氛体验">
+    <meta name="keywords" content="香水定制,个性化香水,定制香氛,专属香水">
+    <title>Custom Fragrance</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#8B4513">
+    <link rel="stylesheet" href="/css/design-tokens.css?v=17.0">
+    <link rel="stylesheet" href="/css/style.css?v=17.0">
+    <link rel="stylesheet" href="/css/pages.css?v=17.0">
+    <link rel="stylesheet" href="/css/buttons.css?v=17.0">
+    <link rel="stylesheet" href="/css/responsive.css?v=18.0">
+    <link rel="stylesheet" href="/css/mobile-first.css?v=18.0" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/css/lazy-load.css?v=17.0" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/css/cart-animation.css?v=17.0" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="/css/filter-optimization.css?v=17.0">
+    <link rel="stylesheet" href="/css/theme.css?v=17.0">
+    <link rel="stylesheet" href="/css/skeleton.css?v=17.0" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/js/mobile-gestures.js?v=18.0" defer></script>
+    <!-- V17.0 搜索建议CSS -->
+    <style nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+    .search-box { position: relative; }
+    .search-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 1000; display: none; max-height: 250px; overflow-y: auto; }
+    .search-suggestions .s-item { padding: 10px 15px; cursor: pointer; color: #333; font-size: 14px; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+    .search-suggestions .s-item:last-child { border-bottom: none; }
+    .search-suggestions .s-item:hover, .search-suggestions .s-item.active { background: #f5f5f5; color: #8B4513; }
+    .search-suggestions .s-item i { margin-right: 8px; color: #999; font-size: 12px; }
+    .search-suggestions .s-footer { padding: 8px 15px; text-align: center; font-size: 12px; color: #999; background: #fafafa; border-top: 1px solid #eee; }
+    .lang-switcher { margin-left: 15px; font-size: 13px; }
+    .lang-link { color: rgba(255,255,255,0.8); text-decoration: none; padding: 2px 4px; transition: color 0.2s; }
+    .lang-link:hover { color: #fff; }
+    .lang-link.active { color: #fff; font-weight: bold; }
+    .lang-divider { color: rgba(255,255,255,0.4); margin: 0 3px; }
+    /* V18: Cookie 同意横幅 */
+    .cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #2d3748; color: #fff; z-index: 9999; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); animation: cookieSlideUp 0.5s ease; }
+    @keyframes cookieSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .cookie-banner-inner { max-width: 1200px; margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .cookie-icon { font-size: 1.5rem; opacity: 0.8; flex-shrink: 0; }
+    .cookie-text { flex: 1; min-width: 250px; }
+    .cookie-text p { margin: 0; font-size: 0.9rem; line-height: 1.5; opacity: 0.9; }
+    .cookie-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+    .cookie-actions .btn-sm { padding: 8px 16px; font-size: 0.85rem; }
+    .cookie-actions .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; }
+    .cookie-actions .btn-outline:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+    .cookie-link { color: rgba(255,255,255,0.7); font-size: 0.85rem; text-decoration: underline; white-space: nowrap; }
+    .cookie-link:hover { color: #fff; }
+    @media (max-width: 640px) { .cookie-banner-inner { flex-direction: column; align-items: flex-start; gap: 12px; } .cookie-actions { width: 100%; } }
+    </style>
+    <script nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+    // V17.0 搜索建议功能
+    var searchTimeout, searchSelectedIdx = -1;
+    var searchSuggestionsFmt = '共 {0} 条建议';
+    $(document).ready(function() {
+        $('#searchKeyword').on('input', function() {
+            var q = $(this).val().trim();
+            clearTimeout(searchTimeout);
+            searchSelectedIdx = -1;
+            if (q.length < 2) { $('#searchSuggestions').hide(); return; }
+            searchTimeout = setTimeout(function() {
+                $.get('/api/search_suggestions.asp', { q: q, limit: 8 }, function(res) {
+                    var html = '';
+                    if (res && res.code === 0 && res.data && res.data.length > 0) {
+                        for (var i = 0; i < res.data.length; i++) {
+                            html += '<div class="s-item" data-value="' + $('<span>').text(res.data[i]).html() + '"><i class="fas fa-search"></i>' + $('<span>').text(res.data[i]).html() + '</div>';
+                        }
+                        html += '<div class="s-footer">' + searchSuggestionsFmt.replace('{0}', res.data.length) + '</div>';
+                        $('#searchSuggestions').html(html).show();
+                    } else {
+                        $('#searchSuggestions').hide();
+                    }
+                });
+            }, 300);
+        }).on('keydown', function(e) {
+            var items = $('#searchSuggestions .s-item');
+            if (items.length === 0) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                searchSelectedIdx = Math.min(searchSelectedIdx + 1, items.length - 1);
+                items.removeClass('active');
+                $(items[searchSelectedIdx]).addClass('active');
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                searchSelectedIdx = Math.max(searchSelectedIdx - 1, -1);
+                items.removeClass('active');
+                if (searchSelectedIdx >= 0) $(items[searchSelectedIdx]).addClass('active');
+            } else if (e.key === 'Enter' && searchSelectedIdx >= 0) {
+                e.preventDefault();
+                $(items[searchSelectedIdx]).click();
+            }
+        });
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#searchBox').length) $('#searchSuggestions').hide();
+        });
+        
+        // V17.0: 点击搜索建议项
+        $(document).on('click', '#searchSuggestions .s-item', function() {
+            var val = $(this).data('value');
+            if (val) {
+                $('#searchKeyword').val(val);
+                $('#searchKeyword').closest('form').submit();
+            }
+        });
+    });
+    </script>
+    <script nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+    // 全局CSRF令牌配置
+    var csrfToken = 'sNDz7HVeDr018FhqKeR0G9qf3MIAVaHP';
+    
+    // 为所有jQuery AJAX请求添加CSRF令牌
+    $(document).ready(function() {
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                // 对于POST请求添加CSRF头
+                if (settings.type && settings.type.toUpperCase() === 'POST') {
+                    xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+                }
+            }
+        });
+        
+        // 拦截所有jQuery AJAX请求，确保CSRF令牌被添加到POST数据中
+        var originalAjax = $.ajax;
+        $.ajax = function(options) {
+            // 如果是POST请求，确保csrf_token在data中
+            if (options.type && options.type.toUpperCase() === 'POST') {
+                // 处理data为对象的情况
+                if (options.data && typeof options.data === 'object' && !(options.data instanceof FormData)) {
+                    if (!(options.data instanceof Array)) {
+                        options.data.csrf_token = csrfToken;
+                    }
+                }
+                // 处理data为字符串的情况（如序列化的表单数据）
+                else if (options.data && typeof options.data === 'string') {
+                    if (options.data.indexOf('csrf_token=') === -1) {
+                        options.data += '&csrf_token=' + encodeURIComponent(csrfToken);
+                    }
+                }
+                // data为空的情况
+                else if (!options.data) {
+                    options.data = 'csrf_token=' + encodeURIComponent(csrfToken);
+                }
+            }
+            return originalAjax.apply(this, arguments);
+        };
+    });
+    </script>
+</head>
+<body>
+    
+    <div id="cookieBanner" class="cookie-banner">
+        <div class="cookie-banner-inner">
+            <div class="cookie-icon"><i class="fas fa-cookie-bite"></i></div>
+            <div class="cookie-text">
+                <p>本网站使用 Cookie 来提升您的浏览体验、分析网站流量并提供个性化推荐。继续使用即表示您同意我们的 Cookie 政策。</p>
+            </div>
+            <div class="cookie-actions">
+                <button class="btn btn-primary btn-sm" onclick="acceptCookies('all')">
+                    全部接受
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="acceptCookies('essential')">
+                    仅必要
+                </button>
+                <a href="/user/privacy.asp" class="cookie-link">
+                    了解更多
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- V11 移动端导航组件 -->
+    
+<!-- 移动端顶部导航栏 -->
+<nav class="mobile-nav" id="mobileNav">
+    <div class="mobile-nav-left">
+        <button class="hamburger-btn" id="hamburgerBtn" aria-label="打开菜单">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+    <a href="/" class="mobile-logo">Custom Fragrance</a>
+    <div class="mobile-nav-right">
+        <a href="/cart.asp" class="touch-target" style="position:relative">
+            <i class="fas fa-shopping-cart"></i>
+            
+        </a>
+    </div>
+</nav>
+
+<!-- 移动端侧边菜单遮罩 -->
+<div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+<!-- 移动端侧边菜单 -->
+<nav class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-header">
+        <h3>Custom Fragrance</h3>
+        <button class="close-menu-btn" id="closeMenuBtn" aria-label="关闭菜单">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <ul class="mobile-menu-list">
+        <li><a href="/"><i class="fas fa-home"></i> 首页</a></li>
+        <li><a href="/products.asp"><i class="fas fa-box"></i> 所有产品</a></li>
+        <li><a href="/customize.asp"><i class="fas fa-magic"></i> 定制香水</a></li>
+        <li><a href="/about.asp"><i class="fas fa-info-circle"></i> 关于我们</a></li>
+        <li><a href="/contact.asp"><i class="fas fa-phone"></i> 联系我们</a></li>
+        <li class="divider"></li>
+        
+            <li><a href="/user/login.asp"><i class="fas fa-sign-in-alt"></i> 登录</a></li>
+            <li><a href="/user/register.asp"><i class="fas fa-user-plus"></i> 注册</a></li>
+        
+    </ul>
+    <div class="mobile-menu-footer">
+        &copy; 2026Custom Fragrance
+    </div>
+</nav>
+
+<!-- 移动端底部导航栏 -->
+<nav class="bottom-nav">
+    <a href="/" class="bottom-nav-item">
+        <i class="fas fa-home"></i>
+        <span>首页</span>
+    </a>
+    <a href="/products.asp" class="bottom-nav-item">
+        <i class="fas fa-th-large"></i>
+        <span>分类</span>
+    </a>
+    <a href="/cart.asp" class="bottom-nav-item">
+        <i class="fas fa-shopping-cart"></i>
+        <span>购物车</span>
+        
+    </a>
+    
+    <a href="/user/login.asp" class="bottom-nav-item">
+        <i class="fas fa-user"></i>
+        <span>登录</span>
+    </a>
+    
+</nav>
+
+<script>
+// V11 移动端导航交互逻辑
+(function() {
+    'use strict';
+    
+    var hamburgerBtn = document.getElementById('hamburgerBtn');
+    var closeMenuBtn = document.getElementById('closeMenuBtn');
+    var mobileMenu = document.getElementById('mobileMenu');
+    var overlay = document.getElementById('mobileMenuOverlay');
+    var body = document.body;
+    
+    // 设置body class适配固定导航
+    body.classList.add('has-mobile-nav', 'has-bottom-nav');
+    
+    function openMenu() {
+        if (!mobileMenu || !overlay) return;
+        mobileMenu.classList.add('active');
+        overlay.classList.add('active');
+        if (hamburgerBtn) hamburgerBtn.classList.add('active');
+        body.style.overflow = 'hidden';
+    }
+    
+    function closeMenu() {
+        if (!mobileMenu || !overlay) return;
+        mobileMenu.classList.remove('active');
+        overlay.classList.remove('active');
+        if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+        body.style.overflow = '';
+    }
+    
+    if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMenu);
+    if (closeMenuBtn) closeMenuBtn.addEventListener('click', closeMenu);
+    if (overlay) overlay.addEventListener('click', closeMenu);
+    
+    // ESC键关闭菜单
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('active')) {
+            closeMenu();
+        }
+    });
+    
+    // 当前页面高亮
+    var currentPath = window.location.pathname.toLowerCase();
+    var navLinks = document.querySelectorAll('.mobile-menu-list a, .bottom-nav-item');
+    navLinks.forEach(function(link) {
+        var href = link.getAttribute('href');
+        if (href && currentPath === href.toLowerCase()) {
+            link.classList.add('active');
+        } else if (href && href !== '/' && currentPath.startsWith(href.toLowerCase())) {
+            link.classList.add('active');
+        }
+    });
+})();
+</script>
+
+    
+    <!-- 顶部公告栏 -->
+    <div class="top-bar">
+        <div class="container">
+            <span><i class="fas fa-gift"></i> 专业个性化定制香水</span>
+            <span class="top-bar-right">
+                <i class="fas fa-phone"></i> 400-888-8888
+                <span class="lang-switcher">
+                    <a href="?lang=zh-CN" class="lang-link active">中文</a>
+                    <span class="lang-divider">|</span>
+                    <a href="?lang=en-US" class="lang-link">EN</a>
+                </span>
+                
+            </span>
+        </div>
+    </div>
+
+    <!-- 主导航 -->
+    <header class="main-header">
+        <div class="container">
+            <div class="header-wrapper">
+                <!-- Logo -->
+                <div class="logo">
+                    <a href="/index.asp">
+                        <i class="fas fa-spray-can"></i>
+                        <span>香氛定制</span>
+                    </a>
+                </div>
+
+                <!-- 搜索框 -->
+                <div class="search-box" id="searchBox">
+                    <form action="/products.asp" method="get" autocomplete="off">
+                        <input type="text" name="keyword" id="searchKeyword" placeholder="搜索产品..." autocomplete="off">
+                        <button type="submit"><i class="fas fa-search"></i></button>
+                        <div class="search-suggestions" id="searchSuggestions"></div>
+                    </form>
+                </div>
+
+                <!-- 用户菜单 -->
+                <div class="user-menu">
+                    
+                    <a href="/user/login.asp" class="btn-login"><i class="fas fa-sign-in-alt"></i> 登录</a>
+                    <a href="/user/register.asp" class="btn-register">注册</a>
+                    
+                    <a href="/cart.asp" class="cart-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-count" id="cartCount">0</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 分类导航 -->
+    <nav class="main-nav pc-only">
+        <div class="container">
+            <ul class="nav-list">
+                <li><a href="/index.asp"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="/products.asp"><i class="fas fa-flask"></i> 产品</a></li>
+                
+                <li><a href="/about.asp"><i class="fas fa-book"></i> 关于我们</a></li>
+                <li><a href="/contact.asp"><i class="fas fa-envelope"></i> 联系我们</a></li>
+                
+                <li><a href="/flash_sale.asp" class="nav-hot"><i class="fas fa-bolt"></i> 秒杀</a></li>
+                
+                <li><a href="/group_buy.asp" class="nav-hot"><i class="fas fa-users"></i> 拼团</a></li>
+                
+                <li><a href="/subscribe.asp" class="nav-hot"><i class="fas fa-box-open"></i> 订阅</a></li>
+                
+            </ul>
+        </div>
+    </nav>
+
+    <style nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+    /* V18: 秒杀/拼团热链样式 */
+    .nav-hot { color: #ff6b35 !important; font-weight: 600; position: relative; }
+    .nav-hot::after { content: 'HOT'; position: absolute; top: -6px; right: -20px; font-size: 9px; background: linear-gradient(135deg, #ff416c, #ff4b2b); color: #fff; padding: 1px 4px; border-radius: 3px; line-height: 1; }
+    .nav-hot:hover { color: #ff416c !important; }
+    </style>
+
+    <!-- V11.1 PWA Service Worker注册 -->
+    <script nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('[PWA] SW registered:', reg.scope))
+                .catch(err => console.error('[PWA] SW failed:', err));
+        });
+    }
+    // V18: Cookie 同意处理
+    function acceptCookies(level) {
+        var d = new Date();
+        d.setFullYear(d.getFullYear() + 1);
+        document.cookie = 'cookie_consent=' + level + '; expires=' + d.toUTCString() + '; path=/; SameSite=Lax';
+        var banner = document.getElementById('cookieBanner');
+        if (banner) {
+            banner.style.animation = 'cookieSlideDown 0.3s ease forwards';
+            setTimeout(function() { banner.style.display = 'none'; }, 300);
+        }
+        ' V18: 记录 Cookie 同意（通过 fetch 发送到后端）
+        fetch('/api/cookie_consent.asp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'consent=' + encodeURIComponent(level) + '&csrf_token=' + encodeURIComponent(csrfToken)
+        }).catch(function() {});
+    }
+    </script>
+    <style nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+    @keyframes cookieSlideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
+    </style>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+
+
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>欢迎回来</h1>
+                <p>登录您的账户，继续定制香氛之旅</p>
+            </div>
+            
+            
+            <div class="alert alert-error">
+                <i class="fas fa-exclamation-circle"></i> &#23433;&#20840;&#39564;&#35777;&#22833;&#36133;&#65292;&#35831;&#21047;&#26032;&#39029;&#38754;&#37325;&#35797;
+            </div>
+            
+            
+            <form method="post" class="auth-form" id="loginForm">
+                <input type="hidden" name="csrf_token" value="sNDz7HVeDr018FhqKeR0G9qf3MIAVaHP">
+                <div class="form-group">
+                    <label for="username"><i class="fas fa-user"></i> 用户名/邮箱</label>
+                    <input type="text" id="username" name="username" placeholder="请输入用户名或邮箱" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password"><i class="fas fa-lock"></i> 密码</label>
+                    <div class="password-input">
+                        <input type="password" id="password" name="password" placeholder="请输入密码" required>
+                        <button type="button" class="toggle-password" onclick="togglePassword()">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="remember"> 记住我
+                    </label>
+                    <a href="/user/forgot.asp" class="forgot-link">忘记密码？</a>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-lg btn-block">
+                    <i class="fas fa-sign-in-alt"></i> 登录
+                </button>
+            </form>
+            
+            <div class="auth-divider">
+                <span>或</span>
+            </div>
+            
+            <div class="social-login">
+                <button type="button" class="btn btn-social btn-wechat">
+                    <i class="fab fa-weixin"></i> 微信登录
+                </button>
+            </div>
+            
+            <div class="auth-footer">
+                <p>还没有账号？ <a href="/user/register.asp">立即注册</a></p>
+                <p class="auth-notice"><i class="fas fa-info-circle"></i> 本平台采用会员推荐制，需要有效的推荐链接才能注册</p>
+            </div>
+        </div>
+        
+        <div class="auth-side">
+            <div class="auth-promo">
+                <i class="fas fa-spray-can"></i>
+                <h2>香氛定制</h2>
+                <p>定制你的专属香水，让气味成为你独特的名片</p>
+                <ul class="promo-features">
+                    <li><i class="fas fa-check"></i> 个性化香调搭配</li>
+                    <li><i class="fas fa-check"></i> 优质天然原料</li>
+                    <li><i class="fas fa-check"></i> 专属瓶身定制</li>
+                    <li><i class="fas fa-check"></i> 会员专属优惠</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword() {
+    var pwd = document.getElementById('password');
+    var icon = document.querySelector('.toggle-password i');
+    if (pwd.type === 'password') {
+        pwd.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        pwd.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+</script>
+
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <!-- 关于我们 -->
+                <div class="footer-section">
+                    <h4>关于我们</h4>
+                    <p>专业个性化定制香水</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-weixin"></i></a>
+                        <a href="#"><i class="fab fa-weibo"></i></a>
+                        <a href="#"><i class="fas fa-envelope"></i></a>
+                    </div>
+                </div>
+
+                <!-- 快速链接 -->
+                <div class="footer-section">
+                    <h4>产品</h4>
+                    <ul>
+                        <li><a href="/products.asp">产品</a></li>
+                        <li><a href="/customize.asp">立即购买</a></li>
+                        <li><a href="/about.asp">关于我们</a></li>
+                        <li><a href="/contact.asp">联系我们</a></li>
+                    </ul>
+                </div>
+
+                <!-- 语言选择 -->
+                <div class="footer-section">
+                    <h4>语言</h4>
+                    <ul class="footer-lang">
+                        <li><a href="?lang=zh-CN" class="lang-link active"><i class="fas fa-language"></i> 简体中文</a></li>
+                        <li><a href="?lang=en-US" class="lang-link"><i class="fas fa-language"></i> English</a></li>
+                    </ul>
+                </div>
+
+                <!-- 客户服务 -->
+                <div class="footer-section">
+                    <h4>客户服务</h4>
+                    <ul>
+                        <li><a href="/help/shipping.asp">配送说明</a></li>
+                        <li><a href="/help/return.asp">退换政策</a></li>
+                        <li><a href="/help/payment.asp">支付方式</a></li>
+                        <li><a href="/help/faq.asp">常见问题</a></li>
+                    </ul>
+                </div>
+
+                <!-- 联系方式 -->
+                <div class="footer-section">
+                    <h4>联系我们</h4>
+                    <p><i class="fas fa-phone"></i> 400-888-8888</p>
+                    <p><i class="fas fa-envelope"></i> contact@perfumeshop.com</p>
+                    <p><i class="fas fa-clock"></i> 周一至周日 9:00-21:00</p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>© 2026 香氛定制 版权所有 | <a href="/privacy.asp">隐私政策</a> | <a href="/terms.asp">服务条款</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 返回顶部 -->
+    <a href="#" class="back-to-top" id="backToTop">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+
+    <!-- 公共脚本 -->
+    <!-- V12.0 图片懒加载 -->
+    <script src="/js/lazy-load.js?v=15.0"></script>
+    <!-- V12.0 主题切换 -->
+    <script src="/js/theme-toggle.js?v=15.0" defer></script>
+    <!-- V12.1 产品图库手势支持 -->
+    <script src="/js/product-gallery.js?v=15.0" defer></script>
+    <!-- V12.2 购物车动画 -->
+    <script src="/js/cart-animation.js?v=15.0" defer></script>
+    <!-- V12.3 筛选优化 -->
+    <script src="/js/filter-optimization.js?v=15.0" defer></script>
+    <!-- V13.2 骨架屏加载 -->
+    <script src="/js/skeleton-loader.js?v=15.0"></script>
+    <!-- V14.6 PWA 安装提示 -->
+    <script src="/js/pwa-install.js?v=15.0" defer></script>
+    <!-- V18.0 Web Components -->
+    <script src="/js/components/product-card.js?v=18.0" defer></script>
+    <script src="/js/components/review-stars.js?v=18.0" defer></script>
+    <script src="/js/components/search-autocomplete.js?v=18.0" defer></script>
+    <script src="/js/main.js?v=17.0"></script>
+    
+    <script nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+    // 更新购物车数量
+    function updateCartCount() {
+        $.get('/api/cart_count.asp', function(data) {
+            // V15: 支持新JSON格式 {"code":0,"data":{"count":N}} 和旧纯文本格式
+            if (typeof data === 'object' && data.data && typeof data.data.count !== 'undefined') {
+                $('#cartCount').text(data.data.count);
+            } else if (typeof data === 'object' && typeof data.count !== 'undefined') {
+                $('#cartCount').text(data.count);
+            } else if (!isNaN(data)) {
+                $('#cartCount').text(data);
+            }
+        }).fail(function() {
+            console.warn('购物车数量获取失败');
+        });
+    }
+    $(document).ready(function() {
+        updateCartCount();
+    });
+    </script>
+
+<!-- V18: 智能客服悬浮组件 -->
+
+<!-- V18 智能客服组件 -->
+<style nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+/* ================================================
+   Chatbot Widget Styles - V18
+   ================================================ */
+.chatbot-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9998;
+    font-family: 'Microsoft YaHei','PingFang SC',-apple-system,sans-serif;
+}
+
+/* 悬浮按钮 */
+.chatbot-toggle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8B4513, #A0522D);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(139,69,19,0.4);
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+.chatbot-toggle:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 24px rgba(139,69,19,0.55);
+}
+.chatbot-toggle:active {
+    transform: scale(0.95);
+}
+.chatbot-toggle .unread-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 12px;
+    height: 12px;
+    background: #ff4444;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: none;
+}
+.chatbot-toggle.open {
+    background: linear-gradient(135deg, #666, #555);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* 对话窗口 */
+.chatbot-window {
+    position: absolute;
+    bottom: 72px;
+    right: 0;
+    width: 380px;
+    max-height: 550px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: chatbotSlideUp 0.3s ease;
+}
+@keyframes chatbotSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.chatbot-window.open {
+    display: flex;
+}
+
+/* 头部 */
+.chatbot-header {
+    background: linear-gradient(135deg, #8B4513, #A0522D);
+    color: #fff;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+.chatbot-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.chatbot-header-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+.chatbot-header-text h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+.chatbot-header-text span {
+    font-size: 11px;
+    opacity: 0.85;
+}
+.chatbot-header-actions {
+    display: flex;
+    gap: 4px;
+}
+.chatbot-header-actions button {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+.chatbot-header-actions button:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* 消息区域 */
+.chatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+    max-height: 380px;
+    background: #faf9f7;
+}
+.chatbot-messages::-webkit-scrollbar {
+    width: 5px;
+}
+.chatbot-messages::-webkit-scrollbar-thumb {
+    background: #d5d0ca;
+    border-radius: 3px;
+}
+
+/* 消息气泡 */
+.chatbot-message {
+    display: flex;
+    gap: 8px;
+    animation: msgFadeIn 0.25s ease;
+}
+@keyframes msgFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.chatbot-message.bot {
+    align-items: flex-start;
+}
+.chatbot-message.user {
+    flex-direction: row-reverse;
+}
+.chatbot-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+.chatbot-message.bot .chatbot-avatar {
+    background: #f0e6da;
+    color: #8B4513;
+}
+.chatbot-message.user .chatbot-avatar {
+    background: #8B4513;
+    color: #fff;
+}
+.chatbot-bubble {
+    max-width: 75%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-word;
+}
+.chatbot-message.bot .chatbot-bubble {
+    background: #fff;
+    color: #333;
+    border: 1px solid #e8e3dc;
+    border-top-left-radius: 4px;
+}
+.chatbot-message.user .chatbot-bubble {
+    background: #8B4513;
+    color: #fff;
+    border-top-right-radius: 4px;
+}
+.chatbot-bubble a {
+    color: #8B4513;
+    text-decoration: underline;
+}
+.chatbot-message.user .chatbot-bubble a {
+    color: #ffd699;
+}
+.chatbot-time {
+    font-size: 10px;
+    color: #999;
+    margin-top: 4px;
+    padding: 0 4px;
+}
+.chatbot-message.user .chatbot-time {
+    text-align: right;
+}
+
+/* 消息来源标签 */
+.chatbot-source-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.chatbot-source-tag.ai {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+.chatbot-source-tag.handoff {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+/* 打字指示器 */
+.chatbot-typing {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 16px;
+}
+.chatbot-typing.show {
+    display: flex;
+}
+.chatbot-typing .typing-dots {
+    display: flex;
+    gap: 4px;
+    padding: 10px 16px;
+    background: #fff;
+    border: 1px solid #e8e3dc;
+    border-radius: 14px;
+    border-top-left-radius: 4px;
+}
+.chatbot-typing .typing-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #c5bdb5;
+    animation: typingBounce 1.4s infinite ease-in-out;
+}
+.chatbot-typing .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.chatbot-typing .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+}
+
+/* 快捷回复 */
+.chatbot-quick-replies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 16px;
+    border-top: 1px solid #f0ede8;
+    background: #fff;
+}
+.chatbot-quick-reply {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1px solid #d5d0ca;
+    background: #fff;
+    color: #8B4513;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.chatbot-quick-reply:hover {
+    background: #8B4513;
+    color: #fff;
+    border-color: #8B4513;
+}
+
+/* 输入区域 */
+.chatbot-input-area {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid #e8e3dc;
+    background: #fff;
+    border-radius: 0 0 16px 16px;
+}
+.chatbot-input-area input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #d5d0ca;
+    border-radius: 20px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+.chatbot-input-area input:focus {
+    border-color: #8B4513;
+}
+.chatbot-input-area input::placeholder {
+    color: #bbb;
+}
+.chatbot-send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #8B4513;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.15s;
+    flex-shrink: 0;
+}
+.chatbot-send-btn:hover {
+    background: #A0522D;
+}
+.chatbot-send-btn:active {
+    transform: scale(0.92);
+}
+.chatbot-send-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* 手风琴面板 */
+.chatbot-handoff-banner {
+    margin: 8px 16px;
+    padding: 10px 14px;
+    background: #fff8e1;
+    border: 1px solid #ffcc02;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #795548;
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+.chatbot-handoff-banner.show {
+    display: flex;
+}
+.chatbot-handoff-banner i {
+    font-size: 16px;
+    color: #ff8f00;
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+    .chatbot-widget {
+        bottom: 12px;
+        right: 12px;
+    }
+    .chatbot-toggle {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+    .chatbot-window {
+        width: calc(100vw - 24px);
+        right: -6px;
+        bottom: 64px;
+        max-height: 65vh;
+        border-radius: 12px;
+    }
+    .chatbot-messages {
+        max-height: 45vh;
+    }
+    .chatbot-bubble {
+        max-width: 82%;
+    }
+}
+</style>
+
+<div class="chatbot-widget" id="chatbotWidget">
+    <!-- 悬浮按钮 -->
+    <button class="chatbot-toggle" id="chatbotToggle" title="智能客服">
+        <i class="fas fa-comment-dots"></i>
+        <span class="unread-dot" id="chatbotUnread"></span>
+    </button>
+
+    <!-- 对话窗口 -->
+    <div class="chatbot-window" id="chatbotWindow">
+        <!-- 头部 -->
+        <div class="chatbot-header">
+            <div class="chatbot-header-left">
+                <div class="chatbot-header-icon"><i class="fas fa-robot"></i></div>
+                <div class="chatbot-header-text">
+                    <h4>智能客服</h4>
+                    <span>AI 在线 · 7×24h</span>
+                </div>
+            </div>
+            <div class="chatbot-header-actions">
+                <button onclick="chatbotToggleWindow()" title="关闭"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+
+        <!-- 消息区域 -->
+        <div class="chatbot-messages" id="chatbotMessages">
+            <!-- 欢迎消息由JS动态插入 -->
+        </div>
+
+        <!-- 打字指示器 -->
+        <div class="chatbot-typing" id="chatbotTyping">
+            <div class="chatbot-avatar" style="background:#f0e6da;color:#8B4513;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="typing-dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <!-- 快捷回复 -->
+        <div class="chatbot-quick-replies" id="chatbotQuickReplies"></div>
+
+        <!-- 人工转接提示 -->
+        <div class="chatbot-handoff-banner" id="chatbotHandoffBanner">
+            <i class="fas fa-headset"></i>
+            <span>问题未解决？回复「<b>转人工</b>」联系人工客服</span>
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="输入您的问题..." maxlength="300" autocomplete="off">
+            <button class="chatbot-send-btn" id="chatbotSendBtn" title="发送">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script nonce="kkwN19kmJ397ET4Y6oCMfERYa4zP63ky">
+(function() {
+    'use strict';
+    
+    var isOpen = false;
+    var sessionId = '';
+    var isWaiting = false;
+    var quickRepliesVisible = false;
+    
+    var widget = document.getElementById('chatbotWidget');
+    var toggle = document.getElementById('chatbotToggle');
+    var windowEl = document.getElementById('chatbotWindow');
+    var messagesEl = document.getElementById('chatbotMessages');
+    var typingEl = document.getElementById('chatbotTyping');
+    var quickRepliesEl = document.getElementById('chatbotQuickReplies');
+    var handoffBanner = document.getElementById('chatbotHandoffBanner');
+    var inputEl = document.getElementById('chatbotInput');
+    var sendBtn = document.getElementById('chatbotSendBtn');
+    
+    // 生成会话ID
+    function generateSessionId() {
+        return 'cb_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    }
+    
+    // 初始化
+    function init() {
+        sessionId = sessionStorage.getItem('chatbot_session_id') || generateSessionId();
+        sessionStorage.setItem('chatbot_session_id', sessionId);
+        
+        // 欢迎消息
+        addWelcomeMessage();
+        
+        // 事件绑定
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleWindow();
+        });
+        
+        sendBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            sendMessage();
+        });
+        
+        inputEl.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // 点击窗口外关闭（仅桌面端点击遮罩区域）
+        document.addEventListener('click', function(e) {
+            if (isOpen && !widget.contains(e.target)) {
+                // 桌面端不自动关闭，保持对话
+            }
+        });
+        
+        // 初始快捷回复
+        showDefaultQuickReplies();
+    }
+    
+    // 切换窗口
+    window.toggleWindow = function() {
+        if (isOpen) {
+            closeWindow();
+        } else {
+            openWindow();
+        }
+    };
+    
+    function openWindow() {
+        isOpen = true;
+        windowEl.classList.add('open');
+        toggle.classList.add('open');
+        toggle.innerHTML = '<i class="fas fa-times"></i>';
+        inputEl.focus();
+        scrollToBottom();
+    }
+    
+    function closeWindow() {
+        isOpen = false;
+        windowEl.classList.remove('open');
+        toggle.classList.remove('open');
+        toggle.innerHTML = '<i class="fas fa-comment-dots"></i><span class="unread-dot" id="chatbotUnread"></span>';
+    }
+    
+    // 欢迎消息
+    function addWelcomeMessage() {
+        var existingMsgs = messagesEl.querySelectorAll('.chatbot-message.bot');
+        if (existingMsgs.length === 0) {
+            addBotMessage(
+                '👋 您好！我是智能客服小香。' + '\n\n' +
+                '我可以帮您解答：\n' +
+                '🔹 退换货政策\n' +
+                '🔹 配送物流信息\n' +
+                '🔹 定制香水流程\n' +
+                '🔹 香调与浓度选择\n' +
+                '🔹 会员权益与积分\n\n' +
+                '请随时向我提问，或点击下方快捷按钮快速获取帮助！'
+            );
+        }
+    }
+    
+    // 添加消息
+    function addBotMessage(text, source, handoff) {
+        var msgDiv = document.createElement('div');
+        msgDiv.className = 'chatbot-message bot';
+        
+        var avatar = document.createElement('div');
+        avatar.className = 'chatbot-avatar';
+        avatar.innerHTML = '<i class="fas fa-robot"></i>';
+        
+        var bubble = document.createElement('div');
+        bubble.className = 'chatbot-bubble';
+        
+        // 处理换行和链接
+        var formattedText = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br>')
+            .replace(/&lt;a href=/g, '<a href=')
+            .replace(/&lt;\/a&gt;/g, '</a>')
+            .replace(/&lt;b&gt;/g, '<b>')
+            .replace(/&lt;\/b&gt;/g, '</b>');
+        
+        bubble.innerHTML = formattedText;
+        
+        // 来源标签
+        if (source && source !== 'faq') {
+            var tag = document.createElement('span');
+            tag.className = 'chatbot-source-tag ' + source;
+            if (source === 'ai') {
+                tag.textContent = 'AI';
+            } else if (source === 'handoff' || handoff) {
+                tag.textContent = '待人工';
+                tag.className = 'chatbot-source-tag handoff';
+            }
+            bubble.appendChild(document.createTextNode(' '));
+            bubble.appendChild(tag);
+        }
+        
+        var time = document.createElement('div');
+        time.className = 'chatbot-time';
+        time.textContent = getTimeString();
+        
+        msgDiv.appendChild(avatar);
+        var wrapper = document.createElement('div');
+        wrapper.appendChild(bubble);
+        wrapper.appendChild(time);
+        msgDiv.appendChild(wrapper);
+        
+        messagesEl.appendChild(msgDiv);
+        scrollToBottom();
+        
+        if (handoff) {
+            showHandoffBanner();
+        } else {
+            hideHandoffBanner();
+        }
+    }
+    
+    function addUserMessage(text) {
+        var msgDiv = document.createElement('div');
+        msgDiv.className = 'chatbot-message user';
+        
+        var avatar = document.createElement('div');
+        avatar.className = 'chatbot-avatar';
+        avatar.innerHTML = '<i class="fas fa-user"></i>';
+        
+        var bubble = document.createElement('div');
+        bubble.className = 'chatbot-bubble';
+        bubble.textContent = text;
+        
+        var time = document.createElement('div');
+        time.className = 'chatbot-time';
+        time.textContent = getTimeString();
+        
+        msgDiv.appendChild(avatar);
+        var wrapper = document.createElement('div');
+        wrapper.appendChild(bubble);
+        wrapper.appendChild(time);
+        msgDiv.appendChild(wrapper);
+        
+        messagesEl.appendChild(msgDiv);
+        scrollToBottom();
+    }
+    
+    function showTyping() {
+        typingEl.classList.add('show');
+        hideQuickReplies();
+        scrollToBottom();
+    }
+    
+    function hideTyping() {
+        typingEl.classList.remove('show');
+    }
+    
+    function showQuickReplies(suggestions) {
+        quickRepliesEl.innerHTML = '';
+        if (suggestions && suggestions.length > 0) {
+            suggestions.forEach(function(s) {
+                var btn = document.createElement('button');
+                btn.className = 'chatbot-quick-reply';
+                btn.textContent = s;
+                btn.addEventListener('click', function() {
+                    inputEl.value = s;
+                    sendMessage();
+                });
+                quickRepliesEl.appendChild(btn);
+            });
+            quickRepliesVisible = true;
+        }
+    }
+    
+    function showDefaultQuickReplies() {
+        var defaults = ['如何退换货？', '配送多久能到？', '怎么定制香水？', '有哪些香调？', '转人工客服'];
+        showQuickReplies(defaults);
+    }
+    
+    function hideQuickReplies() {
+        quickRepliesEl.innerHTML = '';
+        quickRepliesVisible = false;
+    }
+    
+    function showHandoffBanner() {
+        handoffBanner.classList.add('show');
+    }
+    
+    function hideHandoffBanner() {
+        handoffBanner.classList.remove('show');
+    }
+    
+    function scrollToBottom() {
+        setTimeout(function() {
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }, 50);
+    }
+    
+    function getTimeString() {
+        var now = new Date();
+        return ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    }
+    
+    // 发送消息
+    function sendMessage() {
+        var text = inputEl.value.trim();
+        if (text === '' || isWaiting) return;
+        
+        // 显示用户消息
+        addUserMessage(text);
+        inputEl.value = '';
+        isWaiting = true;
+        sendBtn.disabled = true;
+        
+        // 显示打字动画
+        showTyping();
+        
+        // AJAX 请求
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/chatbot.asp', true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        
+        xhr.onload = function() {
+            hideTyping();
+            isWaiting = false;
+            sendBtn.disabled = false;
+            inputEl.focus();
+            
+            if (xhr.status === 200) {
+                try {
+                    var res = JSON.parse(xhr.responseText);
+                    if (res.code === 0 && res.data) {
+                        var data = res.data;
+                        addBotMessage(data.reply, data.source, data.handoff);
+                        
+                        // 更新会话ID
+                        if (data.session_id) {
+                            sessionId = data.session_id;
+                            sessionStorage.setItem('chatbot_session_id', sessionId);
+                        }
+                        
+                        // 显示追问建议
+                        if (data.suggestions && data.suggestions.length > 0) {
+                            showQuickReplies(data.suggestions);
+                        } else {
+                            showDefaultQuickReplies();
+                        }
+                    } else {
+                        addBotMessage('抱歉，我暂时无法处理您的请求。请稍后再试或拨打客服热线 400-888-8888。', 'error', true);
+                        showDefaultQuickReplies();
+                    }
+                } catch(e) {
+                    addBotMessage('抱歉，系统出现了错误。请拨打客服热线 400-888-8888 获取帮助。', 'error', true);
+                    showDefaultQuickReplies();
+                }
+            } else if (xhr.status === 429) {
+                addBotMessage('您发送消息太快了，请稍等片刻再试 😊', 'error');
+                showDefaultQuickReplies();
+            } else {
+                addBotMessage('网络连接异常，请检查网络后重试。客服热线：400-888-8888', 'error', true);
+                showDefaultQuickReplies();
+            }
+        };
+        
+        xhr.onerror = function() {
+            hideTyping();
+            isWaiting = false;
+            sendBtn.disabled = false;
+            addBotMessage('网络连接失败，请检查网络后重试。客服热线：400-888-8888', 'error', true);
+            showDefaultQuickReplies();
+        };
+        
+        // 构建请求体
+        var params = 'message=' + encodeURIComponent(text) + '&session_id=' + encodeURIComponent(sessionId);
+        xhr.send(params);
+    }
+    
+    // 初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+    // 暴露函数到全局
+    window.chatbotToggleWindow = toggleWindow;
+    window.chatbotSendMessage = sendMessage;
+})();
+</script>
+
+
+</body>
+</html>

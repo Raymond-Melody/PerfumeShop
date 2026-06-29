@@ -204,6 +204,11 @@
             <h2>可离线访问的页面</h2>
             <div id="cachedList"><div class="no-cached">正在检查缓存...</div></div>
         </div>
+
+        <div class="offline-info" id="offlineInfo" style="margin-top:16px;font-size:0.8rem;color:var(--fg-subtle);text-align:center;">
+            <div id="lastOnline"></div>
+            <div id="offlineCartInfo" style="margin-top:6px;"></div>
+        </div>
     </div>
 
     <script>
@@ -249,13 +254,18 @@
                 { url: '/about.asp', title: '品牌故事' },
                 { url: '/contact.asp', title: '联系我们' },
                 { url: '/customize.asp', title: '定制香水' },
+                { url: '/subscribe.asp', title: '香氛订阅盒' },
+                { url: '/community.asp', title: '香氛社区' },
+                { url: '/flash_sale.asp', title: '限时秒杀' },
+                { url: '/group_buy.asp', title: '拼团惠购' },
+                { url: '/fragrance_quiz.asp', title: '香氛测试' },
                 { url: '/cart.asp', title: '购物车' }
             ];
 
             var found = [];
             var checked = 0;
 
-            caches.open('perfumeshop-v16-dynamic').then(function(cache) {
+            caches.open('perfumeshop-v18-dynamic').then(function(cache) {
                 pageUrls.forEach(function(page) {
                     cache.match(page.url).then(function(response) {
                         if (response && response.ok) {
@@ -272,7 +282,7 @@
                 });
             }).catch(function() {
                 // 同时检查静态缓存
-                caches.open('perfumeshop-v16-static').then(function(cache) {
+                caches.open('perfumeshop-v18-static').then(function(cache) {
                     pageUrls.forEach(function(page) {
                         cache.match(page.url).then(function(response) {
                             if (response && response.ok) {
@@ -306,6 +316,37 @@
         }
 
         loadCachedPages();
+
+        // 显示最后在线时间
+        (function() {
+            var lastOnline = localStorage.getItem('perfumeshop_last_online');
+            var el = document.getElementById('lastOnline');
+            if (lastOnline) {
+                var d = new Date(parseInt(lastOnline));
+                el.textContent = '最后在线：' + d.toLocaleString('zh-CN');
+            } else {
+                el.textContent = '无缓存记录';
+            }
+
+            // 尝试读取离线购物车
+            if ('indexedDB' in window) {
+                var req = indexedDB.open('PerfumeShopOffline', 1);
+                req.onsuccess = function(e) {
+                    var db = e.target.result;
+                    if (db.objectStoreNames.contains('offlineCart')) {
+                        var tx = db.transaction('offlineCart', 'readonly');
+                        var store = tx.objectStore('offlineCart');
+                        var countReq = store.count();
+                        countReq.onsuccess = function() {
+                            var cartEl = document.getElementById('offlineCartInfo');
+                            if (countReq.result > 0) {
+                                cartEl.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="13" r="1.5"/><circle cx="12" cy="13" r="1.5"/><path d="M1 1h2l2.5 11h8"/></svg> 离线购物车有 ' + countReq.result + ' 件商品，联网后将自动同步';
+                            }
+                        };
+                    }
+                };
+            }
+        })();
     </script>
 </body>
 </html>

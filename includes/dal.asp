@@ -9,6 +9,7 @@
 ' ADO 常量定义
 Const DAL_adInteger = 3      ' adInteger
 Const DAL_adVarChar = 200    ' adVarChar
+Const DAL_adVarWChar = 202  ' adVarWChar (Unicode, V18社区功能需要)
 Const DAL_adBoolean = 11     ' adBoolean
 Const DAL_adCurrency = 6     ' adCurrency
 Const DAL_adDate = 7         ' adDate

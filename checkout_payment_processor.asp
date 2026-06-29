@@ -33,6 +33,59 @@ If paymentMethod <> "" Then
         finalAmount = discountedGrandTotal + SHIPPING_FEE
     End If
     
+    ' V18: 积分抵扣处理
+    Dim pointsToRedeem, pointsDiscount, pointsRedeemed
+    pointsToRedeem = 0
+    pointsDiscount = 0
+    pointsRedeemed = 0
+    If FEATURE_POINTS_SYSTEM Then
+        pointsToRedeem = Request.Form("points_to_redeem")
+        If pointsToRedeem = "" Then pointsToRedeem = 0
+        If Not IsNumeric(pointsToRedeem) Then pointsToRedeem = 0
+        pointsToRedeem = CLng(pointsToRedeem)
+        If pointsToRedeem > 0 Then
+            ' 验证积分是否足够
+            Dim availPts, maxRedeemable, maxPctVal, redeemRateVal
+            availPts = PE_GetAvailablePoints(userId)
+            redeemRateVal = PE_GetRule("redeem_discount_rate")
+            If redeemRateVal <= 0 Then redeemRateVal = 100
+            maxPctVal = PE_GetRule("max_redeem_pct") / 100
+            If maxPctVal <= 0 Then maxPctVal = 0.3
+            maxRedeemable = Int(discountedGrandTotal * maxPctVal * redeemRateVal)
+            If pointsToRedeem > availPts Then pointsToRedeem = availPts
+            If pointsToRedeem > maxRedeemable Then pointsToRedeem = maxRedeemable
+            pointsDiscount = CDbl(pointsToRedeem) / CDbl(redeemRateVal)
+            If pointsDiscount > discountedGrandTotal Then
+                pointsDiscount = discountedGrandTotal
+            End If
+            finalAmount = finalAmount - pointsDiscount
+            If finalAmount < 0 Then finalAmount = 0
+            pointsRedeemed = pointsToRedeem
+        End If
+    End If
+    
+    ' V18: 优惠券处理
+    Dim couponCode, couponDiscount, couponApplied
+    couponCode = ""
+    couponDiscount = 0
+    couponApplied = False
+    If FEATURE_COUPON_SYSTEM Then
+        couponCode = Trim(Request.Form("coupon_code"))
+        If couponCode <> "" Then
+            Dim couponResult
+            Set couponResult = PE_CouponValidate(couponCode, userId, discountedGrandTotal)
+            If couponResult("valid") Then
+                couponDiscount = CDbl(couponResult("discount"))
+                finalAmount = finalAmount - couponDiscount
+                If finalAmount < 0 Then finalAmount = 0
+                couponApplied = True
+            Else
+                Session("ErrorMessage") = "优惠码无效: " & couponResult("message")
+            End If
+            Set couponResult = Nothing
+        End If
+    End If
+    
     ' 判断是否是已存在订单模式
     If isExistingOrder Then
         orderId = existingOrderId
@@ -289,6 +342,29 @@ If paymentMethod <> "" Then
                 
                 If paymentResult Then
                     If Not isExistingOrder Then
+                        ' V18: 积分处理
+                        If FEATURE_POINTS_SYSTEM Then
+                            ' 扣除已使用的积分
+                            If pointsRedeemed > 0 Then
+                                Call PE_RedeemPoints(userId, pointsRedeemed, "redeem_discount", orderId)
+                            End If
+                            ' 消费获得积分（按折后实付金额）
+                            Dim orderPoints, earnedDesc
+                            orderPoints = PE_CalcOrderPoints(discountedGrandTotal - pointsDiscount)
+                            If orderPoints > 0 Then
+                                earnedDesc = "Order #" & orderId & " purchase"
+                                Call PE_EarnPoints(userId, orderPoints, "purchase", orderId, earnedDesc)
+                            End If
+                            ' 更新 Orders 表积分字段
+                            conn.Execute "UPDATE Orders SET PointsEarned = " & orderPoints & ", PointsRedeemed = " & pointsRedeemed & ", PointsDiscount = " & pointsDiscount & " WHERE OrderID = " & orderId
+                        End If
+                        
+                        ' V18: 优惠券使用标记
+                        If FEATURE_COUPON_SYSTEM And couponApplied And couponCode <> "" Then
+                            Call PE_CouponUse(couponCode, userId, orderId)
+                            conn.Execute "UPDATE Orders SET CouponDiscount = " & couponDiscount & " WHERE OrderID = " & orderId
+                        End If
+                        
                         Dim actualDeleteClause2
                         If IsEmpty(deleteClause) Then
                             actualDeleteClause2 = whereClause

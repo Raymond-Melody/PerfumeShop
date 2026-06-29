@@ -38,7 +38,8 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
     <link rel="stylesheet" href="/css/style.css?v=17.0">
     <link rel="stylesheet" href="/css/pages.css?v=17.0">
     <link rel="stylesheet" href="/css/buttons.css?v=17.0">
-    <link rel="stylesheet" href="/css/responsive.css?v=17.0">
+    <link rel="stylesheet" href="/css/responsive.css?v=18.0">
+    <link rel="stylesheet" href="/css/mobile-first.css?v=18.0" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="/css/lazy-load.css?v=17.0" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="/css/cart-animation.css?v=17.0" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="/css/filter-optimization.css?v=17.0">
@@ -47,6 +48,7 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <% If amphtmlLink <> "" Then Response.Write amphtmlLink %>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/js/mobile-gestures.js?v=18.0" defer></script>
     <!-- V17.0 搜索建议CSS -->
     <style nonce="<%= Session("csp_nonce") %>">
     .search-box { position: relative; }
@@ -61,6 +63,20 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
     .lang-link:hover { color: #fff; }
     .lang-link.active { color: #fff; font-weight: bold; }
     .lang-divider { color: rgba(255,255,255,0.4); margin: 0 3px; }
+    /* V18: Cookie 同意横幅 */
+    .cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #2d3748; color: #fff; z-index: 9999; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); animation: cookieSlideUp 0.5s ease; }
+    @keyframes cookieSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .cookie-banner-inner { max-width: 1200px; margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .cookie-icon { font-size: 1.5rem; opacity: 0.8; flex-shrink: 0; }
+    .cookie-text { flex: 1; min-width: 250px; }
+    .cookie-text p { margin: 0; font-size: 0.9rem; line-height: 1.5; opacity: 0.9; }
+    .cookie-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+    .cookie-actions .btn-sm { padding: 8px 16px; font-size: 0.85rem; }
+    .cookie-actions .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; }
+    .cookie-actions .btn-outline:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+    .cookie-link { color: rgba(255,255,255,0.7); font-size: 0.85rem; text-decoration: underline; white-space: nowrap; }
+    .cookie-link:hover { color: #fff; }
+    @media (max-width: 640px) { .cookie-banner-inner { flex-direction: column; align-items: flex-start; gap: 12px; } .cookie-actions { width: 100%; } }
     </style>
     <script nonce="<%= Session("csp_nonce") %>">
     // V17.0 搜索建议功能
@@ -161,6 +177,36 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
     </script>
 </head>
 <body>
+    <%
+    ' V18: GDPR Cookie 同意横幅
+    If FEATURE_GDPR_COMPLIANCE Then
+        Dim cookieConsent
+        cookieConsent = Request.Cookies("cookie_consent")
+        If cookieConsent = "" Then
+    %>
+    <div id="cookieBanner" class="cookie-banner">
+        <div class="cookie-banner-inner">
+            <div class="cookie-icon"><i class="fas fa-cookie-bite"></i></div>
+            <div class="cookie-text">
+                <p><% If FEATURE_I18N Then %><%= T("cookie_banner_text", Empty) %><% Else %>本网站使用 Cookie 来提升您的浏览体验、分析网站流量并提供个性化推荐。继续使用即表示您同意我们的 Cookie 政策。<% End If %></p>
+            </div>
+            <div class="cookie-actions">
+                <button class="btn btn-primary btn-sm" onclick="acceptCookies('all')">
+                    <% If FEATURE_I18N Then %><%= T("cookie_accept_all", Empty) %><% Else %>全部接受<% End If %>
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="acceptCookies('essential')">
+                    <% If FEATURE_I18N Then %><%= T("cookie_accept_essential", Empty) %><% Else %>仅必要<% End If %>
+                </button>
+                <a href="/user/privacy.asp" class="cookie-link">
+                    <% If FEATURE_I18N Then %><%= T("cookie_learn_more", Empty) %><% Else %>了解更多<% End If %>
+                </a>
+            </div>
+        </div>
+    </div>
+    <%
+        End If
+    End If
+    %>
     <!-- V11 移动端导航组件 -->
     <!--#include file="mobile_nav.asp"-->
     
@@ -255,7 +301,7 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
                             navIcon = navTypes(nIdx, 4)  ' Icon
                             If navName <> "" Then  ' 只显示有NavName的类型
                 %>
-                <li><a href="/products.asp?type=<%= Server.URLEncode(navCode) %>"><i class="<%= Server.HTMLEncode(navIcon) %>"></i> <%= Server.HTMLEncode(navName) %></a></li>
+                <li><a href="/products.asp?type=<%= Server.URLEncode(navCode) %>"><i class="<%= Server.HTMLEncode(navIcon) %>"></i> <%= Server.HTMLEncode(GetProductTypeI18nName(navCode, navName, "nav")) %></a></li>
                 <%
                             End If
                         Next
@@ -265,9 +311,28 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
                 %>
                 <li><a href="/about.asp"><i class="fas fa-book"></i> <% If FEATURE_I18N Then Response.Write T("about", Empty) Else Response.Write "品牌故事" End If %></a></li>
                 <li><a href="/contact.asp"><i class="fas fa-envelope"></i> <% If FEATURE_I18N Then Response.Write T("contact", Empty) Else Response.Write "联系我们" End If %></a></li>
+                <% If FEATURE_FLASH_SALE Then %>
+                <li><a href="/flash_sale.asp" class="nav-hot"><i class="fas fa-bolt"></i> 秒杀</a></li>
+                <% End If %>
+                <% If FEATURE_GROUP_BUY Then %>
+                <li><a href="/group_buy.asp" class="nav-hot"><i class="fas fa-users"></i> 拼团</a></li>
+                <% End If %>
+                <% If FEATURE_SUBSCRIPTION Then %>
+                <li><a href="/subscribe.asp" class="nav-hot"><i class="fas fa-box-open"></i> 订阅</a></li>
+                <% End If %>
+                <% If FEATURE_COMMUNITY Then %>
+                <li><a href="/community.asp" class="nav-hot"><i class="fas fa-comments"></i> 社区</a></li>
+                <% End If %>
             </ul>
         </div>
     </nav>
+
+    <style nonce="<%= Session("csp_nonce") %>">
+    /* V18: 秒杀/拼团热链样式 */
+    .nav-hot { color: #ff6b35 !important; font-weight: 600; position: relative; }
+    .nav-hot::after { content: 'HOT'; position: absolute; top: -6px; right: -20px; font-size: 9px; background: linear-gradient(135deg, #ff416c, #ff4b2b); color: #fff; padding: 1px 4px; border-radius: 3px; line-height: 1; }
+    .nav-hot:hover { color: #ff416c !important; }
+    </style>
 
     <!-- V11.1 PWA Service Worker注册 -->
     <script nonce="<%= Session("csp_nonce") %>">
@@ -278,7 +343,27 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
                 .catch(err => console.error('[PWA] SW failed:', err));
         });
     }
+    // V18: Cookie 同意处理
+    function acceptCookies(level) {
+        var d = new Date();
+        d.setFullYear(d.getFullYear() + 1);
+        document.cookie = 'cookie_consent=' + level + '; expires=' + d.toUTCString() + '; path=/; SameSite=Lax';
+        var banner = document.getElementById('cookieBanner');
+        if (banner) {
+            banner.style.animation = 'cookieSlideDown 0.3s ease forwards';
+            setTimeout(function() { banner.style.display = 'none'; }, 300);
+        }
+        ' V18: 记录 Cookie 同意（通过 fetch 发送到后端）
+        fetch('/api/cookie_consent.asp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'consent=' + encodeURIComponent(level) + '&csrf_token=' + encodeURIComponent(csrfToken)
+        }).catch(function() {});
+    }
     </script>
+    <style nonce="<%= Session("csp_nonce") %>">
+    @keyframes cookieSlideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
+    </style>
 
     <!-- 主内容区 -->
     <main class="main-content">

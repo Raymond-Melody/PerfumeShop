@@ -24,6 +24,102 @@
                 </div>
                 <% End If %>
                 
+                <% If FEATURE_COUPON_SYSTEM Then %>
+                <div class="summary-row coupon-row" style="background:#e8f5e9;margin:8px 0;padding:10px 12px;border-radius:8px;border:1px dashed #4CAF50;">
+                    <span><i class="fas fa-ticket-alt" style="color:#4CAF50;"></i> 优惠码:</span>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <input type="text" 
+                               id="couponCode" 
+                               name="coupon_code" 
+                               value="" 
+                               style="width:150px;padding:6px 10px;border:1px solid #4CAF50;border-radius:6px;font-size:14px;text-transform:uppercase;"
+                               placeholder="输入优惠码">
+                        <button type="button" class="btn btn-sm" onclick="validateCoupon()" style="background:#4CAF50;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;">验证</button>
+                        <span id="couponStatus" style="font-size:12px;"></span>
+                    </div>
+                </div>
+                <script>
+                var couponApplied = false;
+                var couponDiscount = 0;
+                function validateCoupon() {
+                    var code = document.getElementById('couponCode').value.trim();
+                    var statusEl = document.getElementById('couponStatus');
+                    if (!code) { statusEl.innerHTML = ''; couponApplied = false; couponDiscount = 0; return; }
+                    statusEl.innerHTML = '<span style="color:#888;"><i class="fas fa-spinner fa-spin"></i> 验证中...</span>';
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/coupon_validate.asp', true);
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr.onload = function() {
+                        try {
+                            var resp = JSON.parse(xhr.responseText);
+                            if (resp.success) {
+                                statusEl.innerHTML = '<span style="color:#4CAF50;font-weight:bold;"><i class="fas fa-check-circle"></i> 可优惠 ¥' + resp.data.discount.toFixed(2) + '</span>';
+                                couponApplied = true;
+                                couponDiscount = resp.data.discount;
+                            } else {
+                                statusEl.innerHTML = '<span style="color:#f44336;">' + resp.message + '</span>';
+                                couponApplied = false;
+                                couponDiscount = 0;
+                            }
+                        } catch(e) {
+                            statusEl.innerHTML = '<span style="color:#f44336;">网络错误</span>';
+                        }
+                    };
+                    xhr.send('code=' + encodeURIComponent(code) + '&cart_total=' + <%= discountedGrandTotal %>);
+                }
+                </script>
+                <% End If %>
+                
+                <% If FEATURE_POINTS_SYSTEM Then
+                    Dim userAvailablePoints, maxRedeemPoints, redeemRate, maxRedeemPct, maxRedeemValue
+                    userAvailablePoints = PE_GetAvailablePoints(userId)
+                    redeemRate = PE_GetRule("redeem_discount_rate")
+                    If redeemRate <= 0 Then redeemRate = 100
+                    maxRedeemPct = PE_GetRule("max_redeem_pct") / 100
+                    If maxRedeemPct <= 0 Then maxRedeemPct = 0.3
+                    maxRedeemValue = discountedGrandTotal * maxRedeemPct
+                    maxRedeemPoints = Int(maxRedeemValue * redeemRate)
+                    If maxRedeemPoints > userAvailablePoints Then maxRedeemPoints = userAvailablePoints
+                    If maxRedeemPoints < 0 Then maxRedeemPoints = 0
+                %>
+                <div class="summary-row points-redeem-row" style="background:#fff8e1;margin:8px 0;padding:10px 12px;border-radius:8px;border:1px dashed #ffcc02;">
+                    <span><i class="fas fa-coins" style="color:#ff8f00;"></i> 积分抵扣 (可用 <strong><%= userAvailablePoints %></strong> 积分):</span>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <input type="number" 
+                               id="pointsToRedeem" 
+                               name="points_to_redeem" 
+                               min="0" 
+                               max="<%= maxRedeemPoints %>" 
+                               value="0" 
+                               step="<%= CInt(redeemRate) %>"
+                               style="width:110px;padding:6px 10px;border:1px solid #ffcc02;border-radius:6px;font-size:14px;text-align:center;"
+                               onchange="updatePointsPreview()" 
+                               oninput="updatePointsPreview()"
+                               placeholder="0">
+                        <button type="button" class="btn btn-sm" onclick="useAllPoints()" style="background:#ff8f00;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;">全部使用</button>
+                        <span id="pointsValuePreview" style="font-size:13px;color:#e65100;">-¥0.00</span>
+                    </div>
+                </div>
+                <script>
+                var redeemRate = <%= redeemRate %>;
+                var maxRedeem = <%= maxRedeemPoints %>;
+                function updatePointsPreview() {
+                    var input = document.getElementById('pointsToRedeem');
+                    var preview = document.getElementById('pointsValuePreview');
+                    var val = parseInt(input.value) || 0;
+                    if (val < 0) { input.value = 0; val = 0; }
+                    if (val > maxRedeem) { input.value = maxRedeem; val = maxRedeem; }
+                    var discount = (val / redeemRate).toFixed(2);
+                    preview.textContent = '-¥' + discount;
+                }
+                function useAllPoints() {
+                    var input = document.getElementById('pointsToRedeem');
+                    input.value = maxRedeem;
+                    updatePointsPreview();
+                }
+                </script>
+                <% End If %>
+                
                 <div class="summary-row">
                     <span><% If FEATURE_I18N Then %><%= T("cart_summary_shipping", Empty) %><% Else %>运费<% End If %>:</span>
                     <% If discountedGrandTotal >= FREE_SHIPPING_AMOUNT Then %>
@@ -152,8 +248,16 @@
                         <i class="fas fa-exclamation-triangle"></i> <% If FEATURE_I18N Then %><%= T("checkout_no_payment", Empty) %><% Else %>暂无可用的支付方式，请联系客服。<% End If %>
                     </div>
                     <% End If %>
-                    
-                    <button type="submit" class="btn btn-primary btn-lg btn-block">
+
+                    <!-- V18: 记住支付方式 -->
+                    <div class="remember-payment" style="margin:16px 0;display:flex;align-items:center;gap:10px;">
+                        <label class="checkbox-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" name="remember_payment" value="1" id="rememberPayment" style="width:18px;height:18px;">
+                            <span style="font-size:0.9rem;color:#666;"><% If FEATURE_I18N Then %>记住我的支付方式<% Else %>记住我的支付方式<% End If %></span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg btn-block" style="padding:14px 24px;font-size:1rem;border-radius:10px;">
                         <i class="fas fa-check"></i> <% If FEATURE_I18N Then %><%= T("checkout_confirm_pay", Empty) %><% Else %>确认订单并支付<% End If %>
                     </button>
                 </form>

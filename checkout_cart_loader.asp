@@ -126,10 +126,9 @@ If Not isExistingOrder Then
     Dim grandTotal
     grandTotal = cartTotal + totalEngravingFee
 
-    ' 计算会员折扣
+    ' 计算会员折扣（V18: 自动适配新旧等级系统）
     Dim memberLevel, memberDiscount, memberDiscountAmount, discountedGrandTotal
-    memberLevel = MU_CalcUserLevel(userId)
-    memberDiscount = MU_GetLevelDiscount(memberLevel)
+    memberDiscount = MU_GetEffectiveDiscountRate(userId)
     If memberDiscount < 1.0 Then
         memberDiscountAmount = grandTotal * (1 - memberDiscount)
         discountedGrandTotal = grandTotal - memberDiscountAmount
@@ -148,8 +147,7 @@ Else
     cartTotal = CDbl(rsExistingOrder("TotalAmount"))
     cartCount = 1
     grandTotal = cartTotal
-    memberLevel = MU_CalcUserLevel(userId)
-    memberDiscount = MU_GetLevelDiscount(memberLevel)
+    memberDiscount = MU_GetEffectiveDiscountRate(userId)
     If memberDiscount < 1.0 Then
         memberDiscountAmount = grandTotal * (1 - memberDiscount)
         discountedGrandTotal = grandTotal - memberDiscountAmount

@@ -4,7 +4,7 @@
  */
 
 // ── 缓存配置 ──
-var CACHE_VERSION = 'perfumeshop-v16';
+var CACHE_VERSION = 'perfumeshop-v18';
 var CACHE_STATIC = CACHE_VERSION + '-static';
 var CACHE_DYNAMIC = CACHE_VERSION + '-dynamic';
 var CACHE_IMAGES = CACHE_VERSION + '-images';
@@ -22,20 +22,29 @@ var STATIC_ASSETS = [
   '/products.asp',
   '/about.asp',
   '/contact.asp',
-  '/css/design-tokens.css?v=16.0',
-  '/css/style.css?v=16.0',
-  '/css/pages.css?v=16.0',
-  '/css/buttons.css?v=16.0',
-  '/css/responsive.css?v=16.0',
-  '/css/lazy-load.css?v=16.0',
-  '/css/cart-animation.css?v=16.0',
-  '/css/filter-optimization.css?v=16.0',
-  '/css/theme.css?v=16.0',
-  '/css/skeleton.css?v=16.0',
-  '/js/main.js?v=16.0',
-  '/js/lazy-load.js?v=16.0',
-  '/js/theme-toggle.js?v=16.0',
-  '/js/skeleton-loader.js?v=16.0',
+  '/customize.asp',
+  '/subscribe.asp',
+  '/community.asp',
+  '/flash_sale.asp',
+  '/group_buy.asp',
+  '/fragrance_quiz.asp',
+  '/css/design-tokens.css?v=18.0',
+  '/css/style.css?v=18.0',
+  '/css/pages.css?v=18.0',
+  '/css/buttons.css?v=18.0',
+  '/css/responsive.css?v=18.0',
+  '/css/mobile-first.css?v=18.0',
+  '/css/lazy-load.css?v=18.0',
+  '/css/cart-animation.css?v=18.0',
+  '/css/filter-optimization.css?v=18.0',
+  '/css/theme.css?v=18.0',
+  '/css/skeleton.css?v=18.0',
+  '/js/main.js?v=18.0',
+  '/js/lazy-load.js?v=18.0',
+  '/js/theme-toggle.js?v=18.0',
+  '/js/skeleton-loader.js?v=18.0',
+  '/js/mobile-gestures.js?v=18.0',
+  '/js/push-manager.js?v=18.0',
   '/images/default-product.svg',
   '/images/default-avatar.svg',
   OFFLINE_PAGE,
@@ -115,15 +124,15 @@ function purgeExpiredCache(cacheName, maxAge) {
 
 // ── 安装事件 ──
 self.addEventListener('install', function(event) {
-  console.log('[SW V16] Installing...');
+  console.log('[SW V18] Installing...');
   event.waitUntil(
     caches.open(CACHE_STATIC)
       .then(function(cache) {
-        console.log('[SW V16] Caching ' + STATIC_ASSETS.length + ' static assets...');
+        console.log('[SW V18] Caching ' + STATIC_ASSETS.length + ' static assets...');
         // 逐个缓存，允许单个失败不影响整体
         var promises = STATIC_ASSETS.map(function(url) {
           return cache.add(url).catch(function(err) {
-            console.warn('[SW V16] Failed to cache: ' + url, err.message);
+            console.warn('[SW V18] Failed to cache: ' + url, err.message);
           });
         });
         return Promise.all(promises);
@@ -136,14 +145,14 @@ self.addEventListener('install', function(event) {
 
 // ── 激活事件 ──
 self.addEventListener('activate', function(event) {
-  console.log('[SW V16] Activating...');
+  console.log('[SW V18] Activating...');
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       // 清理所有旧版本缓存
       var deletions = cacheNames.filter(function(name) {
         return name.indexOf('perfumeshop') === 0 && name !== CACHE_STATIC && name !== CACHE_DYNAMIC && name !== CACHE_IMAGES;
       }).map(function(name) {
-        console.log('[SW V16] Removing old cache: ' + name);
+        console.log('[SW V18] Removing old cache: ' + name);
         return caches.delete(name);
       });
       return Promise.all(deletions);
@@ -350,20 +359,80 @@ self.addEventListener('notificationclick', function(event) {
 
 // ── 后台同步 ──
 self.addEventListener('sync', function(event) {
+  console.log('[SW V18] Background sync: ' + event.tag);
   if (event.tag === 'sync-cart') {
     event.waitUntil(syncCartData());
+  } else if (event.tag === 'sync-review') {
+    event.waitUntil(syncReviewData());
+  } else if (event.tag === 'sync-order') {
+    event.waitUntil(syncOrderData());
   }
 });
 
 // 购物车数据同步
 function syncCartData() {
-  return self.clients.matchAll({ type: 'window' }).then(function(clients) {
-    return Promise.all(clients.map(function(client) {
-      return client.postMessage({
-        type: 'SYNC_CART',
-        timestamp: Date.now()
-      });
-    }));
+  return syncOfflineQueue('cart');
+}
+
+function syncReviewData() {
+  return syncOfflineQueue('review');
+}
+
+function syncOrderData() {
+  return syncOfflineQueue('order');
+}
+
+function syncOfflineQueue(queueType) {
+  return openIDB().then(function(db) {
+    var tx = db.transaction('offlineQueue', 'readonly');
+    var store = tx.objectStore('offlineQueue');
+    var index = store.index('type');
+    return index.getAll(queueType);
+  }).then(function(items) {
+    if (!items || items.length === 0) return;
+    var promises = items.map(function(item) {
+      return fetch(item.url, {
+        method: item.method || 'POST',
+        headers: item.headers || { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: item.body
+      }).then(function(response) {
+        if (response.ok) {
+          return deleteFromQueue(item.id);
+        }
+      }).catch(function() {});
+    });
+    return Promise.all(promises);
+  });
+}
+
+// IndexedDB 操作
+function openIDB() {
+  return new Promise(function(resolve, reject) {
+    var request = indexedDB.open('PerfumeShopOffline', 1);
+    request.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains('offlineQueue')) {
+        var store = db.createObjectStore('offlineQueue', { keyPath: 'id', autoIncrement: true });
+        store.createIndex('type', 'type', { unique: false });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('offlineCart')) {
+        db.createObjectStore('offlineCart', { keyPath: 'productId' });
+      }
+      if (!db.objectStoreNames.contains('offlineOrders')) {
+        db.createObjectStore('offlineOrders', { keyPath: 'orderId' });
+      }
+    };
+    request.onsuccess = function(e) { resolve(e.target.result); };
+    request.onerror = function(e) { reject(e.target.error); };
+  });
+}
+
+function deleteFromQueue(id) {
+  return openIDB().then(function(db) {
+    var tx = db.transaction('offlineQueue', 'readwrite');
+    tx.objectStore('offlineQueue').delete(id);
+    return tx.complete;
   });
 }
 
@@ -401,4 +470,4 @@ self.addEventListener('message', function(event) {
   }
 });
 
-console.log('[SW V16] Service Worker loaded');
+console.log('[SW V18] Service Worker loaded');

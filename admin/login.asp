@@ -16,6 +16,7 @@ End If
 <!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/dal_users.asp"-->
 <!--#include file="../includes/password_utils.asp"-->
+<!--#include file="../includes/rate_limiter.asp"-->
 <%
 
 ' === 打开数据库连接 ===
@@ -43,8 +44,11 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
         password = Request.Form("password")
         rememberMe = Request.Form("remember_me")
         
-        ' 速率限制检查
-        If IsLoginLocked("Admin") Then
+        ' V18: 令牌桶速率限制（IP级别防暴力破解）
+        If FEATURE_RATE_LIMITER And Not RateLimitCheck("login") Then
+            errorMessage = T("admin_login_locked", Empty)
+        ' 会话级锁定检查（V17兼容）
+        ElseIf IsLoginLocked("Admin") Then
             errorMessage = T("admin_login_locked", Empty)
         ElseIf username = "" Or password = "" Then
             errorMessage = T("admin_login_empty_fields", Empty)

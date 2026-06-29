@@ -3,7 +3,7 @@
 Response.Buffer = True
 Response.ContentType = "application/json"
 Response.Charset = "UTF-8"
-%><!--#include file="../includes/config.asp"--><!--#include file="../includes/connection.asp"--><!--#include file="../includes/upload_utils.asp"--><%
+%><!--#include file="../includes/config.asp"--><!--#include file="../includes/connection.asp"--><!--#include file="../includes/upload_utils.asp"--><!--#include file="../includes/api_guard.asp"--><%
 Response.Clear
 Response.ContentType = "application/json"
 Response.Charset = "UTF-8"
@@ -30,6 +30,9 @@ If Session("AdminID") = "" Or IsEmpty(Session("AdminID")) Then
     Response.Write resultJson
     Response.End
 End If
+
+' V18: API 守卫（速率限制）
+If Not API_Guard("api", False) Then Response.End
 
 ' 3. 创建 MultipartParser 实例并解析请求
 Set parser = New MultipartParser

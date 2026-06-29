@@ -12,6 +12,7 @@ Response.ContentType = "application/json"
 <!--#include file="../includes/dal.asp"-->
 <!--#include file="../includes/api_response.asp"-->
 <!--#include file="../includes/audit_utils.asp"-->
+<!--#include file="../includes/api_guard.asp"-->
 <%
 Call OpenConnection()
 
@@ -23,6 +24,9 @@ If Session("AdminID") = "" Then
     Call API_Error(API_ERR_AUTH_REQUIRED, "请先登录管理后台")
     Response.End
 End If
+
+' V18: API 守卫（速率限制）
+If Not API_Guard("api", False) Then Response.End
 
 If Not API_CheckCSRF() Then
     Call API_Error(API_ERR_CSRF_INVALID, "安全验证失败")

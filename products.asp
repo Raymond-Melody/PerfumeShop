@@ -65,9 +65,39 @@ Else
 End If
 
 If keyword <> "" Then
-    ' V17: 使用SafeLike防止SQL注入和LIKE通配符注入，加权排序（名称匹配优先）
-    whereClause = whereClause & " AND (p.ProductName LIKE '%" & SafeLike(keyword) & "%' OR p.Description LIKE '%" & SafeLike(keyword) & "%')"
-    orderClause = " ORDER BY CASE WHEN p.ProductName LIKE '" & SafeLike(keyword) & "%' THEN 0 WHEN p.ProductName LIKE '%" & SafeLike(keyword) & "%' THEN 1 ELSE 2 END, ISNULL(p.CreatedAt, '2099-12-31') DESC, p.ProductID DESC"
+    ' V18: AI增强搜索 - 相关性评分 + 同义词扩展
+    Dim safeKw, expandedWhere
+    safeKw = SafeLike(keyword)
+    
+    ' 基础匹配（名称+描述）
+    expandedWhere = " AND (p.ProductName LIKE '%" & safeKw & "%' OR p.Description LIKE '%" & safeKw & "%' OR p.Category LIKE '%" & safeKw & "%')"
+    
+    ' V18: 同义词扩展搜索
+    If FEATURE_AI_SEARCH Then
+        Dim synonymKw
+        synonymKw = SEARCH_ExpandSearchKeywords(keyword)
+        If synonymKw <> "" Then
+            expandedWhere = expandedWhere & " OR p.ProductName LIKE '%" & synonymKw & "%' OR p.Description LIKE '%" & synonymKw & "%'"
+        End If
+        ' 拼音扩展
+        Dim pinyinKw
+        pinyinKw = SEARCH_PinyinExpand(keyword)
+        If pinyinKw <> "" Then
+            expandedWhere = expandedWhere & " OR p.ProductName LIKE '%" & pinyinKw & "%'"
+        End If
+    End If
+    
+    whereClause = whereClause & expandedWhere
+    
+    ' V18: 加权相关性排序
+    ' 分数: 精确名称匹配=100, 名称开头=80, 名称包含=50, 描述包含=25, 分类包含=15
+    orderClause = " ORDER BY (" & _
+        "CASE WHEN p.ProductName = '" & safeKw & "' THEN 100 ELSE 0 END + " & _
+        "CASE WHEN p.ProductName LIKE '" & safeKw & "%' THEN 80 ELSE 0 END + " & _
+        "CASE WHEN p.ProductName LIKE '%" & safeKw & "%' THEN 50 ELSE 0 END + " & _
+        "CASE WHEN p.Description LIKE '%" & safeKw & "%' THEN 25 ELSE 0 END + " & _
+        "CASE WHEN p.Category LIKE '%" & safeKw & "%' THEN 15 ELSE 0 END" & _
+        ") DESC, ISNULL(p.CreatedAt, '2099-12-31') DESC, p.ProductID DESC"
 End If
 
 Select Case sortBy
@@ -127,7 +157,7 @@ If page > totalPages Then page = totalPages
                             fCode = activeTypes(fIdx, 0)
                             fName = activeTypes(fIdx, 1)
                     %>
-                    <li><a href="/products.asp?type=<%= Server.URLEncode(fCode) %>" class="<%= IIf(productType = fCode, "active", "") %>"><%= Server.HTMLEncode(fName) %></a></li>
+                    <li><a href="/products.asp?type=<%= Server.URLEncode(fCode) %>" class="<%= IIf(productType = fCode, "active", "") %>"><%= Server.HTMLEncode(GetProductTypeI18nName(fCode, fName, "display")) %></a></li>
                     <%
                         Next
                     End If
@@ -237,7 +267,7 @@ If page > totalPages Then page = totalPages
                             <% ElseIf pType = "KOL" Then %>
                             <span class="badge badge-kol"><% If FEATURE_I18N Then %><%= T("products_badge_kol", Empty) %><% Else %>KOL推荐<% End If %></span>
                             <% End If %>
-                            <% If pCategory = "奢华系列" Then %>
+                            <% If pCategory = "奢华系列" Or pCategory = "Luxury" Then %>
                             <span class="badge badge-premium"><% If FEATURE_I18N Then %><%= T("products_badge_premium", Empty) %><% Else %>奢华<% End If %></span>
                             <% End If %>
                         </div>
@@ -249,7 +279,7 @@ If page > totalPages Then page = totalPages
                         </div>
                     </div>
                     <div class="product-info">
-                        <span class="product-category"><%= HTMLEncode(pCategory) %></span>
+                        <span class="product-category"><% If FEATURE_I18N And pCategory = "奢华系列" Then %><%= T("products_badge_premium", Empty) %><% Else %><%= HTMLEncode(pCategory) %><% End If %></span>
                         <h3><a href="/product.asp?id=<%= pId %>"><%= HTMLEncode(rsProducts("ProductName")) %></a></h3>
                         <p class="product-desc"><%= HTMLEncode(Left(rsProducts("Description") & "", 60)) %>...</p>
                         <div class="product-footer">
@@ -347,5 +377,60 @@ function quickView(productId) {
 
 <!--#include file="includes/footer.asp"-->
 <%
+' ============================================
+' V18 AI增强搜索辅助函数
+' ============================================
+
+' 同义词扩展：将搜索关键词映射为同义词用于SQL LIKE扩展
+' 输入: "清新" → 输出: "海洋"
+Function SEARCH_ExpandSearchKeywords(keyword)
+    Dim kw
+    kw = LCase(Trim(keyword))
+    Select Case kw
+        Case "清新", "清爽", "干净": SEARCH_ExpandSearchKeywords = SafeLike("海洋")
+        Case "浓郁", "持久", "浓香": SEARCH_ExpandSearchKeywords = SafeLike("木质")
+        Case "温柔", "柔和", "淡雅": SEARCH_ExpandSearchKeywords = SafeLike("花香")
+        Case "阳光", "活力", "运动": SEARCH_ExpandSearchKeywords = SafeLike("柑橘")
+        Case "性感", "神秘", "魅惑": SEARCH_ExpandSearchKeywords = SafeLike("麝香")
+        Case "成熟", "稳重", "经典": SEARCH_ExpandSearchKeywords = SafeLike("木质")
+        Case "甜美", "可爱", "少女": SEARCH_ExpandSearchKeywords = SafeLike("果香")
+        Case "中性", "百搭", "日常": SEARCH_ExpandSearchKeywords = SafeLike("柑橘")
+        Case Else: SEARCH_ExpandSearchKeywords = ""
+    End Select
+End Function
+
+' 拼音扩展：将拼音输入映射为中文搜索词
+' 输入: "hua" → 输出: "花香"
+' 输入: "ganju" → 输出: "柑橘"
+Function SEARCH_PinyinExpand(keyword)
+    Dim kw
+    kw = LCase(Trim(keyword))
+    Select Case kw
+        Case "hua", "huaxiang":           SEARCH_PinyinExpand = SafeLike("花香")
+        Case "ganju", "juzi":             SEARCH_PinyinExpand = SafeLike("柑橘")
+        Case "muzhi", "mu":               SEARCH_PinyinExpand = SafeLike("木质")
+        Case "dongfang":                  SEARCH_PinyinExpand = SafeLike("东方")
+        Case "qingxin", "qing":           SEARCH_PinyinExpand = SafeLike("清新")
+        Case "haian", "haiyang", "hai":   SEARCH_PinyinExpand = SafeLike("海洋")
+        Case "meigui", "gui":             SEARCH_PinyinExpand = SafeLike("玫瑰")
+        Case "moli":                      SEARCH_PinyinExpand = SafeLike("茉莉")
+        Case "tanxiang", "tan":           SEARCH_PinyinExpand = SafeLike("檀香")
+        Case "xuesong", "song":           SEARCH_PinyinExpand = SafeLike("雪松")
+        Case "hupo":                      SEARCH_PinyinExpand = SafeLike("琥珀")
+        Case "shexiang", "she":           SEARCH_PinyinExpand = SafeLike("麝香")
+        Case "xiangcao":                  SEARCH_PinyinExpand = SafeLike("香草")
+        Case "guoxiang", "guo":           SEARCH_PinyinExpand = SafeLike("果香")
+        Case "xiangshui":                 SEARCH_PinyinExpand = SafeLike("香水")
+        Case "dingzhi":                   SEARCH_PinyinExpand = SafeLike("定制")
+        Case "xiangfen":                  SEARCH_PinyinExpand = SafeLike("香氛")
+        Case "nishi":                     SEARCH_PinyinExpand = SafeLike("女士")
+        Case "nanshi":                    SEARCH_PinyinExpand = SafeLike("男士")
+        Case "zhongxing", "zhong":        SEARCH_PinyinExpand = SafeLike("中性")
+        Case "lvye", "lvcha", "lv":       SEARCH_PinyinExpand = SafeLike("绿茶")
+        Case "xunyi", "xun":              SEARCH_PinyinExpand = SafeLike("薰衣草")
+        Case Else:                        SEARCH_PinyinExpand = ""
+    End Select
+End Function
+
 Call CloseConnection()
 %>

@@ -239,4 +239,57 @@ Function GetActiveTypeCodesForSQL()
     
     GetActiveTypeCodesForSQL = typeCodeList
 End Function
+
+' ============================================
+' V17.2: i18n辅助 - 根据TypeCode获取翻译后的产品类型名称
+' 参数:
+'   typeCode     - 产品类型代码 (如 "Custom", "standard", "kol", "Fixed")
+'   dbName       - 数据库中的名称 (作为回退值)
+'   nameType     - "display" 获取完整显示名, "nav" 获取简短导航名
+' 返回: 翻译后的名称，若翻译缺失则返回数据库原始名称
+' ============================================
+Function GetProductTypeI18nName(typeCode, dbName, nameType)
+    Dim lcType, i18nKey, translated
+    
+    If IsNull(dbName) Or dbName = "" Then
+        GetProductTypeI18nName = ""
+        Exit Function
+    End If
+    
+    ' i18n未启用时直接返回数据库名称
+    If Not FEATURE_I18N Then
+        GetProductTypeI18nName = dbName
+        Exit Function
+    End If
+    
+    lcType = LCase(typeCode & "")
+    
+    ' 构建i18n键名: product_type_<typecode> (display) 或 nav_<typecode> (nav)
+    If nameType = "nav" Then
+        i18nKey = "nav_" & lcType
+        ' 先尝试nav键
+        translated = T(i18nKey, Empty)
+        ' 检查是否命中翻译 (未命中时返回 [key] 格式)
+        If Left(translated, 1) = "[" And Right(translated, 1) = "]" Then
+            ' 回退: 尝试 product_type_<typecode>
+            i18nKey = "product_type_" & lcType
+            translated = T(i18nKey, Empty)
+            If Left(translated, 1) = "[" And Right(translated, 1) = "]" Then
+                GetProductTypeI18nName = dbName
+                Exit Function
+            End If
+        End If
+    Else
+        ' display 名称: 先尝试 product_type_<typecode>
+        i18nKey = "product_type_" & lcType
+        translated = T(i18nKey, Empty)
+        If Left(translated, 1) = "[" And Right(translated, 1) = "]" Then
+            ' 回退到数据库名称
+            GetProductTypeI18nName = dbName
+            Exit Function
+        End If
+    End If
+    
+    GetProductTypeI18nName = translated
+End Function
 %>

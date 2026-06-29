@@ -1113,3 +1113,122 @@ input, button, textarea, select {
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================
+   V18: AI推荐区域样式
+   ============================================ */
+.recommend-section {
+    padding: 50px 0;
+    background: #faf9f7;
+}
+.recommend-section .section-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.recommend-section .section-header h2 {
+    font-size: 26px;
+    color: #333;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.recommend-section .section-header h2 i { color: #ff6f61; }
+.recommend-section .section-header p {
+    color: #888;
+    font-size: 14px;
+}
+.recommendation-section {
+    padding: 40px 0;
+    background: #f8f9fa;
+    margin-top: 30px;
+}
+.recommendation-section .section-title {
+    font-size: 22px;
+    color: #333;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.recommendation-section .section-title i { color: #ff6f61; }
+.recommendation-section .section-desc {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+.recommendation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+}
+.rec-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    border: 1px solid #eee;
+    transition: all 0.3s ease;
+    display: block;
+}
+.rec-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+.rec-img-wrapper {
+    position: relative;
+    height: 180px;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.rec-img-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s;
+}
+.rec-card:hover .rec-img-wrapper img { transform: scale(1.05); }
+.rec-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #ff6f61;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.rec-info {
+    padding: 12px;
+}
+.rec-info h4 {
+    font-size: 14px;
+    color: #333;
+    margin: 0 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rec-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: #e74c3c;
+}
+/* V18: 推荐区块响应式 */
+@media (max-width: 768px) {
+    .recommendation-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    .rec-img-wrapper {
+        height: 140px;
+    }
+    .rec-info h4 {
+        font-size: 13px;
+    }
+}

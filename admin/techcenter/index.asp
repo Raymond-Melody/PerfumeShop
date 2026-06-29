@@ -6,6 +6,8 @@ Response.ContentType = "text/html"
 <!--#include file="includes/auth.asp"-->
 <!--#include file="../../includes/config.asp"-->
 <!--#include file="../../includes/connection.asp"-->
+<!--#include file="../../includes/dal.asp"-->
+<!--#include file="../../includes/dal_techcenter.asp"-->
 <%
 Call OpenConnection()
 
@@ -28,17 +30,14 @@ totalProductTypes = GetScalar("SELECT COUNT(*) FROM ProductTypeConfig WHERE IsAc
 
 ' ========== 供应链对接：配方发布状态 ==========
 Dim accordPublished, productPublished, totalPublishLogs
-accordPublished = 0 : productPublished = 0 : totalPublishLogs = 0
-On Error Resume Next
-accordPublished = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeAccords WHERE Status='Published'"))
-productPublished = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipeProducts WHERE Status='Published'"))
-totalPublishLogs = SafeNum(GetScalar("SELECT COUNT(*) FROM RecipePublishLog"))
+accordPublished = DAL_TC_CountPublishedAccords()
+productPublished = DAL_TC_CountPublishedProducts()
+totalPublishLogs = DAL_TC_CountPublishLogs()
 
 Dim totalRecipes, totalRecipeNotes
-' totalRecipes already defined above as part of another query, use totalRecipes flag
+' V18: 使用 DAL
 Dim totalRecipeCount
-totalRecipeCount = SafeNum(GetScalar("SELECT COUNT(*) FROM Recipes WHERE IsActive=1"))
-On Error GoTo 0
+totalRecipeCount = DAL_TC_CountActiveRecipes()
 
 Function SafeNum(val)
     If IsNull(val) Or val = "" Or Not IsNumeric(val) Then SafeNum = 0 Else SafeNum = CDbl(val)
@@ -46,9 +45,7 @@ End Function
 
 ' ========== 最近发布操作 ==========
 Dim rsRecentPublish
-On Error Resume Next
-Set rsRecentPublish = conn.Execute("SELECT TOP 5 PublishedAt, PublishType, PublishedBy FROM RecipePublishLog ORDER BY PublishedAt DESC")
-On Error GoTo 0
+Set rsRecentPublish = DAL_TC_GetRecentPublishLogs(5)
 
 ' ========== 底部最近更新 ==========
 ' 最近修改的5个产品

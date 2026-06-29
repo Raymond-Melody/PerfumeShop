@@ -9,12 +9,16 @@ Response.Charset = "UTF-8"
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <!--#include file="../includes/audit_utils.asp"-->
+<!--#include file="../includes/api_guard.asp"-->
 <%
 ' 权限检查
 If Session("AdminID") = "" Then
     Response.Write "请先登录管理后台"
     Response.End
 End If
+
+' V18: API 守卫（速率限制）
+If Not API_Guard("api", False) Then Response.End
 
 Call OpenConnection()
 
