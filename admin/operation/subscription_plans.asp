@@ -78,11 +78,41 @@ subTotalSubs = GetScalar("SELECT COUNT(*) FROM UserSubscriptions")
 subActiveSubs = GetScalar("SELECT COUNT(*) FROM UserSubscriptions WHERE Status = 0")
 
 ' 获取编辑中的计划
-Dim subEditData, subEditId
+Dim subEditData, subEditId, subIsEditing
 subEditId = Request.QueryString("edit_id")
 Set subEditData = Nothing
+subIsEditing = False
 If subEditId <> "" And IsNumeric(subEditId) Then
     Set subEditData = conn.Execute("SELECT * FROM SubscriptionPlans WHERE PlanID = " & subEditId)
+    If Not subEditData Is Nothing Then
+        If Not subEditData.EOF Then
+            subIsEditing = True
+        End If
+    End If
+End If
+
+' 预提取编辑数据到变量（VBScript IIf不短路，需提前取值）
+Dim eSubPlanName, eSubPeriod, eSubPrice, eSubSample, eSubFull, eSubCancelFee, eSubSort, eSubDesc, eSubFreeShip
+If subIsEditing Then
+    eSubPlanName = subEditData("PlanName")
+    eSubPeriod = subEditData("Period")
+    eSubPrice = subEditData("Price")
+    eSubSample = subEditData("SampleCount")
+    eSubFull = subEditData("FullSizeCount")
+    eSubCancelFee = subEditData("CancellationFee")
+    eSubSort = subEditData("SortOrder")
+    eSubDesc = subEditData("Description")
+    eSubFreeShip = CBool(subEditData("FreeShipping"))
+Else
+    eSubPlanName = ""
+    eSubPeriod = "monthly"
+    eSubPrice = ""
+    eSubSample = "3"
+    eSubFull = "1"
+    eSubCancelFee = "0"
+    eSubSort = "0"
+    eSubDesc = ""
+    eSubFreeShip = False
 End If
 
 ' 计划列表
@@ -197,21 +227,21 @@ End Function
         
         <!-- 创建/编辑计划 -->
         <div class="panel">
-            <h3><i class="fas fa-<% If Not subEditData Is Nothing And Not subEditData.EOF Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If Not subEditData Is Nothing And Not subEditData.EOF Then %>编辑计划<% Else %>创建订阅计划<% End If %></h3>
+            <h3><i class="fas fa-<% If subIsEditing Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If subIsEditing Then %>编辑计划<% Else %>创建订阅计划<% End If %></h3>
             <form method="post">
-                <% If Not subEditData Is Nothing And Not subEditData.EOF Then %>
+                <% If subIsEditing Then %>
                 <input type="hidden" name="edit_id" value="<%= subEditData("PlanID") %>">
                 <% End If %>
                 <div class="form-row">
                     <div class="form-group">
                         <label>计划名称 *</label>
-                        <input type="text" name="plan_name" value="<%= IIf(Not subEditData Is Nothing And Not subEditData.EOF, subEditData("PlanName"), "") %>" placeholder="如: 月度探索盒" required>
+                        <input type="text" name="plan_name" value="<%= eSubPlanName %>" placeholder="如: 月度探索盒" required>
                     </div>
                     <div class="form-group">
                         <label>周期 *</label>
                         <select name="period" required>
                             <%
-                            Dim selPeriod : selPeriod = IIf(Not subEditData Is Nothing And Not subEditData.EOF, subEditData("Period"), "monthly")
+                            Dim selPeriod : selPeriod = eSubPeriod
                             %>
                             <option value="monthly"<% If selPeriod = "monthly" Then %> selected<% End If %>>月度</option>
                             <option value="quarterly"<% If selPeriod = "quarterly" Then %> selected<% End If %>>季度</option>
@@ -220,44 +250,44 @@ End Function
                     </div>
                     <div class="form-group">
                         <label>每期价格 *</label>
-                        <input type="number" name="price" step="0.01" value="<%= IIf(Not subEditData Is Nothing And Not subEditData.EOF, subEditData("Price"), "") %>" placeholder="如: 199.00" required>
+                        <input type="number" name="price" step="0.01" value="<%= eSubPrice %>" placeholder="如: 199.00" required>
                     </div>
                     <div class="form-group">
                         <label>小样数量</label>
-                        <input type="number" name="sample_count" value="<%= IIf(Not subEditData Is Nothing And Not subEditData.EOF, subEditData("SampleCount"), "3") %>" min="0">
+                        <input type="number" name="sample_count" value="<%= eSubSample %>" min="0">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>正装数量</label>
-                        <input type="number" name="fullsize_count" value="<%= IIf(Not subEditData Is Nothing And Not subEditData.EOF, subEditData("FullSizeCount"), "1") %>" min="0">
+                        <input type="number" name="fullsize_count" value="<%= eSubFull %>" min="0">
                     </div>
                     <div class="form-group">
                         <label>取消费用</label>
-                        <input type="number" name="cancellation_fee" step="0.01" value="<%= IIf(Not subEditData Is Nothing And Not subEditData.EOF, subEditData("CancellationFee"), "0") %>">
+                        <input type="number" name="cancellation_fee" step="0.01" value="<%= eSubCancelFee %>">
                     </div>
                     <div class="form-group">
                         <label>排序</label>
-                        <input type="number" name="sort_order" value="<%= IIf(Not subEditData Is Nothing And Not subEditData.EOF, subEditData("SortOrder"), "0") %>">
+                        <input type="number" name="sort_order" value="<%= eSubSort %>">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
                         <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
-                            <input type="checkbox" name="free_shipping" value="1"<% If subEditData Is Nothing Or (Not subEditData.EOF And subEditData("FreeShipping")) Then %> checked<% End If %>> 包邮
+                            <input type="checkbox" name="free_shipping" value="1"<% If eSubFreeShip Or Not subIsEditing Then %> checked<% End If %>> 包邮
                         </label>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label>计划描述</label>
-                        <textarea name="description" placeholder="描述订阅计划内容..."><%= IIf(Not subEditData Is Nothing And Not subEditData.EOF, subEditData("Description"), "") %></textarea>
+                        <textarea name="description" placeholder="描述订阅计划内容..."><%= eSubDesc %></textarea>
                     </div>
                 </div>
                 <div style="margin-top:12px;display:flex;gap:8px;">
                     <button type="submit" name="action" value="save" class="btn btn-primary">
-                        <i class="fas fa-save"></i> <% If Not subEditData Is Nothing And Not subEditData.EOF Then %>更新<% Else %>创建<% End If %>计划
+                        <i class="fas fa-save"></i> <% If subIsEditing Then %>更新<% Else %>创建<% End If %>计划
                     </button>
-                    <% If Not subEditData Is Nothing And Not subEditData.EOF Then %>
+                    <% If subIsEditing Then %>
                     <a href="subscription_plans.asp" class="btn btn-outline">取消编辑</a>
                     <% End If %>
                 </div>
@@ -317,7 +347,13 @@ End Function
                     %>
                 </tbody>
             </table>
-            <% If rsSubPlans Is Nothing Or rsSubPlans.EOF Then %>
+            <%
+            Dim subPlansEmpty : subPlansEmpty = True
+            If Not rsSubPlans Is Nothing Then
+                If Not rsSubPlans.EOF Then subPlansEmpty = False
+            End If
+            If subPlansEmpty Then
+            %>
             <div style="padding:40px;text-align:center;color:#888;">暂无订阅计划</div>
             <% End If %>
         </div>
@@ -360,7 +396,13 @@ End Function
                     %>
                 </tbody>
             </table>
-            <% If rsActiveSubs Is Nothing Or rsActiveSubs.EOF Then %>
+            <%
+            Dim activeSubsEmpty : activeSubsEmpty = True
+            If Not rsActiveSubs Is Nothing Then
+                If Not rsActiveSubs.EOF Then activeSubsEmpty = False
+            End If
+            If activeSubsEmpty Then
+            %>
             <div style="padding:40px;text-align:center;color:#888;">暂无活跃订阅</div>
             <% End If %>
         </div>

@@ -361,6 +361,10 @@ Function PE_CouponValidate(code, userId, cartTotal)
     Dim rsUsed
     On Error Resume Next
     Set rsUsed = conn.Execute("SELECT COUNT(*) FROM UserCoupons WHERE UserID = " & userId & " AND CouponCode = '" & SafeSQL(code) & "' AND Status = 'used'")
+    If Err.Number <> 0 Then
+        Err.Clear
+        Set rsUsed = Nothing
+    End If
     If Not rsUsed Is Nothing Then
         If Not rsUsed.EOF Then
             If CLng(rsUsed(0)) > 0 Then
@@ -534,6 +538,7 @@ End Function
 ' ============================================
 Function PE_CouponGetUserCoupons(userId, statusFilter)
     If statusFilter = "" Then statusFilter = "available"
+    On Error Resume Next
     Dim sql
     sql = "SELECT uc.*, c.CouponName, c.CouponType, c.DiscountValue, c.MinSpend, c.MaxDiscount, " & _
           "c.Description, c.Terms, c.ValidFrom, c.ValidTo " & _
@@ -544,6 +549,11 @@ Function PE_CouponGetUserCoupons(userId, statusFilter)
     End If
     sql = sql & " ORDER BY uc.ObtainedAt DESC"
     Set PE_CouponGetUserCoupons = conn.Execute(sql)
+    If Err.Number <> 0 Then
+        Err.Clear
+        Set PE_CouponGetUserCoupons = Nothing
+    End If
+    On Error GoTo 0
 End Function
 
 ' ============================================
@@ -566,6 +576,7 @@ End Function
 ' 获取购物车可用的优惠券
 ' ============================================
 Function PE_CouponGetApplicable(userId, cartTotal)
+    On Error Resume Next
     Dim sql
     sql = "SELECT uc.*, c.CouponName, c.CouponType, c.DiscountValue, c.MinSpend, c.MaxDiscount, c.Description " & _
           "FROM UserCoupons uc LEFT JOIN Coupons c ON uc.CouponID = c.CouponID " & _
@@ -574,13 +585,23 @@ Function PE_CouponGetApplicable(userId, cartTotal)
           "AND GETDATE() BETWEEN c.ValidFrom AND c.ValidTo " & _
           "ORDER BY c.DiscountValue DESC"
     Set PE_CouponGetApplicable = conn.Execute(sql)
+    If Err.Number <> 0 Then
+        Err.Clear
+        Set PE_CouponGetApplicable = Nothing
+    End If
+    On Error GoTo 0
 End Function
 
 ' ============================================
 ' 获取所有优惠券（管理后台用）
 ' ============================================
 Function PE_CouponGetAll()
-    Set PE_CouponGetAll = conn.Execute("SELECT * FROM Coupons ORDER BY CreatedAt DESC")
+    On Error Resume Next
+    Set PE_CouponGetAll = conn.Execute("SELECT * FROM Coupons ORDER BY CouponID DESC")
+    If Err.Number <> 0 Then
+        Set PE_CouponGetAll = Nothing
+    End If
+    On Error GoTo 0
 End Function
 
 ' ============================================

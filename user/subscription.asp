@@ -130,10 +130,15 @@ End Function
 %>
 <!--#include file="../includes/header.asp"-->
 
-<div class="container user-section">
-    <div class="page-title-section">
-        <h1><i class="fas fa-box-open"></i> 我的订阅</h1>
-    </div>
+<div class="container">
+    <div class="user-center">
+        <!--#include file="nav.asp"-->
+
+        <div class="user-main">
+            <div class="welcome-section">
+                <h1><i class="fas fa-box-open"></i> 我的订阅</h1>
+                <p>管理您的香氛订阅计划</p>
+            </div>
 
     <% If subMsg <> "" Then %>
     <div class="alert <% If subMsgType = "success" Then %>alert-success<% Else %>alert-error<% End If %>">
@@ -366,9 +371,11 @@ End Function
             %>
             </tbody>
         </table>
-    </div>
+        </div>
     <% End If %>
-</div>
+        </div><!-- /.user-main -->
+    </div><!-- /.user-center -->
+</div><!-- /.container -->
 
 <style>
 .user-section { max-width: 800px; margin: 40px auto; padding: 0 20px; }

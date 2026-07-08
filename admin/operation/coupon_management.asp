@@ -91,9 +91,53 @@ Set editCouponData = Nothing
 If editCouponId <> "" And IsNumeric(editCouponId) Then
     Dim rsEdit
     Set rsEdit = conn.Execute("SELECT * FROM Coupons WHERE CouponID = " & editCouponId)
-    If Not rsEdit Is Nothing And Not rsEdit.EOF Then
-        Set editCouponData = rsEdit
+    If Not rsEdit Is Nothing Then
+        If Not rsEdit.EOF Then
+            Set editCouponData = rsEdit
+        End If
     End If
+End If
+
+' 预提取编辑数据到变量（VBScript IIf不短路，需提前取值避免运行时错误）
+Dim isEditMode, eCouponCode, eCouponName, eCouponType, eDiscountValue, eMinSpend, eMaxDiscount
+Dim eTotalQty, eValidFrom, eValidTo, eCategory, eProductId, eDescription, eTerms, eIsActive, eFirstOrder
+isEditMode = Not (editCouponData Is Nothing)
+If isEditMode Then
+    eCouponCode = editCouponData("CouponCode")
+    eCouponName = editCouponData("CouponName")
+    eCouponType = editCouponData("CouponType")
+    eDiscountValue = editCouponData("DiscountValue")
+    eMinSpend = editCouponData("MinSpend")
+    eMaxDiscount = editCouponData("MaxDiscount")
+    eTotalQty = editCouponData("TotalQty")
+    eValidFrom = Left(editCouponData("ValidFrom"), 10)
+    eValidTo = Left(editCouponData("ValidTo"), 10)
+    eCategory = editCouponData("ApplicableCategory")
+    If Not IsNull(editCouponData("ApplicableProductID")) Then
+        eProductId = editCouponData("ApplicableProductID")
+    Else
+        eProductId = ""
+    End If
+    eDescription = editCouponData("Description")
+    eTerms = editCouponData("Terms")
+    eIsActive = CBool(editCouponData("IsActive"))
+    eFirstOrder = CBool(editCouponData("FirstOrderOnly"))
+Else
+    eCouponCode = ""
+    eCouponName = ""
+    eCouponType = "fixed"
+    eDiscountValue = "0"
+    eMinSpend = "0"
+    eMaxDiscount = "0"
+    eTotalQty = "0"
+    eValidFrom = Left(Now(), 10)
+    eValidTo = Left(DateAdd("yyyy", 1, Now()), 10)
+    eCategory = ""
+    eProductId = ""
+    eDescription = ""
+    eTerms = ""
+    eIsActive = True
+    eFirstOrder = False
 End If
 
 ' 所有券列表
@@ -194,25 +238,25 @@ Set rsAllCoupons = PE_CouponGetAll()
         
         <!-- 创建/编辑表单 -->
         <div class="panel">
-            <h3><i class="fas fa-<% If Not editCouponData Is Nothing Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If Not editCouponData Is Nothing Then %>编辑优惠券<% Else %>创建优惠券<% End If %></h3>
+            <h3><i class="fas fa-<% If isEditMode Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If isEditMode Then %>编辑优惠券<% Else %>创建优惠券<% End If %></h3>
             <form method="post">
-                <% If Not editCouponData Is Nothing Then %>
+                <% If isEditMode Then %>
                 <input type="hidden" name="edit_id" value="<%= editCouponData("CouponID") %>">
                 <% End If %>
                 <div class="form-row">
                     <div class="form-group">
                         <label>优惠码 *</label>
-                        <input type="text" name="code" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("CouponCode"), "") %>" placeholder="如: SUMMER20" style="text-transform:uppercase;" required <% If Not editCouponData Is Nothing Then %>readonly<% End If %>>
+                        <input type="text" name="code" value="<%= eCouponCode %>" placeholder="如: SUMMER20" style="text-transform:uppercase;" required <% If isEditMode Then %>readonly<% End If %>>
                     </div>
                     <div class="form-group">
                         <label>券名称 *</label>
-                        <input type="text" name="name" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("CouponName"), "") %>" placeholder="如: 夏日大促券" required>
+                        <input type="text" name="name" value="<%= eCouponName %>" placeholder="如: 夏日大促券" required>
                     </div>
                     <div class="form-group">
                         <label>券类型 *</label>
                         <select name="type" required>
                             <% 
-                            Dim selType : selType = IIf(Not editCouponData Is Nothing, editCouponData("CouponType"), "fixed")
+                            Dim selType : selType = eCouponType
                             %>
                             <option value="fixed"<% If selType = "fixed" Then %> selected<% End If %>>满减券</option>
                             <option value="percentage"<% If selType = "percentage" Then %> selected<% End If %>>折扣券</option>
@@ -222,63 +266,63 @@ Set rsAllCoupons = PE_CouponGetAll()
                     </div>
                     <div class="form-group">
                         <label>券面额</label>
-                        <input type="number" name="value" step="0.01" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("DiscountValue"), "0") %>" required>
+                        <input type="number" name="value" step="0.01" value="<%= eDiscountValue %>" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>最低消费</label>
-                        <input type="number" name="min_spend" step="0.01" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("MinSpend"), "0") %>">
+                        <input type="number" name="min_spend" step="0.01" value="<%= eMinSpend %>">
                     </div>
                     <div class="form-group">
                         <label>最大优惠(折扣券用)</label>
-                        <input type="number" name="max_discount" step="0.01" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("MaxDiscount"), "0") %>">
+                        <input type="number" name="max_discount" step="0.01" value="<%= eMaxDiscount %>">
                     </div>
                     <div class="form-group">
                         <label>发行总量(0=不限)</label>
-                        <input type="number" name="total_qty" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("TotalQty"), "0") %>">
+                        <input type="number" name="total_qty" value="<%= eTotalQty %>">
                     </div>
                     <div class="form-group">
                         <label>&nbsp;</label>
                         <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
-                            <input type="checkbox" name="is_active" value="1"<% If editCouponData Is Nothing Or editCouponData("IsActive") Then %> checked<% End If %>> 启用
-                            <input type="checkbox" name="first_order" value="1"<% If Not editCouponData Is Nothing And editCouponData("FirstOrderOnly") Then %> checked<% End If %>> 仅首单
+                            <input type="checkbox" name="is_active" value="1"<% If eIsActive Then %> checked<% End If %>> 启用
+                            <input type="checkbox" name="first_order" value="1"<% If eFirstOrder Then %> checked<% End If %>> 仅首单
                         </label>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>生效日期</label>
-                        <input type="date" name="valid_from" value="<%= IIf(Not editCouponData Is Nothing, Left(editCouponData("ValidFrom"), 10), Left(Now(), 10)) %>" required>
+                        <input type="date" name="valid_from" value="<%= eValidFrom %>" required>
                     </div>
                     <div class="form-group">
                         <label>失效日期</label>
-                        <input type="date" name="valid_to" value="<%= IIf(Not editCouponData Is Nothing, Left(editCouponData("ValidTo"), 10), DateAdd("yyyy", 1, Now())) %>" required>
+                        <input type="date" name="valid_to" value="<%= eValidTo %>" required>
                     </div>
                     <div class="form-group">
                         <label>限定品类</label>
-                        <input type="text" name="category" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("ApplicableCategory"), "") %>" placeholder="留空=全场通用">
+                        <input type="text" name="category" value="<%= eCategory %>" placeholder="留空=全场通用">
                     </div>
                     <div class="form-group">
                         <label>限定产品ID</label>
-                        <input type="number" name="product_id" value="<%= IIf(Not editCouponData Is Nothing And Not IsNull(editCouponData("ApplicableProductID")), editCouponData("ApplicableProductID"), "") %>" placeholder="留空=全场通用">
+                        <input type="number" name="product_id" value="<%= eProductId %>" placeholder="留空=全场通用">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group" style="grid-column: span 2;">
                         <label>描述</label>
-                        <input type="text" name="description" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("Description"), "") %>" placeholder="简短描述">
+                        <input type="text" name="description" value="<%= eDescription %>" placeholder="简短描述">
                     </div>
                     <div class="form-group" style="grid-column: span 2;">
                         <label>使用条款</label>
-                        <input type="text" name="terms" value="<%= IIf(Not editCouponData Is Nothing, editCouponData("Terms"), "") %>" placeholder="详细条款">
+                        <input type="text" name="terms" value="<%= eTerms %>" placeholder="详细条款">
                     </div>
                 </div>
                 <div style="margin-top:12px;display:flex;gap:8px;">
                     <button type="submit" name="action" value="save" class="btn btn-primary">
-                        <i class="fas fa-save"></i> <% If Not editCouponData Is Nothing Then %>更新<% Else %>创建<% End If %>优惠券
+                        <i class="fas fa-save"></i> <% If isEditMode Then %>更新<% Else %>创建<% End If %>优惠券
                     </button>
-                    <% If Not editCouponData Is Nothing Then %>
+                    <% If isEditMode Then %>
                     <a href="coupon_management.asp" class="btn" style="background:#555;color:#fff;">取消编辑</a>
                     <% End If %>
                 </div>
@@ -295,11 +339,11 @@ Set rsAllCoupons = PE_CouponGetAll()
                 <tbody>
                     <% If Not rsAllCoupons Is Nothing Then
                         Do While Not rsAllCoupons.EOF
-                            Dim cid, ccode, cname, ctype, cval, cmin, cqty, cuqty, cfrom, cto, cactive
+                            Dim cid, ccode, cname, coupType, cval, cmin, cqty, cuqty, cfrom, cto, cactive
                             cid = rsAllCoupons("CouponID")
                             ccode = rsAllCoupons("CouponCode")
                             cname = rsAllCoupons("CouponName")
-                            ctype = rsAllCoupons("CouponType")
+                            coupType = rsAllCoupons("CouponType")
                             cval = CDbl(rsAllCoupons("DiscountValue"))
                             cmin = CDbl(rsAllCoupons("MinSpend"))
                             cqty = rsAllCoupons("TotalQty")
@@ -309,11 +353,11 @@ Set rsAllCoupons = PE_CouponGetAll()
                             cactive = CBool(rsAllCoupons("IsActive"))
                             
                             Dim tBadge
-                            Select Case ctype
+                            Select Case coupType
                                 Case "fixed": tBadge = "<span class='badge badge-fixed'>满减</span>"
                                 Case "percentage": tBadge = "<span class='badge badge-percent'>折扣</span>"
                                 Case "free_shipping": tBadge = "<span class='badge badge-freeship'>免邮</span>"
-                                Case Else: tBadge = "<span class='badge badge-inactive'>" & ctype & "</span>"
+                                Case Else: tBadge = "<span class='badge badge-inactive'>" & coupType & "</span>"
                             End Select
                     %>
                     <tr>

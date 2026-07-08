@@ -91,39 +91,57 @@ input, button, textarea, select {
     color: var(--secondary-color);
 }
 
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 /* 主头部 */
 .main-header {
     background: #fff;
-    padding: 20px 0;
+    padding: 12px 0;
     border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
     z-index: 1000;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
 .header-wrapper {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 30px;
+    flex-wrap: nowrap;
+    gap: 20px;
+}
+
+.header-wrapper > * {
+    min-width: 0;
+}
+
+.logo {
+    flex-shrink: 0;
 }
 
 .logo a {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 24px;
+    gap: 8px;
+    font-size: 22px;
     font-weight: bold;
     color: var(--primary-color);
+    text-decoration: none;
+    white-space: nowrap;
 }
 
 .logo i {
-    font-size: 32px;
+    font-size: 28px;
 }
 
 .search-box {
-    flex: 1;
-    max-width: 500px;
+    flex: 1 1 auto;
+    max-width: 480px;
+    min-width: 160px;
 }
 
 .search-box form {
@@ -159,16 +177,22 @@ input, button, textarea, select {
 .user-menu {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 6px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .user-menu a {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 8px 15px;
+    padding: 6px 12px;
     border-radius: 20px;
     transition: var(--transition);
+    font-size: 14px;
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .btn-login {
@@ -191,7 +215,12 @@ input, button, textarea, select {
 .cart-icon {
     position: relative;
     font-size: 20px;
-    padding: 10px;
+    padding: 8px 10px;
+    color: var(--text-color);
+}
+
+.cart-icon:hover {
+    color: var(--primary-color);
 }
 
 .cart-count {
@@ -209,9 +238,21 @@ input, button, textarea, select {
     justify-content: center;
 }
 
+/* 桌面端汉堡菜单按钮（窄屏992-1050px时显示，替代横导航栏） */
+.desktop-hamburger {
+    display: none;
+    width: var(--touch-target-size, 44px);
+    height: var(--touch-target-size, 44px);
+    flex-shrink: 0;
+}
+
 /* 用户下拉菜单 */
 .dropdown {
     position: relative;
+}
+
+.user-info > a {
+    font-weight: 500;
 }
 
 .dropdown-menu {
@@ -219,14 +260,16 @@ input, button, textarea, select {
     top: 100%;
     right: 0;
     background: #fff;
-    min-width: 150px;
+    min-width: 170px;
     border-radius: var(--radius);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px);
-    transition: var(--transition);
-    z-index: 1000;
+    transform: translateY(8px);
+    transition: all 0.2s ease;
+    z-index: 1010;
+    border: 1px solid var(--border-color);
+    padding: 4px 0;
 }
 
 .dropdown:hover .dropdown-menu {
@@ -236,9 +279,14 @@ input, button, textarea, select {
 }
 
 .dropdown-menu a {
-    display: block;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.15s, color 0.15s;
 }
 
 .dropdown-menu a:last-child {
@@ -251,35 +299,71 @@ input, button, textarea, select {
 }
 
 .dropdown-menu i {
-    margin-right: 8px;
-    width: 20px;
+    width: 18px;
+    text-align: center;
+    font-size: 14px;
+    opacity: 0.75;
 }
 
 /* 主导航 */
 .main-nav {
-    background: var(--bg-light);
-    border-bottom: 1px solid var(--border-color);
+    background: #fff;
+    border-bottom: 2px solid var(--primary-color);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 .nav-list {
     display: flex;
     align-items: center;
-    gap: 5px;
+    flex-wrap: nowrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
 }
 
 .nav-list > li > a {
-    display: block;
-    padding: 15px 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 13px 16px;
     font-weight: 500;
+    font-size: 14px;
     color: var(--text-color);
+    text-decoration: none;
+    position: relative;
+    transition: color 0.2s, background 0.2s;
+    white-space: nowrap;
 }
 
 .nav-list > li > a:hover {
     color: var(--primary-color);
+    background: rgba(139,69,19,0.04);
+}
+
+.nav-list > li > a.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.nav-list > li > a.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 14px;
+    right: 14px;
+    height: 3px;
+    background: var(--primary-color);
+    border-radius: 3px 3px 0 0;
 }
 
 .nav-list > li > a i {
-    margin-right: 5px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.nav-list > li {
+    flex-shrink: 0;
 }
 
 /* 子菜单 */
@@ -1084,11 +1168,6 @@ input, button, textarea, select {
         flex: 100%;
         max-width: none;
         margin-top: 15px;
-    }
-    
-    .nav-list {
-        flex-wrap: wrap;
-        justify-content: center;
     }
     
     .hero-banner {

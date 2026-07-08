@@ -20,12 +20,87 @@
 @media (max-width: 991px) {
     .main-header,
     .main-nav,
-    .pc-only {
+    .pc-only,
+    .top-bar {
         display: none !important;
     }
 }
 
-/* ===== 响应式容器 ===== */
+/* ===== 桌面端小屏：隐藏主导航，显示汉堡菜单 (992-1050px) ===== */
+@media (min-width: 992px) and (max-width: 1050px) {
+    /* 隐藏横导航栏，改用汉堡菜单 */
+    .main-nav {
+        display: none !important;
+    }
+    /* 显示桌面端汉堡按钮 */
+    .desktop-hamburger {
+        display: flex;
+    }
+    /* 头部布局微调 */
+    .header-wrapper {
+        gap: 12px;
+    }
+    .search-box {
+        max-width: 320px;
+        min-width: 140px;
+    }
+    .search-box input {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+    .search-box button {
+        padding: 10px 16px;
+    }
+    .logo a {
+        font-size: 18px;
+    }
+    .logo i {
+        font-size: 24px;
+    }
+    .user-menu a {
+        padding: 5px 8px;
+        font-size: 13px;
+        gap: 3px;
+    }
+}
+
+/* ===== 桌面端中屏导航栏微调 (1051-1200px) ===== */
+@media (min-width: 1051px) and (max-width: 1200px) {
+    .nav-list > li > a {
+        padding: 13px 16px;
+        font-size: 14px;
+    }
+    .nav-list > li > a i {
+        font-size: 14px;
+    }
+    .header-wrapper {
+        gap: 18px;
+    }
+    .search-box {
+        max-width: 380px;
+    }
+    .logo a {
+        font-size: 22px;
+    }
+    .logo i {
+        font-size: 28px;
+    }
+}
+
+/* ===== PC端 sticky 导航滚动偏移 ===== */
+@media (min-width: 992px) {
+    .main-content {
+        scroll-margin-top: 140px;
+    }
+}
+
+/* ===== 动态溢出检测：导航超宽时切换汉堡菜单（JS控制 body.nav-overflow） ===== */
+body.nav-overflow .main-nav {
+    display: none !important;
+}
+body.nav-overflow .desktop-hamburger {
+    display: flex;
+}
 .container {
     width: 100%;
     padding: 0 var(--mobile-padding);
@@ -261,12 +336,10 @@ input[type="button"] {
     justify-content: space-between;
 }
 
-/* PC端隐藏移动端组件 */
+/* PC端隐藏移动端组件（保留侧边菜单供桌面窄屏汉堡使用） */
 @media (min-width: 992px) {
     .mobile-nav,
     .bottom-nav,
-    .mobile-menu,
-    .mobile-menu-overlay,
     .mobile-filter-toggle {
         display: none !important;
     }
@@ -423,6 +496,17 @@ input[type="button"] {
     background: #f8f6f3;
 }
 
+.mobile-menu-list li a.active {
+    background: #fdf2e9;
+    color: var(--primary-color, #8B4513);
+    font-weight: 600;
+    border-right: 3px solid var(--primary-color, #8B4513);
+}
+
+.mobile-menu-list li a.active i {
+    color: var(--primary-color, #8B4513);
+}
+
 .mobile-menu-list li a i {
     width: 20px;
     text-align: center;
@@ -550,30 +634,101 @@ input[type="button"] {
 
 /* ===== 管理后台响应式 ===== */
 @media (max-width: 768px) {
+    .sidebar,
     .admin-sidebar {
         position: fixed;
         left: calc(-1 * var(--sidebar-width));
-        top: 0;
+        top: 60px;
         width: var(--sidebar-width);
-        height: 100vh;
-        height: 100dvh;
-        z-index: 999;
-        transition: left 0.3s ease;
+        height: calc(100vh - 60px);
+        height: calc(100dvh - 60px);
+        z-index: 998 !important;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         overflow-y: auto;
-        background: #2c1810;
+        box-shadow: 2px 0 16px rgba(0,0,0,0.15);
     }
     
+    .sidebar.active,
     .admin-sidebar.active {
         left: 0;
     }
     
-    .admin-content {
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 997;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+    
+    .main-content {
         margin-left: 0 !important;
         padding: 16px !important;
     }
     
-    .admin-content.full-width {
+    .main-content.full-width {
         width: 100% !important;
+    }
+    
+    /* 管理员汉堡按钮 */
+    .admin-hamburger {
+        display: flex !important;
+        width: var(--touch-target-size);
+        height: var(--touch-target-size);
+        background: none;
+        border: none;
+        cursor: pointer;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        padding: 0;
+        margin-right: 8px;
+    }
+    
+    .admin-hamburger span {
+        display: block;
+        width: 22px;
+        height: 2px;
+        background: rgba(255,255,255,0.9);
+        border-radius: 1px;
+        transition: all 0.3s ease;
+    }
+    
+    .admin-hamburger.active span:nth-child(1) {
+        transform: rotate(45deg) translate(5px, 5px);
+    }
+    
+    .admin-hamburger.active span:nth-child(2) {
+        opacity: 0;
+    }
+    
+    .admin-hamburger.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(5px, -5px);
+    }
+    
+    /* Pattern B 模块暗色移动端顶部栏 */
+    .admin-mobile-topbar {
+        display: flex !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .admin-hamburger {
+        display: none !important;
+    }
+    .sidebar-overlay {
+        display: none !important;
+    }
+    .admin-mobile-topbar {
+        display: none !important;
     }
 }
 

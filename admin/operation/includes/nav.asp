@@ -1,14 +1,22 @@
-<!-- 运营管理后台导航 -->
+<!-- 运营管理后台导航 V18 -->
 <link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/responsive.css?v=18.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <div class="admin-dashboard">
     <!-- 顶部导航栏 -->
     <nav class="admin-navbar">
         <div class="admin-nav-container">
-            <a href="index.asp" class="admin-nav-brand">
-                <i class="fas fa-chart-line"></i>
-                <span>运营管理中心</span>
-            </a>
+            <div style="display:flex;align-items:center;">
+                <button class="admin-hamburger" id="adminHamburger" aria-label="菜单">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <a href="index.asp" class="admin-nav-brand">
+                    <i class="fas fa-chart-line"></i>
+                    <span>运营管理中心</span>
+                </a>
+            </div>
             <ul class="admin-nav-menu">
                 <li><a href="javascript:void(0)" onclick="location.reload()"><i class="fas fa-sync-alt"></i> 刷新</a></li>
                 <li><a href="../portal.asp"><i class="fas fa-th-large"></i> 返回入口</a></li>
@@ -17,8 +25,11 @@
         </div>
     </nav>
     
+    <!-- 移动端侧边栏遮罩 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <!-- 侧边栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="adminSidebar">
         <ul class="sidebar-menu">
             <li><a href="index.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/index.asp", "active", "") %>"><i class="fas fa-home"></i> <span>运营概览</span></a></li>
             
@@ -40,6 +51,7 @@
             <li><a href="order_reviews.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/order_reviews.asp", "active", "") %>"><i class="fas fa-star-half-alt"></i> <span>评价管理</span></a></li>
             <li><a href="marketing.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/marketing.asp", "active", "") %>"><i class="fas fa-bullhorn"></i> <span>营销活动</span></a></li>
             <li><a href="coupon_management.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/coupon_management.asp", "active", "") %>"><i class="fas fa-ticket-alt"></i> <span>优惠券管理</span></a></li>
+            <li><a href="tier_management.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/tier_management.asp", "active", "") %>"><i class="fas fa-layer-group"></i> <span>会员等级</span></a></li>
             <li><a href="flash_sale.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/flash_sale.asp", "active", "") %>"><i class="fas fa-bolt"></i> <span>秒杀管理</span></a></li>
             <li><a href="group_buy.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/group_buy.asp", "active", "") %>"><i class="fas fa-users"></i> <span>拼团管理</span></a></li>
             <li><a href="subscription_plans.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/subscription_plans.asp", "active", "") %>"><i class="fas fa-box-open"></i> <span>订阅管理</span></a></li>
@@ -48,6 +60,7 @@
         </ul>
     </aside>
 </div>
+<!--#include file="../../includes/nav_common.asp"-->
 <style>
 /* 侧边栏深色主题增强 */
 .sidebar-section-title {

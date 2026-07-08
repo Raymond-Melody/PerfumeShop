@@ -1,13 +1,21 @@
-<!-- 系统管理后台导航 -->
+<!-- 系统管理后台导航 V18 -->
 <link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/responsive.css?v=18.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <div class="admin-dashboard">
     <nav class="admin-navbar">
         <div class="admin-nav-container">
-            <a href="index.asp" class="admin-nav-brand">
-                <i class="fas fa-cogs"></i>
-                <span>站点技术管理</span>
-            </a>
+            <div style="display:flex;align-items:center;">
+                <button class="admin-hamburger" id="adminHamburger" aria-label="菜单">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <a href="index.asp" class="admin-nav-brand">
+                    <i class="fas fa-cogs"></i>
+                    <span>站点技术管理</span>
+                </a>
+            </div>
             <ul class="admin-nav-menu">
                 <li><a href="javascript:void(0)" onclick="location.reload()"><i class="fas fa-sync-alt"></i> 刷新</a></li>
                 <li><a href="../portal.asp"><i class="fas fa-th-large"></i> 返回入口</a></li>
@@ -15,8 +23,12 @@
             </ul>
         </div>
     </nav>
+    
+    <!-- 移动端侧边栏遮罩 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <!-- 侧边栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="adminSidebar">
         <ul class="sidebar-menu">
             <li><a href="index.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/index.asp" Then %> class="active"<% End If %>><i class="fas fa-home"></i> <span>系统概览</span></a></li>
             <li class="sidebar-section-title">权限管理</li>
@@ -38,3 +50,4 @@
         </ul>
     </aside>
 </div>
+<!--#include file="../../includes/nav_common.asp"-->

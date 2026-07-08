@@ -39,11 +39,25 @@
         <li><a href="/"><i class="fas fa-home"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_home", Empty) %><% Else %>首页<% End If %></a></li>
         <li><a href="/products.asp"><i class="fas fa-box"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_all", Empty) %><% Else %>所有产品<% End If %></a></li>
         <li><a href="/customize.asp"><i class="fas fa-magic"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_customize", Empty) %><% Else %>定制香水<% End If %></a></li>
+        <% If FEATURE_FLASH_SALE Then %>
+        <li><a href="/flash_sale.asp"><i class="fas fa-bolt"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_flash", Empty) %><% Else %>限时秒杀<% End If %></a></li>
+        <% End If %>
+        <% If FEATURE_GROUP_BUY Then %>
+        <li><a href="/group_buy.asp"><i class="fas fa-users"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_group", Empty) %><% Else %>拼团优惠<% End If %></a></li>
+        <% End If %>
+        <% If FEATURE_COMMUNITY Then %>
+        <li><a href="/community.asp"><i class="fas fa-comments"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_community", Empty) %><% Else %>香氛社区<% End If %></a></li>
+        <% End If %>
+        <% If FEATURE_SUBSCRIPTION Then %>
+        <li><a href="/subscribe.asp"><i class="fas fa-box-open"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_subscription", Empty) %><% Else %>订阅盒子<% End If %></a></li>
+        <% End If %>
         <li><a href="/about.asp"><i class="fas fa-info-circle"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_about", Empty) %><% Else %>关于我们<% End If %></a></li>
         <li><a href="/contact.asp"><i class="fas fa-phone"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_contact", Empty) %><% Else %>联系我们<% End If %></a></li>
         <li class="divider"></li>
         <% If Session("UserID") <> "" Then %>
+            <li><a href="/user/index.asp"><i class="fas fa-user-circle"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_profile", Empty) %><% Else %>个人中心<% End If %></a></li>
             <li><a href="/user/orders.asp"><i class="fas fa-clipboard-list"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_orders", Empty) %><% Else %>我的订单<% End If %></a></li>
+            <li><a href="/user/coupons.asp"><i class="fas fa-ticket-alt"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_coupons", Empty) %><% Else %>优惠券<% End If %></a></li>
             <li><a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_favorites", Empty) %><% Else %>收藏夹<% End If %></a></li>
             <li><a href="/user/settings.asp"><i class="fas fa-cog"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_settings", Empty) %><% Else %>账户设置<% End If %></a></li>
             <li><a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then %><%= T("mobile_menu_logout", Empty) %><% Else %>退出登录<% End If %></a></li>
@@ -88,11 +102,12 @@
 </nav>
 
 <script>
-// V11 移动端导航交互逻辑
+// V11 移动端导航交互逻辑（含桌面窄屏汉堡菜单支持）
 (function() {
     'use strict';
     
     var hamburgerBtn = document.getElementById('hamburgerBtn');
+    var desktopHamburgerBtn = document.getElementById('desktopHamburgerBtn');
     var closeMenuBtn = document.getElementById('closeMenuBtn');
     var mobileMenu = document.getElementById('mobileMenu');
     var overlay = document.getElementById('mobileMenuOverlay');
@@ -106,6 +121,7 @@
         mobileMenu.classList.add('active');
         overlay.classList.add('active');
         if (hamburgerBtn) hamburgerBtn.classList.add('active');
+        if (desktopHamburgerBtn) desktopHamburgerBtn.classList.add('active');
         body.style.overflow = 'hidden';
     }
     
@@ -114,10 +130,12 @@
         mobileMenu.classList.remove('active');
         overlay.classList.remove('active');
         if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+        if (desktopHamburgerBtn) desktopHamburgerBtn.classList.remove('active');
         body.style.overflow = '';
     }
     
     if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMenu);
+    if (desktopHamburgerBtn) desktopHamburgerBtn.addEventListener('click', openMenu);
     if (closeMenuBtn) closeMenuBtn.addEventListener('click', closeMenu);
     if (overlay) overlay.addEventListener('click', closeMenu);
     
@@ -128,16 +146,57 @@
         }
     });
     
-    // 当前页面高亮
-    var currentPath = window.location.pathname.toLowerCase();
-    var navLinks = document.querySelectorAll('.mobile-menu-list a, .bottom-nav-item');
-    navLinks.forEach(function(link) {
-        var href = link.getAttribute('href');
-        if (href && currentPath === href.toLowerCase()) {
-            link.classList.add('active');
-        } else if (href && href !== '/' && currentPath.startsWith(href.toLowerCase())) {
-            link.classList.add('active');
+    // 当前页面高亮 - 增强版路径匹配
+    function setActiveNav() {
+        var currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+        var currentFull = (currentPath + window.location.search).toLowerCase();
+        
+        // 侧边菜单active高亮
+        var sideLinks = document.querySelectorAll('.mobile-menu-list a');
+        var bestMatch = null, bestScore = 0;
+        sideLinks.forEach(function(link) {
+            link.classList.remove('active');
+            var href = link.getAttribute('href');
+            if (!href) return;
+            var hrefNorm = href.toLowerCase();
+            // 精确匹配优先
+            if (currentPath === hrefNorm || currentFull === hrefNorm) {
+                link.classList.add('active');
+                bestMatch = link; bestScore = 100;
+            } else if (hrefNorm !== '/' && currentPath.indexOf(hrefNorm) === 0) {
+                var score = hrefNorm.length;
+                if (score > bestScore) { bestMatch = link; bestScore = score; }
+            }
+        });
+        if (bestMatch && bestScore < 100 && bestScore > 0) {
+            bestMatch.classList.add('active');
         }
-    });
+        
+        // 底部导航active高亮
+        var bottomLinks = document.querySelectorAll('.bottom-nav-item');
+        var bestBottom = null, bestScoreB = 0;
+        bottomLinks.forEach(function(link) {
+            link.classList.remove('active');
+            var href = link.getAttribute('href');
+            if (!href) return;
+            var hrefNorm = href.toLowerCase();
+            if (currentPath === hrefNorm) {
+                link.classList.add('active');
+                bestBottom = link; bestScoreB = 100;
+            } else if (hrefNorm !== '/' && currentPath.indexOf(hrefNorm) === 0) {
+                var score = hrefNorm.length;
+                if (score > bestScoreB) { bestBottom = link; bestScoreB = score; }
+            }
+        });
+        if (bestBottom && bestScoreB < 100 && bestScoreB > 0) {
+            bestBottom.classList.add('active');
+        }
+    }
+    
+    // 初始执行
+    setActiveNav();
+    
+    // 监听popstate（浏览器前进后退）
+    window.addEventListener('popstate', setActiveNav);
 })();
 </script>

@@ -81,11 +81,35 @@ fsUpcoming = GetScalar("SELECT COUNT(*) FROM FlashSale WHERE IsActive = 1 AND St
 fsExpired = GetScalar("SELECT COUNT(*) FROM FlashSale WHERE EndTime < '" & nowStr & "'")
 
 ' 获取编辑中的秒杀
-Dim fsEditData, fsEditId
+Dim fsEditData, fsIsEditing
 fsEditId = Request.QueryString("edit_id")
 Set fsEditData = Nothing
+fsIsEditing = False
 If fsEditId <> "" And IsNumeric(fsEditId) Then
     Set fsEditData = conn.Execute("SELECT * FROM FlashSale WHERE FlashSaleID = " & fsEditId)
+    If Not fsEditData Is Nothing Then
+        If Not fsEditData.EOF Then
+            fsIsEditing = True
+        End If
+    End If
+End If
+
+' 预提取编辑数据到变量（VBScript IIf/And不短路，需提前取值）
+Dim eFSFlashPrice, eFSStock, eFSLimit, eFSStartTime, eFSEndTime, eFSSort
+If fsIsEditing Then
+    eFSFlashPrice = fsEditData("FlashPrice")
+    eFSStock = fsEditData("Stock")
+    eFSLimit = fsEditData("LimitPerUser")
+    eFSStartTime = FormatDateTime(fsEditData("StartTime"), 0)
+    eFSEndTime = FormatDateTime(fsEditData("EndTime"), 0)
+    eFSSort = fsEditData("SortOrder")
+Else
+    eFSFlashPrice = ""
+    eFSStock = "100"
+    eFSLimit = "1"
+    eFSStartTime = FormatDateTime(Now(), 0)
+    eFSEndTime = FormatDateTime(DateAdd("d", 1, Now()), 0)
+    eFSSort = "0"
 End If
 
 ' 所有秒杀列表
@@ -187,9 +211,9 @@ Dim rsProducts : Set rsProducts = DAL_GetList("SELECT ProductID, ProductName, Ba
         
         <!-- 创建/编辑表单 -->
         <div class="panel">
-            <h3><i class="fas fa-<% If Not fsEditData Is Nothing And Not fsEditData.EOF Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If Not fsEditData Is Nothing And Not fsEditData.EOF Then %>编辑秒杀活动<% Else %>创建秒杀活动<% End If %></h3>
+            <h3><i class="fas fa-<% If fsIsEditing Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If fsIsEditing Then %>编辑秒杀活动<% Else %>创建秒杀活动<% End If %></h3>
             <form method="post">
-                <% If Not fsEditData Is Nothing And Not fsEditData.EOF Then %>
+                <% If fsIsEditing Then %>
                 <input type="hidden" name="edit_id" value="<%= fsEditData("FlashSaleID") %>">
                 <% End If %>
                 <div class="form-row">
@@ -204,7 +228,7 @@ Dim rsProducts : Set rsProducts = DAL_GetList("SELECT ProductID, ProductName, Ba
                                     Dim pSelName : pSelName = rsProducts("ProductName")
                                     Dim pSelPrice : pSelPrice = rsProducts("BasePrice")
                                     Dim pSelSelected : pSelSelected = ""
-                                    If Not fsEditData Is Nothing And Not fsEditData.EOF Then
+                                    If fsIsEditing Then
                                         If CLng(fsEditData("ProductID")) = CLng(pSelID) Then pSelSelected = " selected"
                                     End If
                             %>
@@ -219,36 +243,36 @@ Dim rsProducts : Set rsProducts = DAL_GetList("SELECT ProductID, ProductName, Ba
                     </div>
                     <div class="form-group">
                         <label>秒杀价 *</label>
-                        <input type="number" name="flash_price" step="0.01" value="<%= IIf(Not fsEditData Is Nothing And Not fsEditData.EOF, fsEditData("FlashPrice"), "") %>" placeholder="如: 99.00" required>
+                        <input type="number" name="flash_price" step="0.01" value="<%= eFSFlashPrice %>" placeholder="如: 99.00" required>
                     </div>
                     <div class="form-group">
                         <label>秒杀库存 *</label>
-                        <input type="number" name="stock" value="<%= IIf(Not fsEditData Is Nothing And Not fsEditData.EOF, fsEditData("Stock"), "100") %>" required>
+                        <input type="number" name="stock" value="<%= eFSStock %>" required>
                     </div>
                     <div class="form-group">
                         <label>每人限购</label>
-                        <input type="number" name="limit_per_user" value="<%= IIf(Not fsEditData Is Nothing And Not fsEditData.EOF, fsEditData("LimitPerUser"), "1") %>" min="1">
+                        <input type="number" name="limit_per_user" value="<%= eFSLimit %>" min="1">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>开始时间 *</label>
-                        <input type="datetime-local" name="start_time" value="<%= IIf(Not fsEditData Is Nothing And Not fsEditData.EOF, FormatDateTime(fsEditData("StartTime"), 0), FormatDateTime(Now(), 0)) %>" required>
+                        <input type="datetime-local" name="start_time" value="<%= eFSStartTime %>" required>
                     </div>
                     <div class="form-group">
                         <label>结束时间 *</label>
-                        <input type="datetime-local" name="end_time" value="<%= IIf(Not fsEditData Is Nothing And Not fsEditData.EOF, FormatDateTime(fsEditData("EndTime"), 0), FormatDateTime(DateAdd("d", 1, Now()), 0)) %>" required>
+                        <input type="datetime-local" name="end_time" value="<%= eFSEndTime %>" required>
                     </div>
                     <div class="form-group">
                         <label>排序</label>
-                        <input type="number" name="sort_order" value="<%= IIf(Not fsEditData Is Nothing And Not fsEditData.EOF, fsEditData("SortOrder"), "0") %>" min="0">
+                        <input type="number" name="sort_order" value="<%= eFSSort %>" min="0">
                     </div>
                 </div>
                 <div style="margin-top:12px;display:flex;gap:8px;">
                     <button type="submit" name="action" value="save" class="btn btn-primary">
-                        <i class="fas fa-save"></i> <% If Not fsEditData Is Nothing And Not fsEditData.EOF Then %>更新<% Else %>创建<% End If %>秒杀活动
+                        <i class="fas fa-save"></i> <% If fsIsEditing Then %>更新<% Else %>创建<% End If %>秒杀活动
                     </button>
-                    <% If Not fsEditData Is Nothing And Not fsEditData.EOF Then %>
+                    <% If fsIsEditing Then %>
                     <a href="flash_sale.asp" class="btn btn-outline">取消编辑</a>
                     <% End If %>
                 </div>

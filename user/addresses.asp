@@ -120,22 +120,7 @@ userId = Session("UserID")
 
 <div class="container">
     <div class="user-center">
-        <!-- 侧边栏 -->
-        <aside class="user-sidebar">
-            <div class="user-profile">
-                <h3><%= HTMLEncode(Session("Username")) %></h3>
-                <p><%= HTMLEncode(Session("Email")) %></p>
-            </div>
-            
-            <nav class="user-nav">
-                <a href="/user/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
-                <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then %><%= T("user_nav_orders", Empty) %><% Else %>我的订单<% End If %></a>
-                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then %><%= T("user_nav_settings", Empty) %><% Else %>账户设置<% End If %></a>
-                <a href="/user/addresses.asp" class="active"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_addresses", Empty) %><% Else %>收货地址<% End If %></a>
-                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("user_nav_favorites", Empty) %><% Else %>我的收藏<% End If %></a>
-                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_logout", Empty) %><% Else %>退出登录<% End If %></a>
-            </nav>
-        </aside>
+        <!--#include file="nav.asp"-->
         
         <!-- 主内容 -->
         <div class="user-main">

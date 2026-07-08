@@ -90,24 +90,7 @@ If tab = "" Then tab = "available"
 
 <div class="container">
     <div class="user-center">
-        <aside class="user-sidebar">
-            <div class="user-profile">
-                <h3><%= HTMLEncode(Session("Username")) %></h3>
-                <p><%= HTMLEncode(Session("Email")) %></p>
-            </div>
-            <nav class="user-nav">
-                <a href="/user/index.asp"><i class="fas fa-home"></i> 个人中心</a>
-                <% If FEATURE_POINTS_SYSTEM Then %>
-                <a href="/user/points.asp" style="color:#ff8f00;"><i class="fas fa-coins"></i> 积分中心</a>
-                <% End If %>
-                <a href="/user/coupons.asp" class="active" style="background:#e8f5e9;color:#2e7d32;"><i class="fas fa-ticket-alt"></i> 优惠券</a>
-                <a href="/user/orders.asp"><i class="fas fa-list"></i> 我的订单</a>
-                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> 账户设置</a>
-                <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> 收货地址</a>
-                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> 我的收藏</a>
-                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> 退出登录</a>
-            </nav>
-        </aside>
+        <!--#include file="nav.asp"-->
 
         <div class="user-main">
             <div class="welcome-section">

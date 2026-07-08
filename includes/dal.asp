@@ -317,8 +317,15 @@ Function DAL_GetListPaged(sql, arrParams, page, pageSize, ByRef pageInfo)
     If IsNull(page) Or page < 1 Then page = 1
     If IsNull(pageSize) Or pageSize < 1 Then pageSize = PAGE_SIZE
     
-    ' 构建COUNT查询
-    countSql = "SELECT COUNT(*) FROM (" & sql & ") AS DAL_CountSub"
+    ' 构建COUNT查询 — 移除 ORDER BY 避免 SQL Server 子查询错误
+    ' (子查询中不允许 ORDER BY，除非配合 TOP/OFFSET/FETCH)
+    Dim orderByPos
+    orderByPos = InStrRev(UCase(sql), "ORDER BY")
+    If orderByPos > 0 Then
+        countSql = "SELECT COUNT(*) FROM (" & Left(sql, orderByPos - 1) & ") AS DAL_CountSub"
+    Else
+        countSql = "SELECT COUNT(*) FROM (" & sql & ") AS DAL_CountSub"
+    End If
     totalCount = CLng(DAL_GetScalar(countSql, arrParams, 0))
     totalPages = Int((totalCount + pageSize - 1) / pageSize)
     If totalPages < 1 Then totalPages = 1

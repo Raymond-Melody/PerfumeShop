@@ -242,11 +242,18 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
                 <!-- 搜索框 -->
                 <div class="search-box" id="searchBox">
                     <form action="/products.asp" method="get" autocomplete="off">
-                        <input type="text" name="keyword" id="searchKeyword" placeholder="<% If FEATURE_I18N Then Response.Write T("search_placeholder", Empty) Else Response.Write "搜索您想要的香水..." End If %>" autocomplete="off">
+                        <input type="text" name="keyword" id="searchKeyword" placeholder="<% If FEATURE_I18N Then Response.Write T("header_search_placeholder", Empty) Else Response.Write "搜索您想要的香水..." End If %>" autocomplete="off">
                         <button type="submit"><i class="fas fa-search"></i></button>
                         <div class="search-suggestions" id="searchSuggestions"></div>
                     </form>
                 </div>
+
+                <!-- V18 桌面窄屏汉堡菜单按钮（992-1050px显示） -->
+                <button class="hamburger-btn desktop-hamburger" id="desktopHamburgerBtn" aria-label="<% If FEATURE_I18N Then %><%= T("mobile_menu_open", Empty) %><% Else %>打开菜单<% End If %>">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
 
                 <!-- 用户菜单 -->
                 <div class="user-menu">
@@ -287,51 +294,106 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
             <ul class="nav-list">
                 <li><a href="/index.asp"><i class="fas fa-home"></i> <% If FEATURE_I18N Then Response.Write T("home", Empty) Else Response.Write "首页" End If %></a></li>
                 <li><a href="/products.asp"><i class="fas fa-flask"></i> <% If FEATURE_I18N Then Response.Write T("products", Empty) Else Response.Write "全部香水" End If %></a></li>
-                <%
-                ' 动态生成商品类型导航
-                ' 使用 On Error Resume Next 检查函数是否可用
-                On Error Resume Next
-                Dim navTypes, nIdx, navCode, navName, navIcon
-                navTypes = GetActiveProductTypes()
-                If Err.Number = 0 Then
-                    If IsArray(navTypes) Then
-                        For nIdx = 0 To UBound(navTypes, 1)
-                            navCode = navTypes(nIdx, 0)
-                            navName = navTypes(nIdx, 2)  ' NavName
-                            navIcon = navTypes(nIdx, 4)  ' Icon
-                            If navName <> "" Then  ' 只显示有NavName的类型
-                %>
-                <li><a href="/products.asp?type=<%= Server.URLEncode(navCode) %>"><i class="<%= Server.HTMLEncode(navIcon) %>"></i> <%= Server.HTMLEncode(GetProductTypeI18nName(navCode, navName, "nav")) %></a></li>
-                <%
-                            End If
-                        Next
-                    End If
-                End If
-                On Error GoTo 0
-                %>
+                <li><a href="/customize.asp"><i class="fas fa-magic"></i> <% If FEATURE_I18N Then Response.Write T("customize", Empty) Else Response.Write "定制香水" End If %></a></li>
                 <li><a href="/about.asp"><i class="fas fa-book"></i> <% If FEATURE_I18N Then Response.Write T("about", Empty) Else Response.Write "品牌故事" End If %></a></li>
                 <li><a href="/contact.asp"><i class="fas fa-envelope"></i> <% If FEATURE_I18N Then Response.Write T("contact", Empty) Else Response.Write "联系我们" End If %></a></li>
                 <% If FEATURE_FLASH_SALE Then %>
-                <li><a href="/flash_sale.asp" class="nav-hot"><i class="fas fa-bolt"></i> 秒杀</a></li>
+                <li><a href="/flash_sale.asp" class="nav-hot"><i class="fas fa-bolt"></i> <% If FEATURE_I18N Then %><%= T("nav_flash_sale", Empty) %><% Else %>秒杀<% End If %></a></li>
                 <% End If %>
                 <% If FEATURE_GROUP_BUY Then %>
-                <li><a href="/group_buy.asp" class="nav-hot"><i class="fas fa-users"></i> 拼团</a></li>
+                <li><a href="/group_buy.asp" class="nav-hot"><i class="fas fa-users"></i> <% If FEATURE_I18N Then %><%= T("nav_group_buy", Empty) %><% Else %>拼团<% End If %></a></li>
                 <% End If %>
                 <% If FEATURE_SUBSCRIPTION Then %>
-                <li><a href="/subscribe.asp" class="nav-hot"><i class="fas fa-box-open"></i> 订阅</a></li>
+                <li><a href="/subscribe.asp" class="nav-hot"><i class="fas fa-box-open"></i> <% If FEATURE_I18N Then %><%= T("nav_subscription", Empty) %><% Else %>订阅<% End If %></a></li>
                 <% End If %>
                 <% If FEATURE_COMMUNITY Then %>
-                <li><a href="/community.asp" class="nav-hot"><i class="fas fa-comments"></i> 社区</a></li>
+                <li><a href="/community.asp" class="nav-hot"><i class="fas fa-comments"></i> <% If FEATURE_I18N Then %><%= T("nav_community", Empty) %><% Else %>社区<% End If %></a></li>
                 <% End If %>
             </ul>
         </div>
     </nav>
 
+    <!-- V18 桌面导航active状态检测 -->
+    <script nonce="<%= Session("csp_nonce") %>">
+    (function() {
+        var currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+        var navAnchors = document.querySelectorAll('.main-nav .nav-list > li > a');
+        var bestMatch = null, bestScore = 0;
+        navAnchors.forEach(function(a) {
+            var href = a.getAttribute('href');
+            if (!href) return;
+            var hrefNorm = href.toLowerCase().replace(/\/$/, '');
+            // 跳过带查询参数的链接的精确比较
+            var hrefPath = hrefNorm.split('?')[0];
+            if (currentPath === hrefPath || currentPath === hrefNorm) {
+                a.classList.add('active');
+                bestMatch = a; bestScore = 100;
+            } else if (hrefPath !== '/' && hrefPath !== '' && currentPath.indexOf(hrefPath) === 0) {
+                var score = hrefPath.length;
+                if (score > bestScore) { bestMatch = a; bestScore = score; }
+            }
+        });
+        if (bestMatch && bestScore < 100 && bestScore > 0) {
+            bestMatch.classList.add('active');
+        }
+    })();
+    </script>
+
+    <!-- V18 动态溢出检测：导航栏超宽时自动切换汉堡菜单 -->
+    <script nonce="<%= Session("csp_nonce") %>">
+    (function() {
+        'use strict';
+        var mainNav = document.querySelector('.main-nav');
+        var navList = document.querySelector('.nav-list');
+        var desktopBtn = document.getElementById('desktopHamburgerBtn');
+        if (!mainNav || !navList) return;
+
+        var container = mainNav.querySelector('.container');
+        var body = document.body;
+        var checking = false;
+
+        function checkOverflow() {
+            if (checking) return;
+            checking = true;
+            // 使用 requestAnimationFrame 确保 DOM 已更新
+            requestAnimationFrame(function() {
+                var listWidth = navList.scrollWidth;
+                var containerWidth = container ? container.clientWidth : mainNav.clientWidth;
+                var overflows = listWidth > containerWidth + 2; // 2px 容差
+                if (overflows) {
+                    body.classList.add('nav-overflow');
+                } else {
+                    body.classList.remove('nav-overflow');
+                }
+                checking = false;
+            });
+        }
+
+        // 初始检测
+        checkOverflow();
+
+        // 使用 ResizeObserver 监听容器大小变化
+        if (container && window.ResizeObserver) {
+            var ro = new ResizeObserver(function() {
+                checkOverflow();
+            });
+            ro.observe(container);
+        }
+
+        // 回退方案：监听窗口 resize
+        var resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(checkOverflow, 150);
+        });
+    })();
+    </script>
+
     <style nonce="<%= Session("csp_nonce") %>">
-    /* V18: 秒杀/拼团热链样式 */
-    .nav-hot { color: #ff6b35 !important; font-weight: 600; position: relative; }
-    .nav-hot::after { content: 'HOT'; position: absolute; top: -6px; right: -20px; font-size: 9px; background: linear-gradient(135deg, #ff416c, #ff4b2b); color: #fff; padding: 1px 4px; border-radius: 3px; line-height: 1; }
-    .nav-hot:hover { color: #ff416c !important; }
+    /* V18: 秒杀/拼团等热链样式 */
+    .nav-hot { color: #e65100 !important; font-weight: 600; position: relative; }
+    .nav-hot::after { content: 'HOT'; position: absolute; top: -1px; right: -4px; font-size: 9px; background: linear-gradient(135deg, #ff416c, #ff4b2b); color: #fff; padding: 1px 5px; border-radius: 3px; line-height: 1.4; font-weight: 700; letter-spacing: 0.5px; pointer-events: none; z-index: 1; }
+    .nav-hot:hover { color: #bf360c !important; background: rgba(230,81,0,0.06) !important; }
     </style>
 
     <!-- V11.1 PWA Service Worker注册 -->
@@ -353,7 +415,7 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
             banner.style.animation = 'cookieSlideDown 0.3s ease forwards';
             setTimeout(function() { banner.style.display = 'none'; }, 300);
         }
-        ' V18: 记录 Cookie 同意（通过 fetch 发送到后端）
+        // V18: 记录 Cookie 同意（通过 fetch 发送到后端）
         fetch('/api/cookie_consent.asp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

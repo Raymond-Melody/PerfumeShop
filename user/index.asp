@@ -104,45 +104,20 @@ Call EnsureCSRFToken()
 
 <div class="container">
     <div class="user-center">
-        <!-- 侧边栏 -->
-        <aside class="user-sidebar">
-            <div class="user-profile">
-                <h3><%= HTMLEncode(Session("Username")) %></h3>
-                <p><%= HTMLEncode(Session("Email")) %></p>
-                <div style="margin-top:8px;">
-                    <% Call MU_RenderLevelBadge(userId) %>
-                </div>
-                <div style="margin-top:5px;font-size:12px;color:#888;">
-                    <% If FEATURE_I18N Then %><%= T("user_index_points_label", Empty) %><% Else %>积分<% End If %>: <strong><%= userPoints %></strong> | 
-                    <% If FEATURE_I18N Then %><%= T("user_index_level_discount", Empty) %><% Else %>等级折扣<% End If %>: <strong><%= FormatPercent(1 - MU_GetEffectiveDiscountRate(userId), 0) %></strong>
-                </div>
-            </div>
-            
-            <nav class="user-nav">
-                <a href="/user/index.asp" class="active"><i class="fas fa-home"></i> <% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
-                <% If FEATURE_POINTS_SYSTEM Then %>
-                <a href="/user/points.asp" style="color:#ff8f00;"><i class="fas fa-coins"></i> 积分中心</a>
-                <% End If %>
-                <% If FEATURE_COUPON_SYSTEM Then %>
-                <a href="/user/coupons.asp" style="color:#2e7d32;"><i class="fas fa-ticket-alt"></i> 优惠券</a>
-                <% End If %>
-                <% If Not rsUser Is Nothing Then %>
-                    <% If rsUser("UserRole") = "KOL" Then %>
-                        <a href="/user/kol_products.asp" style="background: #fff0f6; color: #eb2f96; font-weight: bold;"><i class="fas fa-star"></i> <% If FEATURE_I18N Then %><%= T("user_nav_kol", Empty) %><% Else %>KOL推荐管理<% End If %></a>
-                    <% End If %>
-                <% End If %>
-                <a href="/user/orders.asp"><i class="fas fa-list"></i> <% If FEATURE_I18N Then %><%= T("user_orders_title", Empty) %><% Else %>我的订单<% End If %></a>
-                <a href="/user/settings.asp"><i class="fas fa-user-edit"></i> <% If FEATURE_I18N Then %><%= T("user_nav_settings", Empty) %><% Else %>账户设置<% End If %></a>
-                <a href="/user/addresses.asp"><i class="fas fa-map-marker-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_addresses", Empty) %><% Else %>收货地址<% End If %></a>
-                <a href="/user/favorites.asp"><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("user_nav_favorites", Empty) %><% Else %>我的收藏<% End If %></a>
-                <a href="/user/index.asp#referral"><i class="fas fa-user-friends"></i> <% If FEATURE_I18N Then %><%= T("user_nav_referral", Empty) %><% Else %>推荐好友<% End If %></a>
-                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> <% If FEATURE_I18N Then %><%= T("user_nav_logout", Empty) %><% Else %>退出登录<% End If %></a>
-            </nav>
-        </aside>
+        <!--#include file="nav.asp"-->
 
         <!-- 主内容 -->
         <div class="user-main">
             <div class="welcome-section">
+                <% If FEATURE_MEMBER_TIERS Then %>
+                <div style="margin-bottom:8px;">
+                    <% Call MU_RenderLevelBadge(userId) %>
+                    <span style="margin-left:8px;font-size:13px;color:#888;">
+                        <% If FEATURE_I18N Then %><%= T("user_index_points_label", Empty) %><% Else %>积分<% End If %>: <strong><%= userPoints %></strong> | 
+                        <% If FEATURE_I18N Then %><%= T("user_index_level_discount", Empty) %><% Else %>等级折扣<% End If %>: <strong><%= FormatPercent(1 - MU_GetEffectiveDiscountRate(userId), 0) %></strong>
+                    </span>
+                </div>
+                <% End If %>
                 <h1><% If FEATURE_I18N Then %><%= T("user_index_welcome_prefix", Empty) %><% Else %>欢迎回来，<% End If %><%= HTMLEncode(Session("Username")) %>！</h1>
                 <p><% If FEATURE_I18N Then %><%= T("user_index_subtitle", Empty) %><% Else %>在这里管理您的订单和账户信息<% End If %></p>
             </div>

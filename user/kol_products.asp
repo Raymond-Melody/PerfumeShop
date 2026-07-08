@@ -110,19 +110,7 @@ Set rsNotes = ExecuteQuery("SELECT * FROM FragranceNotes WHERE IsActive <> 0 ORD
 
 <div class="container">
     <div class="user-center">
-        <!-- 侧边栏 -->
-        <aside class="user-sidebar">
-            <div class="user-profile">
-                <h3><%= HTMLEncode(Session("Username")) %></h3>
-                <p><span class="status-badge" style="background:#eb2f96;">KOL 推荐官</span></p>
-            </div>
-            <nav class="user-nav">
-                <a href="/user/index.asp"><i class="fas fa-home"></i> 个人中心</a>
-                <a href="/user/kol_products.asp" class="active"><i class="fas fa-star"></i> KOL推荐管理</a>
-                <a href="/user/orders.asp"><i class="fas fa-list"></i> 我的订单</a>
-                <a href="/user/logout.asp"><i class="fas fa-sign-out-alt"></i> 退出登录</a>
-            </nav>
-        </aside>
+        <!--#include file="nav.asp"-->
 
         <!-- 主内容 -->
         <div class="user-main">

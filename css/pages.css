@@ -1157,6 +1157,12 @@
     color: var(--primary-color);
 }
 
+/* 特殊导航项样式：积分中心(橙色) / 优惠券(绿色) / KOL(粉色) / 退出(红色) */
+.user-nav a.nav-points.active { background: #fff8e1; color: #ff8f00; }
+.user-nav a.nav-coupons.active { background: #e8f5e9; color: #2e7d32; }
+.user-nav a.nav-kol.active { background: #fff0f6; color: #eb2f96; }
+.user-nav a.nav-logout:hover { background: #fce4ec; color: #c62828; }
+
 .user-nav i {
     width: 20px;
 }

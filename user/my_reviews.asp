@@ -17,7 +17,12 @@ End If
 Dim userId, action, reviewId, reviewMsg, reviewErr
 userId = CLng(Session("UserID"))
 action = Request.QueryString("action")
-reviewId = CLng(Request.QueryString("review_id"))
+reviewId = 0
+If Request.QueryString("review_id") <> "" Then
+    If IsNumeric(Request.QueryString("review_id")) Then
+        reviewId = CLng(Request.QueryString("review_id"))
+    End If
+End If
 reviewMsg = ""
 reviewErr = ""
 
@@ -38,8 +43,13 @@ End If
 
 ' ---- 分页参数 ----
 Dim page, pageSize, pageInfo
-page = CLng(Request.QueryString("page"))
-If page < 1 Then page = 1
+page = 1
+If Request.QueryString("page") <> "" Then
+    If IsNumeric(Request.QueryString("page")) Then
+        page = CLng(Request.QueryString("page"))
+        If page < 1 Then page = 1
+    End If
+End If
 pageSize = 10
 
 ' ---- 查询用户评价 ----
@@ -66,40 +76,22 @@ totalUserReviews = CLng(DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE
         <span class="separator">/</span>
         <a href="/user/index.asp"><% If FEATURE_I18N Then %><%= T("user_nav_center", Empty) %><% Else %>个人中心<% End If %></a>
         <span class="separator">/</span>
-        <span><% If FEATURE_I18N Then %><%= T("user_orders_go_review", Empty) %><% Else %>我的评价<% End If %></span>
+        <span><% If FEATURE_I18N Then %><%= T("user_my_reviews_title", Empty) %><% Else %>我的评价<% End If %></span>
     </div>
 </div>
 
-<div class="container my-reviews-page">
-    <!-- 侧边栏 -->
-    <aside class="sidebar">
+<div class="container">
+    <div class="user-center">
         <!--#include file="nav.asp"-->
-        
-        <div class="filter-section">
-            <h3><% If FEATURE_I18N Then %>评价统计<% Else %>评价统计<% End If %></h3>
-            <div class="review-stats-mini">
-                <div class="stat-item">
-                    <span class="stat-num"><%= totalUserReviews %></span>
-                    <span class="stat-label"><% If FEATURE_I18N Then %>条评价<% Else %>条评价<% End If %></span>
-                </div>
+
+        <!-- 主内容区 -->
+        <div class="user-main">
+            <div class="welcome-section">
+                <h1><i class="fas fa-star"></i> <% If FEATURE_I18N Then %><%= T("user_my_reviews_title", Empty) %><% Else %>我的评价<% End If %></h1>
+                <p>共 <strong><%= totalUserReviews %></strong> 条评价 | <a href="/products.asp"><% If FEATURE_I18N Then %><%= T("user_favorites_browse", Empty) %><% Else %>浏览商品<% End If %> &raquo;</a></p>
             </div>
-        </div>
-        
-        <div class="filter-section cta-box">
-            <h3><% If FEATURE_I18N Then %>继续探索<% Else %>继续探索<% End If %></h3>
-            <p><% If FEATURE_I18N Then %>发现更多心仪香水并留下评价<% Else %>发现更多心仪香水并留下评价<% End If %></p>
-            <a href="/products.asp" class="btn btn-primary btn-block"><% If FEATURE_I18N Then %><%= T("user_favorites_browse", Empty) %><% Else %>浏览商品<% End If %></a>
-        </div>
-    </aside>
 
-    <!-- 主内容区 -->
-    <div class="products-main">
-        <div class="products-header">
-            <h2 class="products-title"><i class="fas fa-star"></i> <% If FEATURE_I18N Then %><%= T("user_orders_go_review", Empty) %><% Else %>我的评价<% End If %></h2>
-            <span class="products-count"><%= totalUserReviews %> 条评价</span>
-        </div>
-
-        <!-- 消息提示 -->
+            <!-- 消息提示 -->
         <% If reviewMsg <> "" Then %>
         <div class="review-alert review-alert-success"><%= reviewMsg %></div>
         <% End If %>
@@ -108,7 +100,16 @@ totalUserReviews = CLng(DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE
         <% End If %>
 
         <!-- 评价列表 -->
-        <% If Not rsReviews Is Nothing And Not rsReviews.EOF Then %>
+        <%
+        Dim hasReviews
+        hasReviews = False
+        If Not rsReviews Is Nothing Then
+            If Not rsReviews.EOF Then
+                hasReviews = True
+            End If
+        End If
+        If hasReviews Then
+        %>
         <div class="my-review-list">
             <%
             Do While Not rsReviews.EOF
@@ -189,8 +190,9 @@ totalUserReviews = CLng(DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE
             Set rsReviews = Nothing
         End If
         %>
-    </div>
-</div>
+    </div><!-- /.user-main -->
+</div><!-- /.user-center -->
+</div><!-- /.container -->
 
 <!-- 删除确认脚本 -->
 <script nonce="<%= Session("csp_nonce") %>">
@@ -203,10 +205,6 @@ function confirmDelete(reviewId) {
 
 <!-- 评价模块样式 -->
 <style nonce="<%= Session("csp_nonce") %>">
-.my-reviews-page { display: flex; gap: 24px; padding: 24px 0; }
-.my-reviews-page > .sidebar { width: 240px; flex-shrink: 0; }
-.my-reviews-page > .products-main { flex: 1; min-width: 0; }
-@media (max-width: 768px) { .my-reviews-page { flex-direction: column; } .my-reviews-page > .sidebar { width: 100%; } }
 
 .review-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: .9rem; }
 .review-alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }

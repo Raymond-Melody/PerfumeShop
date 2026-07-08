@@ -23,10 +23,13 @@ Function BuildConnectionString()
         ' V17: Microsoft OLE DB Driver for SQL Server (推荐) 
         ' 需安装: https://aka.ms/downloadmsoledbsql 
         ' 优势: TLS 1.2加密、更好的UTF-8支持、持续维护 
-        BuildConnectionString = "Provider=MSOLEDBSQL;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;TrustServerCertificate=yes;" 
+        ' DataTypeCompatibility=0 确保 NVARCHAR 等 Unicode 类型正确传输 
+        ' 注意: TrustServerCertificate=Yes 兼容 MSOLEDBSQL 18.x/19.x 两种版本
+        BuildConnectionString = "Provider=MSOLEDBSQL;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;TrustServerCertificate=Yes;DataTypeCompatibility=0;"
     Else 
         ' V14.6兼容: SQLOLEDB (已弃用但仍可用) 
-        BuildConnectionString = "Provider=SQLOLEDB;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;" 
+        ' Auto Translate=False 防止 SQLOLEDB 对 Unicode 数据做错误的代码页转换 
+        BuildConnectionString = "Provider=SQLOLEDB;Server=" & serverName & ";Database=" & dbName & ";Integrated Security=SSPI;Auto Translate=False;" 
     End If 
 End Function 
 
@@ -81,7 +84,7 @@ Sub OpenConnection()
                 Err.Clear 
                 Set conn = Nothing 
                 Set conn = Server.CreateObject("ADODB.Connection") 
-                conn.Open "Provider=SQLOLEDB;Server=localhost\YOURPERFUME;Database=PerfumeShop;Integrated Security=SSPI;" 
+                conn.Open "Provider=SQLOLEDB;Server=localhost\YOURPERFUME;Database=PerfumeShop;Integrated Security=SSPI;Auto Translate=False;" 
                 If Err.Number = 0 Then 
                     Dim fbRs : Set fbRs = conn.Execute("SELECT 1 AS health_check") 
                     If Err.Number = 0 Then 

@@ -45,50 +45,41 @@ End Select
 </div>
 
 <div class="container">
-    <div class="products-page">
-        <!-- 侧边栏筛选 -->
-        <aside class="sidebar">
-            <div class="filter-section">
-                <h3><% If FEATURE_I18N Then %><%= T("user_favorites_management", Empty) %><% Else %>收藏管理<% End If %></h3>
-                <ul class="filter-list">
-                    <li><a href="/user/favorites.asp" class="active"><% If FEATURE_I18N Then %><%= T("user_favorites_title", Empty) %><% Else %>我的收藏<% End If %></a></li>
-                </ul>
-            </div>
-            
-            <div class="filter-section">
-                <h3><% If FEATURE_I18N Then %><%= T("user_favorites_category", Empty) %><% Else %>香调分类<% End If %></h3>
-                <ul class="filter-list">
-                    <li><a href="/user/favorites.asp?sort=<%= sortBy %>"><% If FEATURE_I18N Then %><%= T("user_favorites_all", Empty) %><% Else %>全部<% End If %></a></li>
-                    <li><a href="/user/favorites.asp?category=花香调&sort=<%= sortBy %>">花香调</a></li>
-                    <li><a href="/user/favorites.asp?category=东方调&sort=<%= sortBy %>">东方调</a></li>
-                    <li><a href="/user/favorites.asp?category=木质调&sort=<%= sortBy %>">木质调</a></li>
-                    <li><a href="/user/favorites.asp?category=海洋调&sort=<%= sortBy %>">海洋调</a></li>
-                    <li><a href="/user/favorites.asp?category=美食调&sort=<%= sortBy %>">美食调</a></li>
-                    <li><a href="/user/favorites.asp?category=奢华系列&sort=<%= sortBy %>">奢华系列</a></li>
-                </ul>
-            </div>
-            
-            <div class="filter-section cta-box">
-                <h3><% If FEATURE_I18N Then %><%= T("user_favorites_continue", Empty) %><% Else %>继续探索<% End If %></h3>
-                <p><% If FEATURE_I18N Then %><%= T("user_favorites_discover", Empty) %><% Else %>发现更多心仪香水<% End If %></p>
-                <a href="/products.asp" class="btn btn-primary btn-block"><% If FEATURE_I18N Then %><%= T("user_favorites_browse", Empty) %><% Else %>浏览商品<% End If %></a>
-            </div>
-        </aside>
+    <div class="user-center">
+        <!--#include file="nav.asp"-->
 
-        <!-- 产品列表 -->
-        <div class="products-main">
-            <div class="products-header">
-                <div class="results-info">
-                    <span><% If FEATURE_I18N Then %><%= T("user_favorites_title", Empty) %><% Else %>我的收藏<% End If %></span>
-                </div>
-                <div class="sort-options">
-                    <label><% If FEATURE_I18N Then %><%= T("user_favorites_sort", Empty) %><% Else %>排序<% End If %>:</label>
-                    <select id="sortSelect" onchange="changeSort(this.value)">
-                        <option value="newest" <% If sortBy = "" Or sortBy = "newest" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("user_favorites_sort_newest", Empty) %><% Else %>最新收藏<% End If %></option>
-                        <option value="price_asc" <% If sortBy = "price_asc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("user_favorites_sort_price_asc", Empty) %><% Else %>价格从低到高<% End If %></option>
-                        <option value="price_desc" <% If sortBy = "price_desc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("user_favorites_sort_price_desc", Empty) %><% Else %>价格从高到低<% End If %></option>
-                        <option value="name" <% If sortBy = "name" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("user_favorites_sort_name", Empty) %><% Else %>名称排序<% End If %></option>
-                    </select>
+        <!-- 主内容 -->
+        <div class="user-main">
+            <div class="welcome-section">
+                <h1><i class="fas fa-heart"></i> <% If FEATURE_I18N Then %><%= T("user_favorites_title", Empty) %><% Else %>我的收藏<% End If %></h1>
+                <p><% If FEATURE_I18N Then %><%= T("user_favorites_empty_desc", Empty) %><% Else %>收藏喜欢的商品，方便以后快速找到<% End If %></p>
+            </div>
+
+            <!-- 筛选工具栏 -->
+            <div class="user-card" style="padding:16px 20px;margin-bottom:20px;">
+                <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;">
+                    <!-- 香调分类筛选 -->
+                    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+                        <span style="font-size:13px;color:#888;margin-right:4px;"><% If FEATURE_I18N Then %><%= T("user_favorites_category", Empty) %><% Else %>香调<% End If %>:</span>
+                        <a href="/user/favorites.asp?sort=<%= sortBy %>" class="filter-tag <%= IIF(categoryFilter = "", "active", "") %>"><% If FEATURE_I18N Then %><%= T("user_favorites_all", Empty) %><% Else %>全部<% End If %></a>
+                        <a href="/user/favorites.asp?category=花香调&sort=<%= sortBy %>" class="filter-tag <%= IIF(categoryFilter = "花香调", "active", "") %>">花香调</a>
+                        <a href="/user/favorites.asp?category=东方调&sort=<%= sortBy %>" class="filter-tag <%= IIF(categoryFilter = "东方调", "active", "") %>">东方调</a>
+                        <a href="/user/favorites.asp?category=木质调&sort=<%= sortBy %>" class="filter-tag <%= IIF(categoryFilter = "木质调", "active", "") %>">木质调</a>
+                        <a href="/user/favorites.asp?category=海洋调&sort=<%= sortBy %>" class="filter-tag <%= IIF(categoryFilter = "海洋调", "active", "") %>">海洋调</a>
+                        <a href="/user/favorites.asp?category=美食调&sort=<%= sortBy %>" class="filter-tag <%= IIF(categoryFilter = "美食调", "active", "") %>">美食调</a>
+                        <a href="/user/favorites.asp?category=奢华系列&sort=<%= sortBy %>" class="filter-tag <%= IIF(categoryFilter = "奢华系列", "active", "") %>">奢华系列</a>
+                    </div>
+                    <div style="flex:1;"></div>
+                    <!-- 排序选项 -->
+                    <div class="sort-options" style="display:flex;align-items:center;gap:8px;">
+                        <label style="font-size:13px;color:#888;"><% If FEATURE_I18N Then %><%= T("user_favorites_sort", Empty) %><% Else %>排序<% End If %>:</label>
+                        <select id="sortSelect" onchange="changeSort(this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+                            <option value="newest" <% If sortBy = "" Or sortBy = "newest" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("user_favorites_sort_newest", Empty) %><% Else %>最新收藏<% End If %></option>
+                            <option value="price_asc" <% If sortBy = "price_asc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("user_favorites_sort_price_asc", Empty) %><% Else %>价格从低到高<% End If %></option>
+                            <option value="price_desc" <% If sortBy = "price_desc" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("user_favorites_sort_price_desc", Empty) %><% Else %>价格从高到低<% End If %></option>
+                            <option value="name" <% If sortBy = "name" Then Response.Write "selected" End If %>><% If FEATURE_I18N Then %><%= T("user_favorites_sort_name", Empty) %><% Else %>名称排序<% End If %></option>
+                        </select>
+                    </div>
                 </div>
             </div>
             
@@ -162,6 +153,23 @@ End Select
         </div>
     </div>
 </div>
+
+<style>
+/* 筛选标签样式 */
+.filter-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    text-decoration: none;
+    color: #666;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s;
+}
+.filter-tag:hover { color: #e91e63; border-color: #e91e63; background: #fce4ec; }
+.filter-tag.active { background: #e91e63; color: #fff; border-color: #e91e63; }
+</style>
 
 <script>
 function removeFromFavorites(productId) {

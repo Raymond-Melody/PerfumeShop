@@ -1,6 +1,7 @@
 <!-- 产品技术管理中心导航 -->
-<!-- 注意：isManager 变量由父页面通过 includes/auth.asp 定义，此处不再重复 include -->
+<!-- 产品技术管理中心导航 V18 -->
 <link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/responsive.css?v=18.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <%
 ' 获取当前页面名称用于高亮
@@ -28,10 +29,17 @@ End Function
 <div class="admin-dashboard">
     <nav class="admin-navbar">
         <div class="admin-nav-container">
-            <a href="index.asp" class="admin-nav-brand">
-                <i class="fas fa-flask"></i>
-                <span>产品技术管理中心</span>
-            </a>
+            <div style="display:flex;align-items:center;">
+                <button class="admin-hamburger" id="adminHamburger" aria-label="菜单">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <a href="index.asp" class="admin-nav-brand">
+                    <i class="fas fa-flask"></i>
+                    <span>产品技术管理中心</span>
+                </a>
+            </div>
             <ul class="admin-nav-menu">
                 <li><a href="javascript:void(0)" onclick="location.reload()"><i class="fas fa-sync-alt"></i> 刷新</a></li>
                 <li><a href="../portal.asp"><i class="fas fa-th-large"></i> 返回入口</a></li>
@@ -39,8 +47,12 @@ End Function
             </ul>
         </div>
     </nav>
+    
+    <!-- 移动端侧边栏遮罩 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <!-- 侧边栏 -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="adminSidebar">
         <ul class="sidebar-menu">
             <!-- 技术概览（仪表板） -->
             <li class="nav-item">
@@ -116,6 +128,7 @@ End Function
         </ul>
     </aside>
 </div>
+<!--#include file="../../includes/nav_common.asp"-->
 <style>
 /* 导航分组样式 */
 .nav-group {

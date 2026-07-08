@@ -84,11 +84,37 @@ gbSuccessGroups = GetScalar("SELECT COUNT(*) FROM GroupBuyOrders WHERE Status = 
 gbTotalParticipants = GetScalar("SELECT COUNT(*) FROM GroupBuyParticipants")
 
 ' 获取编辑中的计划
-Dim gbEditData, gbEditId
+Dim gbEditData, gbIsEditing
 gbEditId = Request.QueryString("edit_id")
 Set gbEditData = Nothing
+gbIsEditing = False
 If gbEditId <> "" And IsNumeric(gbEditId) Then
     Set gbEditData = conn.Execute("SELECT * FROM GroupBuyPlans WHERE PlanID = " & gbEditId)
+    If Not gbEditData Is Nothing Then
+        If Not gbEditData.EOF Then
+            gbIsEditing = True
+        End If
+    End If
+End If
+
+' 预提取编辑数据到变量（VBScript IIf/And不短路，需提前取值）
+Dim eGBGroupPrice, eGBDuration, eGBStartTime, eGBEndTime, eGBMinUnit, eGBMaxUnit, eGBSort
+If gbIsEditing Then
+    eGBGroupPrice = gbEditData("GroupPrice")
+    eGBDuration = gbEditData("DurationHours")
+    eGBStartTime = FormatDateTime(gbEditData("StartTime"), 0)
+    eGBEndTime = FormatDateTime(gbEditData("EndTime"), 0)
+    eGBMinUnit = gbEditData("MinUnit")
+    eGBMaxUnit = gbEditData("MaxUnit")
+    eGBSort = gbEditData("SortOrder")
+Else
+    eGBGroupPrice = ""
+    eGBDuration = "24"
+    eGBStartTime = FormatDateTime(Now(), 0)
+    eGBEndTime = FormatDateTime(DateAdd("d", 7, Now()), 0)
+    eGBMinUnit = "1"
+    eGBMaxUnit = "0"
+    eGBSort = "0"
 End If
 
 ' 所有计划列表
@@ -199,9 +225,9 @@ Dim rsGroups : Set rsGroups = DAL_GetList("SELECT g.GroupID, g.PlanID, g.GroupSN
         
         <!-- 拼团计划表单 -->
         <div class="panel">
-            <h3><i class="fas fa-<% If Not gbEditData Is Nothing And Not gbEditData.EOF Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If Not gbEditData Is Nothing And Not gbEditData.EOF Then %>编辑拼团计划<% Else %>创建拼团计划<% End If %></h3>
+            <h3><i class="fas fa-<% If gbIsEditing Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If gbIsEditing Then %>编辑拼团计划<% Else %>创建拼团计划<% End If %></h3>
             <form method="post">
-                <% If Not gbEditData Is Nothing And Not gbEditData.EOF Then %>
+                <% If gbIsEditing Then %>
                 <input type="hidden" name="edit_id" value="<%= gbEditData("PlanID") %>">
                 <% End If %>
                 <div class="form-row">
@@ -216,7 +242,7 @@ Dim rsGroups : Set rsGroups = DAL_GetList("SELECT g.GroupID, g.PlanID, g.GroupSN
                                     Dim gpSelName : gpSelName = rsGBProducts("ProductName")
                                     Dim gpSelPrice : gpSelPrice = rsGBProducts("BasePrice")
                                     Dim gpSelSelected : gpSelSelected = ""
-                                    If Not gbEditData Is Nothing And Not gbEditData.EOF Then
+                                    If gbIsEditing Then
                                         If CLng(gbEditData("ProductID")) = CLng(gpSelID) Then gpSelSelected = " selected"
                                     End If
                             %>
@@ -238,7 +264,7 @@ Dim rsGroups : Set rsGroups = DAL_GetList("SELECT g.GroupID, g.PlanID, g.GroupSN
                             Dim tsi, tsSel
                             For tsi = 0 To UBound(tsVals)
                                 tsSel = ""
-                                If Not gbEditData Is Nothing And Not gbEditData.EOF Then
+                                If gbIsEditing Then
                                     If CLng(gbEditData("TeamSize")) = tsVals(tsi) Then tsSel = " selected"
                                 End If
                             %>
@@ -248,40 +274,40 @@ Dim rsGroups : Set rsGroups = DAL_GetList("SELECT g.GroupID, g.PlanID, g.GroupSN
                     </div>
                     <div class="form-group">
                         <label>拼团价(每人) *</label>
-                        <input type="number" name="group_price" step="0.01" value="<%= IIf(Not gbEditData Is Nothing And Not gbEditData.EOF, gbEditData("GroupPrice"), "") %>" placeholder="如: 199.00" required>
+                        <input type="number" name="group_price" step="0.01" value="<%= eGBGroupPrice %>" placeholder="如: 199.00" required>
                     </div>
                     <div class="form-group">
                         <label>成团有效期(小时)</label>
-                        <input type="number" name="duration_hours" value="<%= IIf(Not gbEditData Is Nothing And Not gbEditData.EOF, gbEditData("DurationHours"), "24") %>" min="1">
+                        <input type="number" name="duration_hours" value="<%= eGBDuration %>" min="1">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>开始时间 *</label>
-                        <input type="datetime-local" name="start_time" value="<%= IIf(Not gbEditData Is Nothing And Not gbEditData.EOF, FormatDateTime(gbEditData("StartTime"), 0), FormatDateTime(Now(), 0)) %>" required>
+                        <input type="datetime-local" name="start_time" value="<%= eGBStartTime %>" required>
                     </div>
                     <div class="form-group">
                         <label>结束时间 *</label>
-                        <input type="datetime-local" name="end_time" value="<%= IIf(Not gbEditData Is Nothing And Not gbEditData.EOF, FormatDateTime(gbEditData("EndTime"), 0), FormatDateTime(DateAdd("d", 7, Now()), 0)) %>" required>
+                        <input type="datetime-local" name="end_time" value="<%= eGBEndTime %>" required>
                     </div>
                     <div class="form-group">
                         <label>最低开团数</label>
-                        <input type="number" name="min_unit" value="<%= IIf(Not gbEditData Is Nothing And Not gbEditData.EOF, gbEditData("MinUnit"), "1") %>" min="0">
+                        <input type="number" name="min_unit" value="<%= eGBMinUnit %>" min="0">
                     </div>
                     <div class="form-group">
                         <label>最高开团数(0=不限)</label>
-                        <input type="number" name="max_unit" value="<%= IIf(Not gbEditData Is Nothing And Not gbEditData.EOF, gbEditData("MaxUnit"), "0") %>" min="0">
+                        <input type="number" name="max_unit" value="<%= eGBMaxUnit %>" min="0">
                     </div>
                     <div class="form-group">
                         <label>排序</label>
-                        <input type="number" name="sort_order" value="<%= IIf(Not gbEditData Is Nothing And Not gbEditData.EOF, gbEditData("SortOrder"), "0") %>" min="0">
+                        <input type="number" name="sort_order" value="<%= eGBSort %>" min="0">
                     </div>
                 </div>
                 <div style="margin-top:12px;display:flex;gap:8px;">
                     <button type="submit" name="action" value="save" class="btn btn-primary">
-                        <i class="fas fa-save"></i> <% If Not gbEditData Is Nothing And Not gbEditData.EOF Then %>更新<% Else %>创建<% End If %>拼团计划
+                        <i class="fas fa-save"></i> <% If gbIsEditing Then %>更新<% Else %>创建<% End If %>拼团计划
                     </button>
-                    <% If Not gbEditData Is Nothing And Not gbEditData.EOF Then %>
+                    <% If gbIsEditing Then %>
                     <a href="group_buy.asp" class="btn btn-outline">取消编辑</a>
                     <% End If %>
                 </div>

@@ -1,4 +1,5 @@
-<!-- 采购管理中心侧边导航 -->
+<!-- 采购管理中心侧边导航 V18 -->
+<link rel="stylesheet" href="/css/responsive.css?v=18.0">
 <%
 Dim purchaseFullPath : purchaseFullPath = Request.ServerVariables("SCRIPT_NAME")
 Dim purParts : purParts = Split(CStr(purchaseFullPath), "/")
@@ -11,7 +12,17 @@ Function IsActive(pageName)
     If purchaseCurrentPage = pageName Then IsActive = "active" Else IsActive = ""
 End Function
 %>
-<div class="admin-sidebar" style="position:fixed;left:0;top:60px;width:250px;height:calc(100vh - 60px);background:#1a1a2e;border-right:1px solid rgba(255,255,255,0.06);overflow-y:auto;z-index:100;">
+<!-- V18 移动端顶部栏 -->
+<div class="admin-mobile-topbar" style="display:none;position:fixed;top:0;left:0;right:0;height:48px;background:#1a1a2e;z-index:999;align-items:center;padding:0 12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+    <button class="admin-hamburger" id="adminHamburger" aria-label="菜单">
+        <span></span><span></span><span></span>
+    </button>
+    <span style="color:#e0e0e0;font-size:14px;font-weight:600;margin-left:12px;">采购管理中心</span>
+</div>
+<!-- 移动端侧边栏遮罩 -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="admin-sidebar" id="adminSidebar" style="position:fixed;left:0;top:60px;width:250px;height:calc(100vh - 60px);background:#1a1a2e;border-right:1px solid rgba(255,255,255,0.06);overflow-y:auto;z-index:100;">
     <div class="sidebar-header" style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
         <h3 style="color:#e0e0e0;margin:0;font-size:16px;display:flex;align-items:center;gap:10px;">
             <i class="fas fa-shopping-cart" style="color:#FF9800;"></i> 采购管理中心
@@ -106,4 +117,9 @@ End Function
 <style>
 .admin-sidebar .nav-item:hover { background: rgba(255,255,255,0.05); color: #e0e0e0; border-left-color: #FF9800; }
 .admin-sidebar .nav-item.active { background: rgba(255,152,0,0.12); color: #FF9800; border-left-color: #FF9800; font-weight: 500; }
+/* V18 移动端body偏移适配顶部栏 */
+@media (max-width: 768px) {
+    body { padding-top: 48px !important; }
+}
 </style>
+<!--#include file="../../includes/nav_common.asp"-->
