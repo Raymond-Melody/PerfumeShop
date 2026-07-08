@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfumeShop.Core", "PerfumeShop.Core\PerfumeShop.Core.csproj", "{5EBF7E68-BAD5-40C8-AE68-30479A82E9D7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfumeShop.Shared", "PerfumeShop.Shared\PerfumeShop.Shared.csproj", "{5CCCA318-2BCF-431E-B5B4-3A40CE0C160E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfumeShop.Data", "PerfumeShop.Data\PerfumeShop.Data.csproj", "{1E0ADB89-2A3F-458A-BE20-3B59A34287FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfumeShop.Api", "PerfumeShop.Api\PerfumeShop.Api.csproj", "{CBA4CCFA-02AB-4685-BB09-0987FAD5A892}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfumeShop.Admin", "PerfumeShop.Admin\PerfumeShop.Admin.csproj", "{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5EBF7E68-BAD5-40C8-AE68-30479A82E9D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EBF7E68-BAD5-40C8-AE68-30479A82E9D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EBF7E68-BAD5-40C8-AE68-30479A82E9D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EBF7E68-BAD5-40C8-AE68-30479A82E9D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CCCA318-2BCF-431E-B5B4-3A40CE0C160E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CCCA318-2BCF-431E-B5B4-3A40CE0C160E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CCCA318-2BCF-431E-B5B4-3A40CE0C160E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CCCA318-2BCF-431E-B5B4-3A40CE0C160E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E0ADB89-2A3F-458A-BE20-3B59A34287FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0ADB89-2A3F-458A-BE20-3B59A34287FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0ADB89-2A3F-458A-BE20-3B59A34287FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0ADB89-2A3F-458A-BE20-3B59A34287FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBA4CCFA-02AB-4685-BB09-0987FAD5A892}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBA4CCFA-02AB-4685-BB09-0987FAD5A892}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBA4CCFA-02AB-4685-BB09-0987FAD5A892}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBA4CCFA-02AB-4685-BB09-0987FAD5A892}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

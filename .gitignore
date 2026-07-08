@@ -69,3 +69,28 @@ images/uploads/*
 Thumbs.db
 Desktop.ini
 [Dd]esktop.ini
+
+# === .NET / ASP.NET Core 项目排除规则 (V19) ===
+# 构建输出
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.cache
+
+# NuGet
+*.nupkg
+**/packages/
+
+# VS Code / Rider
+.vscode/
+.idea/
+*.DotSettings.user
+
+# 开发证书
+*.pfx
+
+# 用户机密
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
