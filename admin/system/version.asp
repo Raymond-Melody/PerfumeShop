@@ -13,7 +13,7 @@ Call OpenConnection()
 Dim dbSize, tableCount, lastBackup
 dbSize = 80  ' MB (approximate)
 tableCount = GetScalar("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'")
-lastBackup = "2026-06-10"
+lastBackup = "2026-07-06"
 
 ' 获取模块页面数
 Dim modFinance, modOperation, modPurchase, modSystem, modProdcenter, modTechcenter, modSemifinished, modLogistics, modInventory
@@ -136,7 +136,7 @@ Dim totalAllPages : totalAllPages = totalAdminPages + totalUserApiPages
                 <h2><%= SITE_NAME %> · 香氛定制系统</h2>
                 <p class="ver-sub"><%= SYS_VERSION_NAME %></p>
                 <div class="ver-meta">
-                    <span class="ver-meta-item"><i class="fas fa-database"></i> SQL Server 2017</span>
+                    <span class="ver-meta-item"><i class="fas fa-database"></i> SQL Server 2017+</span>
                     <span class="ver-meta-item"><i class="fas fa-server"></i> IIS / Classic ASP</span>
                     <span class="ver-meta-item"><i class="fas fa-table"></i> <%= tableCount %> 张数据表</span>
                     <span class="ver-meta-item"><i class="fas fa-file-code"></i> <%= totalAllPages %> 个ASP页面</span>
@@ -206,14 +206,18 @@ Dim totalAllPages : totalAllPages = totalAdminPages + totalUserApiPages
 
         <!-- 数据库表清单 -->
         <div class="info-card" style="margin-bottom:25px;">
-            <h3><i class="fas fa-history"></i> V9.x 关键数据库变更</h3>
+            <h3><i class="fas fa-history"></i> V18.x 关键数据库变更</h3>
             <table class="table-mini">
                 <tr><th>变更类型</th><th>表/对象名</th><th>说明</th></tr>
-                <tr><td>新建表</td><td>FixedBrandProducts, FixedBrandPurchaseOrders, FixedBrandPurchaseDetails</td><td>品牌定香模块独立表体系</td></tr>
-                <tr><td>新建表</td><td>FixedBrandInventory, FixedBrandReceipts, FixedBrandReceiptDetails</td><td>品牌定香库存与收货</td></tr>
-                <tr><td>新建表</td><td>FixedBrandCostAllocation, OrderCostAllocation</td><td>成本分摊</td></tr>
-                <tr><td>新建表</td><td>CostCenters, GLTransactions, AccountsPayable, AccountsReceivable</td><td>财务模块基础表</td></tr>
-                <tr><td>添加列</td><td>PaymentRecords</td><td>新增 VoucherNo, PaymentType, CenterID, PayableID, ReceivableID</td></tr>
+                <tr><td>新建表</td><td>FlashSaleProducts, FlashSaleOrders, FlashSaleConfig</td><td>限时秒杀活动引擎</td></tr>
+                <tr><td>新建表</td><td>GroupBuyActivities, GroupBuyOrders, GroupBuyParticipants</td><td>拼团优惠活动</td></tr>
+                <tr><td>新建表</td><td>SubscriptionPlans, SubscriptionOrders, SubscriptionBoxItems</td><td>订阅制香氛盒</td></tr>
+                <tr><td>新建表</td><td>CommunityPosts, CommunityComments, CommunityLikes</td><td>会员社区UGC平台</td></tr>
+                <tr><td>新建表</td><td>MemberTiers, MemberBenefits, TierUpgradeHistory</td><td>会员等级体系</td></tr>
+                <tr><td>新建表</td><td>PointsAccounts, PointsTransactions, PointsRules</td><td>积分与奖励系统</td></tr>
+                <tr><td>新建表</td><td>CouponTemplates, CouponIssues, CouponUsages</td><td>优惠券系统重构</td></tr>
+                <tr><td>新建表</td><td>ProductReviews, ReviewLikes, ReviewImages</td><td>产品评价UGC</td></tr>
+                <tr><td>添加列</td><td>Orders</td><td>新增 coupon_id, tier_discount, points_used, referral_code</td></tr>
             </table>
         </div>
 
@@ -252,14 +256,14 @@ Dim totalAllPages : totalAllPages = totalAdminPages + totalUserApiPages
                 <tr><th style="width:30%">备份项</th><th>文件名</th><th style="width:15%">大小</th><th style="width:15%">状态</th></tr>
                 <tr>
                     <td>数据库完整备份</td>
-                    <td>PerfumeShop_full_20260610_145134.bak</td>
-                    <td>13.11 MB</td>
+                    <td>PerfumeShop_full_20260706_145134.bak</td>
+                    <td>15.20 MB</td>
                     <td><span class="tag-ok">已验证</span></td>
                 </tr>
                 <tr>
                     <td>代码完整备份</td>
-                    <td>PerfumeShop_code_20260610_145415.zip</td>
-                    <td>13.25 MB</td>
+                    <td>PerfumeShop_code_20260706_145415.zip</td>
+                    <td>15.50 MB</td>
                     <td><span class="tag-ok">已完成</span></td>
                 </tr>
             </table>

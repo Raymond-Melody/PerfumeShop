@@ -164,21 +164,90 @@ Response.ContentType = "text/html"
                     <tr><td>/user/order_detail.asp</td><td>订单详情<span class="role-tag role-tag-user">用户</span></td></tr>
                     <tr><td>/user/favorites.asp</td><td>我的收藏<span class="role-tag role-tag-user">用户</span></td></tr>
                     <tr><td>/user/addresses.asp</td><td>收货地址管理<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/user/coupons.asp</td><td>我的优惠券 (V18新增)<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/user/points.asp</td><td>我的积分 (V18新增)<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/user/subscription.asp</td><td>我的订阅 (V18新增)<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/user/kol_products.asp</td><td>KOL定制产品 (V18新增)<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/user/my_reviews.asp</td><td>我的评价 (V18新增)<span class="role-tag role-tag-user">用户</span></td></tr>
                     <tr><td>/user/settings.asp</td><td>个人设置<span class="role-tag role-tag-user">用户</span></td></tr>
-                    <tr><td>/user/register.asp</td><td>用户注册<span class="role-tag role-tag-user">用户</span></td></tr>
-                    <tr><td>/user/login.asp</td><td>用户登录<span class="role-tag role-tag-user">用户</span></td></tr>
                 </table>
             </div>
         </div>
 
-        <!-- ========== 二、后台模块总览 ========== -->
+        <!-- ========== 二、V18营销功能模块 ========== -->
         <div class="guide-section">
-            <h2>二、后台管理系统总览</h2>
+            <h2>二、V18 营销功能模块（前台）</h2>
+            
+            <div class="guide-card">
+                <h3>2.1 限时秒杀</h3>
+                <table class="guide-table">
+                    <tr><th>页面</th><th>功能</th><th>角色</th></tr>
+                    <tr><td>/flash_sale.asp</td><td>秒杀活动列表页，展示正在进行和即将开始的秒杀<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/admin/operation/flash_sale.asp</td><td>秒杀活动管理：创建/编辑/上下架活动<span class="role-tag role-tag-admin">运营</span></td></tr>
+                </table>
+            </div>
+
+            <div class="guide-card">
+                <h3>2.2 拼团优惠</h3>
+                <table class="guide-table">
+                    <tr><th>页面</th><th>功能</th><th>角色</th></tr>
+                    <tr><td>/group_buy.asp</td><td>拼团活动列表，支持发起拼团/参与他人拼团<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/admin/operation/group_buy.asp</td><td>拼团活动管理：设置成团人数/折扣/有效期<span class="role-tag role-tag-admin">运营</span></td></tr>
+                </table>
+            </div>
+
+            <div class="guide-card">
+                <h3>2.3 订阅盒子</h3>
+                <table class="guide-table">
+                    <tr><th>页面</th><th>功能</th><th>角色</th></tr>
+                    <tr><td>/subscribe.asp</td><td>订阅计划展示：月度/季度/年度，香氛偏好选择<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/user/subscription.asp</td><td>我的订阅管理：查看/修改/取消订阅<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/admin/operation/subscription_plans.asp</td><td>订阅计划管理：定价/盒内商品配置<span class="role-tag role-tag-admin">运营</span></td></tr>
+                </table>
+            </div>
+
+            <div class="guide-card">
+                <h3>2.4 会员社区</h3>
+                <table class="guide-table">
+                    <tr><th>页面</th><th>功能</th><th>角色</th></tr>
+                    <tr><td>/community.asp</td><td>社区首页：帖子列表、热门话题、发帖<span class="role-tag role-tag-user">用户</span></td></tr>
+                </table>
+            </div>
+
+            <div class="guide-card">
+                <h3>2.5 会员体系</h3>
+                <table class="guide-table">
+                    <tr><th>功能模块</th><th>说明</th><th>角色</th></tr>
+                    <tr><td>会员等级 (MemberTiers)</td><td>青铜/白银/黄金/铂金/钻石五级，等级折扣自动计算<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>积分系统 (Points)</td><td>消费积分、签到积分、积分兑换<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/user/points.asp</td><td>我的积分：积分余额、积分明细、兑换记录<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>优惠券系统 (Coupons)</td><td>满减券/折扣券/免邮券，支持发放与核销<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/user/coupons.asp</td><td>我的优惠券：可用/已用/已过期<span class="role-tag role-tag-user">用户</span></td></tr>
+                    <tr><td>/admin/operation/tier_management.asp</td><td>会员等级管理：升级条件/权益配置<span class="role-tag role-tag-admin">运营</span></td></tr>
+                    <tr><td>/admin/operation/coupon_management.asp</td><td>优惠券管理：模板创建/批量发放/核销统计<span class="role-tag role-tag-admin">运营</span></td></tr>
+                </table>
+            </div>
+
+            <div class="guide-card">
+                <h3>2.6 AI 智能功能</h3>
+                <table class="guide-table">
+                    <tr><th>功能</th><th>入口</th><th>说明</th></tr>
+                    <tr><td>智能客服</td><td>chatbot_widget.asp (全站浮窗)</td><td>AI驱动的在线客服，支持自然语言问答</td></tr>
+                    <tr><td>香氛匹配</td><td>/fragrance_quiz.asp</td><td>通过问卷推荐个性化香氛，AI匹配引擎</td></tr>
+                    <tr><td>智能推荐</td><td>首页/产品页推荐区域</td><td>基于用户行为和偏好的个性化推荐</td></tr>
+                    <tr><td>情感分析</td><td>后台评论管理</td><td>自动分析用户评论情感倾向</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- ========== 三、后台模块总览 ========== -->
+        <div class="guide-section">
+            <h2>三、后台管理系统总览</h2>
             <div class="module-grid">
                 <div class="module-card">
                     <h4><i class="fas fa-chart-line"></i> 运营中心 (operation)</h4>
-                    <p>订单处理、发货、退款、营销统计、综合报表</p>
-                    <p class="page-count">22 页面</p>
+                    <p>订单处理、发货、退款、秒杀/拼团/订阅管理、优惠券、会员等级、积分体系</p>
+                    <p class="page-count">29 页面 (V18扩展)</p>
                 </div>
                 <div class="module-card">
                     <h4><i class="fas fa-dollar-sign"></i> 财务中心 (finance)</h4>
@@ -223,12 +292,12 @@ Response.ContentType = "text/html"
             </div>
         </div>
 
-        <!-- ========== 三、财务中心 ========== -->
+        <!-- ========== 四、财务中心 ========== -->
         <div class="guide-section">
-            <h2>三、财务中心流程</h2>
+            <h2>四、财务中心流程</h2>
             
             <div class="guide-card">
-                <h3>3.1 应付账款 (AP)</h3>
+                <h3>4.1 应付账款 (AP)</h3>
                 <div class="flow-row">
                     <span class="flow-step">采购收货</span>
                     <span class="flow-arrow">→</span>
@@ -243,7 +312,7 @@ Response.ContentType = "text/html"
             </div>
 
             <div class="guide-card">
-                <h3>3.2 应收账款 (AR)</h3>
+                <h3>4.2 应收账款 (AR)</h3>
                 <div class="flow-row">
                     <span class="flow-step">用户下单</span>
                     <span class="flow-arrow">→</span>
@@ -256,7 +325,7 @@ Response.ContentType = "text/html"
             </div>
 
             <div class="guide-card">
-                <h3>3.3 财务报表</h3>
+                <h3>4.3 财务报表</h3>
                 <div class="flow-row">
                     <span class="flow-step">成本中心设置 cost_centers.asp</span>
                     <span class="flow-arrow">→</span>
@@ -283,12 +352,12 @@ Response.ContentType = "text/html"
             </div>
         </div>
 
-        <!-- ========== 四、采购中心 ========== -->
+        <!-- ========== 五、采购中心 ========== -->
         <div class="guide-section">
-            <h2>四、采购中心流程</h2>
+            <h2>五、采购中心流程</h2>
             
             <div class="guide-card">
-                <h3>4.1 标准采购</h3>
+                <h3>5.1 标准采购</h3>
                 <div class="flow-row">
                     <span class="flow-step">供应商管理 supplier_management.asp</span>
                     <span class="flow-arrow">→</span>
@@ -301,7 +370,7 @@ Response.ContentType = "text/html"
             </div>
 
             <div class="guide-card">
-                <h3>4.2 品牌定香采购（FixedBrand）</h3>
+                <h3>5.2 品牌定香采购（FixedBrand）</h3>
                 <div class="flow-row">
                     <span class="flow-step">品牌定香首页 fixed_brand/index.asp</span>
                     <span class="flow-arrow">→</span>
@@ -317,11 +386,11 @@ Response.ContentType = "text/html"
             </div>
         </div>
 
-        <!-- ========== 五、运营中心 ========== -->
+        <!-- ========== 六、运营中心 ========== -->
         <div class="guide-section">
-            <h2>五、运营中心流程</h2>
+            <h2>六、运营中心流程</h2>
             <div class="guide-card">
-                <h3>5.1 订单处理</h3>
+                <h3>6.1 订单处理</h3>
                 <div class="flow-row">
                     <span class="flow-step">新订单审核</span>
                     <span class="flow-arrow">→</span>
@@ -336,11 +405,11 @@ Response.ContentType = "text/html"
             </div>
         </div>
 
-        <!-- ========== 六、生产中心 ========== -->
+        <!-- ========== 七、生产中心 ========== -->
         <div class="guide-section">
-            <h2>六、生产中心流程</h2>
+            <h2>七、生产中心流程</h2>
             <div class="guide-card">
-                <h3>6.1 生产管理</h3>
+                <h3>7.1 生产管理</h3>
                 <div class="flow-row">
                     <span class="flow-step">生产排程 prod_scheduling.asp</span>
                     <span class="flow-arrow">→</span>
@@ -353,11 +422,11 @@ Response.ContentType = "text/html"
             </div>
         </div>
 
-        <!-- ========== 七、物流中心 ========== -->
+        <!-- ========== 八、物流中心 ========== -->
         <div class="guide-section">
-            <h2>七、物流中心流程</h2>
+            <h2>八、物流中心流程</h2>
             <div class="guide-card">
-                <h3>7.1 发货管理</h3>
+                <h3>8.1 发货管理</h3>
                 <div class="flow-row">
                     <span class="flow-step">待发货列表</span>
                     <span class="flow-arrow">→</span>
@@ -372,11 +441,11 @@ Response.ContentType = "text/html"
             </div>
         </div>
 
-        <!-- ========== 八、系统管理 ========== -->
+        <!-- ========== 九、系统管理 ========== -->
         <div class="guide-section">
-            <h2>八、系统管理流程</h2>
+            <h2>九、系统管理流程</h2>
             <div class="guide-card">
-                <h3>8.1 用户与权限</h3>
+                <h3>9.1 用户与权限</h3>
                 <table class="guide-table">
                     <tr><th>页面</th><th>功能</th></tr>
                     <tr><td>/admin/system/admins.asp</td><td>创建/编辑/禁用管理员账号</td></tr>
@@ -387,7 +456,7 @@ Response.ContentType = "text/html"
             </div>
 
             <div class="guide-card">
-                <h3>8.2 数据备份</h3>
+                <h3>9.2 数据备份</h3>
                 <div class="flow-row">
                     <span class="flow-step">进入备份中心 backup_center.asp</span>
                     <span class="flow-arrow">→</span>
@@ -404,9 +473,9 @@ Response.ContentType = "text/html"
             </div>
         </div>
 
-        <!-- ========== 九、API接口 ========== -->
+        <!-- ========== 十、API接口 ========== -->
         <div class="guide-section">
-            <h2>九、前端 API 接口</h2>
+            <h2>十、前端 API 接口</h2>
             <div class="guide-card">
                 <table class="guide-table">
                     <tr><th>接口</th><th>功能</th></tr>
@@ -422,22 +491,29 @@ Response.ContentType = "text/html"
                     <tr><td>/api/upload.asp</td><td>文件上传</td></tr>
                     <tr><td>/api/risk_check.asp</td><td>风控检查</td></tr>
                     <tr><td>/api/get_areas.asp</td><td>获取地区数据</td></tr>
+                    <tr><td>/api/chatbot.asp</td><td>AI客服对话接口 (V18新增)</td></tr>
+                    <tr><td>/api/fragrance_match.asp</td><td>香氛匹配推荐 (V18新增)</td></tr>
+                    <tr><td>/api/coupon_validate.asp</td><td>优惠券验证 (V18新增)</td></tr>
+                    <tr><td>/api/search_suggestions.asp</td><td>搜索建议 (V18新增)</td></tr>
+                    <tr><td>/api/notifications.asp</td><td>消息通知 (V18新增)</td></tr>
                 </table>
             </div>
         </div>
 
-        <!-- ========== 十、技术架构 ========== -->
+        <!-- ========== 十一、技术架构 ========== -->
         <div class="guide-section">
-            <h2>十、技术架构要点</h2>
+            <h2>十一、技术架构要点</h2>
             <div class="guide-card">
                 <table class="guide-table">
                     <tr><th>组件</th><th>技术栈</th></tr>
                     <tr><td>后端语言</td><td>Classic ASP (VBScript), CodePage 65001 (UTF-8)</td></tr>
-                    <tr><td>数据库</td><td>SQL Server 2017 (localhost\YOURPERFUME, 97张表)</td></tr>
-                    <tr><td>数据库连接</td><td>SQLOLEDB Provider, Integrated Security (SSPI)</td></tr>
-                    <tr><td>前端样式</td><td>CSS 自定义属性 (design-tokens.css), Font Awesome 6</td></tr>
-                    <tr><td>安全机制</td><td>CSRF 令牌, Cookie 签名, 登录速率限制, 安全响应头</td></tr>
-                    <tr><td>备份方式</td><td>SQL Server BACKUP DATABASE (完整备份), PowerShell 自动化</td></tr>
+                    <tr><td>数据库</td><td>SQL Server 2017+ (localhost\YOURPERFUME)</td></tr>
+                    <tr><td>数据库连接</td><td>MSOLEDBSQL Provider, Integrated Security (SSPI)</td></tr>
+                    <tr><td>前端样式</td><td>CSS 自定义属性 (design-tokens.css), Font Awesome 6, 移动优先响应式</td></tr>
+                    <tr><td>安全机制</td><td>CSRF 令牌, Cookie 签名, 登录速率限制, CSP 安全响应头, API 限流</td></tr>
+                    <tr><td>AI服务</td><td>Python Flask (ai-service/), 智能客服/香氛匹配/情感分析</td></tr>
+                    <tr><td>前端增强</td><td>PWA Service Worker, 离线缓存, 骨架屏加载, 图片懒加载</td></tr>
+                    <tr><td>国际化</td><td>FEATURE_I18N 功能开关, zh-CN + en-US 双语言</td></tr>
                 </table>
             </div>
 
