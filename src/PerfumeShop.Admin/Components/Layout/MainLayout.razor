@@ -52,12 +52,14 @@
 
     private MudTheme _theme = new()
     {
+#pragma warning disable CS0618 // Palette 已废弃，MudBlazor 6.21.0 尚未提供 PaletteLight
         Palette = new Palette
         {
             Primary = "#7C4DFF",
             Secondary = "#FF4081",
             AppbarBackground = "#7C4DFF",
         },
+#pragma warning restore CS0618
         PaletteDark = new PaletteDark
         {
             Primary = "#BB86FC",

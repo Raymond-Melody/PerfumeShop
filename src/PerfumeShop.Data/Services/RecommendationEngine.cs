@@ -43,16 +43,30 @@ public class RecommendationEngine : IRecommendationEngine
 
     public async Task<IEnumerable<int>> GetPopularProductsAsync(int count = 10, CancellationToken ct = default)
     {
-        // 按购买量排序 (通过关联订单明细统计)
-        return await (from p in _db.Products
-                      join od in _db.OrderDetails on p.ProductId equals od.ProductId into odJoin
-                      from od in odJoin.DefaultIfEmpty()
-                      where p.IsActive == true
-                      group od by new { p.ProductId, p.CreatedAt } into g
-                      orderby g.Sum(x => x != null ? x.Quantity : 0) descending, g.Key.CreatedAt descending
-                      select g.Key.ProductId)
-                      .Take(count)
-                      .ToListAsync(ct);
+        // 按订单明细中的总销量排序（EF Core 可翻译的子查询）
+        var popularIds = await _db.OrderDetails
+            .GroupBy(od => od.ProductId)
+            .Select(g => new { ProductId = g.Key, TotalSold = g.Sum(od => od.Quantity) })
+            .OrderByDescending(x => x.TotalSold)
+            .Take(count)
+            .Select(x => x.ProductId)
+            .ToListAsync(ct);
+
+        if (popularIds.Count < count)
+        {
+            // 销量不足时用最新上架商品补齐
+            var existingIds = new HashSet<int>(popularIds);
+            var newProducts = await _db.Products
+                .AsNoTracking()
+                .Where(p => p.IsActive == true && !existingIds.Contains(p.ProductId))
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(count - popularIds.Count)
+                .Select(p => p.ProductId)
+                .ToListAsync(ct);
+            popularIds.AddRange(newProducts);
+        }
+
+        return popularIds;
     }
 
     public async Task<IEnumerable<int>> GetRelatedProductsAsync(int productId, int count = 4, CancellationToken ct = default)
