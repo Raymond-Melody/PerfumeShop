@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfumeShop.Api", "PerfumeS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfumeShop.Admin", "PerfumeShop.Admin\PerfumeShop.Admin.csproj", "{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PerfumeShop.IntegrationTests", "..\tests\PerfumeShop.IntegrationTests\PerfumeShop.IntegrationTests.csproj", "{CD1BB208-1401-45ED-A1B6-7299E38F11F3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1A0A4FD4-E2CC-4D56-BE46-360F34D71DF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CD1BB208-1401-45ED-A1B6-7299E38F11F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD1BB208-1401-45ED-A1B6-7299E38F11F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD1BB208-1401-45ED-A1B6-7299E38F11F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD1BB208-1401-45ED-A1B6-7299E38F11F3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

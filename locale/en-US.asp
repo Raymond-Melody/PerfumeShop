@@ -1016,7 +1016,7 @@ admin_login_db_conn_error=Database connection error:
 # === Admin - Portal ===
 admin_portal_page_title=Admin Center - Perfume E-Commerce System
 admin_portal_heading=Admin Center
-admin_portal_subtitle=V9.0 Unified Entry · Select a management module
+admin_portal_subtitle=V18.0 Unified Entry · Select a management module
 admin_portal_operation=Operations Center
 admin_portal_operation_desc=Orders, Customers, Products, Reviews
 admin_portal_operation_f1=Order Management
@@ -1071,17 +1071,25 @@ admin_portal_inventory_f1=Inventory Dashboard
 admin_portal_inventory_f2=Category Alerts
 admin_portal_inventory_f3=Stock Movements
 admin_portal_inventory_f4=Quick Access
+admin_portal_analytics=Data Analytics Dashboard
+admin_portal_analytics_desc=Revenue Trends, Conversion Funnels, Top Products
+admin_portal_analytics_f1=Real-Time Overview
+admin_portal_analytics_f2=Conversion Funnel Analysis
+admin_portal_analytics_f3=Top Products Ranking
+admin_portal_analytics_f4=Revenue Trend Charts
 admin_portal_logout=Sign Out
 admin_portal_logout_desc=End this admin session
-admin_portal_footer=Perfume E-Commerce System · Unified Management Platform
+admin_portal_footer=Perfume E-Commerce System V18.0 · Unified Management Platform
 
 # === Admin - Navigation ===
-admin_nav_brand=V9.0 Admin Center
+admin_nav_brand=V18.0 Admin Center
+admin_nav_menu=Menu
 admin_nav_refresh=Refresh
 admin_nav_visit_site=Visit Site
 admin_nav_logout=Sign Out
 admin_nav_back=Back to Portal
 admin_nav_business=Business Modules
+admin_nav_data=Data Analytics
 admin_nav_sys_mgmt=System
 admin_nav_site_settings=Site Settings
 admin_nav_prodcenter=Production

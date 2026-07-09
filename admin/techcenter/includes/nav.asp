@@ -53,6 +53,12 @@ End Function
     
     <!-- 侧边栏 -->
     <aside class="sidebar" id="adminSidebar">
+        <div class="sidebar-header" style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <h3 style="color:#e0e0e0;margin:0;font-size:16px;display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-flask" style="color:#9C27B0;"></i> 产品技术管理中心
+            </h3>
+            <p style="color:#888;font-size:11px;margin:8px 0 0;">配方 · 基香 · 香调 · 产品</p>
+        </div>
         <ul class="sidebar-menu">
             <!-- 技术概览（仪表板） -->
             <li class="nav-item">
@@ -126,6 +132,11 @@ End Function
                 </a>
             </li>
         </ul>
+        <div class="sidebar-footer" style="padding:15px 20px;border-top:1px solid rgba(255,255,255,0.06);">
+            <a href="/admin/portal.asp" style="color:#666;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-arrow-left"></i> 返回管理中心
+            </a>
+        </div>
     </aside>
 </div>
 <!--#include file="../../includes/nav_common.asp"-->

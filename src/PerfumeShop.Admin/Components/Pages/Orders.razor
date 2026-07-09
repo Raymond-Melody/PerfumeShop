@@ -1,0 +1,139 @@
+@page "/admin/orders"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>订单管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">订单管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudTextField @bind-Value="_searchText" Placeholder="搜索订单号/用户ID..." Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_statusFilter" Placeholder="状态筛选" Clearable="true">
+            <MudSelectItem Value="@("pending")">待付款</MudSelectItem>
+            <MudSelectItem Value="@("paid")">已付款</MudSelectItem>
+            <MudSelectItem Value="@("shipped")">已发货</MudSelectItem>
+            <MudSelectItem Value="@("delivered")">已送达</MudSelectItem>
+            <MudSelectItem Value="@("cancelled")">已取消</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<Order>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>订单号</MudTh>
+        <MudTh>用户ID</MudTh>
+        <MudTh SortBy="new SortDefinition<Order>(nameof(Order.TotalAmount), o => o.TotalAmount)">金额</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh SortBy="new SortDefinition<Order>(nameof(Order.CreatedAt), o => o.CreatedAt)">创建时间</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.OrderNo</MudTd>
+        <MudTd>@context.UserId</MudTd>
+        <MudTd>¥@context.TotalAmount.ToString("F2")</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status ?? "")">@(context.Status ?? "-")</MudChip>
+        </MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                           OnClick="@(() => ViewDetail(context.OrderId))" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@* 订单详情对话框 *@
+<MudDialog @bind-Visible="_showDetail" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">订单详情 #@_selectedOrder?.OrderId</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedOrder != null)
+        {
+            <MudGrid>
+                <MudItem xs="6"><MudText><b>订单号:</b> @_selectedOrder.OrderNo</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>状态:</b> <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_selectedOrder.Status ?? "")">@(_selectedOrder.Status ?? "-")</MudChip></MudText></MudItem>
+                <MudItem xs="6"><MudText><b>用户ID:</b> @_selectedOrder.UserId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>金额:</b> ¥@_selectedOrder.TotalAmount.ToString("F2")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>运费:</b> ¥@(_selectedOrder.ShippingFee ?? 0).ToString("F2")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>支付方式:</b> @(_selectedOrder.PaymentMethod ?? "-")</MudText></MudItem>
+                <MudItem xs="12"><MudText><b>收货地址:</b> @(_selectedOrder.ShippingAddress ?? "-")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>收件人:</b> @(_selectedOrder.ShippingName ?? "-")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>电话:</b> @(_selectedOrder.ShippingPhone ?? "-")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>成本:</b> ¥@(_selectedOrder.CostAmount ?? 0).ToString("F2")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>利润:</b> ¥@(_selectedOrder.ProfitAmount ?? 0).ToString("F2")</MudText></MudItem>
+                <MudItem xs="12"><MudText><b>备注:</b> @(_selectedOrder.Notes ?? "无")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>创建:</b> @_selectedOrder.CreatedAt?.ToString("yyyy-MM-dd HH:mm:ss")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>更新:</b> @_selectedOrder.UpdatedAt?.ToString("yyyy-MM-dd HH:mm:ss")</MudText></MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private MudTable<Order>? _table;
+    private string _searchText = "";
+    private string? _statusFilter;
+    private bool _showDetail;
+    private Order? _selectedOrder;
+
+    private async Task<TableData<Order>> ServerReload(TableState state)
+    {
+        var query = Db.Orders.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var search = _searchText.Trim();
+            query = query.Where(o => o.OrderNo.Contains(search) || o.UserId.ToString().Contains(search));
+        }
+        if (!string.IsNullOrWhiteSpace(_statusFilter))
+        {
+            query = query.Where(o => o.Status == _statusFilter);
+        }
+
+        var totalItems = await query.CountAsync();
+
+        // 排序
+        query = state.SortLabel switch
+        {
+            nameof(Order.TotalAmount) => state.SortDirection == SortDirection.Descending
+                ? query.OrderByDescending(o => o.TotalAmount) : query.OrderBy(o => o.TotalAmount),
+            _ => state.SortDirection == SortDirection.Descending
+                ? query.OrderByDescending(o => o.CreatedAt) : query.OrderBy(o => o.CreatedAt)
+        };
+
+        var items = await query.Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<Order> { TotalItems = totalItems, Items = items };
+    }
+
+    private async Task ViewDetail(int orderId)
+    {
+        _selectedOrder = await Db.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+        _showDetail = true;
+    }
+
+    private void Cancel() => _showDetail = false;
+
+    private Color GetStatusColor(string status) => status.ToLower() switch
+    {
+        "pending" => Color.Warning,
+        "paid" or "confirmed" => Color.Info,
+        "shipped" => Color.Primary,
+        "delivered" or "completed" => Color.Success,
+        "cancelled" => Color.Error,
+        _ => Color.Default
+    };
+}

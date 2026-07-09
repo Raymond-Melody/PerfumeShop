@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - YourPerfume 定制你的专属香氛</title>
+    <meta name="description" content="YourPerfume 香水定制平台 - 从前调到后调，每一个选择都是你的独特表达" />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+          integrity="sha384-XtzBx5NJx8QSoWJmQUVUdONUGDMVGJCYOzuLSefYBpGBGqJMM7WGpBBb5h4iYWd" crossorigin="anonymous" />
+    <style>
+        :root { --brand: #7C4DFF; --brand-light: #B388FF; --brand-dark: #651FFF; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+        .navbar-brand { font-weight: 700; color: var(--brand) !important; }
+        .btn-brand { background: var(--brand); color: #fff; border: none; }
+        .btn-brand:hover { background: var(--brand-dark); color: #fff; }
+        .hero-banner { background: linear-gradient(135deg, var(--brand) 0%, #E1BEE7 100%); color: #fff; padding: 80px 0; text-align: center; }
+        .hero-banner h1 { font-size: 2.5rem; font-weight: 700; }
+        .product-card { transition: transform .2s, box-shadow .2s; border: none; border-radius: 12px; overflow: hidden; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(124,77,255,.15); }
+        .product-card .card-img-top { height: 220px; object-fit: cover; background: #f5f0ff; }
+        .product-card .price { color: var(--brand); font-weight: 700; font-size: 1.2rem; }
+        .badge-sale { position: absolute; top: 10px; left: 10px; background: #FF1744; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: .8rem; }
+        footer { background: #1a1a2e; color: #ccc; padding: 40px 0 20px; margin-top: auto; }
+        footer a { color: var(--brand-light); text-decoration: none; }
+        footer a:hover { color: #fff; }
+        .section-title { font-weight: 700; color: #333; border-left: 4px solid var(--brand); padding-left: 12px; }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="bi bi-flower1"></i> YourPerfume</a>
+            <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">首页</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products">全部商品</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products?type=custom">定制香水</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products?type=fixed">成品香水</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/customize"><i class="bi bi-palette"></i> 定制</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/flash-sale"><i class="bi bi-lightning-charge text-danger"></i> 秒杀</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/group-buy">拼团</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/subscribe">订阅</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/community">社区</a></li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="/cart"><i class="bi bi-cart3"></i> 购物车</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user"><i class="bi bi-person"></i> 我的</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">更多</a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/fragrance-quiz"><i class="bi bi-stars"></i> 香氛测试</a></li>
+                            <li><a class="dropdown-item" href="/about">关于我们</a></li>
+                            <li><a class="dropdown-item" href="/contact">联系我们</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <h5><i class="bi bi-flower1"></i> YourPerfume</h5>
+                    <p class="small">定制你的专属香氛<br/>从前调到后调，每一个选择都是你的独特表达</p>
+                </div>
+                <div class="col-md-2">
+                    <h6>购物指南</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="/products">全部商品</a></li>
+                        <li><a href="/products?type=fixed">成品香水</a></li>
+                        <li><a href="/flash-sale">限时秒杀</a></li>
+                        <li><a href="/group-buy">拼团优惠</a></li>
+                        <li><a href="/subscribe">订阅盒子</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2">
+                    <h6>客户服务</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="/user/orders">我的订单</a></li>
+                        <li><a href="/user/favorites">我的收藏</a></li>
+                        <li><a href="/contact">联系我们</a></li>
+                        <li><a href="/about">关于我们</a></li>
+                        <li><a href="/fragrance-quiz">香氛测试</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>关于我们</h6>
+                    <p class="small">YourPerfume 是专业的香水定制平台，汇聚全球顶级调香师，为您提供独一无二的香氛体验。</p>
+                </div>
+            </div>
+            <hr class="border-secondary" />
+            <p class="text-center small mb-0">&copy; @DateTime.Now.Year YourPerfume. All rights reserved. | V19 .NET 8</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous" defer></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

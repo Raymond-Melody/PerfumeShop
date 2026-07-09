@@ -1,0 +1,188 @@
+@page "/admin/points"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>积分管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">积分管理</MudText>
+
+<MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+    @* 积分规则 *@
+    <MudTabPanel Text="积分规则" Icon="@Icons.Material.Filled.Rule">
+        <MudTable Items="@_rules" Hover="true" Dense="true" Striped="true">
+            <HeaderContent>
+                <MudTh>规则ID</MudTh>
+                <MudTh>编码</MudTh>
+                <MudTh>名称</MudTh>
+                <MudTh>值</MudTh>
+                <MudTh>单位</MudTh>
+                <MudTh>状态</MudTh>
+                <MudTh>操作</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.RuleId</MudTd>
+                <MudTd><code>@context.RuleCode</code></MudTd>
+                <MudTd>@context.RuleName</MudTd>
+                <MudTd>@context.RuleValue</MudTd>
+                <MudTd>@context.RuleUnit</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@(context.IsEnabled ? Color.Success : Color.Default)">
+                        @(context.IsEnabled ? "启用" : "停用")
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@(context.IsEnabled ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                                   Size="Size.Small" OnClick="@(() => ToggleRule(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    @* 兑换商品 *@
+    <MudTabPanel Text="兑换商城" Icon="@Icons.Material.Filled.Redeem">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@(() => _showCreateItem = true)" Class="mb-3">添加兑换品</MudButton>
+
+        <MudTable Items="@_redemptions" Hover="true" Dense="true" Striped="true">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>名称</MudTh>
+                <MudTh>类型</MudTh>
+                <MudTh>积分</MudTh>
+                <MudTh>库存</MudTh>
+                <MudTh>价值</MudTh>
+                <MudTh>状态</MudTh>
+                <MudTh>操作</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.RedemptionId</MudTd>
+                <MudTd>@context.ItemName</MudTd>
+                <MudTd><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.ItemType</MudChip></MudTd>
+                <MudTd>@context.PointsCost pts</MudTd>
+                <MudTd>@context.Stock</MudTd>
+                <MudTd>¥@context.RedemptionValue.ToString("F2")</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@(context.IsEnabled ? Color.Success : Color.Default)">
+                        @(context.IsEnabled ? "启用" : "停用")
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@(context.IsEnabled ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                                   Size="Size.Small" OnClick="@(() => ToggleRedemption(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    @* 积分流水 *@
+    <MudTabPanel Text="积分流水" Icon="@Icons.Material.Filled.ReceiptLong">
+        <MudTable ServerData="@(new Func<TableState, Task<TableData<PointsLedger>>>(ServerReloadLedger))"
+                  @ref="_ledgerTable" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>用户ID</MudTh>
+                <MudTh>类型</MudTh>
+                <MudTh>积分</MudTh>
+                <MudTh>描述</MudTh>
+                <MudTh>时间</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.LedgerId</MudTd>
+                <MudTd>@context.UserId</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@(context.Points > 0 ? Color.Success : Color.Error)">
+                        @context.PointType
+                    </MudChip>
+                </MudTd>
+                <MudTd Style="@(context.Points > 0 ? "color:green" : "color:red")">
+                    @(context.Points > 0 ? "+" : "")@context.Points
+                </MudTd>
+                <MudTd>@(context.Description ?? "-")</MudTd>
+                <MudTd>@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            </RowTemplate>
+            <PagerContent><MudTablePager /></PagerContent>
+        </MudTable>
+    </MudTabPanel>
+</MudTabs>
+
+@* 添加兑换品对话框 *@
+<MudDialog @bind-Visible="_showCreateItem" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent><MudText Typo="Typo.h6">添加兑换商品</MudText></TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12"><MudTextField @bind-Value="_newItem.ItemName" Label="名称" /></MudItem>
+            <MudItem xs="6">
+                <MudSelect @bind-Value="_newItem.ItemType" Label="类型">
+                    <MudSelectItem Value="@("coupon")">优惠券</MudSelectItem>
+                    <MudSelectItem Value="@("product")">商品</MudSelectItem>
+                    <MudSelectItem Value="@("gift")">礼品</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newItem.PointsCost" Label="所需积分" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newItem.Stock" Label="库存" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newItem.RedemptionValue" Label="价值" Format="F2" /></MudItem>
+            <MudItem xs="12"><MudTextField @bind-Value="_newItem.Description" Label="描述" Lines="2" /></MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showCreateItem = false" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="CreateRedemption" Variant="Variant.Filled" Color="Color.Primary">创建</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<PointsRule> _rules = new();
+    private List<PointsRedemption> _redemptions = new();
+    private MudTable<PointsLedger>? _ledgerTable;
+    private bool _showCreateItem;
+    private PointsRedemption _newItem = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _rules = await Db.PointsRules.OrderBy(r => r.SortOrder).ToListAsync();
+        _redemptions = await Db.PointsRedemptions.OrderBy(r => r.SortOrder).ToListAsync();
+    }
+
+    private async Task ToggleRule(PointsRule rule)
+    {
+        var newVal = !rule.IsEnabled;
+        await Db.PointsRules.Where(r => r.RuleId == rule.RuleId)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsEnabled, newVal));
+        rule.IsEnabled = newVal;
+        Snackbar.Add($"规则 \"{rule.RuleName}\" 已{(newVal ? "启用" : "停用")}", Severity.Success);
+    }
+
+    private async Task ToggleRedemption(PointsRedemption item)
+    {
+        var newVal = !item.IsEnabled;
+        await Db.PointsRedemptions.Where(r => r.RedemptionId == item.RedemptionId)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsEnabled, newVal));
+        item.IsEnabled = newVal;
+        Snackbar.Add($"兑换品 \"{item.ItemName}\" 已{(newVal ? "启用" : "停用")}", Severity.Success);
+    }
+
+    private async Task CreateRedemption()
+    {
+        _newItem.IsEnabled = true;
+        _newItem.CreatedAt = DateTime.Now;
+        _newItem.UpdatedAt = DateTime.Now;
+        Db.PointsRedemptions.Add(_newItem);
+        await Db.SaveChangesAsync();
+        _showCreateItem = false;
+        _newItem = new();
+        _redemptions = await Db.PointsRedemptions.OrderBy(r => r.SortOrder).ToListAsync();
+        Snackbar.Add("兑换品已创建", Severity.Success);
+    }
+
+    private async Task<TableData<PointsLedger>> ServerReloadLedger(TableState state)
+    {
+        var query = Db.PointsLedgers.AsQueryable();
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(l => l.CreatedAt)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<PointsLedger> { TotalItems = total, Items = items };
+    }
+}

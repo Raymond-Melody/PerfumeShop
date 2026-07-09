@@ -1,0 +1,95 @@
+@page "/subscribe"
+@model PerfumeShop.Api.Pages.SubscribeModel
+@{ ViewData["Title"] = "订阅服务"; }
+
+<section class="py-4">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2><i class="bi bi-gift" style="color:var(--brand)"></i> 香氛订阅盒子</h2>
+            <p class="text-muted">每月精选香水小样，发现您的下一款挚爱</p>
+        </div>
+
+        @if (!Model.Plans.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-box-seam display-1 text-muted"></i>
+                <p class="text-muted mt-3">暂无可用订阅计划</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4 justify-content-center">
+                @foreach (var plan in Model.Plans)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 text-center subscription-card">
+                            @if (!string.IsNullOrEmpty(plan.FeaturedImage))
+                            {
+                                <img src="@plan.FeaturedImage" class="card-img-top" alt="" style="height:200px;object-fit:cover" />
+                            }
+                            else
+                            {
+                                <div class="card-img-top d-flex align-items-center justify-content-center" style="height:200px;background:linear-gradient(135deg,#7C4DFF,#FF4081)">
+                                    <i class="bi bi-gift-fill text-white" style="font-size:4rem"></i>
+                                </div>
+                            }
+                            <div class="card-body">
+                                <h4>@plan.PlanName</h4>
+                                <div class="price fs-2 my-3">¥@plan.Price<span class="text-muted fs-6">/@plan.Period</span></div>
+                                @if (!string.IsNullOrEmpty(plan.Description))
+                                {
+                                    <p class="text-muted small">@plan.Description</p>
+                                }
+                                <ul class="list-unstyled text-start">
+                                    <li class="mb-2"><i class="bi bi-check-circle text-success"></i> 每月 @plan.SampleCount 支精选小样</li>
+                                    <li class="mb-2"><i class="bi bi-check-circle text-success"></i> @plan.FullSizeCount 支正装可选</li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-@(plan.FreeShipping ? "check-circle text-success" : "x-circle text-muted")"></i>
+                                        @(plan.FreeShipping ? "包邮" : "需付运费")
+                                    </li>
+                                    @if (plan.CancellationFee > 0)
+                                    {
+                                        <li class="mb-2"><i class="bi bi-info-circle text-warning"></i> 提前取消需付 ¥@plan.CancellationFee</li>
+                                    }
+                                    else
+                                    {
+                                        <li class="mb-2"><i class="bi bi-check-circle text-success"></i> 随时取消无费用</li>
+                                    }
+                                </ul>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="/login?returnUrl=/subscribe/@plan.PlanId" class="btn btn-brand w-100">立即订阅</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- 订阅流程说明 -->
+        <div class="row g-4 mt-5">
+            <div class="col-12 text-center mb-3">
+                <h4>订阅流程</h4>
+            </div>
+            @foreach (var (step, icon, title, desc) in new[] {
+                ("1", "bi-pencil-square", "选择计划", "选择适合您的订阅方案"),
+                ("2", "bi-chat-dots", "填写问卷", "告诉我们您的香调偏好"),
+                ("3", "bi-box-seam", "收盒子", "每月精选香水送到家"),
+                ("4", "bi-star", "评价反馈", "评价喜欢的香味，越订越懂你")
+            })
+            {
+                <div class="col-md-3 col-6 text-center">
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width:60px;height:60px">
+                        <i class="bi @icon fs-4" style="color:var(--brand)"></i>
+                    </div>
+                    <h6>@title</h6>
+                    <small class="text-muted">@desc</small>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<style>
+    .subscription-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.1); transform: translateY(-4px); transition: all 0.3s; }
+</style>

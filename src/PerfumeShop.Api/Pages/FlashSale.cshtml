@@ -1,0 +1,52 @@
+@page "/flash-sale"
+@model PerfumeShop.Api.Pages.FlashSaleModel
+@{ ViewData["Title"] = "限时秒杀"; }
+
+<section class="py-4">
+    <div class="container">
+        <h2 class="mb-4"><i class="bi bi-lightning-charge text-danger"></i> 限时秒杀</h2>
+
+        @if (!Model.Sales.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-hourglass display-1 text-muted"></i>
+                <p class="text-muted mt-3">暂无秒杀活动，请稍后再来</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var fs in Model.Sales)
+                {
+                    var prod = Model.Products.GetValueOrDefault(fs.ProductId);
+                    var soldPct = fs.Stock + fs.SoldCount > 0
+                        ? (int)((double)fs.SoldCount / (fs.Stock + fs.SoldCount) * 100) : 100;
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card product-card position-relative">
+                            <span class="badge-sale"><i class="bi bi-lightning-charge"></i> 秒杀</span>
+                            <img class="card-img-top" src="@(prod?.ImageUrl ?? "/images/default-product.svg")" alt="" />
+                            <div class="card-body">
+                                <h5>@(prod?.ProductName ?? "商品")</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="price" style="font-size:1.5rem">¥@fs.FlashPrice.ToString("F2")</span>
+                                    <small class="text-muted text-decoration-line-through">¥@(prod?.BasePrice.ToString("F2") ?? "")</small>
+                                </div>
+                                <div class="progress mb-2" style="height:8px">
+                                    <div class="progress-bar bg-danger" style="width:@(soldPct)%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted">
+                                    <span>已售 @fs.SoldCount</span>
+                                    <span>限购 @fs.LimitPerUser 件/人</span>
+                                </div>
+                                <p class="small text-muted mt-2">
+                                    <i class="bi bi-clock"></i> @fs.StartTime.ToString("MM-dd HH:mm") ~ @fs.EndTime.ToString("MM-dd HH:mm")
+                                </p>
+                                <a href="/product?id=@fs.ProductId" class="btn btn-brand w-100">立即抢购</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>

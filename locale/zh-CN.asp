@@ -1017,7 +1017,7 @@ admin_login_db_conn_error=数据库连接错误:
 # === 管理后台 - 门户 ===
 admin_portal_page_title=管理中心入口 - 香氛电商系统
 admin_portal_heading=管理中心
-admin_portal_subtitle=V9.0 全模块统一入口 · 请选择要进入的管理后台
+admin_portal_subtitle=V18.0 全模块统一入口 · 请选择要进入的管理后台
 admin_portal_operation=运营管理中心
 admin_portal_operation_desc=订单、客户、商品、评价
 admin_portal_operation_f1=订单管理
@@ -1072,17 +1072,25 @@ admin_portal_inventory_f1=库存仪表盘
 admin_portal_inventory_f2=全品类预警
 admin_portal_inventory_f3=库存流水
 admin_portal_inventory_f4=快捷入口
+admin_portal_analytics=数据分析仪表盘
+admin_portal_analytics_desc=营收趋势、转化漏斗、热门产品
+admin_portal_analytics_f1=实时数据概览
+admin_portal_analytics_f2=转化漏斗分析
+admin_portal_analytics_f3=热门产品排行
+admin_portal_analytics_f4=营收趋势图
 admin_portal_logout=安全退出
 admin_portal_logout_desc=结束本次管理会话
-admin_portal_footer=香氛电商系统 · 全模块统一管理平台
+admin_portal_footer=香氛电商系统 V18.0 · 全模块统一管理平台
 
 # === 管理后台 - 导航 ===
-admin_nav_brand=V9.0 管理中心
+admin_nav_brand=V18.0 管理中心
+admin_nav_menu=菜单
 admin_nav_refresh=刷新
 admin_nav_visit_site=访问前台
 admin_nav_logout=退出登录
 admin_nav_back=返回入口
 admin_nav_business=业务模块
+admin_nav_data=数据分析
 admin_nav_sys_mgmt=系统管理
 admin_nav_site_settings=站点设置
 admin_nav_prodcenter=产品生产

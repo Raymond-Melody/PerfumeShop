@@ -1,0 +1,137 @@
+@page "/admin/analytics"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>数据分析</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">数据分析</MudText>
+
+@* 概览统计 *@
+<MudGrid Class="mb-6">
+    <MudItem xs="12" sm="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">今日营收</MudText>
+                <MudText Typo="Typo.h5">¥@_todayRevenue.ToString("F2")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@_todayOrders 笔订单</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">本月营收</MudText>
+                <MudText Typo="Typo.h5">¥@_monthRevenue.ToString("F2")</MudText>
+                <MudText Typo="Typo.caption">@_monthOrders 笔订单</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Tertiary">总用户</MudText>
+                <MudText Typo="Typo.h5">@_totalUsers</MudText>
+                <MudText Typo="Typo.caption">今日新增 @_todayNewUsers</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Warning">平均客单价</MudText>
+                <MudText Typo="Typo.h5">¥@_avgOrderValue.ToString("F2")</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@* 每日统计趋势 *@
+<MudText Typo="Typo.h5" Class="mb-3">近30天趋势</MudText>
+<MudTable Items="@_dailyStats" Hover="true" Dense="true" Striped="true" RowsPerPage="15">
+    <HeaderContent>
+        <MudTh>日期</MudTh>
+        <MudTh>营收</MudTh>
+        <MudTh>订单数</MudTh>
+        <MudTh>新增用户</MudTh>
+        <MudTh>总用户</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.StatDate.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>¥@(context.TotalRevenue?.ToString("F2") ?? "0.00")</MudTd>
+        <MudTd>@(context.TotalOrders ?? 0)</MudTd>
+        <MudTd>@(context.NewUsers ?? 0)</MudTd>
+        <MudTd>@(context.TotalUsers ?? 0)</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@* 订单状态分布 *@
+<MudText Typo="Typo.h5" Class="mt-6 mb-3">订单状态分布</MudText>
+<MudGrid>
+    @foreach (var item in _statusDist)
+    {
+        <MudItem xs="6" sm="2">
+            <MudPaper Class="pa-3 text-center" Elevation="1">
+                <MudChip T="string" Color="@GetStatusColor(item.Key)">@item.Key</MudChip>
+                <MudText Typo="Typo.h5">@item.Value</MudText>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private decimal _todayRevenue, _monthRevenue, _avgOrderValue;
+    private int _todayOrders, _monthOrders, _totalUsers, _todayNewUsers;
+    private List<DailyStatistic> _dailyStats = new();
+    private Dictionary<string, int> _statusDist = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = DateTime.Today;
+        var monthStart = new DateTime(today.Year, today.Month, 1);
+
+        // 今日统计
+        var todayOrders = await Db.Orders.Where(o => o.CreatedAt >= today).ToListAsync();
+        _todayRevenue = todayOrders.Sum(o => o.TotalAmount);
+        _todayOrders = todayOrders.Count;
+
+        // 本月统计
+        var monthOrders = await Db.Orders.Where(o => o.CreatedAt >= monthStart).ToListAsync();
+        _monthRevenue = monthOrders.Sum(o => o.TotalAmount);
+        _monthOrders = monthOrders.Count;
+
+        // 用户
+        _totalUsers = await Db.Users.CountAsync();
+        _todayNewUsers = await Db.Users.CountAsync(u => u.CreatedAt >= today);
+
+        // 平均客单价
+        var allOrders = await Db.Orders.CountAsync();
+        var totalRev = await Db.Orders.SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
+        _avgOrderValue = allOrders > 0 ? totalRev / allOrders : 0;
+
+        // 近30天日统计
+        var thirtyDaysAgo = today.AddDays(-30);
+        _dailyStats = await Db.DailyStatistics
+            .Where(d => d.StatDate >= thirtyDaysAgo)
+            .OrderByDescending(d => d.StatDate)
+            .ToListAsync();
+
+        // 订单状态分布
+        var statusGroups = await Db.Orders
+            .GroupBy(o => o.Status ?? "unknown")
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync();
+        _statusDist = statusGroups.ToDictionary(x => x.Status, x => x.Count);
+    }
+
+    private Color GetStatusColor(string status) => status.ToLower() switch
+    {
+        "pending" => Color.Warning,
+        "paid" or "confirmed" => Color.Info,
+        "shipped" => Color.Primary,
+        "delivered" or "completed" => Color.Success,
+        "cancelled" => Color.Error,
+        _ => Color.Default
+    };
+}

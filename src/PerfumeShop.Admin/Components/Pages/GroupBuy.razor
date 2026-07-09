@@ -1,0 +1,153 @@
+@page "/admin/group-buy"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>拼团管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">拼团管理</MudText>
+
+<MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+    @* 拼团计划 *@
+    <MudTabPanel Text="拼团计划" Icon="@Icons.Material.Filled.Assignment">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@(() => _showCreatePlan = true)" Class="mb-3">新建计划</MudButton>
+
+        <MudTable Items="@_plans" Hover="true" Dense="true" Striped="true">
+            <HeaderContent>
+                <MudTh>计划ID</MudTh>
+                <MudTh>商品ID</MudTh>
+                <MudTh>成团人数</MudTh>
+                <MudTh>拼团价</MudTh>
+                <MudTh>时间范围</MudTh>
+                <MudTh>时长(h)</MudTh>
+                <MudTh>状态</MudTh>
+                <MudTh>操作</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.PlanId</MudTd>
+                <MudTd>@context.ProductId</MudTd>
+                <MudTd>@context.TeamSize</MudTd>
+                <MudTd>¥@context.GroupPrice.ToString("F2")</MudTd>
+                <MudTd>@context.StartTime.ToString("MM-dd") ~ @context.EndTime.ToString("MM-dd")</MudTd>
+                <MudTd>@context.DurationHours</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                        @(context.IsActive ? "启用" : "停用")
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@(context.IsActive ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                                   Size="Size.Small" OnClick="@(() => TogglePlan(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => DeletePlan(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    @* 拼团订单 *@
+    <MudTabPanel Text="拼团订单" Icon="@Icons.Material.Filled.Groups">
+        <MudTable ServerData="@(new Func<TableState, Task<TableData<GroupBuyOrder>>>(ServerReloadOrders))"
+                  @ref="_ordersTable" Hover="true" Dense="true" Striped="true" RowsPerPage="15">
+            <HeaderContent>
+                <MudTh>团ID</MudTh>
+                <MudTh>团号</MudTh>
+                <MudTh>计划ID</MudTh>
+                <MudTh>发起人</MudTh>
+                <MudTh>当前/目标</MudTh>
+                <MudTh>状态</MudTh>
+                <MudTh>创建时间</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.GroupId</MudTd>
+                <MudTd><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.GroupSn</MudChip></MudTd>
+                <MudTd>@context.PlanId</MudTd>
+                <MudTd>@context.InitiatorId</MudTd>
+                <MudTd>@context.CurrentSize / @context.TargetSize</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@(context.Status == 1 ? Color.Success : Color.Warning)">
+                        @(context.Status == 1 ? "已成团" : "拼团中")
+                    </MudChip>
+                </MudTd>
+                <MudTd>@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            </RowTemplate>
+            <PagerContent><MudTablePager /></PagerContent>
+        </MudTable>
+    </MudTabPanel>
+</MudTabs>
+
+@* 新建计划对话框 *@
+<MudDialog @bind-Visible="_showCreatePlan" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent><MudText Typo="Typo.h6">新建拼团计划</MudText></TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12"><MudNumericField @bind-Value="_newPlan.ProductId" Label="商品ID" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newPlan.TeamSize" Label="成团人数" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newPlan.GroupPrice" Label="拼团价" Format="F2" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newPlan.MinUnit" Label="最小购买" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newPlan.MaxUnit" Label="最大购买" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newPlan.DurationHours" Label="团时长(小时)" /></MudItem>
+            <MudItem xs="6"><MudDatePicker @bind-Value="_newPlan.StartTime" Label="开始时间" /></MudItem>
+            <MudItem xs="6"><MudDatePicker @bind-Value="_newPlan.EndTime" Label="结束时间" /></MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showCreatePlan = false" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="CreatePlan" Variant="Variant.Filled" Color="Color.Primary">创建</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<GroupBuyPlan> _plans = new();
+    private MudTable<GroupBuyOrder>? _ordersTable;
+    private bool _showCreatePlan;
+    private GroupBuyPlan _newPlan = new() { TeamSize = 3, DurationHours = 24, MinUnit = 1, MaxUnit = 5 };
+
+    protected override async Task OnInitializedAsync() => await LoadPlans();
+
+    private async Task LoadPlans()
+    {
+        _plans = await Db.GroupBuyPlans.OrderByDescending(p => p.CreatedAt).ToListAsync();
+    }
+
+    private async Task TogglePlan(GroupBuyPlan plan)
+    {
+        var newVal = !plan.IsActive;
+        await Db.GroupBuyPlans.Where(p => p.PlanId == plan.PlanId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsActive, newVal));
+        plan.IsActive = newVal;
+        Snackbar.Add($"计划 #{plan.PlanId} 已{(newVal ? "启用" : "停用")}", Severity.Success);
+    }
+
+    private async Task DeletePlan(GroupBuyPlan plan)
+    {
+        Db.GroupBuyPlans.Remove(plan);
+        await Db.SaveChangesAsync();
+        Snackbar.Add("计划已删除", Severity.Success);
+        await LoadPlans();
+    }
+
+    private async Task CreatePlan()
+    {
+        _newPlan.IsActive = true;
+        _newPlan.CreatedAt = DateTime.Now;
+        Db.GroupBuyPlans.Add(_newPlan);
+        await Db.SaveChangesAsync();
+        _showCreatePlan = false;
+        _newPlan = new() { TeamSize = 3, DurationHours = 24, MinUnit = 1, MaxUnit = 5 };
+        Snackbar.Add("拼团计划已创建", Severity.Success);
+        await LoadPlans();
+    }
+
+    private async Task<TableData<GroupBuyOrder>> ServerReloadOrders(TableState state)
+    {
+        var query = Db.GroupBuyOrders.AsQueryable();
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(o => o.CreatedAt)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<GroupBuyOrder> { TotalItems = total, Items = items };
+    }
+}

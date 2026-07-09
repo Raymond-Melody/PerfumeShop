@@ -1,0 +1,67 @@
+@page "/user"
+@model PerfumeShop.Api.Pages.User.IndexModel
+@{ ViewData["Title"] = "我的账户"; }
+
+<section class="py-4">
+    <div class="container">
+        <h2 class="mb-4"><i class="bi bi-person-circle"></i> 我的账户</h2>
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="/user" class="list-group-item list-group-item-action active">账户概览</a>
+                    <a href="/user/orders" class="list-group-item list-group-item-action">我的订单</a>
+                    <a href="/user/favorites" class="list-group-item list-group-item-action">我的收藏</a>
+                    <a href="/user/addresses" class="list-group-item list-group-item-action">收货地址</a>
+                    <a href="/user/points" class="list-group-item list-group-item-action">我的积分</a>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div class="row g-3">
+                    <div class="col-sm-4">
+                        <div class="card text-center p-3">
+                            <i class="bi bi-bag-check display-5" style="color:var(--brand)"></i>
+                            <h5 class="mt-2">@Model.OrderCount</h5>
+                            <small class="text-muted">总订单</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="card text-center p-3">
+                            <i class="bi bi-heart display-5" style="color:var(--brand)"></i>
+                            <h5 class="mt-2">@Model.FavoriteCount</h5>
+                            <small class="text-muted">收藏</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="card text-center p-3">
+                            <i class="bi bi-stars display-5" style="color:var(--brand)"></i>
+                            <h5 class="mt-2">@Model.Points</h5>
+                            <small class="text-muted">积分</small>
+                        </div>
+                    </div>
+                </div>
+                <h5 class="mt-4">最近订单</h5>
+                @if (Model.RecentOrders.Any())
+                {
+                    <table class="table">
+                        <thead><tr><th>订单号</th><th>金额</th><th>状态</th><th>时间</th></tr></thead>
+                        <tbody>
+                            @foreach (var o in Model.RecentOrders)
+                            {
+                                <tr>
+                                    <td>@o.OrderNo</td>
+                                    <td>¥@o.TotalAmount.ToString("F2")</td>
+                                    <td><span class="badge bg-secondary">@(o.Status ?? "-")</span></td>
+                                    <td>@o.CreatedAt?.ToString("yyyy-MM-dd")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted">暂无订单记录</p>
+                }
+            </div>
+        </div>
+    </div>
+</section>

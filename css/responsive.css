@@ -26,15 +26,34 @@
     }
 }
 
+/* V18.3: 主导航基础过渡 —— display:grid 支持 grid-template-rows 折叠动画（必须在媒体查询之前） */
+.main-nav {
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition: grid-template-rows 0.25s ease, opacity 0.2s ease;
+    overflow: hidden;
+    contain: layout style;
+}
+.main-nav > .container {
+    overflow: hidden;
+    min-height: 0;
+}
+
 /* ===== 桌面端小屏：隐藏主导航，显示汉堡菜单 (992-1050px) ===== */
 @media (min-width: 992px) and (max-width: 1050px) {
-    /* 隐藏横导航栏，改用汉堡菜单 */
+    /* V18.3: 使用 grid-template-rows 折叠 + opacity 淡出替代 display:none */
     .main-nav {
-        display: none !important;
+        grid-template-rows: 0fr;
+        opacity: 0;
+        pointer-events: none;
     }
     /* 显示桌面端汉堡按钮 */
     .desktop-hamburger {
-        display: flex;
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        transition: opacity 0.15s ease, visibility 0s 0s;
     }
     /* 头部布局微调 */
     .header-wrapper {
@@ -95,11 +114,17 @@
 }
 
 /* ===== 动态溢出检测：导航超宽时切换汉堡菜单（JS控制 body.nav-overflow） ===== */
+/* V18.3: grid-template-rows 折叠 + opacity 淡出替代 display:none 闪切 */
 body.nav-overflow .main-nav {
-    display: none !important;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    pointer-events: none;
 }
 body.nav-overflow .desktop-hamburger {
-    display: flex;
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.15s ease, visibility 0s 0s;
 }
 .container {
     width: 100%;
@@ -713,11 +738,6 @@ input[type="button"] {
     .admin-hamburger.active span:nth-child(3) {
         transform: rotate(-45deg) translate(5px, -5px);
     }
-    
-    /* Pattern B 模块暗色移动端顶部栏 */
-    .admin-mobile-topbar {
-        display: flex !important;
-    }
 }
 
 @media (min-width: 769px) {
@@ -725,9 +745,6 @@ input[type="button"] {
         display: none !important;
     }
     .sidebar-overlay {
-        display: none !important;
-    }
-    .admin-mobile-topbar {
         display: none !important;
     }
 }

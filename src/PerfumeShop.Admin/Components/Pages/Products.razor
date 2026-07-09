@@ -1,0 +1,207 @@
+@page "/admin/products"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>商品管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">商品管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudTextField @bind-Value="_searchText" Placeholder="搜索商品名称/分类..." Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_activeFilter" Placeholder="状态筛选" Clearable="true">
+            <MudSelectItem Value="@("active")">在售</MudSelectItem>
+            <MudSelectItem Value="@("inactive")">下架</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="2">
+        <MudSelect @bind-Value="_categoryFilter" Placeholder="分类" Clearable="true">
+            @foreach (var cat in _categories)
+            {
+                <MudSelectItem Value="@cat">@cat</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="3" Class="d-flex align-end">
+        <MudText Typo="Typo.body2" Color="Color.Secondary">共 @_totalItems 件商品</MudText>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<Product>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>商品名称</MudTh>
+        <MudTh>分类</MudTh>
+        <MudTh SortBy="new SortDefinition<Product>(nameof(Product.BasePrice), p => p.BasePrice)">基准价</MudTh>
+        <MudTh>BOM成本</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh SortBy="new SortDefinition<Product>(nameof(Product.CreatedAt), p => p.CreatedAt)">创建时间</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.ProductId</MudTd>
+        <MudTd>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                @if (!string.IsNullOrEmpty(context.ImageUrl))
+                {
+                    <MudAvatar Size="Size.Small" Variant="Variant.Outlined">
+                        <MudImage Src="@context.ImageUrl" Width="32" Height="32" ObjectFit="ObjectFit.Cover" />
+                    </MudAvatar>
+                }
+                <MudText>@context.ProductName</MudText>
+            </MudStack>
+        </MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@(context.Category ?? "-")</MudChip></MudTd>
+        <MudTd>¥@context.BasePrice.ToString("F2")</MudTd>
+        <MudTd>¥@(context.Bomcost?.ToString("F2") ?? "-")</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@(context.IsActive == true ? Color.Success : Color.Default)">
+                @(context.IsActive == true ? "在售" : "下架")
+            </MudChip>
+        </MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                           OnClick="@(() => EditProduct(context))" />
+            <MudIconButton Icon="@(context.IsActive == true ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                           Size="Size.Small" Color="@(context.IsActive == true ? Color.Warning : Color.Success)"
+                           OnClick="@(() => ToggleActive(context))" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@* 编辑对话框 *@
+<MudDialog @bind-Visible="_showEdit" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">编辑商品 #@_editProduct?.ProductId</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_editProduct != null)
+        {
+            <MudGrid>
+                <MudItem xs="12"><MudTextField @bind-Value="_editProduct.ProductName" Label="商品名称" /></MudItem>
+                <MudItem xs="6"><MudTextField @bind-Value="_editCategory" Label="分类" /></MudItem>
+                <MudItem xs="6"><MudTextField @bind-Value="_editProduct.ProductType" Label="类型" /></MudItem>
+                <MudItem xs="4"><MudNumericField @bind-Value="_editBasePrice" Label="基准价" Format="F2" /></MudItem>
+                <MudItem xs="4"><MudNumericField @bind-Value="_editBomcost" Label="BOM成本" Format="F2" /></MudItem>
+                <MudItem xs="4"><MudNumericField @bind-Value="_editUnitCost" Label="单位成本" Format="F2" /></MudItem>
+                <MudItem xs="12"><MudTextField @bind-Value="_editProduct.Description" Label="描述" Lines="3" /></MudItem>
+                <MudItem xs="6"><MudSwitch @bind-Value="_editIsActive" Label="在售" Color="Color.Success" /></MudItem>
+                <MudItem xs="6"><MudSwitch @bind-Value="_editEngravable" Label="可刻字" Color="Color.Info" /></MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CancelEdit" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="SaveEdit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving">
+            @_saving ? "保存中..." : "保存"
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudTable<Product>? _table;
+    private string _searchText = "";
+    private string? _activeFilter;
+    private string? _categoryFilter;
+    private int _totalItems;
+    private List<string> _categories = new();
+    private bool _showEdit, _saving;
+
+    private Product? _editProduct;
+    private string? _editCategory;
+    private decimal _editBasePrice, _editBomcost, _editUnitCost;
+    private bool _editIsActive, _editEngravable;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await Db.Products
+            .Where(p => p.Category != null)
+            .Select(p => p.Category!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+    }
+
+    private async Task<TableData<Product>> ServerReload(TableState state)
+    {
+        var query = Db.Products.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var s = _searchText.Trim();
+            query = query.Where(p => p.ProductName.Contains(s) || (p.Category != null && p.Category.Contains(s)));
+        }
+        if (_activeFilter == "active")
+            query = query.Where(p => p.IsActive == true);
+        else if (_activeFilter == "inactive")
+            query = query.Where(p => p.IsActive != true);
+        if (!string.IsNullOrWhiteSpace(_categoryFilter))
+            query = query.Where(p => p.Category == _categoryFilter);
+
+        _totalItems = await query.CountAsync();
+
+        query = state.SortLabel switch
+        {
+            nameof(Product.BasePrice) => state.SortDirection == SortDirection.Descending
+                ? query.OrderByDescending(p => p.BasePrice) : query.OrderBy(p => p.BasePrice),
+            _ => state.SortDirection == SortDirection.Descending
+                ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt)
+        };
+
+        var items = await query.Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<Product> { TotalItems = _totalItems, Items = items };
+    }
+
+    private async Task ToggleActive(Product product)
+    {
+        var newVal = product.IsActive != true;
+        await Db.Products.Where(p => p.ProductId == product.ProductId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsActive, newVal));
+        product.IsActive = newVal;
+        Snackbar.Add($"商品 {product.ProductName} 已{(newVal ? "上架" : "下架")}", Severity.Success);
+        await _table!.ReloadServerData();
+    }
+
+    private void EditProduct(Product product)
+    {
+        _editProduct = product;
+        _editCategory = product.Category;
+        _editBasePrice = product.BasePrice;
+        _editBomcost = product.Bomcost ?? 0;
+        _editUnitCost = product.UnitCost ?? 0;
+        _editIsActive = product.IsActive ?? false;
+        _editEngravable = product.Engravable ?? false;
+        _showEdit = true;
+    }
+
+    private async Task SaveEdit()
+    {
+        if (_editProduct == null) return;
+        _saving = true;
+        _editProduct.Category = _editCategory;
+        _editProduct.BasePrice = _editBasePrice;
+        _editProduct.Bomcost = _editBomcost;
+        _editProduct.UnitCost = _editUnitCost;
+        _editProduct.IsActive = _editIsActive;
+        _editProduct.Engravable = _editEngravable;
+        Db.Products.Update(_editProduct);
+        await Db.SaveChangesAsync();
+        _saving = false;
+        _showEdit = false;
+        Snackbar.Add("商品信息已更新", Severity.Success);
+        await _table!.ReloadServerData();
+    }
+
+    private void CancelEdit() => _showEdit = false;
+}

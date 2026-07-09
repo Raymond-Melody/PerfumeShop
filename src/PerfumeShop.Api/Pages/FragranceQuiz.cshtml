@@ -1,0 +1,145 @@
+@page "/fragrance-quiz"
+@model PerfumeShop.Api.Pages.FragranceQuizModel
+@{ ViewData["Title"] = "香氛测试"; }
+
+<section class="py-4">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2><i class="bi bi-stars" style="color:var(--brand)"></i> 发现你的专属香调</h2>
+            <p class="text-muted">回答几个简单的问题，为你推荐最适合的香水</p>
+        </div>
+
+        <div id="quizContainer" class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Question 1 -->
+                <div class="quiz-step" data-step="1">
+                    <div class="card p-5 text-center">
+                        <h4 class="mb-4">你更喜欢哪种氛围？</h4>
+                        <div class="row g-3">
+                            @foreach (var (val, icon, label) in new[] {
+                                ("fresh", "bi-sun", "清新明亮"),
+                                ("floral", "bi-flower1", "浪漫花园"),
+                                ("woody", "bi-tree", "温暖森林"),
+                                ("oriental", "bi-moon-stars", "神秘东方")
+                            })
+                            {
+                                <div class="col-6 col-md-3">
+                                    <button class="btn btn-outline-secondary w-100 py-4 quiz-answer" data-question="1" data-value="@val">
+                                        <i class="bi @icon d-block fs-1 mb-2"></i>
+                                        @label
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question 2 -->
+                <div class="quiz-step d-none" data-step="2">
+                    <div class="card p-5 text-center">
+                        <h4 class="mb-4">理想的周末是？</h4>
+                        <div class="row g-3">
+                            @foreach (var (val, icon, label) in new[] {
+                                ("active", "bi-bicycle", "户外运动"),
+                                ("social", "bi-people", "朋友聚会"),
+                                ("relax", "bi-book", "安静独处"),
+                                ("explore", "bi-airplane", "旅行探索")
+                            })
+                            {
+                                <div class="col-6 col-md-3">
+                                    <button class="btn btn-outline-secondary w-100 py-4 quiz-answer" data-question="2" data-value="@val">
+                                        <i class="bi @icon d-block fs-1 mb-2"></i>
+                                        @label
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Question 3 -->
+                <div class="quiz-step d-none" data-step="3">
+                    <div class="card p-5 text-center">
+                        <h4 class="mb-4">你更偏好哪种口味？</h4>
+                        <div class="row g-3">
+                            @foreach (var (val, icon, label) in new[] {
+                                ("citrus", "bi-droplet", "柠檬柑橘"),
+                                ("sweet", "bi-cake2", "甜蜜果香"),
+                                ("spicy", "bi-fire", "辛辣温暖"),
+                                ("herbal", "bi-leaf", "草本清新")
+                            })
+                            {
+                                <div class="col-6 col-md-3">
+                                    <button class="btn btn-outline-secondary w-100 py-4 quiz-answer" data-question="3" data-value="@val">
+                                        <i class="bi @icon d-block fs-1 mb-2"></i>
+                                        @label
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result -->
+                <div class="quiz-step d-none" data-step="result">
+                    <div class="card p-5 text-center">
+                        <i class="bi bi-stars fs-1" style="color:var(--brand)"></i>
+                        <h3 class="mt-3" id="resultTitle">你的专属香调是...</h3>
+                        <p class="text-muted" id="resultDesc"></p>
+                        <div id="resultNotes" class="my-4"></div>
+                        <a href="/products" class="btn btn-brand btn-lg">查看推荐商品</a>
+                        <a href="/customize" class="btn btn-outline-secondary btn-lg ms-2">开始定制</a>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div class="mt-4">
+                    <div class="progress" style="height:6px">
+                        <div class="progress-bar" id="quizProgress" style="width:33%;background:var(--brand)"></div>
+                    </div>
+                    <div class="text-center mt-2 small text-muted" id="progressText">第 1 题 / 共 3 题</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+(function() {
+    let currentStep = 1;
+    const answers = {};
+    document.querySelectorAll('.quiz-answer').forEach(btn => {
+        btn.addEventListener('click', function() {
+            answers[this.dataset.question] = this.dataset.value;
+            if (currentStep < 3) {
+                document.querySelector(`.quiz-step[data-step="${currentStep}"]`).classList.add('d-none');
+                currentStep++;
+                document.querySelector(`.quiz-step[data-step="${currentStep}"]`).classList.remove('d-none');
+                document.getElementById('quizProgress').style.width = (currentStep / 3 * 100) + '%';
+                document.getElementById('progressText').textContent = `第 ${currentStep} 题 / 共 3 题`;
+            } else {
+                showResult();
+            }
+        });
+    });
+
+    function showResult() {
+        document.querySelector('.quiz-step[data-step="3"]').classList.add('d-none');
+        document.querySelector('.quiz-step[data-step="result"]').classList.remove('d-none');
+        document.getElementById('quizProgress').style.width = '100%';
+        document.getElementById('progressText').textContent = '测试完成！';
+
+        const profiles = {
+            fresh: { title: '清新活力派', desc: '你喜欢干净清爽的香气，柑橘和海洋调是你的最佳拍档。', notes: '推荐香调：柠檬、佛手柑、海盐、绿茶' },
+            floral: { title: '浪漫花香派', desc: '你钟爱优雅浪漫的花香，玫瑰和茉莉是你的灵魂香调。', notes: '推荐香调：玫瑰、茉莉、牡丹、晚香玉' },
+            woody: { title: '温暖木质派', desc: '你偏好沉稳温暖的木质调，檀香和雪松给你安全感。', notes: '推荐香调：檀香、雪松、琥珀、麝香' },
+            oriental: { title: '神秘东方派', desc: '你迷恋浓郁神秘的东方香调，香草和辛香料是你的标志。', notes: '推荐香调：香草、肉桂、乳香、广藿香' }
+        };
+        const key = answers['1'] || 'fresh';
+        const profile = profiles[key];
+        document.getElementById('resultTitle').textContent = profile.title;
+        document.getElementById('resultDesc').textContent = profile.desc;
+        document.getElementById('resultNotes').textContent = profile.notes;
+    }
+})();
+</script>

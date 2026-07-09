@@ -29,6 +29,12 @@
     
     <!-- 侧边栏 -->
     <aside class="sidebar" id="adminSidebar">
+        <div class="sidebar-header" style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <h3 style="color:#e0e0e0;margin:0;font-size:16px;display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-shield-alt" style="color:#E91E63;"></i> 站点技术管理
+            </h3>
+            <p style="color:#888;font-size:11px;margin:8px 0 0;">权限 · 安全 · 备份 · 日志</p>
+        </div>
         <ul class="sidebar-menu">
             <li><a href="index.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/index.asp" Then %> class="active"<% End If %>><i class="fas fa-home"></i> <span>系统概览</span></a></li>
             <li class="sidebar-section-title">权限管理</li>
@@ -48,6 +54,11 @@
             <li><a href="guide.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/guide.asp" Then %> class="active"<% End If %>><i class="fas fa-book-open"></i> <span>使用流程指南</span></a></li>
             <li><a href="version.asp"<% If LCase(Request.ServerVariables("SCRIPT_NAME") & "") = "/admin/system/version.asp" Then %> class="active"<% End If %>><i class="fas fa-code-branch"></i> <span>版本信息</span></a></li>
         </ul>
+        <div class="sidebar-footer" style="padding:15px 20px;border-top:1px solid rgba(255,255,255,0.06);">
+            <a href="/admin/portal.asp" style="color:#666;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-arrow-left"></i> 返回管理中心
+            </a>
+        </div>
     </aside>
 </div>
 <!--#include file="../../includes/nav_common.asp"-->

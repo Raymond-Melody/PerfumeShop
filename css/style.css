@@ -239,11 +239,16 @@ input, button, textarea, select {
 }
 
 /* 桌面端汉堡菜单按钮（窄屏992-1050px时显示，替代横导航栏） */
+/* V18.3: 使用 visibility:collapse + opacity 过渡替代 display:none，消除切换空白期 */
 .desktop-hamburger {
-    display: none;
+    display: flex;
+    visibility: collapse;
+    opacity: 0;
+    pointer-events: none;
     width: var(--touch-target-size, 44px);
     height: var(--touch-target-size, 44px);
     flex-shrink: 0;
+    transition: opacity 0.15s ease, visibility 0s 0.15s;
 }
 
 /* 用户下拉菜单 */

@@ -248,7 +248,7 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-cubes"></i> <span><% If FEATURE_I18N Then %><%= T("admin_portal_heading", Empty) %><% Else %>管理中心<% End If %></span></h1>
-            <p><% If FEATURE_I18N Then %><%= T("admin_portal_subtitle", Empty) %><% Else %>V9.0 全模块统一入口 · 请选择要进入的管理后台<% End If %></p>
+            <p><% If FEATURE_I18N Then %><%= T("admin_portal_subtitle", Empty) %><% Else %>V18 全模块统一入口 · 请选择要进入的管理后台<% End If %></p>
         </div>
         
         <div class="user-info">
@@ -429,6 +429,24 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
             </a>
             <% End If %>
 
+            <% If InStr(accessiblePortals, "analytics") > 0 Then %>
+            <a href="analytics/index.asp" class="portal-card" style="border-left:4px solid #2196F3;">
+                <div class="card-top">
+                    <div class="portal-icon" style="background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);"><i class="fas fa-chart-bar"></i></div>
+                    <div class="card-title">
+                        <h3><% If FEATURE_I18N Then %><%= T("admin_portal_analytics", Empty) %><% Else %>数据分析仪表盘<% End If %> <span class="badge-new">V18</span></h3>
+                        <p><% If FEATURE_I18N Then %><%= T("admin_portal_analytics_desc", Empty) %><% Else %>营收趋势、转化漏斗、热门产品<% End If %></p>
+                    </div>
+                </div>
+                <ul class="portal-features">
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then %><%= T("admin_portal_analytics_f1", Empty) %><% Else %>实时数据概览<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then %><%= T("admin_portal_analytics_f2", Empty) %><% Else %>转化漏斗分析<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then %><%= T("admin_portal_analytics_f3", Empty) %><% Else %>热门产品排行<% End If %></li>
+                    <li><i class="fas fa-check"></i> <% If FEATURE_I18N Then %><%= T("admin_portal_analytics_f4", Empty) %><% Else %>营收趋势图<% End If %></li>
+                </ul>
+            </a>
+            <% End If %>
+
             <a href="logout.asp" class="portal-card logout logout-card">
                 <div class="card-top">
                     <div class="portal-icon"><i class="fas fa-sign-out-alt"></i></div>
@@ -441,7 +459,7 @@ Call LogAdminAction("访问统一入口", "portal", "", "", "")
         </div>
 
         <div class="footer-info">
-            <% If FEATURE_I18N Then %><%= T("admin_portal_footer", Empty) %><% Else %>香氛电商系统 <span>V9.0</span> · 全模块统一管理平台<% End If %>
+            <% If FEATURE_I18N Then %><%= T("admin_portal_footer", Empty) %><% Else %>香氛电商系统 <span>V18.0</span> · 全模块统一管理平台<% End If %>
         </div>
     </div>
 </body>

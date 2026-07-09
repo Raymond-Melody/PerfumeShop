@@ -1,0 +1,146 @@
+@page "/admin/flash-sale"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>秒杀管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">秒杀管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_activeFilter" Placeholder="状态" Clearable="true">
+            <MudSelectItem Value="@("active")">进行中</MudSelectItem>
+            <MudSelectItem Value="@("upcoming")">即将开始</MudSelectItem>
+            <MudSelectItem Value="@("ended")">已结束</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="3" Class="d-flex align-end">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@(() => _showCreate = true)">新建秒杀</MudButton>
+    </MudItem>
+</MudGrid>
+
+<MudTable Items="@_flashSales" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>商品ID</MudTh>
+        <MudTh>秒杀价</MudTh>
+        <MudTh>库存/已售</MudTh>
+        <MudTh>限购</MudTh>
+        <MudTh>时间段</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.FlashSaleId</MudTd>
+        <MudTd>@context.ProductId</MudTd>
+        <MudTd>¥@context.FlashPrice.ToString("F2")</MudTd>
+        <MudTd>@context.Stock / @context.SoldCount</MudTd>
+        <MudTd>@context.LimitPerUser</MudTd>
+        <MudTd>@context.StartTime.ToString("MM-dd HH:mm") ~ @context.EndTime.ToString("MM-dd HH:mm")</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context)">@GetStatusText(context)</MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@(context.IsActive ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                           Size="Size.Small" Color="@(context.IsActive ? Color.Warning : Color.Success)"
+                           OnClick="@(() => ToggleActive(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                           OnClick="@(() => DeleteSale(context))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@* 新建秒杀对话框 *@
+<MudDialog @bind-Visible="_showCreate" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent><MudText Typo="Typo.h6">新建秒杀活动</MudText></TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12"><MudNumericField @bind-Value="_new.ProductId" Label="商品ID" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_new.FlashPrice" Label="秒杀价" Format="F2" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_new.Stock" Label="库存" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_new.LimitPerUser" Label="限购数" /></MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_new.SortOrder" Label="排序" /></MudItem>
+            <MudItem xs="6"><MudDatePicker @bind-Value="_new.StartTime" Label="开始时间" /></MudItem>
+            <MudItem xs="6"><MudDatePicker @bind-Value="_new.EndTime" Label="结束时间" /></MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showCreate = false" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="CreateSale" Variant="Variant.Filled" Color="Color.Primary">创建</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<FlashSale> _flashSales = new();
+    private string? _activeFilter;
+    private bool _showCreate;
+    private FlashSale _new = new();
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        var query = Db.FlashSales.AsQueryable();
+        var now = DateTime.Now;
+        if (_activeFilter == "active")
+            query = query.Where(f => f.IsActive && now >= f.StartTime && now <= f.EndTime);
+        else if (_activeFilter == "upcoming")
+            query = query.Where(f => f.IsActive && f.StartTime > now);
+        else if (_activeFilter == "ended")
+            query = query.Where(f => f.EndTime < now || !f.IsActive);
+
+        _flashSales = await query.OrderByDescending(f => f.CreatedAt).ToListAsync();
+    }
+
+    private async Task ToggleActive(FlashSale fs)
+    {
+        var newVal = !fs.IsActive;
+        await Db.FlashSales.Where(f => f.FlashSaleId == fs.FlashSaleId)
+            .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsActive, newVal));
+        fs.IsActive = newVal;
+        Snackbar.Add($"秒杀 #{fs.FlashSaleId} 已{(newVal ? "启用" : "暂停")}", Severity.Success);
+    }
+
+    private async Task DeleteSale(FlashSale fs)
+    {
+        Db.FlashSales.Remove(fs);
+        await Db.SaveChangesAsync();
+        Snackbar.Add($"秒杀 #{fs.FlashSaleId} 已删除", Severity.Success);
+        await LoadData();
+    }
+
+    private async Task CreateSale()
+    {
+        _new.IsActive = true;
+        _new.CreatedAt = DateTime.Now;
+        _new.SoldCount = 0;
+        Db.FlashSales.Add(_new);
+        await Db.SaveChangesAsync();
+        _showCreate = false;
+        _new = new();
+        Snackbar.Add("秒杀活动已创建", Severity.Success);
+        await LoadData();
+    }
+
+    private Color GetStatusColor(FlashSale fs)
+    {
+        var now = DateTime.Now;
+        if (!fs.IsActive) return Color.Default;
+        if (now >= fs.StartTime && now <= fs.EndTime) return Color.Error;
+        if (fs.StartTime > now) return Color.Info;
+        return Color.Default;
+    }
+
+    private string GetStatusText(FlashSale fs)
+    {
+        var now = DateTime.Now;
+        if (!fs.IsActive) return "已暂停";
+        if (now >= fs.StartTime && now <= fs.EndTime) return "进行中";
+        if (fs.StartTime > now) return "即将开始";
+        return "已结束";
+    }
+}

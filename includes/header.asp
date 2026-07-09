@@ -20,7 +20,7 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preconnect" href="https://code.jquery.com" crossorigin>
     <link rel="preload" href="/css/design-tokens.css?v=17.0" as="style">
-    <link rel="preload" href="/css/style.css?v=17.0" as="style">
+    <link rel="preload" href="/css/style.css?v=18.3" as="style">
     <link rel="preload" href="https://code.jquery.com/jquery-3.6.0.min.js" as="script" crossorigin>
     <!-- V14.6 PWA 增强 -->
     <meta name="color-scheme" content="light only">
@@ -35,10 +35,10 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#8B4513">
     <link rel="stylesheet" href="/css/design-tokens.css?v=17.0">
-    <link rel="stylesheet" href="/css/style.css?v=17.0">
+    <link rel="stylesheet" href="/css/style.css?v=18.3">
     <link rel="stylesheet" href="/css/pages.css?v=17.0">
     <link rel="stylesheet" href="/css/buttons.css?v=17.0">
-    <link rel="stylesheet" href="/css/responsive.css?v=18.0">
+    <link rel="stylesheet" href="/css/responsive.css?v=18.3">
     <link rel="stylesheet" href="/css/mobile-first.css?v=18.0" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="/css/lazy-load.css?v=17.0" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="/css/cart-animation.css?v=17.0" media="print" onload="this.media='all'">
@@ -351,40 +351,99 @@ If IsEmpty(amphtmlLink) Or IsNull(amphtmlLink) Then amphtmlLink = ""
         var container = mainNav.querySelector('.container');
         var body = document.body;
         var checking = false;
+        var lastWindowWidth = window.innerWidth;
+        var isResizeChecking = false; // V18.2: 标记 resize 检测进行中，抑制 RO
 
-        function checkOverflow() {
+        function measureOverflow() {
+            // V18.1 fix: 当 main-nav 被 nav-overflow 隐藏时，不测量（display:none 导致 scrollWidth=0）
+            if (mainNav.offsetParent === null) return null;
+            var listWidth = navList.scrollWidth;
+            var containerWidth = container ? container.clientWidth : mainNav.clientWidth;
+            if (containerWidth <= 0) return null;
+            return listWidth > containerWidth + 4; // 4px 容差，减少边界抖动
+        }
+
+        function applyOverflow(overflows) {
+            if (overflows) {
+                body.classList.add('nav-overflow');
+            } else {
+                body.classList.remove('nav-overflow');
+            }
+        }
+
+        function checkOverflow(allowRemove) {
             if (checking) return;
             checking = true;
-            // 使用 requestAnimationFrame 确保 DOM 已更新
             requestAnimationFrame(function() {
-                var listWidth = navList.scrollWidth;
-                var containerWidth = container ? container.clientWidth : mainNav.clientWidth;
-                var overflows = listWidth > containerWidth + 2; // 2px 容差
-                if (overflows) {
-                    body.classList.add('nav-overflow');
-                } else {
-                    body.classList.remove('nav-overflow');
+                // V18.1 fix: ResizeObserver 只负责添加溢出类（缩小窗口）
+                // 移除溢出类只在窗口 resize 时执行（放大窗口），防止反馈循环闪烁
+                if (!allowRemove && body.classList.contains('nav-overflow')) {
+                    checking = false;
+                    return;
                 }
+                var overflows = measureOverflow();
+                if (overflows === null) {
+                    checking = false;
+                    return;
+                }
+                applyOverflow(overflows);
                 checking = false;
             });
         }
 
-        // 初始检测
-        checkOverflow();
+        // 初始检测（允许移除，因为是首次加载）
+        (function initCheck() {
+            if (checking) return;
+            checking = true;
+            requestAnimationFrame(function() {
+                var overflows = measureOverflow();
+                if (overflows !== null) {
+                    applyOverflow(overflows);
+                }
+                checking = false;
+            });
+        })();
 
-        // 使用 ResizeObserver 监听容器大小变化
+        // ResizeObserver：仅检测新增溢出（缩小方向），不主动移除
         if (container && window.ResizeObserver) {
-            var ro = new ResizeObserver(function() {
-                checkOverflow();
+            var ro = new ResizeObserver(function(entries) {
+                // V18.2 fix: resize 检测期间抑制 RO，避免与手动测量竞态
+                if (isResizeChecking) return;
+                if (!body.classList.contains('nav-overflow')) {
+                    checkOverflow(false);
+                }
             });
             ro.observe(container);
         }
 
-        // 回退方案：监听窗口 resize
+        // 窗口 resize：完整检测（放大窗口时可移除溢出类）
         var resizeTimer;
         window.addEventListener('resize', function() {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(checkOverflow, 150);
+            resizeTimer = setTimeout(function() {
+                lastWindowWidth = window.innerWidth;
+                if (checking) return;
+                checking = true;
+                isResizeChecking = true; // V18.2: 抑制 RO 的竞态触发
+
+                // V18.3 fix: 同步测量，消除导航切换的空白帧
+                // 先记录并临时移除 nav-overflow，恢复导航栏可见性以获取真实宽度
+                var hadOverflow = body.classList.contains('nav-overflow');
+                if (hadOverflow) body.classList.remove('nav-overflow');
+
+                // 同步测量：classList.remove 已触发样式失效，
+                // measureOverflow 读取 offsetParent/scrollWidth 会强制重排，确保测量到最新状态
+                var overflows = measureOverflow();
+
+                if (overflows === null) {
+                    // CSS 媒体查询隐藏了导航栏（如 ≤1050px），恢复之前的 nav-overflow 状态
+                    if (hadOverflow) body.classList.add('nav-overflow');
+                } else {
+                    applyOverflow(overflows);
+                }
+                isResizeChecking = false;
+                checking = false;
+            }, 100); // V18.3: 防抖降至100ms，提升响应速度
         });
     })();
     </script>

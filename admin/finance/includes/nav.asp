@@ -51,6 +51,12 @@ End Function
     
     <!-- 侧边栏 -->
     <aside class="sidebar" id="adminSidebar">
+        <div class="sidebar-header" style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <h3 style="color:#e0e0e0;margin:0;font-size:16px;display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-dollar-sign" style="color:#00bcd4;"></i> 财务管理中心
+            </h3>
+            <p style="color:#888;font-size:11px;margin:8px 0 0;">应收应付 · 成本 · 总账 · 报表</p>
+        </div>
         <ul class="sidebar-menu">
             <!-- 财务概览 -->
             <li class="nav-item">
@@ -220,6 +226,11 @@ End Function
                 </a>
             </li>
         </ul>
+        <div class="sidebar-footer" style="padding:15px 20px;border-top:1px solid rgba(255,255,255,0.06);">
+            <a href="/admin/portal.asp" style="color:#666;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-arrow-left"></i> 返回管理中心
+            </a>
+        </div>
     </aside>
 </div>
 <!--#include file="../../includes/nav_common.asp"-->

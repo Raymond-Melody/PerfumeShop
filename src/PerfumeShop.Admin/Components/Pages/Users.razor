@@ -1,0 +1,166 @@
+@page "/admin/users"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>客户管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">客户管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudTextField @bind-Value="_searchText" Placeholder="搜索用户名/邮箱/手机..." Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_tierFilter" Placeholder="会员等级" Clearable="true">
+            <MudSelectItem Value="@("bronze")">青铜</MudSelectItem>
+            <MudSelectItem Value="@("silver")">白银</MudSelectItem>
+            <MudSelectItem Value="@("gold")">黄金</MudSelectItem>
+            <MudSelectItem Value="@("platinum")">铂金</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="2">
+        <MudSwitch @bind-Value="_vipOnly" Label="仅VIP" Color="Color.Secondary" />
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<User>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>用户名</MudTh>
+        <MudTh>邮箱</MudTh>
+        <MudTh>手机</MudTh>
+        <MudTh>等级</MudTh>
+        <MudTh SortBy="new SortDefinition<User>(nameof(User.TotalSpent), u => u.TotalSpent)">累计消费</MudTh>
+        <MudTh>订单数</MudTh>
+        <MudTh>积分</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.UserId</MudTd>
+        <MudTd>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudAvatar Size="Size.Small" Color="@GetTierColor(context.CustomerTier)">@GetInitial(context)</MudAvatar>
+                <MudText>@context.Username</MudText>
+            </MudStack>
+        </MudTd>
+        <MudTd>@context.Email</MudTd>
+        <MudTd>@(context.Phone ?? "-")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@GetTierColor(context.CustomerTier)">@(context.CustomerTier ?? "-")</MudChip></MudTd>
+        <MudTd>¥@(context.TotalSpent?.ToString("F2") ?? "0.00")</MudTd>
+        <MudTd>@(context.OrderCount ?? 0)</MudTd>
+        <MudTd>@(context.Points ?? 0)</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@(context.IsActive == true ? Color.Success : Color.Error)">
+                @(context.IsActive == true ? "正常" : "禁用")
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                           OnClick="@(() => ViewDetail(context))" />
+            <MudIconButton Icon="@(context.IsActive == true ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)"
+                           Size="Size.Small" Color="@(context.IsActive == true ? Color.Warning : Color.Success)"
+                           OnClick="@(() => ToggleActive(context))" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@* 用户详情对话框 *@
+<MudDialog @bind-Visible="_showDetail" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">用户详情 @_selectedUser?.Username</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedUser != null)
+        {
+            <MudGrid>
+                <MudItem xs="6"><MudText><b>用户ID:</b> @_selectedUser.UserId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>用户名:</b> @_selectedUser.Username</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>邮箱:</b> @_selectedUser.Email</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>手机:</b> @(_selectedUser.Phone ?? "-")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>姓名:</b> @(_selectedUser.FullName ?? "-")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>角色:</b> @(_selectedUser.UserRole ?? "customer")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>累计消费:</b> ¥@(_selectedUser.TotalSpent?.ToString("F2") ?? "0.00")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>订单数:</b> @(_selectedUser.OrderCount ?? 0)</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>积分:</b> @(_selectedUser.Points ?? 0)</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>VIP:</b> @(_selectedUser.IsVip == true ? "是" : "否")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>等级:</b> @(_selectedUser.CustomerTier ?? "-")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>偏好香调:</b> @(_selectedUser.PreferredNote ?? "-")</MudText></MudItem>
+                <MudItem xs="12"><MudText><b>地址:</b> @(_selectedUser.Address ?? "-") @(_selectedUser.City ?? "") @(_selectedUser.PostalCode ?? "")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>注册时间:</b> @_selectedUser.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>最后下单:</b> @_selectedUser.LastOrderDate?.ToString("yyyy-MM-dd HH:mm")</MudText></MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showDetail = false" Variant="Variant.Text">关闭</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudTable<User>? _table;
+    private string _searchText = "";
+    private string? _tierFilter;
+    private bool _vipOnly;
+    private bool _showDetail;
+    private User? _selectedUser;
+
+    private async Task<TableData<User>> ServerReload(TableState state)
+    {
+        var query = Db.Users.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var s = _searchText.Trim();
+            query = query.Where(u => u.Username.Contains(s) || u.Email.Contains(s) || (u.Phone != null && u.Phone.Contains(s)));
+        }
+        if (!string.IsNullOrWhiteSpace(_tierFilter))
+            query = query.Where(u => u.CustomerTier == _tierFilter);
+        if (_vipOnly)
+            query = query.Where(u => u.IsVip == true);
+
+        var totalItems = await query.CountAsync();
+
+        query = state.SortLabel switch
+        {
+            nameof(User.TotalSpent) => state.SortDirection == SortDirection.Descending
+                ? query.OrderByDescending(u => u.TotalSpent) : query.OrderBy(u => u.TotalSpent),
+            _ => state.SortDirection == SortDirection.Descending
+                ? query.OrderByDescending(u => u.CreatedAt) : query.OrderBy(u => u.CreatedAt)
+        };
+
+        var items = await query.Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<User> { TotalItems = totalItems, Items = items };
+    }
+
+    private async Task ToggleActive(User user)
+    {
+        var newVal = user.IsActive != true;
+        await Db.Users.Where(u => u.UserId == user.UserId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.IsActive, newVal));
+        user.IsActive = newVal;
+        Snackbar.Add($"用户 {user.Username} 已{(newVal ? "启用" : "禁用")}", Severity.Success);
+        await _table!.ReloadServerData();
+    }
+
+    private void ViewDetail(User user) { _selectedUser = user; _showDetail = true; }
+
+    private string GetInitial(User u) => (u.FullName ?? u.Username).FirstOrDefault().ToString().ToUpper();
+
+    private Color GetTierColor(string? tier) => (tier?.ToLower()) switch
+    {
+        "platinum" => Color.Secondary,
+        "gold" => Color.Warning,
+        "silver" => Color.Info,
+        "bronze" => Color.Tertiary,
+        _ => Color.Default
+    };
+}

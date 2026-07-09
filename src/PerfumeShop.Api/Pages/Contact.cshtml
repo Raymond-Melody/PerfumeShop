@@ -1,0 +1,122 @@
+@page "/contact"
+@model PerfumeShop.Api.Pages.ContactModel
+@{ ViewData["Title"] = "联系我们"; }
+
+<section class="py-4">
+    <div class="container">
+        <h2 class="text-center mb-5"><i class="bi bi-envelope" style="color:var(--brand)"></i> 联系我们</h2>
+
+        <div class="row g-5">
+            <!-- 联系信息 -->
+            <div class="col-md-5">
+                <div class="card p-4 h-100" style="background:linear-gradient(135deg,#7C4DFF,#FF4081);color:#fff">
+                    <h4 class="mb-4">联系方式</h4>
+                    <div class="mb-4">
+                        <i class="bi bi-telephone me-2"></i>
+                        <div class="d-inline-block">
+                            <strong>客服电话</strong><br />
+                            <span>400-888-8888</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <i class="bi bi-envelope me-2"></i>
+                        <div class="d-inline-block">
+                            <strong>电子邮箱</strong><br />
+                            <span>service@@yourperfume.com</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <i class="bi bi-clock me-2"></i>
+                        <div class="d-inline-block">
+                            <strong>服务时间</strong><br />
+                            <span>周一至周六 9:00-18:00</span>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        <div class="d-inline-block">
+                            <strong>公司地址</strong><br />
+                            <span>中国·深圳·南山区科技园</span>
+                        </div>
+                    </div>
+                    <hr style="border-color:rgba(255,255,255,0.3)" />
+                    <h6>关注我们</h6>
+                    <div>
+                        <a href="#" class="text-white me-3 fs-5"><i class="bi bi-wechat"></i></a>
+                        <a href="#" class="text-white me-3 fs-5"><i class="bi bi-sina-weibo"></i></a>
+                        <a href="#" class="text-white me-3 fs-5"><i class="bi bi-tiktok"></i></a>
+                        <a href="#" class="text-white fs-5"><i class="bi bi-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 联系表单 -->
+            <div class="col-md-7">
+                <div class="card p-4">
+                    <h4 class="mb-4">发送消息</h4>
+                    <form id="contactForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">您的姓名</label>
+                                <input type="text" name="name" class="form-control" required placeholder="请输入姓名" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">联系电话</label>
+                                <input type="tel" name="phone" class="form-control" placeholder="请输入手机号" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">电子邮箱</label>
+                                <input type="email" name="email" class="form-control" required placeholder="请输入邮箱" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">咨询类型</label>
+                                <select name="type" class="form-select">
+                                    <option value="general">一般咨询</option>
+                                    <option value="order">订单问题</option>
+                                    <option value="product">产品咨询</option>
+                                    <option value="custom">定制服务</option>
+                                    <option value="complaint">投诉建议</option>
+                                    <option value="cooperation">商务合作</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">消息内容</label>
+                                <textarea name="message" class="form-control" rows="5" required placeholder="请详细描述您的问题或需求"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-brand btn-lg w-100">
+                                    <i class="bi bi-send"></i> 发送消息
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="mt-5">
+            <h4 class="text-center mb-4">常见问题</h4>
+            <div class="accordion" id="faqAccordion">
+                @foreach (var (q, a, i) in new[] {
+                    ("定制香水需要多长时间？", "定制香水通常需要5-7个工作日制作，加上配送时间约3-5天。总计约8-12个工作日。", 0),
+                    ("如何退换货？", "收到商品后7天内可申请无理由退换。定制商品不支持无理由退换，但如有质量问题可免费换新。", 1),
+                    ("运费怎么计算？", "单笔订单满299元免运费。未满299元收取15元运费。偏远地区可能需要额外运费。", 2),
+                    ("积分如何使用？", "每消费1元积1分，100积分可兑换1元。积分可在积分商城兑换礼品或下单时直接抵扣。", 3)
+                })
+                {
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button @(i > 0 ? "collapsed" : "")" type="button" data-bs-toggle="collapse" data-bs-target="#faq_@i">
+                                @q
+                            </button>
+                        </h2>
+                        <div id="faq_@i" class="accordion-collapse collapse @(i == 0 ? "show" : "")" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted">@a</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>

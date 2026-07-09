@@ -220,7 +220,7 @@ Function GetAccessiblePortals()
     roleCode = Session("AdminRoleCode")
     
     If roleCode = "SUPER_ADMIN" Then
-        portals = "operation,semifinished,prodcenter,production,logistics,purchase,finance,techcenter,system,inventory"
+        portals = "operation,semifinished,prodcenter,production,logistics,purchase,finance,techcenter,system,inventory,analytics"
     ElseIf Left(roleCode, 2) = "OP" Then
         portals = "operation"
     ElseIf Left(roleCode, 4) = "PROD" Then

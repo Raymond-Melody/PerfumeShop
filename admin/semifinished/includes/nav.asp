@@ -1,5 +1,7 @@
 <!-- 半成品生产中心侧边导航 V18 -->
+<link rel="stylesheet" href="/css/admin.css">
 <link rel="stylesheet" href="/css/responsive.css?v=18.0">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <%
 Dim navFrom : navFrom = Request.QueryString("from")
 If navFrom = "inventory" Then
@@ -10,86 +12,60 @@ Else
     Dim scriptParts : scriptParts = Split(CStr(semiCurrentPage), "/")
     semiCurrentPage = scriptParts(UBound(scriptParts))
 %>
-<!-- V18 移动端顶部栏 -->
-<div class="admin-mobile-topbar" style="display:none;position:fixed;top:0;left:0;right:0;height:48px;background:#1a1a2e;z-index:999;align-items:center;padding:0 12px;border-bottom:1px solid rgba(255,255,255,0.06);">
-    <button class="admin-hamburger" id="adminHamburger" aria-label="菜单">
-        <span></span><span></span><span></span>
-    </button>
-    <span style="color:#e0e0e0;font-size:14px;font-weight:600;margin-left:12px;">半成品生产中心</span>
-</div>
-<!-- 移动端侧边栏遮罩 -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<div class="admin-sidebar" id="adminSidebar" style="position:fixed;left:0;top:60px;width:250px;height:calc(100vh - 60px);background:#1a1a2e;border-right:1px solid rgba(255,255,255,0.06);overflow-y:auto;z-index:100;">
-    <div class="sidebar-header" style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
-        <h3 style="color:#e0e0e0;margin:0;font-size:16px;display:flex;align-items:center;gap:10px;">
-            <i class="fas fa-flask" style="color:#2196F3;"></i> 半成品生产中心
-        </h3>
-        <p style="color:#888;font-size:11px;margin:8px 0 0;">原料 → 基香 → 香调</p>
-    </div>
-    
-    <nav class="sidebar-nav" style="padding:15px 0;">
-        <div class="nav-section">
-            <div class="nav-section-title" style="padding:8px 20px;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:1px;">总览</div>
-            <a href="index.asp" class="nav-item <%= IIf(semiCurrentPage="index.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-tachometer-alt"></i> 生产概览
-            </a>
-        </div>
-        
-        <div class="nav-section" style="margin-top:15px;">
-            <div class="nav-section-title" style="padding:8px 20px;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:1px;">生产管理</div>
-            <a href="accord_production.asp" class="nav-item <%= IIf(semiCurrentPage="accord_production.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-cogs"></i> Accord生产
-            </a>
-            <a href="base_note_production.asp" class="nav-item <%= IIf(semiCurrentPage="base_note_production.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-vial"></i> 基香生产
-            </a>
-            <a href="workshop_transfer.asp" class="nav-item <%= IIf(semiCurrentPage="workshop_transfer.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-exchange-alt"></i> 车间调拨
-            </a>
-        </div>
-        
-        <div class="nav-section" style="margin-top:15px;">
-            <div class="nav-section-title" style="padding:8px 20px;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:1px;">库存管理</div>
-            <a href="inventory_dashboard.asp" class="nav-item <%= IIf(semiCurrentPage="inventory_dashboard.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-chart-pie"></i> 库存仪表盘
-            </a>
-            <a href="raw_material_inventory.asp" class="nav-item <%= IIf(semiCurrentPage="raw_material_inventory.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-boxes"></i> 原料库存
-            </a>
-            <a href="base_note_inventory.asp" class="nav-item <%= IIf(semiCurrentPage="base_note_inventory.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-database"></i> 基香库存
-            </a>
-            <a href="note_inventory.asp" class="nav-item <%= IIf(semiCurrentPage="note_inventory.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-layer-group"></i> 香调库存
-            </a>
-            <a href="material_outbound.asp" class="nav-item <%= IIf(semiCurrentPage="material_outbound.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-truck-loading"></i> 原料出库
-            </a>
-        </div>
-        
-        <div class="nav-section" style="margin-top:15px;">
-            <div class="nav-section-title" style="padding:8px 20px;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:1px;">预警</div>
-            <a href="inventory_alerts.asp" class="nav-item <%= IIf(semiCurrentPage="inventory_alerts.asp","active","") %>" style="display:flex;align-items:center;gap:10px;padding:12px 20px;color:#b0b0b0;text-decoration:none;font-size:14px;transition:all 0.2s;border-left:3px solid transparent;">
-                <i class="fas fa-exclamation-triangle"></i> 库存预警
-            </a>
+<div class="admin-dashboard">
+    <!-- V18 桌面端顶部导航栏 -->
+    <nav class="admin-navbar">
+        <div class="admin-nav-container">
+            <div style="display:flex;align-items:center;">
+                <button class="admin-hamburger" id="adminHamburger" aria-label="菜单">
+                    <span></span><span></span><span></span>
+                </button>
+                <a href="index.asp" class="admin-nav-brand">
+                    <i class="fas fa-vial"></i>
+                    <span>半成品生产中心</span>
+                </a>
+            </div>
+            <ul class="admin-nav-menu">
+                <li><a href="javascript:void(0)" onclick="location.reload()"><i class="fas fa-sync-alt"></i> 刷新</a></li>
+                <li><a href="/admin/portal.asp"><i class="fas fa-th-large"></i> 返回入口</a></li>
+                <li><a href="/admin/logout.asp"><i class="fas fa-sign-out-alt"></i> 退出</a></li>
+            </ul>
         </div>
     </nav>
-    
-    <div class="sidebar-footer" style="position:sticky;bottom:0;padding:15px 20px;border-top:1px solid rgba(255,255,255,0.06);background:#1a1a2e;">
-        <a href="/admin/portal.asp" style="color:#888;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fas fa-arrow-left"></i> 返回管理中心
-        </a>
-    </div>
-</div>
 
-<style>
-.admin-sidebar .nav-item:hover { background: rgba(255,255,255,0.05); color: #e0e0e0; border-left-color: #2196F3; }
-.admin-sidebar .nav-item.active { background: rgba(33,150,243,0.12); color: #2196F3; border-left-color: #2196F3; }
-/* V18 移动端body偏移适配顶部栏 */
-@media (max-width: 768px) {
-    body { padding-top: 48px !important; }
-}
-</style>
+    <!-- 移动端侧边栏遮罩 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- V18 侧边栏导航 -->
+    <aside class="sidebar" id="adminSidebar">
+        <div class="sidebar-header" style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <h3 style="color:#e0e0e0;margin:0;font-size:16px;display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-flask" style="color:#2196F3;"></i> 半成品生产中心
+            </h3>
+            <p style="color:#888;font-size:11px;margin:8px 0 0;">原料 → 基香 → 香调</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="sidebar-section-title">总览</li>
+            <li><a href="index.asp" class="<%= IIf(semiCurrentPage="index.asp","active","") %>"><i class="fas fa-tachometer-alt"></i> <span>生产概览</span></a></li>
+            <li class="sidebar-section-title">生产管理</li>
+            <li><a href="accord_production.asp" class="<%= IIf(semiCurrentPage="accord_production.asp","active","") %>"><i class="fas fa-cogs"></i> <span>Accord生产</span></a></li>
+            <li><a href="base_note_production.asp" class="<%= IIf(semiCurrentPage="base_note_production.asp","active","") %>"><i class="fas fa-vial"></i> <span>基香生产</span></a></li>
+            <li><a href="workshop_transfer.asp" class="<%= IIf(semiCurrentPage="workshop_transfer.asp","active","") %>"><i class="fas fa-exchange-alt"></i> <span>车间调拨</span></a></li>
+            <li class="sidebar-section-title">库存管理</li>
+            <li><a href="inventory_dashboard.asp" class="<%= IIf(semiCurrentPage="inventory_dashboard.asp","active","") %>"><i class="fas fa-chart-pie"></i> <span>库存仪表盘</span></a></li>
+            <li><a href="raw_material_inventory.asp" class="<%= IIf(semiCurrentPage="raw_material_inventory.asp","active","") %>"><i class="fas fa-boxes"></i> <span>原料库存</span></a></li>
+            <li><a href="base_note_inventory.asp" class="<%= IIf(semiCurrentPage="base_note_inventory.asp","active","") %>"><i class="fas fa-database"></i> <span>基香库存</span></a></li>
+            <li><a href="note_inventory.asp" class="<%= IIf(semiCurrentPage="note_inventory.asp","active","") %>"><i class="fas fa-layer-group"></i> <span>香调库存</span></a></li>
+            <li><a href="material_outbound.asp" class="<%= IIf(semiCurrentPage="material_outbound.asp","active","") %>"><i class="fas fa-truck-loading"></i> <span>原料出库</span></a></li>
+            <li class="sidebar-section-title">预警</li>
+            <li><a href="inventory_alerts.asp" class="<%= IIf(semiCurrentPage="inventory_alerts.asp","active","") %>"><i class="fas fa-exclamation-triangle"></i> <span>库存预警</span></a></li>
+        </ul>
+        <div class="sidebar-footer" style="padding:15px 20px;border-top:1px solid rgba(255,255,255,0.06);">
+            <a href="/admin/portal.asp" style="color:#666;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-arrow-left"></i> 返回管理中心
+            </a>
+        </div>
+    </aside>
+</div>
 <!--#include file="../../includes/nav_common.asp"-->
 <% End If %>

@@ -30,12 +30,17 @@
     
     <!-- 侧边栏 -->
     <aside class="sidebar" id="adminSidebar">
+        <div class="sidebar-header" style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <h3 style="color:#e0e0e0;margin:0;font-size:16px;display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-chart-line" style="color:#667eea;"></i> 运营管理中心
+            </h3>
+            <p style="color:#888;font-size:11px;margin:8px 0 0;">订单 · 客户 · 商品 · 营销</p>
+        </div>
         <ul class="sidebar-menu">
             <li><a href="index.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/index.asp", "active", "") %>"><i class="fas fa-home"></i> <span>运营概览</span></a></li>
             
             <li class="sidebar-section-title">订单与客户</li>
             <li><a href="orders.asp" class="<%= IIf(InStr(LCase(Request.ServerVariables("SCRIPT_NAME")), "/admin/operation/orders") > 0, "active", "") %>"><i class="fas fa-shopping-cart"></i> <span>订单管理</span></a></li>
-            <li><a href="order_detail.asp" class="<%= IIf(InStr(LCase(Request.ServerVariables("SCRIPT_NAME")), "/admin/operation/order_detail") > 0, "active", "") %>" style="display:none;"></a></li>
             <li><a href="customers.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/customers.asp", "active", "") %>"><i class="fas fa-users"></i> <span>客户管理</span></a></li>
             <li><a href="points.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/points.asp", "active", "") %>"><i class="fas fa-coins"></i> <span>积分管理</span></a></li>
             
@@ -58,6 +63,11 @@
             <li><a href="referral_codes.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/referral_codes.asp", "active", "") %>"><i class="fas fa-user-friends"></i> <span>推荐码管理</span></a></li>
             <li><a href="payment_switch.asp" class="<%= IIf(LCase(Request.ServerVariables("SCRIPT_NAME")) = "/admin/operation/payment_switch.asp", "active", "") %>"><i class="fas fa-toggle-on"></i> <span>支付开关</span></a></li>
         </ul>
+        <div class="sidebar-footer" style="padding:15px 20px;border-top:1px solid rgba(255,255,255,0.06);">
+            <a href="/admin/portal.asp" style="color:#666;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-arrow-left"></i> 返回管理中心
+            </a>
+        </div>
     </aside>
 </div>
 <!--#include file="../../includes/nav_common.asp"-->

@@ -53,9 +53,9 @@ pendingOrders = CLng(GetScalar("SELECT COUNT(*) FROM Orders WHERE Status='Pendin
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>数据分析仪表盘 - V15</title>
+<title>数据分析仪表盘 - V18</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<link rel="stylesheet" href="../css/admin-theme.css">
+<link rel="stylesheet" href="/css/admin.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding: 20px; }
@@ -90,8 +90,10 @@ pendingOrders = CLng(GetScalar("SELECT COUNT(*) FROM Orders WHERE Status='Pendin
 </style>
 </head>
 <body>
+<!--#include file="../includes/nav.asp"-->
+<div class="main-content">
 <div class="header">
-    <h1><i class="fas fa-chart-bar"></i> 数据分析仪表盘 V16</h1>
+    <h1><i class="fas fa-chart-bar"></i> 数据分析仪表盘 V18</h1>
     <div>
         <span style="color:#888;font-size:12px;margin-right:12px;">实时数据</span>
         <button class="period-btn active" onclick="changePeriod(7)">7天</button>
@@ -275,6 +277,8 @@ function changePeriod(days) {
     window.location = '?days=' + days;
 }
 </script>
+</div>
+<!-- .main-content -->
 </body>
 </html>
 <%

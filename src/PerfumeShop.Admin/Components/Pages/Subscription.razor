@@ -1,0 +1,167 @@
+@page "/admin/subscription"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>订阅管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">订阅管理</MudText>
+
+<MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+    @* 订阅计划 *@
+    <MudTabPanel Text="订阅计划" Icon="@Icons.Material.Filled.Assignment">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@(() => _showCreatePlan = true)" Class="mb-3">新建计划</MudButton>
+
+        <MudTable Items="@_plans" Hover="true" Dense="true" Striped="true">
+            <HeaderContent>
+                <MudTh>ID</MudTh>
+                <MudTh>计划名称</MudTh>
+                <MudTh>周期</MudTh>
+                <MudTh>价格</MudTh>
+                <MudTh>样品数</MudTh>
+                <MudTh>正装数</MudTh>
+                <MudTh>包邮</MudTh>
+                <MudTh>状态</MudTh>
+                <MudTh>操作</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.PlanId</MudTd>
+                <MudTd>@context.PlanName</MudTd>
+                <MudTd><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Period</MudChip></MudTd>
+                <MudTd>¥@context.Price.ToString("F2")</MudTd>
+                <MudTd>@context.SampleCount</MudTd>
+                <MudTd>@context.FullSizeCount</MudTd>
+                <MudTd>@(context.FreeShipping ? "是" : "否")</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                        @(context.IsActive ? "启用" : "停用")
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@(context.IsActive ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                                   Size="Size.Small" OnClick="@(() => TogglePlan(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => DeletePlan(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    @* 用户订阅 *@
+    <MudTabPanel Text="用户订阅" Icon="@Icons.Material.Filled.Subscriptions">
+        <MudTable ServerData="@(new Func<TableState, Task<TableData<UserSubscription>>>(ServerReloadSubs))"
+                  @ref="_subsTable" Hover="true" Dense="true" Striped="true" RowsPerPage="15">
+            <HeaderContent>
+                <MudTh>订阅ID</MudTh>
+                <MudTh>用户ID</MudTh>
+                <MudTh>计划ID</MudTh>
+                <MudTh>状态</MudTh>
+                <MudTh>自动续订</MudTh>
+                <MudTh>开始日期</MudTh>
+                <MudTh>结束日期</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.SubscriptionId</MudTd>
+                <MudTd>@context.UserId</MudTd>
+                <MudTd>@context.PlanId</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@GetSubStatusColor(context.Status)">@context.Status</MudChip>
+                </MudTd>
+                <MudTd>@(context.AutoRenew ? "是" : "否")</MudTd>
+                <MudTd>@context.StartDate.ToString("yyyy-MM-dd")</MudTd>
+                <MudTd>@(context.EndDate?.ToString("yyyy-MM-dd") ?? "-")</MudTd>
+            </RowTemplate>
+            <PagerContent><MudTablePager /></PagerContent>
+        </MudTable>
+    </MudTabPanel>
+</MudTabs>
+
+@* 新建计划对话框 *@
+<MudDialog @bind-Visible="_showCreatePlan" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent><MudText Typo="Typo.h6">新建订阅计划</MudText></TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12"><MudTextField @bind-Value="_newPlan.PlanName" Label="计划名称" /></MudItem>
+            <MudItem xs="6">
+                <MudSelect @bind-Value="_newPlan.Period" Label="周期">
+                    <MudSelectItem Value="@("monthly")">月度</MudSelectItem>
+                    <MudSelectItem Value="@("quarterly")">季度</MudSelectItem>
+                    <MudSelectItem Value="@("yearly")">年度</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6"><MudNumericField @bind-Value="_newPlan.Price" Label="价格" Format="F2" /></MudItem>
+            <MudItem xs="4"><MudNumericField @bind-Value="_newPlan.SampleCount" Label="样品数" /></MudItem>
+            <MudItem xs="4"><MudNumericField @bind-Value="_newPlan.FullSizeCount" Label="正装数" /></MudItem>
+            <MudItem xs="4"><MudSwitch @bind-Value="_newPlan.FreeShipping" Label="包邮" Color="Color.Success" /></MudItem>
+            <MudItem xs="12"><MudTextField @bind-Value="_newPlan.Description" Label="描述" Lines="2" /></MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showCreatePlan = false" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="CreatePlan" Variant="Variant.Filled" Color="Color.Primary">创建</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<SubscriptionPlan> _plans = new();
+    private MudTable<UserSubscription>? _subsTable;
+    private bool _showCreatePlan;
+    private SubscriptionPlan _newPlan = new();
+
+    protected override async Task OnInitializedAsync() => await LoadPlans();
+
+    private async Task LoadPlans()
+    {
+        _plans = await Db.SubscriptionPlans.OrderBy(p => p.SortOrder).ThenByDescending(p => p.CreatedAt).ToListAsync();
+    }
+
+    private async Task TogglePlan(SubscriptionPlan plan)
+    {
+        var newVal = !plan.IsActive;
+        await Db.SubscriptionPlans.Where(p => p.PlanId == plan.PlanId)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsActive, newVal));
+        plan.IsActive = newVal;
+        Snackbar.Add($"计划 \"{plan.PlanName}\" 已{(newVal ? "启用" : "停用")}", Severity.Success);
+    }
+
+    private async Task DeletePlan(SubscriptionPlan plan)
+    {
+        Db.SubscriptionPlans.Remove(plan);
+        await Db.SaveChangesAsync();
+        Snackbar.Add("计划已删除", Severity.Success);
+        await LoadPlans();
+    }
+
+    private async Task CreatePlan()
+    {
+        _newPlan.IsActive = true;
+        _newPlan.CreatedAt = DateTime.Now;
+        Db.SubscriptionPlans.Add(_newPlan);
+        await Db.SaveChangesAsync();
+        _showCreatePlan = false;
+        _newPlan = new();
+        Snackbar.Add("订阅计划已创建", Severity.Success);
+        await LoadPlans();
+    }
+
+    private async Task<TableData<UserSubscription>> ServerReloadSubs(TableState state)
+    {
+        var query = Db.UserSubscriptions.AsQueryable();
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(s => s.CreatedAt)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<UserSubscription> { TotalItems = total, Items = items };
+    }
+
+    private Color GetSubStatusColor(string status) => status.ToLower() switch
+    {
+        "active" => Color.Success,
+        "paused" => Color.Warning,
+        "cancelled" => Color.Error,
+        "expired" => Color.Default,
+        _ => Color.Info
+    };
+}

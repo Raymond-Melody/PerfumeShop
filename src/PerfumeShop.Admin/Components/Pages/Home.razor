@@ -1,7 +1,94 @@
 ﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
 
-<PageTitle>Home</PageTitle>
+<PageTitle>运营仪表盘</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudText Typo="Typo.h4" Class="mb-4">运营仪表盘</MudText>
 
-Welcome to your new app.
+<MudGrid>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">商品总数</MudText>
+                <MudText Typo="Typo.h4">@_productCount</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">用户总数</MudText>
+                <MudText Typo="Typo.h4">@_userCount</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Tertiary">订单总数</MudText>
+                <MudText Typo="Typo.h4">@_orderCount</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Color="Color.Warning">活跃秒杀</MudText>
+                <MudText Typo="Typo.h4">@_flashSaleCount</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<MudText Typo="Typo.h5" Class="mt-6 mb-3">最新订单</MudText>
+<MudTable Items="@_recentOrders" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>订单号</MudTh>
+        <MudTh>用户</MudTh>
+        <MudTh>金额</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>时间</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.OrderId</MudTd>
+        <MudTd>@context.UserId</MudTd>
+        <MudTd>¥@context.TotalAmount.ToString("F2")</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status ?? "")">@(context.Status ?? "-")</MudChip>
+        </MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private int _productCount, _userCount, _orderCount, _flashSaleCount;
+    private List<Order> _recentOrders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _productCount = await Db.Products.CountAsync();
+        _userCount = await Db.Users.CountAsync();
+        _orderCount = await Db.Orders.CountAsync();
+
+        var now = DateTime.Now;
+        _flashSaleCount = await Db.FlashSales.CountAsync(f => f.IsActive && now >= f.StartTime && now <= f.EndTime);
+
+        _recentOrders = await Db.Orders
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(10)
+            .ToListAsync();
+    }
+
+    private Color GetStatusColor(string status) => status.ToLower() switch
+    {
+        "pending" => Color.Warning,
+        "paid" or "confirmed" => Color.Info,
+        "shipped" => Color.Primary,
+        "delivered" or "completed" => Color.Success,
+        "cancelled" => Color.Error,
+        _ => Color.Default
+    };
+}
