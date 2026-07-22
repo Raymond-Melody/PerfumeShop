@@ -1,0 +1,121 @@
+@page "/user/favorites"
+@model PerfumeShop.Api.Pages.User.FavoritesModel
+@{ ViewData["Title"] = "我的收藏"; }
+
+@section Styles {
+<text>
+<style>
+.filter-tag {
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: 13px; text-decoration: none; color: #666;
+    background: #f5f5f5; border: 1px solid #e0e0e0; transition: all 0.2s;
+}
+.filter-tag:hover { color: #e91e63; border-color: #e91e63; background: #fce4ec; }
+.filter-tag.active { background: #e91e63; color: #fff; border-color: #e91e63; }
+</style>
+</text>
+}
+
+<!-- 面包屑 -->
+<div class="breadcrumb">
+    <div class="container">
+        <a href="/">首页</a>
+        <span class="separator">/</span>
+        <a href="/user">个人中心</a>
+        <span class="separator">/</span>
+        <span>我的收藏</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="user-center">
+        <!-- 左侧导航 (复用 user/index) -->
+        <aside class="user-side">
+            <div class="user-card">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="/user">账户概览</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/orders">我的订单</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/favorites">我的收藏</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/points">我的积分</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/coupons">我的优惠券</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/addresses">收货地址</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/settings">账户设置</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- 主内容 -->
+        <div class="user-main">
+            <div class="welcome-section">
+                <h1><i class="fas fa-heart"></i> 我的收藏</h1>
+                <p>收藏喜欢的商品，方便以后快速找到</p>
+            </div>
+
+            @if (!Model.IsEmpty)
+            {
+                <div class="products-grid">
+                    @foreach (var item in Model.Favorites)
+                    {
+                        <div class="product-card" data-product-id="@item.ProductId">
+                            <div class="product-image">
+                                <img src="@(item.Image ?? "/images/default-product.svg")" alt="@item.Name"
+                                     onerror="this.src='/images/default-product.svg'">
+                                @if (item.Category == "奢华系列")
+                                {
+                                    <div class="product-badges">
+                                        <span class="badge badge-premium">奢华</span>
+                                    </div>
+                                }
+                                <div class="product-overlay">
+                                    <a href="/product?id=@item.ProductId" class="btn btn-white">查看详情</a>
+                                    <button class="btn btn-icon" title="取消收藏" onclick="removeFromFavorites(@item.ProductId)">
+                                        <i class="fas fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="product-info">
+                                <span class="product-category">@item.Category</span>
+                                <h3><a href="/product?id=@item.ProductId">@item.Name</a></h3>
+                                <p class="product-desc">@((item.Description?.Length > 60 ? item.Description.Substring(0, 60) + "..." : item.Description) ?? "")</p>
+                                <div class="product-footer">
+                                    <div class="product-price">
+                                        <span class="price">¥@item.Price.ToString("F2")</span>
+                                        <span class="price-label">起</span>
+                                    </div>
+                                    <a href="/product?id=@item.ProductId" class="btn btn-sm btn-outline">定制</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="no-results">
+                    <i class="fas fa-heart"></i>
+                    <h3>暂无收藏商品</h3>
+                    <p>收藏喜欢的商品，方便以后快速找到</p>
+                    <a href="/products" class="btn btn-primary">去逛逛</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function removeFromFavorites(productId) {
+    if (!confirm('确定要取消收藏这个商品吗？')) return;
+    fetch('/api/user/1/favorites/' + productId, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || '操作失败');
+            }
+        })
+        .catch(() => alert('网络错误'));
+}
+</script>
+}

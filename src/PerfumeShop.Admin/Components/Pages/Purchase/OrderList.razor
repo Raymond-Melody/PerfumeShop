@@ -1,0 +1,57 @@
+@page "/admin/Purchase/OrderList"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>采购订单</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-file-invoice" style="color:#FF9800;"></i> 采购订单</h2><div class="breadcrumb"><a href="/admin/Purchase/Dashboard" style="color:#FF9800;text-decoration:none;">采购中心</a> / <span>采购订单</span></div></div>
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<button class="btn-add" @onclick="OpenAddModal" style="margin-bottom:20px;">+ 新建采购单</button>
+<div class="table-container"><table class="orders-table"><thead><tr><th>采购单号</th><th>供应商</th><th>类型</th><th>金额</th><th>状态</th><th>日期</th><th>操作</th></tr></thead><tbody>
+@foreach(var o in _items){<tr><td>@(o.PurchaseNo??o.PurchaseId.ToString())</td><td>@(o.SupplierId?.ToString()??"-")</td><td>@(o.OrderType??"-")</td><td>@((o.TotalAmount??0).ToString("N2"))</td><td><span class="status-badge @(o.Status=="completed"?"status-normal":"status-warning")">@(o.Status??"pending")</span></td><td>@(o.OrderDate?.ToString("yyyy-MM-dd")??"-")</td><td><button class="btn-edit" @onclick='()=>UpdateStatus(o,"approved")'>审批</button><button class="btn-edit" @onclick='()=>UpdateStatus(o,"completed")'>完成</button></td></tr>}
+@if(!_items.Any()){<tr><td colspan="7" style="text-align:center;color:#666;padding:40px;">暂无采购单</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+@if(_showModal){<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>新建采购单</h3><button class="modal-close" @onclick="CloseModal">X</button></div><div class="modal-body">
+<div class="form-group"><label>供应商ID</label><input type="number" @bind="_newOrder.SupplierId" /></div>
+<div class="form-group"><label>类型</label><select @bind="_newOrder.OrderType"><option value="raw">原料</option><option value="bottle">瓶子</option><option value="packaging">包装</option></select></div>
+<div class="form-group"><label>金额</label><input type="number" step="0.01" @bind="_newOrder.TotalAmount" /></div>
+</div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="CreateOrder">保存</button></div></div></div>}
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+.btn-add{background:linear-gradient(135deg,#FF9800,#E65100);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(255,152,0,0.1);color:#FF9800;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}
+.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
+.btn-edit{background:rgba(255,152,0,0.15);color:#FF9800;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;margin-right:6px;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;}.alert-error{background:rgba(244,67,54,0.15);color:#e57373;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:500px;border:1px solid rgba(255,255,255,0.06);}
+.modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;}
+.modal-body{padding:25px;}.modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus,.form-group select:focus{border-color:#FF9800;outline:none;}
+.btn-save{background:linear-gradient(135deg,#FF9800,#E65100);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+</style>
+@code {
+    private bool _loaded,_showModal;private string _msg="",_msgType="";
+    private List<PurchaseOrder> _items=new();private PurchaseOrder _newOrder=new();
+    protected override async Task OnInitializedAsync(){
+        try{_items=await Db.PurchaseOrders.AsNoTracking().OrderByDescending(o=>o.PurchaseId).Take(100).ToListAsync();_loaded=true;}catch{_loaded=true;}
+    }
+    void OpenAddModal(){_newOrder=new();_showModal=true;}void CloseModal(){_showModal=false;}
+    async Task CreateOrder(){
+        try{_newOrder.Status="pending";_newOrder.OrderDate=DateTime.Now;_newOrder.PurchaseNo="PO-"+DateTime.Now.ToString("yyyyMMddHHmm");Db.PurchaseOrders.Add(_newOrder);await Db.SaveChangesAsync();_msg="已创建";_msgType="ok";_showModal=false;_items=await Db.PurchaseOrders.AsNoTracking().OrderByDescending(o=>o.PurchaseId).Take(100).ToListAsync();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+    async Task UpdateStatus(PurchaseOrder o,string s){
+        try{o.Status=s;Db.PurchaseOrders.Update(o);await Db.SaveChangesAsync();_msg="状态已更新";_msgType="ok";}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+}

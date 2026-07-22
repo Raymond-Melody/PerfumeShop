@@ -1,0 +1,235 @@
+@page "/admin/TechCenter/RecipePublish"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "TECH_MANAGER,SUPER_ADMIN")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@using Microsoft.JSInterop
+@inject PerfumeShopContext Db
+
+<PageTitle>配方拆分发布</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-lock" style="color:#FF9800;"></i> 配方拆分发布</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>配方拆分发布</span></div></div>
+
+<div class="security-note"><i class="fas fa-shield-alt"></i> <strong>安全隔离说明：</strong>配方拆分发布后，香调生产车间仅能看到"原材料→香调"片段（RecipeAccords），产品制造车间仅能看到"香调→产品"片段（RecipeProducts）。技术中心是唯一持有完整配方的角色。所有发布操作均记录审计日志。</div>
+
+@if(_loaded){
+<div class="stats-row"><div class="stat-card" style="border-left:3px solid #00bcd4;"><span class="stat-num">@_totalRecipes</span><span class="stat-label">活跃配方</span></div><div class="stat-card" style="border-left:3px solid #FF9800;"><span class="stat-num" style="color:#FF9800;">@_accordPublished</span><span class="stat-label">已发布香调配方</span></div><div class="stat-card" style="border-left:3px solid #2196F3;"><span class="stat-num" style="color:#2196F3;">@_productPublished</span><span class="stat-label">已发布产品配方</span></div><div class="stat-card" style="border-left:3px solid #9C27B0;"><span class="stat-num">@_totalLogs</span><span class="stat-label">审计日志</span></div></div>
+
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+
+@* ---- 活跃配方列表 ---- *@
+<div class="card"><div class="card-h">活跃配方列表 — 选择配方进行拆分发布</div><div class="card-b" style="overflow-x:auto;"><table class="orders-table"><thead><tr><th>配方编号</th><th>配方名称</th><th>类型</th><th>香调数</th><th>香调配方</th><th>产品配方</th><th>操作</th></tr></thead><tbody>
+@foreach(var r in _recipes){
+    var accCount=_accordDict.GetValueOrDefault(r.RecipeId,0);
+    var prodCount=_prodDict.GetValueOrDefault(r.RecipeId,0);
+    var noteCount=_noteDict.GetValueOrDefault(r.RecipeId,0);
+<tr><td><strong>@(r.RecipeCode??"-")</strong></td><td>@r.RecipeName</td><td>@(r.ProductType??"-")</td><td>@noteCount</td>
+<td>@if(accCount>0){<span class="badge badge-pub">已发布</span>}else{<span class="badge badge-draft">未发布</span>}</td>
+<td>@if(prodCount>0){<span class="badge badge-pub">已发布</span>}else{<span class="badge badge-draft">未发布</span>}</td>
+<td><button class="btn-sm btn-publish-accord" @onclick='()=>OpenAccordModal(r)' title="发布香调配方">发布香调</button><button class="btn-sm btn-publish-prod" @onclick='()=>OpenProductModal(r)' title="发布产品配方">发布产品</button></td></tr>
+}
+@if(!_recipes.Any()){<tr><td colspan="7" style="text-align:center;color:#666;padding:40px;">暂无可发布的活跃配方</td></tr>}
+</tbody></table></div></div>
+
+@* ---- 已发布香调配方列表 ---- *@
+<div class="card"><div class="card-h" style="border-left:3px solid #FF9800;">已发布香调配方（RecipeAccords）— 香调生产车间可见</div><div class="card-b" style="overflow-x:auto;"><table class="orders-table"><thead><tr><th>配方名称</th><th>产出香调ID</th><th>批量</th><th>状态</th><th>发布时间</th><th>发布人</th><th>操作</th></tr></thead><tbody>
+@foreach(var a in _accords){<tr><td>@(a.RecipeName??"-")</td><td>@a.NoteId</td><td>@(a.BatchSize?.ToString()??"-")</td><td><span class="badge @(a.Status=="Published"?"badge-pub":"badge-depr")">@a.Status</span></td><td>@(a.PublishedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@(a.PublishedBy??"-")</td><td>@if(a.Status=="Published"){<button class="btn-sm btn-danger" @onclick='()=>DeprecateAccord(a)'>废弃</button>}</td></tr>}
+@if(!_accords.Any()){<tr><td colspan="7" style="text-align:center;color:#666;padding:30px;">暂无已发布的香调配方</td></tr>}
+</tbody></table></div></div>
+
+@* ---- 已发布产品配方列表 ---- *@
+<div class="card"><div class="card-h" style="border-left:3px solid #2196F3;">已发布产品配方（RecipeProducts）— 产品制造车间可见</div><div class="card-b" style="overflow-x:auto;"><table class="orders-table"><thead><tr><th>配方ID</th><th>产品ID</th><th>批量</th><th>状态</th><th>发布时间</th><th>发布人</th><th>操作</th></tr></thead><tbody>
+@foreach(var p in _products){<tr><td>@p.RecipeId</td><td>@(p.ProductId??0)</td><td>@(p.BatchSize?.ToString()??"-")</td><td><span class="badge @(p.Status=="Published"?"badge-pub":"badge-depr")">@p.Status</span></td><td>@(p.PublishedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@(p.PublishedBy??"-")</td><td>@if(p.Status=="Published"){<button class="btn-sm btn-danger" @onclick='()=>DeprecateProduct(p)'>废弃</button>}</td></tr>}
+@if(!_products.Any()){<tr><td colspan="7" style="text-align:center;color:#666;padding:30px;">暂无已发布的产品配方</td></tr>}
+</tbody></table></div></div>
+
+@* ---- 审计日志 ---- *@
+<div class="card"><div class="card-h">配方发布审计日志（RecipePublishLog）</div><div class="card-b" style="overflow-x:auto;"><table class="orders-table"><thead><tr><th>时间</th><th>类型</th><th>目标ID</th><th>发布人</th><th>IP</th></tr></thead><tbody>
+@foreach(var l in _logs){<tr><td>@(l.PublishedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td><span class="badge" style="@(l.PublishType=="Accord"?"background:rgba(255,152,0,0.2);color:#FF9800;":"background:rgba(33,150,243,0.2);color:#2196F3;")">@l.PublishType</span></td><td>@l.TargetRecipeId</td><td>@(l.PublishedBy??"-")</td><td>@(l.Ipaddress??"-")</td></tr>}
+@if(!_logs.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">暂无审计记录</td></tr>}
+</tbody></table></div></div>
+
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@* ---- 发布香调配方弹窗 ---- *@
+@if(_showAccordModal){
+<div class="mo" @onclick="CloseAccordModal"><div class="mc" @onclick:stopPropagation="true" style="max-width:700px;max-height:85vh;overflow-y:auto;"><div class="mh"><h3 style="color:#FF9800;"><i class="fas fa-flask"></i> 发布香调配方（原材料→香调）</h3><button class="mcl" @onclick="CloseAccordModal">&times;</button></div>
+<div class="mb">
+<p style="color:#888;font-size:13px;">配方: <strong>@_pubRecipeName</strong> — 此配方将下发至香调生产车间，仅包含原材料级别信息。</p>
+<div class="fg"><label>选择产出香调</label><select @bind="_pubNoteId" @bind:after="LoadAccordIngredients"><option value="0">-- 选择香调 --</option>@foreach(var n in _pubNotes){<option value="@n.NoteId">@n.NoteName (@n.NoteType)</option>}</select></div>
+<div class="fg"><label>批量大小 (ml)</label><input type="number" @bind="_pubBatchSize" min="1" /></div>
+@if(_pubNoteId>0){<h4 style="color:#e0e0e0;margin:12px 0 8px;">原材料明细</h4>@if(_loadingIngredients){<p style="color:#888;"><i class="fas fa-spinner fa-spin"></i> 加载中...</p>}else if(_pubIngredients.Any()){<table class="orders-table"><thead><tr><th>成分名称</th><th>比例(%)</th><th>计划量(g)</th><th>库存匹配</th></tr></thead><tbody>@foreach(var mi in _pubIngredients){<tr><td>@mi.Name</td><td>@mi.Pct.ToString("F1")</td><td>@mi.Qty.ToString("F1")</td><td style="color:@(mi.Matched>0?"#4CAF50":"#FF9800");">@(mi.Matched>0?$"已匹配 #{mi.Matched}":"未匹配库存")</td></tr>}</tbody></table>}else{<p style="color:#666;">该香调暂无原材料成分数据</p>}}
+</div><div class="mft"><button class="btn-secondary" @onclick="CloseAccordModal">取消</button><button class="btn-save" @onclick="PublishAccord" style="background:linear-gradient(135deg,#FF9800,#E65100);" disabled="@(_pubNoteId<=0)">发布香调配方</button></div></div></div>
+}
+
+@* ---- 发布产品配方弹窗 ---- *@
+@if(_showProductModal){
+<div class="mo" @onclick="CloseProductModal"><div class="mc" @onclick:stopPropagation="true" style="max-width:700px;max-height:85vh;overflow-y:auto;"><div class="mh"><h3 style="color:#2196F3;"><i class="fas fa-industry"></i> 发布产品配方（香调→产品）</h3><button class="mcl" @onclick="CloseProductModal">&times;</button></div>
+<div class="mb">
+<p style="color:#888;font-size:13px;">配方: <strong>@_prodPubName</strong> — 此配方将下发至产品制造车间，仅包含香调级别信息。</p>
+<div class="fg"><label>关联产品（可选）</label><select @bind="_prodPubProductId"><option value="0">-- 不关联具体产品 --</option>@foreach(var pr in _allProducts){<option value="@pr.ProductId">@pr.ProductName</option>}</select></div>
+<div class="fg"><label>批量大小</label><input type="number" @bind="_prodPubBatch" min="1" /></div>
+<h4 style="color:#e0e0e0;margin:12px 0 8px;">香调组成</h4>
+@if(_pubProductNotes.Any()){<table class="orders-table"><thead><tr><th>香调名称</th><th>类型</th><th>比例(%)</th><th>计划量(ml)</th></tr></thead><tbody>
+@foreach(var pn in _pubProductNotes){<tr><td>@pn.Name</td><td>@pn.Type</td><td>@pn.Pct.ToString("F1")</td><td>@pn.Qty.ToString("F1")</td></tr>}
+</tbody></table><div style="font-size:12px;color:#888;margin-top:4px;">百分比总和: <span style="color:@(Math.Abs(_pubProductNotes.Sum(x=>x.Pct)-100)>1?"#f44336":"#4CAF50");">@_pubProductNotes.Sum(x=>x.Pct).ToString("F1")%</span></div>}else{<p style="color:#666;">该配方暂无香调组成数据（需先在配方管理中配置 RecipeNotes）</p>}
+</div><div class="mft"><button class="btn-secondary" @onclick="CloseProductModal">取消</button><button class="btn-save" @onclick="PublishProduct" style="background:linear-gradient(135deg,#2196F3,#1565C0);">发布产品配方</button></div></div></div>
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.security-note{background:rgba(255,152,0,0.08);border:1px solid rgba(255,152,0,0.3);border-radius:6px;padding:12px 15px;margin-bottom:20px;font-size:13px;color:#ccc;}
+.security-note i,.security-note strong{color:#FF9800;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-num{font-size:24px;font-weight:700;color:#e0e0e0;display:block;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:10px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.card-h{padding:14px 20px;background:rgba(0,188,212,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;}
+.card-b{padding:16px 20px;overflow-x:auto;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{text-align:left;padding:10px 12px;background:rgba(0,188,212,0.06);border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#888;font-weight:600;}
+.orders-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;}
+.badge-pub{background:rgba(76,175,80,0.2);color:#81c784;}.badge-draft{background:rgba(158,158,158,0.2);color:#9E9E9E;}.badge-depr{background:rgba(244,67,54,0.2);color:#e57373;}
+.btn-sm{padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;border:none;margin-right:4px;}
+.btn-publish-accord{background:rgba(255,152,0,0.15);color:#FF9800;}.btn-publish-prod{background:rgba(33,150,243,0.15);color:#2196F3;}
+.btn-danger{background:rgba(244,67,54,0.15);color:#e57373;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;}.alert-error{background:rgba(244,67,54,0.15);color:#e57373;}
+.mo{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;border:1px solid rgba(255,255,255,0.06);}.mh{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}.mh h3{margin:0;color:#e0e0e0;font-size:18px;}.mcl{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.mb{padding:25px;max-height:65vh;overflow-y:auto;}.mft{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.fg{margin-bottom:15px;}.fg label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}.fg input,.fg select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}.fg input:focus,.fg select:focus{border-color:#00bcd4;outline:none;}
+.btn-save{color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+</style>
+
+@code {
+    private bool _loaded,_showAccordModal,_showProductModal;private int _totalRecipes,_accordPublished,_productPublished,_totalLogs;
+    private string _msg="",_msgType="";
+    private List<Recipe> _recipes=new();private Dictionary<int,int> _accordDict=new(),_prodDict=new(),_noteDict=new();
+    private List<RecipeAccord> _accords=new();private List<RecipeProduct> _products=new();
+    private List<RecipePublishLog> _logs=new();
+    // Accord publish state
+    private string _pubRecipeName="";private int _pubRecipeId,_pubNoteId,_pubBatchSize=100;
+    private List<FragranceNote> _pubNotes=new();
+    private List<MaterialRow> _pubIngredients=new();
+    // Product publish state
+    private string _prodPubName="";private int _prodPubRecipeId,_prodPubProductId,_prodPubBatch=100;
+    private List<Product> _allProducts=new();
+    private List<NoteRow> _pubProductNotes=new();
+    class MaterialRow{public string Name="";public double Pct,Qty;public int Matched;}
+    class NoteRow{public int NoteId;public string Name="",Type="";public double Pct,Qty;}
+
+    protected override async Task OnInitializedAsync(){await LoadAll();}
+
+    async Task LoadAll(){
+        try{
+            _recipes=await Db.Recipes.AsNoTracking().Where(r=>r.IsActive==true).OrderBy(r=>r.RecipeCode).ToListAsync();
+            _totalRecipes=_recipes.Count;
+            var ids=_recipes.Select(r=>r.RecipeId).ToList();
+            // count accords per recipe
+            var acs=await Db.RecipeAccords.AsNoTracking().Where(a=>ids.Contains(a.RecipeId??0)&&a.Status=="Published").GroupBy(a=>a.RecipeId).Select(g=>new{g.Key,Count=g.Count()}).ToListAsync();
+            _accordDict=acs.ToDictionary(x=>x.Key??0,x=>x.Count);
+            // count products per recipe
+            var prs=await Db.RecipeProducts.AsNoTracking().Where(p=>ids.Contains(p.RecipeId??0)&&p.Status=="Published").GroupBy(p=>p.RecipeId).Select(g=>new{g.Key,Count=g.Count()}).ToListAsync();
+            _prodDict=prs.ToDictionary(x=>x.Key??0,x=>x.Count);
+            // note counts
+            var ncs=await Db.RecipeNotes.AsNoTracking().Where(rn=>ids.Contains(rn.RecipeId??0)).GroupBy(rn=>rn.RecipeId).Select(g=>new{g.Key,Count=g.Count()}).ToListAsync();
+            _noteDict=ncs.ToDictionary(x=>x.Key??0,x=>x.Count);
+            // all accords
+            _accords=await Db.RecipeAccords.AsNoTracking().OrderByDescending(a=>a.PublishedAt).Take(50).ToListAsync();
+            _accordPublished=_accords.Count(a=>a.Status=="Published");
+            // all products
+            _products=await Db.RecipeProducts.AsNoTracking().OrderByDescending(p=>p.PublishedAt).Take(50).ToListAsync();
+            _productPublished=_products.Count(p=>p.Status=="Published");
+            // logs
+            _logs=await Db.RecipePublishLogs.AsNoTracking().OrderByDescending(l=>l.LogId).Take(50).ToListAsync();
+            _totalLogs=_logs.Count;
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+
+    // ===== Accord Publish =====
+    async Task OpenAccordModal(Recipe r){
+        _pubRecipeId=r.RecipeId;_pubRecipeName=r.RecipeName??"";_pubNoteId=0;_pubBatchSize=100;_pubIngredients=new();
+        _pubNotes=await Db.FragranceNotes.AsNoTracking().Where(fn=>fn.IsActive==true).OrderBy(fn=>fn.NoteType).ThenBy(fn=>fn.NoteName).ToListAsync();
+        _showAccordModal=true;
+        // Load ingredients on note selection via watch
+    }
+    void CloseAccordModal(){_showAccordModal=false;}
+    // Note: ingredients load automatically when _pubNoteId changes (below)
+
+    async Task LoadAccordIngredients(){
+        if(_pubNoteId<=0||_pubRecipeId<=0)return;
+        var ings=await Db.RecipeIngredients.AsNoTracking().Where(ri=>ri.RecipeId==_pubRecipeId&&ri.NoteId==_pubNoteId).ToListAsync();
+        _pubIngredients=new();
+        foreach(var ri in ings){
+            var mat=await Db.RawMaterialInventories.AsNoTracking().FirstOrDefaultAsync(m=>m.ItemName==ri.IngredientName);
+            _pubIngredients.Add(new MaterialRow{Name=ri.IngredientName??"",Pct=ri.Percentage??0,Qty=ri.Percentage??0,Matched=mat?.MaterialId??0});
+        }
+    }
+
+    async Task PublishAccord(){
+        if(_pubNoteId<=0){_msg="请选择香调";_msgType="err";return;}
+        if(!_pubIngredients.Any()){_msg="该配方+香调在RecipeIngredients中无数据";_msgType="err";return;}
+        try{
+            var accord=new RecipeAccord{RecipeId=_pubRecipeId,NoteId=_pubNoteId,BatchSize=_pubBatchSize,RecipeName=_pubRecipeName,Status="Published",PublishedAt=DateTime.Now,PublishedBy="Admin",CreatedAt=DateTime.Now};
+            Db.RecipeAccords.Add(accord);await Db.SaveChangesAsync();
+            foreach(var mi in _pubIngredients){
+                Db.RecipeAccordMaterials.Add(new RecipeAccordMaterial{AccordRecipeId=accord.AccordRecipeId,MaterialId=mi.Matched,MaterialName=mi.Name,Percentage=mi.Pct,PlannedQty=mi.Qty});
+            }
+            Db.RecipePublishLogs.Add(new RecipePublishLog{RecipeId=_pubRecipeId,PublishType="Accord",TargetRecipeId=accord.AccordRecipeId,PublishedBy="Admin",PublishedAt=DateTime.Now});
+            await Db.SaveChangesAsync();
+            _msg="香调配方发布成功";_msgType="ok";_showAccordModal=false;
+            await LoadAll();
+        }catch(Exception ex){_msg="发布失败: "+ex.Message;_msgType="err";}
+    }
+
+    async Task DeprecateAccord(RecipeAccord a){
+        if(!await ConfirmJs("确定废弃此香调配方？"))return;
+        try{a.Status="Deprecated";Db.RecipeAccords.Update(a);await Db.SaveChangesAsync();_msg="已废弃";_msgType="ok";await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+
+    // ===== Product Publish =====
+    async Task OpenProductModal(Recipe r){
+        _prodPubRecipeId=r.RecipeId;_prodPubName=r.RecipeName??"";_prodPubProductId=0;_prodPubBatch=100;
+        _allProducts=await Db.Products.AsNoTracking().OrderBy(p=>p.ProductName).Take(200).ToListAsync();
+        var notes=await Db.RecipeNotes.AsNoTracking().Where(rn=>rn.RecipeId==r.RecipeId).ToListAsync();
+        _pubProductNotes=notes.Select(n=>{
+            var fn=Db.FragranceNotes.FirstOrDefault(x=>x.NoteId==n.NoteId);
+            return new NoteRow{NoteId=n.NoteId??0,Name=fn?.NoteName??n.NoteType??"",Type=fn?.NoteType??n.NoteType??"",Pct=n.Percentage??0,Qty=n.Percentage??0};
+        }).ToList();
+        _showProductModal=true;
+    }
+    void CloseProductModal(){_showProductModal=false;}
+
+    async Task PublishProduct(){
+        if(_prodPubRecipeId<=0){_msg="无效配方";_msgType="err";return;}
+        try{
+            var prod=new RecipeProduct{RecipeId=_prodPubRecipeId,ProductId=_prodPubProductId>0?_prodPubProductId:null,BatchSize=_prodPubBatch,Status="Published",PublishedAt=DateTime.Now,PublishedBy="Admin",CreatedAt=DateTime.Now};
+            Db.RecipeProducts.Add(prod);await Db.SaveChangesAsync();
+            foreach(var pn in _pubProductNotes){
+                Db.RecipeProductNotes.Add(new RecipeProductNote{ProductRecipeId=prod.ProductRecipeId,NoteId=pn.NoteId,NoteName=pn.Name,Percentage=pn.Pct,PlannedQty=pn.Qty});
+            }
+            Db.RecipePublishLogs.Add(new RecipePublishLog{RecipeId=_prodPubRecipeId,PublishType="Product",TargetRecipeId=prod.ProductRecipeId,PublishedBy="Admin",PublishedAt=DateTime.Now});
+            await Db.SaveChangesAsync();
+            _msg="产品配方发布成功";_msgType="ok";_showProductModal=false;
+            await LoadAll();
+        }catch(Exception ex){_msg="发布失败: "+ex.Message;_msgType="err";}
+    }
+
+    async Task DeprecateProduct(RecipeProduct p){
+        if(!await ConfirmJs("确定废弃此产品配方？"))return;
+        try{p.Status="Deprecated";Db.RecipeProducts.Update(p);await Db.SaveChangesAsync();_msg="已废弃";_msgType="ok";await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+
+    private bool _loadingIngredients;
+    // JS interop for confirm dialog
+    [Inject] IJSRuntime Js{get;set;}=default!;
+    async Task<bool> ConfirmJs(string msg){
+        var result=await Js.InvokeAsync<bool>("confirm",msg);
+        return result;
+    }
+}

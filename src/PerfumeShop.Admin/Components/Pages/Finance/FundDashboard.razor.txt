@@ -1,0 +1,52 @@
+<!-- V19财务中心 · 资金大盘 -->
+@page "/admin/finance/fund-dashboard"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>资金大盘</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-wallet" style="color:#00bcd4;"></i> 资金大盘</MudText>
+
+@if (_loaded)
+{
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+                <div style="font-size:12px;color:#888;">应收未收</div>
+                <div style="font-size:28px;font-weight:700;color:#FF9800;">@_totalReceivable.ToString("C2")</div>
+                <div style="font-size:11px;color:#666;">@_receivableCount 笔</div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+                <div style="font-size:12px;color:#888;">应付未付</div>
+                <div style="font-size:28px;font-weight:700;color:#F44336;">@_totalPayable.ToString("C2")</div>
+                <div style="font-size:11px;color:#666;">@_payableCount 笔</div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+                <div style="font-size:12px;color:#888;">流动资金</div>
+                <div style="font-size:28px;font-weight:700;color:@(_liquidity >= 0 ? "#4CAF50" : "#F44336")">@_liquidity.ToString("C2")</div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded;
+    private decimal _totalReceivable, _totalPayable, _liquidity;
+    private int _receivableCount, _payableCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var receivables = await Db.AccountsReceivables.AsNoTracking().Where(r => r.Status == "Pending").ToListAsync();
+        _totalReceivable = receivables.Sum(r => r.Amount ?? 0); _receivableCount = receivables.Count;
+        var payables = await Db.AccountsPayables.AsNoTracking().Where(p => p.Status == "Pending").ToListAsync();
+        _totalPayable = payables.Sum(p => p.Amount ?? 0); _payableCount = payables.Count;
+        var payments = await Db.PaymentRecords.AsNoTracking().Where(p => p.Status == "Completed").ToListAsync();
+        _liquidity = payments.Sum(p => p.Amount ?? 0) - _totalPayable;
+        _loaded = true;
+    }
+}

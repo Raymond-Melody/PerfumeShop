@@ -1,0 +1,100 @@
+<!-- V19库存管理 · 库存变动记录 -->
+@page "/admin/inventory/stock-movements"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>库存变动记录</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-history" style="color:#00BCD4;"></i> 库存变动记录</MudText>
+
+@if (_loaded)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="3">
+            <MudTextField @bind-Value="_searchText" Placeholder="搜索物品名称/参考号..." Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+        </MudItem>
+        <MudItem xs="12" sm="2">
+            <MudSelect @bind-Value="_typeFilter" Placeholder="物品类型" Clearable="true">
+                <MudSelectItem Value="@("Product")">成品</MudSelectItem>
+                <MudSelectItem Value="@("RawMaterial")">原料</MudSelectItem>
+                <MudSelectItem Value="@("Bottle")">瓶子</MudSelectItem>
+                <MudSelectItem Value="@("Packaging")">包装物</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="2">
+            <MudSelect @bind-Value="_movementFilter" Placeholder="变动类型" Clearable="true">
+                <MudSelectItem Value="@("入库")">入库</MudSelectItem>
+                <MudSelectItem Value="@("出库")">出库</MudSelectItem>
+                <MudSelectItem Value="@("调拨")">调拨</MudSelectItem>
+                <MudSelectItem Value="@("退货")">退货</MudSelectItem>
+                <MudSelectItem Value="@("收货")">收货</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+
+    <MudTable Items="@GetFiltered()" Hover="true" Dense="true" Striped="true">
+        <HeaderContent>
+            <MudTh>ID</MudTh><MudTh>物品类型</MudTh><MudTh>物品名称</MudTh><MudTh>物品代码</MudTh>
+            <MudTh>变动类型</MudTh><MudTh>数量</MudTh><MudTh>变动前</MudTh><MudTh>变动后</MudTh>
+            <MudTh>单位</MudTh><MudTh>参考单号</MudTh><MudTh>操作人</MudTh><MudTh>时间</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.MovementId</MudTd>
+            <MudTd>@context.ItemType</MudTd>
+            <MudTd Style="font-weight:600;">@context.ItemName</MudTd>
+            <MudTd>@context.ItemCode</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@GetMovementColor(context.MovementType)">@context.MovementType</MudChip></MudTd>
+            <MudTd Style="@GetQtyStyle(context)" class="font-weight-bold">@(context.Quantity >= 0 ? "+" : "")@context.Quantity</MudTd>
+            <MudTd>@context.BeforeQty</MudTd>
+            <MudTd>@context.AfterQty</MudTd>
+            <MudTd>@context.Unit</MudTd>
+            <MudTd>@context.ReferenceNo</MudTd>
+            <MudTd>@context.CreatedBy</MudTd>
+            <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private bool _loaded;
+    private List<StockMovement> _movements = new();
+    private string _searchText = "";
+    private string? _typeFilter;
+    private string? _movementFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _movements = await Db.StockMovements.AsNoTracking()
+            .OrderByDescending(m => m.MovementId).Take(500).ToListAsync();
+        _loaded = true;
+    }
+
+    private List<StockMovement> GetFiltered()
+    {
+        var q = _movements.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var s = _searchText.Trim();
+            q = q.Where(m => (m.ItemName != null && m.ItemName.Contains(s))
+                || (m.ReferenceNo != null && m.ReferenceNo.Contains(s))
+                || (m.ItemCode != null && m.ItemCode.Contains(s)));
+        }
+        if (!string.IsNullOrWhiteSpace(_typeFilter)) q = q.Where(m => m.ItemType == _typeFilter);
+        if (!string.IsNullOrWhiteSpace(_movementFilter)) q = q.Where(m => m.MovementType == _movementFilter);
+        return q.ToList();
+    }
+
+    private static Color GetMovementColor(string? type) => type switch
+    {
+        "入库" or "收货" => Color.Success, "出库" or "发货" => Color.Error,
+        "调拨" => Color.Info, "退货" => Color.Warning, _ => Color.Default
+    };
+    private static string GetQtyStyle(StockMovement m) => $"font-weight:600;color:{(m.Quantity >= 0 ? "#4CAF50" : "#F44336")}";
+}

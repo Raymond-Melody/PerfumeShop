@@ -1,0 +1,118 @@
+@page "/admin/TechCenter/BottleManagement"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>瓶型管理</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">瓶型管理</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreate">新建瓶型</MudButton>
+</MudStack>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<BottleStyle>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>ID</MudTh><MudTh>瓶型名称</MudTh><MudTh>类型</MudTh><MudTh>容量(ml)</MudTh>
+        <MudTh>单价</MudTh><MudTh>成本</MudTh><MudTh>库存</MudTh><MudTh>安全库存</MudTh>
+        <MudTh>状态</MudTh><MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.BottleId</MudTd>
+        <MudTd>@context.BottleName</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@(context.BottleType ?? "-")</MudChip></MudTd>
+        <MudTd>@(context.CapacityMl?.ToString() ?? "-")</MudTd>
+        <MudTd>¥@(context.UnitPrice?.ToString("F2") ?? "0.00")</MudTd>
+        <MudTd>¥@(context.UnitCost?.ToString("F2") ?? "0.00")</MudTd>
+        <MudTd>@(context.StockQty?.ToString("F0") ?? "0")</MudTd>
+        <MudTd>@(context.SafetyStock?.ToString("F0") ?? "0")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.IsActive == true ? Color.Success : Color.Default)">@(context.IsActive == true ? "启用" : "停用")</MudChip></MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => Edit(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => Delete(context))" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+<MudDialog @bind-Visible="_showEdit" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent><MudText Typo="Typo.h6">@(_editId > 0 ? "编辑" : "新建")瓶型</MudText></TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="6"><MudTextField @bind-Value="_editName" Label="瓶型名称" Required="true" /></MudItem>
+            <MudItem xs="3"><MudTextField @bind-Value="_editType" Label="类型" /></MudItem>
+            <MudItem xs="3"><MudNumericField @bind-Value="_editCapacity" Label="容量(ml)" /></MudItem>
+            <MudItem xs="3"><MudNumericField @bind-Value="_editPrice" Label="单价" Format="F2" /></MudItem>
+            <MudItem xs="3"><MudNumericField @bind-Value="_editCost" Label="成本" Format="F2" /></MudItem>
+            <MudItem xs="3"><MudNumericField @bind-Value="_editStock" Label="库存" Format="F0" /></MudItem>
+            <MudItem xs="3"><MudNumericField @bind-Value="_editSafety" Label="安全库存" Format="F0" /></MudItem>
+            <MudItem xs="12"><MudTextField @bind-Value="_editDesc" Label="描述" Lines="2" /></MudItem>
+            <MudItem xs="6"><MudTextField @bind-Value="_editImageUrl" Label="图片URL" /></MudItem>
+            <MudItem xs="3"><MudSwitch @bind-Value="_editActive" Label="启用" Color="Color.Success" /></MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showEdit = false)" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving">@(_saving ? "保存中..." : "保存")</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudTable<BottleStyle>? _table;
+    private bool _showEdit, _saving;
+    private int _editId;
+    private string _editName = "", _editType = "", _editDesc = "", _editImageUrl = "";
+    private int? _editCapacity;
+    private decimal _editPrice, _editCost, _editStock, _editSafety;
+    private bool _editActive = true;
+
+    private async Task<TableData<BottleStyle>> ServerReload(TableState state)
+    {
+        var total = await Db.BottleStyles.CountAsync();
+        var items = await Db.BottleStyles.AsNoTracking().OrderBy(b => b.BottleName)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<BottleStyle> { TotalItems = total, Items = items };
+    }
+
+    private void OpenCreate() { _editId = 0; _editName = ""; _editType = ""; _editDesc = ""; _editImageUrl = ""; _editCapacity = null; _editPrice = 0; _editCost = 0; _editStock = 0; _editSafety = 0; _editActive = true; _showEdit = true; }
+
+    private void Edit(BottleStyle b)
+    {
+        _editId = b.BottleId; _editName = b.BottleName; _editType = b.BottleType ?? "";
+        _editDesc = b.Description ?? ""; _editImageUrl = b.ImageUrl ?? "";
+        _editCapacity = b.CapacityMl; _editPrice = b.UnitPrice ?? 0; _editCost = b.UnitCost ?? 0;
+        _editStock = b.StockQty ?? 0; _editSafety = b.SafetyStock ?? 0; _editActive = b.IsActive ?? true; _showEdit = true;
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        if (_editId > 0)
+        {
+            var b = await Db.BottleStyles.FindAsync(_editId);
+            if (b != null)
+            {
+                b.BottleName = _editName; b.BottleType = _editType; b.Description = _editDesc;
+                b.ImageUrl = _editImageUrl; b.CapacityMl = _editCapacity; b.UnitPrice = _editPrice;
+                b.UnitCost = _editCost; b.StockQty = _editStock; b.SafetyStock = _editSafety;
+                b.IsActive = _editActive; b.UpdatedAt = DateTime.Now; Db.BottleStyles.Update(b);
+            }
+        }
+        else
+        {
+            Db.BottleStyles.Add(new BottleStyle
+            {
+                BottleName = _editName, BottleType = _editType, Description = _editDesc,
+                ImageUrl = _editImageUrl, CapacityMl = _editCapacity, UnitPrice = _editPrice,
+                UnitCost = _editCost, StockQty = _editStock, SafetyStock = _editSafety, IsActive = _editActive, UpdatedAt = DateTime.Now
+            });
+        }
+        await Db.SaveChangesAsync(); _saving = false; _showEdit = false;
+        Snackbar.Add("瓶型保存成功", Severity.Success); await _table!.ReloadServerData();
+    }
+
+    private async Task Delete(BottleStyle b) { Db.BottleStyles.Remove(b); await Db.SaveChangesAsync(); Snackbar.Add($"瓶型 {b.BottleName} 已删除", Severity.Warning); await _table!.ReloadServerData(); }
+}

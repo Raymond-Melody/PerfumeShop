@@ -1,0 +1,308 @@
+@page "/admin/finance/cost-management"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@using PerfumeShop.Core.Interfaces
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+@inject ICostEngine CostEngine
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>成本管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-coins" style="color:#00bcd4;"></i> 成本管理</h2><div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>成本管理</span></div></div>
+
+@if(_loaded){
+<!-- 计价方式选择区 -->
+<div class="cost-method-banner">
+<div class="method-info"><i class="fas fa-calculator"></i><div><h4>出库成本计价规则</h4><p>当前: <strong>@GetMethodLabel(_costMethod)</strong></p></div></div>
+@if(_canEdit){
+<div class="cost-method-selector"><select @bind="_costMethod"><option value="FIFO">FIFO 先进先出</option><option value="WEIGHTED">移动加权平均</option><option value="STANDARD">标准成本法</option></select><button class="btn-save" @onclick="SaveCostMethod">保存</button></div>
+}
+</div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<!-- Tab导航 -->
+<div class="tab-nav">
+<a class="tab-link @(_tab=="products"?"active":"")" @onclick='()=>SwitchTab("products")' @onclick:preventDefault><i class="fas fa-boxes"></i> 商品成本维护</a>
+<a class="tab-link @(_tab=="variance"?"active":"")" @onclick='()=>SwitchTab("variance")' @onclick:preventDefault><i class="fas fa-exclamation-triangle"></i> 成本异动监控</a>
+<a class="tab-link @(_tab=="history"?"active":"")" @onclick='()=>SwitchTab("history")' @onclick:preventDefault><i class="fas fa-history"></i> 成本变更历史</a>
+<a class="tab-link @(_tab=="chain"?"active":"")" @onclick='()=>SwitchTab("chain")' @onclick:preventDefault><i class="fas fa-project-diagram"></i> 成本传导链</a>
+</div>
+<!-- Tab内容 -->
+@switch(_tab){
+case "products":
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>商品名称</th><th>类型</th><th>单位成本</th><th>BOM成本</th><th>成本项数</th><th>操作</th></tr></thead><tbody>
+@foreach(var p in _productItems){<tr><td>#@p.ProductId</td><td>@p.ProductName</td><td>@p.ProductType</td><td class="cost-value">¥@p.UnitCost.ToString("N2")</td><td class="cost-value">¥@p.BomCost.ToString("N2")</td><td>@p.CostItemCount</td><td>@if(_canEdit){<button class="btn-primary" style="padding:6px 16px;font-size:12px;" @onclick='()=>OpenCostModal(p.ProductId,p.ProductName)'>编辑</button>}</td></tr>}
+</tbody></table></div>
+@RenderPagination(_productTotalPages);
+break;
+case "variance":
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>商品名称</th><th>上月成本</th><th>本月成本</th><th>变动额</th><th>变动率</th><th>状态</th><th>归因备注</th></tr></thead><tbody>
+@foreach(var v in _varianceItems){var cls=Math.Abs(v.VarianceRate)>5?"warning-row":"";var dirIcon=v.VarianceRate>0?"fa-arrow-up":v.VarianceRate<0?"fa-arrow-down":"fa-minus";var dirCls=v.VarianceRate>0?"variance-up":v.VarianceRate<0?"variance-down":"";<tr class="@cls"><td>#@v.ProductId</td><td>@v.ProductName</td><td class="cost-value">¥@v.PreviousCost.ToString("N2")</td><td class="cost-value">¥@v.CurrentCost.ToString("N2")</td><td class="cost-value @dirCls"><i class="fas @dirIcon"></i> ¥@Math.Abs(v.Variance).ToString("N2")</td><td class="cost-value @dirCls">@(v.VarianceRate>=0?"+":"")@v.VarianceRate.ToString("F1")%</td><td><span class="status-badge @(Math.Abs(v.VarianceRate)>5?"status-warning":"status-normal")">@(Math.Abs(v.VarianceRate)>5?"异动":"正常")</span></td><td>@if(_canEdit){<div style="display:flex;gap:6px;align-items:center;"><input class="note-input" @bind="v.Note" placeholder="如:采购涨价/物流涨价" /><button class="btn-note" title="保存" @onclick="()=>SaveVarianceNote(v)"><i class="fas fa-save"></i></button></div>}else{<span style="color:#888;">@(string.IsNullOrEmpty(v.Note)?"-":v.Note)</span>}</td></tr>}
+</tbody></table></div>
+@RenderPagination(10);
+break;
+case "history":
+<div class="table-container"><table class="orders-table"><thead><tr><th>时间</th><th>商品</th><th>成本类型</th><th>成本项</th><th>单价</th><th>数量</th><th>金额</th><th>操作人</th></tr></thead><tbody>
+@foreach(var l in _historyItems){<tr><td>@(l.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@l.ProductName</td><td><span class="status-badge status-normal">@GetCostTypeLabel(l.CostType)</span></td><td>@(l.CostName??"-")</td><td class="cost-value">¥@l.UnitCost.ToString("N2")</td><td>@l.Quantity</td><td class="cost-value" style="color:#00bcd4;">¥@l.TotalCost.ToString("N2")</td><td>@(string.IsNullOrEmpty(l.CreatedBy)?"系统":l.CreatedBy)</td></tr>}
+@if(!_historyItems.Any()){<tr><td colspan="8" style="text-align:center;color:#666;padding:40px;">暂无成本变更记录</td></tr>}
+</tbody></table></div>
+@RenderPagination(_historyTotalPages);
+break;
+case "chain":
+@if(_canEdit){
+<div style="display:flex;gap:15px;margin-bottom:25px;flex-wrap:wrap;align-items:center;">
+<button class="btn-primary" disabled="@_chainBusy" @onclick="RunAutoCalcProducts"><i class="fas fa-calculator"></i> 自动计算全部产品成本</button>
+<button class="btn-primary" disabled="@_chainBusy" @onclick="RunAutoCalcOrders"><i class="fas fa-receipt"></i> 自动更新全部订单利润</button>
+@if(_chainBusy){<span style="color:#ffa726;"><i class="fas fa-spinner fa-spin"></i> 处理中...</span>}
+</div>
+}
+<div class="chain-panel">
+<h4 class="chain-title"><i class="fas fa-project-diagram"></i> 成本自动传导链路</h4>
+<div class="chain-flow">
+<div class="chain-node" style="border-top-color:#4CAF50;"><i class="fas fa-truck-loading" style="color:#4CAF50;"></i><h5>① 采购原料</h5><p>RawMaterialInventory</p><div class="chain-note-box">原料单价 → 加权成本</div></div>
+<div class="chain-arrow"><i class="fas fa-arrow-right"></i></div>
+<div class="chain-node" style="border-top-color:#2196F3;"><i class="fas fa-flask" style="color:#2196F3;"></i><h5>② 香调/基香</h5><p>RecipeAccords/NoteIngredients</p><div class="chain-note-box">配比 × 单价</div></div>
+<div class="chain-arrow"><i class="fas fa-arrow-right"></i></div>
+<div class="chain-node" style="border-top-color:#FF9800;"><i class="fas fa-box" style="color:#FF9800;"></i><h5>③ 产品BOM</h5><p>ProductNoteRatios</p><div class="chain-note-box">香调成本 × 配比 + 瓶身</div></div>
+<div class="chain-arrow"><i class="fas fa-arrow-right"></i></div>
+<div class="chain-node" style="border-top-color:#9C27B0;"><i class="fas fa-shopping-cart" style="color:#9C27B0;"></i><h5>④ 销售订单</h5><p>Orders.CostAmount</p><div class="chain-note-box">售价 − 成本 − 运费</div></div>
+</div>
+</div>
+@if(_costSummary!=null){
+<div class="stat-grid">
+<div class="stat-card"><div class="stat-label">产品总数</div><div class="stat-value">@_costSummary.TotalProducts</div><div class="stat-sub" style="color:#4CAF50;">已更新成本: @_costSummary.UpdatedProducts</div></div>
+<div class="stat-card"><div class="stat-label">有效订单</div><div class="stat-value">@_costSummary.TotalOrders</div><div class="stat-sub" style="color:#9C27B0;">已算利润: @_costSummary.UpdatedOrders</div></div>
+<div class="stat-card"><div class="stat-label">原料缓存</div><div class="stat-value">@_costSummary.CachedMaterials</div><div class="stat-sub">加权批次: @_costSummary.CachedBatchCosts</div></div>
+<div class="stat-card"><div class="stat-label">上次刷新</div><div class="stat-value" style="font-size:16px;">@(_costSummary.LastUpdate?.ToString("MM-dd HH:mm")??"—")</div><div class="stat-sub">点击上方按钮触发</div></div>
+</div>
+}
+<h4 class="section-h"><i class="fas fa-list"></i> 香调(Note)成本明细</h4>
+<div class="table-container"><table class="orders-table"><thead><tr><th>NoteID</th><th>香调名称</th><th>类型</th><th>自动计算成本</th><th>状态</th></tr></thead><tbody>
+@foreach(var n in _chainNotes){var nc=_noteCosts.GetValueOrDefault(n.NoteId,0m);<tr><td>@n.NoteId</td><td><strong>@n.NoteName</strong></td><td><span style="color:#888;">@n.NoteType</span></td><td class="cost-value">¥@nc.ToString("N4")</td><td><span class="status-badge @(nc>0?"status-normal":"status-warning")">@(nc>0?"已传导":"待核算")</span></td></tr>}
+@if(!_chainNotes.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">暂无启用香调</td></tr>}
+</tbody></table></div>
+<h4 class="section-h"><i class="fas fa-boxes"></i> 产品成本构成</h4>
+<div class="table-container"><table class="orders-table"><thead><tr><th>商品</th><th>类型</th><th>BOM成本</th><th>采购成本</th><th>包装成本</th><th>其他</th><th>单位总成本</th></tr></thead><tbody>
+@foreach(var c in _chainItems){<tr><td>@c.ProductName</td><td>@c.ProductType</td><td class="cost-value">¥@c.BomItems.ToString("N2")</td><td class="cost-value">¥@c.PurchaseItems.ToString("N2")</td><td class="cost-value">¥@c.PackagingItems.ToString("N2")</td><td class="cost-value">¥@c.OtherItems.ToString("N2")</td><td class="cost-value" style="color:#00bcd4;">¥@c.UnitCost.ToString("N2")</td></tr>}
+</tbody></table></div>
+break;
+}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showModal){
+<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>编辑成本 - @_editProductName</h3><button class="modal-close" @onclick="CloseModal"><i class="fas fa-times"></i></button></div><div class="modal-body">
+@foreach(var item in _editItems){
+var idx = _editItems.IndexOf(item);
+<div class="cost-item" style="background:#1a1a2e;border:1px solid #3a3a4a;border-radius:8px;padding:15px;margin-bottom:15px;"><div class="cost-item-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><span class="cost-item-title" style="font-weight:600;color:#00bcd4;">成本项 #@(idx+1)</span><button class="btn-danger" @onclick='()=>RemoveCostItem(idx)'>移除</button></div>
+<div class="form-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;"><div class="form-group"><label>类型</label><select @bind="item.CostType"><option value="BOM">BOM材料</option><option value="Purchase">采购</option><option value="Packaging">包装</option><option value="Other">其他</option></select></div><div class="form-group"><label>名称</label><input @bind="item.CostName" /></div><div class="form-group"><label>单价</label><input type="number" step="0.01" @bind="item.UnitCost" /></div><div class="form-group"><label>数量</label><input type="number" step="0.01" @bind="item.Quantity" /></div></div></div>
+}
+<button class="btn-primary" style="width:100%;" @onclick="AddCostItem">+ 添加成本项</button>
+</div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveProductCosts">保存</button></div></div></div>
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.cost-method-banner{background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:25px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;}
+.method-info{display:flex;align-items:center;gap:15px;}
+.method-info i{font-size:28px;color:#ffa726;}
+.method-info h4{margin:0;color:#e0e0e0;font-size:16px;}
+.method-info p{margin:5px 0 0;color:#888;font-size:13px;}
+.cost-method-selector{display:flex;align-items:center;gap:15px;}
+.cost-method-selector select{padding:10px 15px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:14px;min-width:180px;}
+.cost-method-selector select:focus{border-color:#00bcd4;outline:none;}
+.btn-save{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+.btn-save:hover{opacity:0.9;}
+.tab-nav{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:25px;}
+.tab-link{padding:15px 30px;color:#888;text-decoration:none;font-size:15px;border-bottom:3px solid transparent;transition:all 0.3s;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.tab-link:hover{color:#e0e0e0;}
+.tab-link.active{color:#00bcd4;border-bottom-color:#00bcd4;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.orders-table tr:hover{background:rgba(255,255,255,0.03);}
+.orders-table tr.warning-row{background:rgba(244,67,54,0.15)!important;}
+.cost-value{font-family:'Courier New',monospace;font-weight:600;}
+.variance-up{color:#f44336;}.variance-down{color:#4CAF50;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}
+.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}
+.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
+.pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:25px;}
+.pagination button{padding:8px 14px;border-radius:6px;border:none;font-size:14px;cursor:pointer;background:#3a3a4a;color:#e0e0e0;}
+.pagination button:hover{background:#4a4a5a;}
+.pagination button.current{background:#00bcd4;color:#fff;}
+.pagination button:disabled{background:#2a2a3a;color:#666;cursor:not-allowed;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:700px;max-height:85vh;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
+.modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}
+.modal-header h3{margin:0;color:#e0e0e0;font-size:18px;}
+.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}
+.modal-body{padding:25px;max-height:55vh;overflow-y:auto;}
+.modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:15px;}
+.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus,.form-group select:focus{border-color:#00bcd4;outline:none;}
+.form-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+.btn-danger{background:#c62828;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:12px;cursor:pointer;}
+.chain-panel{background:#1a1a2e;border-radius:12px;padding:30px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.06);}
+.chain-title{color:#00bcd4;margin:0 0 25px;display:flex;align-items:center;gap:10px;font-size:16px;}
+.chain-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:12px;align-items:center;overflow-x:auto;}
+.chain-node{background:#2d2d44;border-radius:10px;padding:15px;text-align:center;border-top:3px solid #4CAF50;min-width:120px;}
+.chain-node i{font-size:26px;margin-bottom:8px;}
+.chain-node h5{color:#e0e0e0;margin:5px 0;font-size:14px;}
+.chain-node p{color:#888;font-size:11px;margin:6px 0;word-break:break-all;}
+.chain-note-box{background:#1a1a2e;border-radius:6px;padding:8px;font-size:11px;color:#aaa;margin-top:6px;}
+.chain-arrow{display:flex;align-items:center;justify-content:center;color:#00bcd4;font-size:22px;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:25px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:10px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,0.06);}
+.stat-label{font-size:12px;color:#888;margin-bottom:8px;}
+.stat-value{font-size:28px;font-weight:700;color:#e0e0e0;}
+.stat-sub{font-size:11px;color:#888;margin-top:5px;}
+.section-h{color:#e0e0e0;margin:25px 0 15px;display:flex;align-items:center;gap:10px;font-size:15px;}
+.note-input{padding:8px 12px;border:1px solid #3a3a4a;border-radius:6px;background:#1a1a2e;color:#e0e0e0;font-size:13px;width:170px;}
+.note-input:focus{border-color:#00bcd4;outline:none;}
+.btn-note{background:#3a3a4a;color:#00bcd4;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px;}
+.btn-note:hover{background:#4a4a5a;}
+@@media(max-width:768px){.form-row{grid-template-columns:repeat(2,1fr);}.cost-method-banner{flex-direction:column;}}
+</style>
+
+@code {
+    private bool _loaded, _canEdit;
+    private string _tab = "products", _costMethod = "FIFO", _msg = "", _msgType = "";
+    private int _page = 1; private const int PageSize = 20;
+    private int _productTotalPages = 1;
+    private List<FinanceRepository.ProductCostSummary> _productItems = new();
+    private List<FinanceRepository.CostVarianceRow> _varianceItems = new();
+    private List<FinanceRepository.CostHistoryRow> _historyItems = new();
+    private int _historyTotalPages = 1;
+    private List<FinanceRepository.CostChainRow> _chainItems = new();
+    private CostSummaryDto? _costSummary;
+    private List<FragranceNote> _chainNotes = new();
+    private Dictionary<int,decimal> _noteCosts = new();
+    private bool _chainBusy;
+
+    protected override async Task OnInitializedAsync() {
+        try{
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            var rc = auth.User.FindFirst("RoleCode")?.Value;
+            _canEdit = rc == "FIN_MANAGER" || rc == "SUPER_ADMIN";
+            _costMethod = await FinRepo.GetCostMethodAsync();
+            await LoadTabData();
+            _loaded = true;
+        }catch{_loaded=true;}
+    }
+
+    string GetMethodLabel(string m) => m switch { "FIFO" => "先进先出法", "WEIGHTED" => "移动加权平均法", "STANDARD" => "标准成本法", _ => m };
+
+    string GetCostTypeLabel(string? t) => t switch { "BOM" => "BOM材料", "Purchase" => "采购", "Packaging" => "包装", "Other" => "其他", _ => t ?? "-" };
+
+    async Task GoToPage(int p) { if(p < 1) p = 1; _page = p; await LoadTabData(); }
+
+    async Task SwitchTab(string t) { _tab = t; _page = 1; await LoadTabData(); }
+
+    async Task LoadTabData() {
+        try {
+            switch(_tab) {
+                case "products":
+                    var total = await FinRepo.GetProductCountAsync();
+                    _productTotalPages = (int)Math.Ceiling(total / (double)PageSize);
+                    if(_page > _productTotalPages) _page = _productTotalPages;
+                    if(_page < 1) _page = 1;
+                    _productItems = await FinRepo.GetProductCostSummariesAsync(_page, PageSize);
+                    break;
+                case "variance":
+                    _varianceItems = await FinRepo.GetCostVarianceAsync(_page, PageSize);
+                    break;
+                case "history":
+                    var htotal = await FinRepo.GetCostHistoryCountAsync();
+                    _historyTotalPages = (int)Math.Ceiling(htotal / (double)PageSize);
+                    if(_page > _historyTotalPages) _page = _historyTotalPages;
+                    if(_page < 1) _page = 1;
+                    _historyItems = await FinRepo.GetCostChangeHistoryAsync(_page, PageSize);
+                    break;
+                case "chain":
+                    await LoadChainData();
+                    break;
+            }
+        } catch { }
+    }
+
+    async Task SaveCostMethod() {
+        try{ await FinRepo.SaveCostMethodAsync(_costMethod); _msg="计价规则已保存"; _msgType="ok"; }
+        catch{ _msg="保存失败"; _msgType="err"; }
+    }
+
+    // ===== 成本传导链（引擎） =====
+    async Task LoadChainData() {
+        _chainItems = await FinRepo.GetCostChainAsync();
+        try { _chainNotes = await FinRepo.GetActiveFragranceNotesAsync(); } catch { _chainNotes = new(); }
+        try { _costSummary = await CostEngine.GetCostSummaryAsync(); } catch { _costSummary = null; }
+        try { await CostEngine.PreloadAllCostDataAsync(); } catch { }
+        _noteCosts = new();
+        foreach(var n in _chainNotes){ try { _noteCosts[n.NoteId] = await CostEngine.GetCachedNoteCostAsync(n.NoteId); } catch { _noteCosts[n.NoteId] = 0m; } }
+    }
+
+    async Task RunAutoCalcProducts() {
+        if(_chainBusy) return; _chainBusy=true; _msg="";
+        try { var n = await CostEngine.UpdateAllProductCostsAsync(); CostEngine.ClearCache(); await LoadChainData(); _msg=$"已自动计算 {n} 个产品的 BOM/单位成本"; _msgType="ok"; }
+        catch(Exception ex){ _msg="计算失败: "+ex.Message; _msgType="err"; }
+        finally { _chainBusy=false; }
+    }
+
+    async Task RunAutoCalcOrders() {
+        if(_chainBusy) return; _chainBusy=true; _msg="";
+        try { await CostEngine.UpdateAllOrderCostsAsync(); CostEngine.ClearCache(); await LoadChainData(); _msg="已自动更新全部有效订单的成本与利润"; _msgType="ok"; }
+        catch(Exception ex){ _msg="更新失败: "+ex.Message; _msgType="err"; }
+        finally { _chainBusy=false; }
+    }
+
+    async Task SaveVarianceNote(FinanceRepository.CostVarianceRow v) {
+        try { await FinRepo.SaveVarianceNoteAsync(v.ProductId, v.Note ?? ""); _msg="归因备注已保存"; _msgType="ok"; }
+        catch { _msg="备注保存失败"; _msgType="err"; }
+    }
+
+    RenderFragment RenderPagination(int totalPages) => builder => {
+        if(totalPages <= 1) return;
+        builder.OpenElement(0,"div"); builder.AddAttribute(1,"class","pagination");
+        builder.OpenElement(2,"button"); builder.AddAttribute(3,"disabled",_page<=1); builder.AddAttribute(4,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(1))); builder.AddContent(5,"首页"); builder.CloseElement();
+        builder.OpenElement(6,"button"); builder.AddAttribute(7,"disabled",_page<=1); builder.AddAttribute(8,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(_page-1))); builder.AddContent(9,"上一页"); builder.CloseElement();
+        builder.OpenElement(10,"button"); builder.AddAttribute(11,"class","current"); builder.AddContent(12,$"{_page}/{totalPages}"); builder.CloseElement();
+        builder.OpenElement(13,"button"); builder.AddAttribute(14,"disabled",_page>=totalPages); builder.AddAttribute(15,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(_page+1))); builder.AddContent(16,"下一页"); builder.CloseElement();
+        builder.OpenElement(17,"button"); builder.AddAttribute(18,"disabled",_page>=totalPages); builder.AddAttribute(19,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(totalPages))); builder.AddContent(20,"末页"); builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    // ===== 成本编辑弹窗 =====
+    bool _showModal; int _editProductId; string _editProductName=""; List<CostEditItem> _editItems=new();
+    class CostEditItem { public string CostType="BOM",CostName=""; public decimal UnitCost; public double Quantity=1; public string EffectiveDate=DateTime.Today.ToString("yyyy-MM-dd"); }
+
+    async Task OpenCostModal(int pid, string pname) {
+        _editProductId = pid; _editProductName = pname; _showModal = true;
+        var existing = await FinRepo.GetProductCostItemsAsync(pid);
+        _editItems = existing.Select(e => new CostEditItem{CostType=e.CostType??"BOM",CostName=e.CostName??"",UnitCost=e.UnitCost??0,Quantity=e.Quantity??1,EffectiveDate=e.EffectiveDate?.ToString("yyyy-MM-dd")??DateTime.Today.ToString("yyyy-MM-dd")}).ToList();
+        if(!_editItems.Any()) AddCostItem();
+    }
+    void AddCostItem() => _editItems.Add(new());
+    void RemoveCostItem(int i) => _editItems.RemoveAt(i);
+    void CloseModal() { _showModal = false; }
+
+    async Task SaveProductCosts() {
+        var costs = _editItems.Where(x=>!string.IsNullOrWhiteSpace(x.CostName)).Select(x=>new ProductCost{
+            CostType=x.CostType,CostName=x.CostName,UnitCost=x.UnitCost,Quantity=x.Quantity,
+            TotalCost=(decimal)(x.UnitCost * (decimal)x.Quantity),EffectiveDate=DateTime.TryParse(x.EffectiveDate,out var d)?d:DateTime.Today
+        }).ToList();
+        try { await FinRepo.SaveProductCostsAsync(_editProductId, costs); _msg="成本已保存"; _msgType="ok"; _showModal=false; }
+        catch { _msg="保存失败"; _msgType="err"; }
+    }
+}

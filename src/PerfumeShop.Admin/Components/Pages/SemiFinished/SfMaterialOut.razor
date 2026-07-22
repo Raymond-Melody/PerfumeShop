@@ -1,0 +1,72 @@
+@page "/admin/semifinished/material-outbound"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>原料出库</PageTitle>
+<div class="ph"><h2 class="pt"><i class="fas fa-truck-loading" style="color:#9C27B0;"></i> 原料出库管理</h2><button class="btn btn-primary" @onclick="OpenOutboundModal">+ 新建出库单</button><div class="br"><a href="/admin/semifinished" style="color:#2196F3;text-decoration:none;">半成品中心</a> / 原料出库</div></div>
+
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="@(_msgErr?"alert-err":"alert-ok")">@_msg</div>}
+
+<div class="sg"><div class="sc"><span class="n" style="color:#9C27B0;">@_total</span><span class="l">总出库单</span></div><div class="sc"><span class="n" style="color:#4CAF50;">@_today</span><span class="l">今日出库</span></div><div class="sc"><span class="n" style="color:#FF9800;">@_pending</span><span class="l">待处理</span></div></div>
+
+<div class="card"><div class="ch">出库记录</div><div class="cb"><table class="dt"><thead><tr><th>出库单号</th><th>类型</th><th>明细数</th><th>申请人</th><th>日期</th><th>状态</th><th>备注</th></tr></thead><tbody>
+@foreach(var m in _items){<tr><td><strong>@m.OutboundNo</strong></td><td>@m.OutboundType</td><td>@m.DetailCount</td><td>@m.RequestedBy</td><td style="color:#888;">@(m.OutboundDate?.ToString("yyyy-MM-dd")??"-")</td><td><span class="@GetCls(m.Status)">@(m.Status??"-")</span></td><td style="color:#888;">@(m.Notes!=null&&m.Notes.Length>20?m.Notes[..20]+"...":m.Notes)</td></tr>}
+@if(!_items.Any()){<tr><td colspan="7" class="tac tm" style="padding:40px;">暂无出库记录</td></tr>}
+</tbody></table></div></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showModal){<div class="mo" @onclick="()=>_showModal=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>新建原料出库单</h3><button class="mcl" @onclick="()=>_showModal=false">&times;</button></div>
+<div class="fg"><label>出库类型</label><select @bind="_oType" class="fi"><option value="">请选择</option><option value="生产领用">生产领用</option><option value="研发领用">研发领用</option><option value="退货出库">退货出库</option><option value="其他出库">其他出库</option></select></div>
+<div class="fg"><label>关联类型</label><input type="text" @bind="_oRefType" class="fi" placeholder="如：生产单号"/></div>
+<div class="fg"><label>参考ID</label><input type="number" @bind="_oRefId" class="fi"/></div>
+<div class="fg"><label>备注</label><textarea @bind="_oNotes" class="fi" rows="2"></textarea></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showModal=false">取消</button><button class="btn btn-primary" @onclick="CreateOutbound" disabled="@_saving">确认出库</button></div>
+</div></div>}
+
+@code{
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+bool _loaded,_msgErr,_showModal,_saving;string? _msg;int _total,_today,_pending;
+List<MoVm> _items=new();string _oType="",_oRefType="",_oNotes="";int _oRefId;
+
+class MoVm{public int Id{get;set;}public string? OutboundNo{get;set;}public string? OutboundType{get;set;}public int DetailCount{get;set;}public string? RequestedBy{get;set;}public DateTime? OutboundDate{get;set;}public string? Status{get;set;}public string? Notes{get;set;}}
+
+protected override async Task OnInitializedAsync(){await Load();}
+async Task Load(){
+    try{
+        var items=await Db.MaterialOutbounds.OrderByDescending(x=>x.CreatedAt).Take(40).ToListAsync();
+        _items=items.Select(m=>new MoVm{Id=m.OutboundId,OutboundNo=m.OutboundNo,OutboundType=m.OutboundType,DetailCount=0,RequestedBy=m.RequestedBy,OutboundDate=m.OutboundDate,Status=m.Status,Notes=m.Notes}).ToList();
+        _total=items.Count;_today=items.Count(x=>x.CreatedAt!=null&&x.CreatedAt>=DateTime.Today);_pending=items.Count(x=>x.Status=="Pending");
+    }catch(Exception ex){_msg="加载失败: "+ex.Message;_msgErr=true;}
+    _loaded=true;
+}
+
+void OpenOutboundModal(){_oType=_oRefType="";_oRefId=0;_oNotes="";_showModal=true;}
+
+async Task CreateOutbound(){
+    if(string.IsNullOrEmpty(_oType))return;_saving=true;
+    try{
+        var no="OUT"+DateTime.Now.ToString("yyyyMMddHHmmss");
+        // MaterialOutbound 为 keyless 实体，改用参数化原始SQL插入
+        await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO MaterialOutbound (OutboundNo,OutboundType,ReferenceID,ReferenceType,Status,RequestedBy,OutboundDate,Notes,CreatedAt) VALUES ({no},{_oType},{_oRefId},{_oRefType},'Confirmed','admin',GETDATE(),{_oNotes},GETDATE())");
+        _msg="出库成功！单号："+no;_msgErr=false;_showModal=false;await Load();
+    }catch(Exception ex){_msg="出库失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+string GetCls(string? s)=>s switch{"Confirmed"=>"sc","Pending"=>"sp",_=>"sc"};
+}
+
+<style>
+.ph{margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}.br{font-size:13px;color:#888;margin-top:5px;}
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:25px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,0.06);}.sc .n{font-size:28px;font-weight:bold;display:block;}.sc .l{font-size:12px;color:#888;display:block;margin-top:5px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.06);}.ch{padding:14px 20px;background:rgba(156,39,176,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;display:flex;justify-content:space-between;align-items:center;}.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(156,39,176,0.15);color:#ce93d8;padding:12px 15px;text-align:left;font-weight:600;font-size:13px;}.dt td{padding:12px 15px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e0e0e0;font-size:14px;}.dt tr:hover td{background:rgba(255,255,255,0.03);}
+.sc{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(76,175,80,0.15);color:#81c784;}.sp{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(255,152,0,0.15);color:#ffb74d;}
+.alert-ok{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}.alert-err{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.mo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);width:90%;max-width:550px;padding:30px;border-radius:15px;border:1px solid rgba(255,255,255,0.06);max-height:80vh;overflow-y:auto;}.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.06);}.mh h3{margin:0;font-size:18px;color:#e0e0e0;}.mcl{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.mft{display:flex;justify-content:flex-end;gap:10px;margin-top:25px;}
+.fg{margin-bottom:18px;}.fg label{display:block;margin-bottom:6px;font-weight:600;color:#e0e0e0;font-size:13px;}.fi{width:100%;padding:10px 12px;background:#2d2d44;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:14px;}.fi:focus{outline:none;border-color:#9C27B0;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:#fff;}.btn-primary{background:#9C27B0;}.btn--neutral{background:#555;}.btn-sm{padding:6px 12px;font-size:12px;}.btn:disabled{opacity:0.6;}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+</style>

@@ -1,0 +1,22 @@
+@page "/admin/system/login-history"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>登录历史</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">登录历史</MudText>
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent><MudTh>ID</MudTh><MudTh>类型</MudTh><MudTh>级别</MudTh><MudTh>消息</MudTh><MudTh>IP</MudTh><MudTh>已读</MudTh><MudTh>时间</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.AlertId</MudTd><MudTd>@context.AlertType</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.AlertLevel == "critical" ? Color.Error : Color.Warning)">@context.AlertLevel</MudChip></MudTd>
+        <MudTd>@context.AlertMessage</MudTd><MudTd>@context.Ipaddress</MudTd>
+        <MudTd>@(context.IsRead == true ? "是" : "否")</MudTd><MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<LoginAlert> _items = new();
+    protected override async Task OnInitializedAsync() { _items = await Db.LoginAlerts.AsNoTracking().OrderByDescending(a => a.AlertId).ToListAsync(); }
+}

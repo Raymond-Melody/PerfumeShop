@@ -1,0 +1,42 @@
+@page "/admin/Purchase/FixedBrandOrders"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>品牌定香采购订单</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">品牌定香采购订单</MudText>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<FixedBrandPurchaseOrder>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>采购单号</MudTh>
+        <MudTh>供应商</MudTh>
+        <MudTh>金额</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>下单日期</MudTh>
+        <MudTh>预期到货</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.PurchaseNo</MudTd>
+        <MudTd>@(context.SupplierName ?? "-")</MudTd>
+        <MudTd>¥@(context.TotalAmount?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small">@context.Status</MudChip></MudTd>
+        <MudTd>@context.OrderDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>@context.ExpectedDate?.ToString("yyyy-MM-dd")</MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private MudTable<FixedBrandPurchaseOrder>? _table;
+
+    private async Task<TableData<FixedBrandPurchaseOrder>> ServerReload(TableState state)
+    {
+        var (items, total) = await Repo.GetFixedBrandOrdersAsync(page: state.Page + 1, pageSize: state.PageSize);
+        return new TableData<FixedBrandPurchaseOrder> { TotalItems = total, Items = items };
+    }
+}

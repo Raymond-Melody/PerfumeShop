@@ -1,0 +1,212 @@
+@page "/user/settings"
+@model PerfumeShop.Api.Pages.User.SettingsModel
+@{ ViewData["Title"] = "账户设置"; }
+
+@section Styles {
+<style>
+.settings-section { background:#fff; border-radius:12px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px; }
+.settings-section h3 { margin:0 0 16px; padding-bottom:12px; border-bottom:1px solid #eee; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-weight:500; margin-bottom:6px; color:#333; }
+.form-group input, .form-group select { width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+.form-group input:focus, .form-group select:focus { border-color:#8B4513; outline:none; box-shadow:0 0 0 3px rgba(139,69,19,0.1); }
+@@media (max-width: 768px) { .form-row { grid-template-columns:1fr; } }
+</style>
+}
+
+<!-- 面包屑 -->
+<div class="breadcrumb">
+    <div class="container">
+        <a href="/">首页</a><span class="separator">/</span>
+        <a href="/user">个人中心</a><span class="separator">/</span>
+        <span>账户设置</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="user-center">
+        <aside class="user-side">
+            <div class="user-card">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="/user">账户概览</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/orders">我的订单</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/favorites">我的收藏</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/points">我的积分</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/coupons">我的优惠券</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/addresses">收货地址</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/settings">账户设置</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <div class="user-main">
+            <div class="welcome-section">
+                <h1><i class="fas fa-cog"></i> 账户设置</h1>
+                <p>管理您的个人信息和账户安全</p>
+            </div>
+
+            <!-- 个人信息 -->
+            <div class="settings-section">
+                <h3><i class="fas fa-user" style="color:#8B4513;"></i> 个人信息</h3>
+                <form id="profileForm" onsubmit="return saveProfile(event);">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fullName">姓名</label>
+                            <input type="text" id="fullName" name="fullName" value="@Model.FullName">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">邮箱</label>
+                            <input type="email" id="email" name="email" value="@Model.Email" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone">手机号</label>
+                            <input type="tel" id="phone" name="phone" value="@Model.Phone">
+                        </div>
+                        <div class="form-group">
+                            <label>头像</label>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <img id="avatarPreview" src="@(Model.AvatarUrl ?? "/images/default-avatar.svg")" alt="头像"
+                                     style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #eee;">
+                                <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('avatarInput').click();">
+                                    <i class="fas fa-camera"></i> 更换头像
+                                </button>
+                                <input type="file" id="avatarInput" accept="image/*" style="display:none;" onchange="previewAvatar(this)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> 保存信息</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 修改密码 -->
+            <div class="settings-section" id="change-password">
+                <h3><i class="fas fa-lock" style="color:#8B4513;"></i> 修改密码</h3>
+                <form id="passwordForm" onsubmit="return changePassword(event);">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="currentPassword">当前密码</label>
+                            <input type="password" id="currentPassword" name="currentPassword" required>
+                        </div>
+                        <div class="form-group"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newPassword">新密码</label>
+                            <input type="password" id="newPassword" name="newPassword" minlength="6" required>
+                            <small style="color:#888;">至少6位字符</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">确认新密码</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" minlength="6" required>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-key"></i> 修改密码</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 隐私设置 -->
+            <div class="settings-section">
+                <h3><i class="fas fa-shield-alt" style="color:#8B4513;"></i> 隐私设置</h3>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0;">
+                    <div>
+                        <strong>邮件订阅</strong>
+                        <p style="margin:4px 0 0;font-size:13px;color:#888;">接收新品上架、促销活动等邮件通知</p>
+                    </div>
+                    <label class="switch" style="position:relative;display:inline-block;width:48px;height:24px;">
+                        <input type="checkbox" id="emailSubscribe" @(Model.EmailSubscribed ? "checked" : "") onchange="toggleEmailSubscribe(this.checked)"
+                               style="opacity:0;width:0;height:0;">
+                        <span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:@(Model.EmailSubscribed ? "#4CAF50" : "#ccc");transition:.3s;border-radius:24px;"
+                              id="subscribeSlider">
+                            <span id="subscribeSliderDot" style="position:absolute;height:18px;width:18px;left:@(Model.EmailSubscribed ? "26px" : "3px");bottom:3px;background:#fff;transition:.3s;border-radius:50%;"></span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 账户注销 -->
+            <div class="settings-section" style="border:1px solid #ffcdd2;">
+                <h3 style="color:#c62828;"><i class="fas fa-exclamation-triangle"></i> 危险区域</h3>
+                <p style="color:#666;font-size:14px;">注销账户将永久删除您的所有数据，此操作不可恢复。</p>
+                <a href="/user/account-delete" class="btn" style="background:#c62828;color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;">
+                    <i class="fas fa-trash-alt"></i> 注销账户
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+var API_USER = '/api/user/1';
+
+function saveProfile(e) {
+    e.preventDefault();
+    var payload = {
+        fullName: document.getElementById('fullName').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value
+    };
+    fetch(API_USER + '/profile', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message || (data.success ? '保存成功' : '保存失败'));
+    })
+    .catch(() => alert('网络错误'));
+    return false;
+}
+
+function changePassword(e) {
+    e.preventDefault();
+    var newPwd = document.getElementById('newPassword').value;
+    var confirm = document.getElementById('confirmPassword').value;
+    if (newPwd.length < 6) { alert('新密码至少6位'); return false; }
+    if (newPwd !== confirm) { alert('两次输入的密码不一致'); return false; }
+    var payload = {
+        currentPassword: document.getElementById('currentPassword').value,
+        newPassword: newPwd
+    };
+    fetch(API_USER + '/password', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('密码已修改，请重新登录');
+            window.location.href = '/login';
+        } else {
+            alert(data.message || '修改失败');
+        }
+    })
+    .catch(() => alert('网络错误'));
+    return false;
+}
+
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('avatarPreview').src = e.target.result; };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function toggleEmailSubscribe(enabled) {
+    var slider = document.getElementById('subscribeSlider');
+    var dot = document.getElementById('subscribeSliderDot');
+    slider.style.backgroundColor = enabled ? '#4CAF50' : '#ccc';
+    dot.style.left = enabled ? '26px' : '3px';
+    fetch(API_USER + '/preference', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailNewsletter: enabled })
+    }).catch(() => {});
+}
+</script>
+}

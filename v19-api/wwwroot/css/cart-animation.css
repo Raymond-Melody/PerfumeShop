@@ -1,0 +1,99 @@
+/* ============================================
+   PerfumeShop V14.6 - 购物车动画样式
+   ============================================ */
+
+/* 飞入动画元素 */
+.cart-flyer {
+    background: var(--primary-color);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* 购物车图标跳动 */
+@keyframes cartBounce {
+    0%, 100% {
+        transform: scale(1);
+    }
+    25% {
+        transform: scale(1.3);
+    }
+    50% {
+        transform: scale(0.9);
+    }
+    75% {
+        transform: scale(1.1);
+    }
+}
+
+.cart-bounce {
+    animation: cartBounce 0.4s ease;
+}
+
+/* 添加商品按钮点击反馈 */
+.btn-add-cart:active,
+.add-to-cart:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+}
+
+/* 购物车数量徽章脉冲 */
+@keyframes badgePulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.cart-count-update {
+    animation: badgePulse 0.3s ease;
+}
+
+/* 商品移除淡出 */
+.cart-item.removing {
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: all 0.3s ease;
+}
+
+/* 添加到购物车成功提示 */
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.toast-success {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(40, 167, 69, 0.95);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    animation: slideInUp 0.3s ease;
+}
+
+/* 移动端适配 */
+@media (max-width: 991px) {
+    .toast-success {
+        bottom: 70px;
+    }
+}

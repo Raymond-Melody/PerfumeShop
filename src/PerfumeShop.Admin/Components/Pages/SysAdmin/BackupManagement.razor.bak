@@ -1,0 +1,19 @@
+@page "/admin/system/backup"
+
+<PageTitle>备份管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">备份管理</MudText>
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">最近备份</MudText><MudText Typo="Typo.h4">@_lastBackup?.ToString("yyyy-MM-dd") ?? "无"</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">备份数量</MudText><MudText Typo="Typo.h4">@_backupCount</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="4"><MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/admin/system/backup-create" Class="mt-6">创建备份</MudButton></MudItem>
+</MudGrid>
+<MudTable Items="@_backups" Hover="true" Dense="true">
+    <HeaderContent><MudTh>文件名</MudTh><MudTh>大小</MudTh><MudTh>创建时间</MudTh><MudTh>操作</MudTh></HeaderContent>
+    <RowTemplate><MudTd>@context.FileName</MudTd><MudTd>@context.FileSize</MudTd><MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd><MudTd><MudIconButton Icon="@Icons.Material.Filled.Restore" Color="Color.Warning" Href="/admin/system/backup-restore" /></MudTd></RowTemplate>
+</MudTable>
+
+@code {
+    private DateTime? _lastBackup; private int _backupCount;
+    private List<BackupInfo> _backups = new();
+    private class BackupInfo { public string FileName { get; set; } = ""; public string FileSize { get; set; } = ""; public DateTime? CreatedAt { get; set; } }
+}

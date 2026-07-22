@@ -1,0 +1,171 @@
+@page "/admin/categories"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>分类管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">商品分类管理</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="@OpenCreate" Class="mb-3">新增分类</MudButton>
+
+<MudTable Items="@_categories" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>分类名称</MudTh>
+        <MudTh>排序</MudTh>
+        <MudTh>产品数</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.CategoryId</MudTd>
+        <MudTd>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Color="Color.Primary" />
+                <MudText>@context.CategoryName</MudText>
+            </MudStack>
+        </MudTd>
+        <MudTd>@(context.SortOrder ?? 0)</MudTd>
+        <MudTd>@GetProductCount(context.CategoryId)</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@(context.IsActive == true ? Color.Success : Color.Default)">
+                @(context.IsActive == true ? "启用" : "停用")
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Info"
+                           OnClick="@(() => OpenEdit(context))" />
+            <MudIconButton Icon="@(context.IsActive == true ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                           Size="Size.Small" OnClick="@(() => ToggleActive(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                           OnClick="@(() => Delete(context))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@* 编辑/新增对话框 *@
+<MudDialog @bind-Visible="_showDialog" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_isEditing ? "编辑分类" : "新增分类")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_editItem.CategoryName" Label="分类名称" Required="true" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_editSortOrder" Label="排序" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudSwitch @bind-Value="_editItem.IsActive" Label="启用" Color="Color.Success" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showDialog = false" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="SaveCategory" Variant="Variant.Filled" Color="Color.Primary">
+            @(_isEditing ? "保存" : "创建")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<Category> _categories = new();
+    private Dictionary<int, int> _productCounts = new();
+    private bool _showDialog;
+    private bool _isEditing;
+    private Category _editItem = new();
+    private int? _editSortOrder;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _categories = await Db.Categories.OrderBy(c => c.SortOrder).ThenBy(c => c.CategoryId).ToListAsync();
+        _productCounts = await Db.Products
+            .Where(p => p.IsActive == true && p.Category != null)
+            .GroupBy(p => p.Category!)
+            .Select(g => new { CatName = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => GetCategoryIdByName(x.CatName), x => x.Count);
+    }
+
+    private int GetCategoryIdByName(string catName)
+    {
+        var cat = _categories.FirstOrDefault(c => string.Equals(c.CategoryName, catName, StringComparison.OrdinalIgnoreCase));
+        return cat?.CategoryId ?? -1;
+    }
+
+    private int GetProductCount(int catId) => _productCounts.GetValueOrDefault(catId, 0);
+
+    private void OpenCreate()
+    {
+        _isEditing = false;
+        _editItem = new Category { CategoryName = "", SortOrder = _categories.Count + 1, IsActive = true };
+        _editSortOrder = _editItem.SortOrder;
+        _showDialog = true;
+    }
+
+    private void OpenEdit(Category cat)
+    {
+        _isEditing = true;
+        _editItem = new Category { CategoryId = cat.CategoryId, CategoryName = cat.CategoryName, SortOrder = cat.SortOrder, IsActive = cat.IsActive };
+        _editSortOrder = cat.SortOrder;
+        _showDialog = true;
+    }
+
+    private async Task SaveCategory()
+    {
+        _editItem.SortOrder = _editSortOrder;
+
+        if (_isEditing)
+        {
+            var existing = await Db.Categories.FindAsync(_editItem.CategoryId);
+            if (existing != null)
+            {
+                existing.CategoryName = _editItem.CategoryName;
+                existing.SortOrder = _editItem.SortOrder;
+                existing.IsActive = _editItem.IsActive;
+            }
+            Snackbar.Add($"分类 \"{_editItem.CategoryName}\" 已更新", Severity.Success);
+        }
+        else
+        {
+            Db.Categories.Add(_editItem);
+            Snackbar.Add($"分类 \"{_editItem.CategoryName}\" 已创建", Severity.Success);
+        }
+
+        await Db.SaveChangesAsync();
+        _showDialog = false;
+        await LoadData();
+    }
+
+    private async Task ToggleActive(Category cat)
+    {
+        var newVal = cat.IsActive != true;
+        await Db.Categories.Where(c => c.CategoryId == cat.CategoryId)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsActive, newVal));
+        cat.IsActive = newVal;
+        Snackbar.Add($"分类 \"{cat.CategoryName}\" 已{(newVal ? "启用" : "停用")}", Severity.Success);
+        await LoadData();
+    }
+
+    private async Task Delete(Category cat)
+    {
+        var count = GetProductCount(cat.CategoryId);
+        if (count > 0)
+        {
+            Snackbar.Add($"分类 \"{cat.CategoryName}\" 下有 {count} 个产品，无法删除", Severity.Warning);
+            return;
+        }
+        await Db.Categories.Where(c => c.CategoryId == cat.CategoryId).ExecuteDeleteAsync();
+        Snackbar.Add($"分类 \"{cat.CategoryName}\" 已删除", Severity.Success);
+        await LoadData();
+    }
+}

@@ -2,7 +2,7 @@
   "name": "香氛定制 - PerfumeShop",
   "short_name": "香氛定制",
   "description": "专业个性化定制香水，打造专属于你的独特香氛体验",
-  "start_url": "/index.asp",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#8B4513",
@@ -61,19 +61,19 @@
     {
       "name": "浏览产品",
       "short_name": "产品",
-      "url": "/products.asp",
+      "url": "/products",
       "icons": [{ "src": "/images/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "定制香水",
       "short_name": "定制",
-      "url": "/customize.asp",
+      "url": "/customize",
       "icons": [{ "src": "/images/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "购物车",
       "short_name": "购物车",
-      "url": "/cart.asp",
+      "url": "/cart",
       "icons": [{ "src": "/images/icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],

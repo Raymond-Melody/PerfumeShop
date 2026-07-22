@@ -1,0 +1,46 @@
+@page "/admin/Purchase/SupplierContract"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>供应商合同</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">供应商合同管理</MudText>
+
+<MudTable Items="@_contracts" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>合同编号</MudTh>
+        <MudTh>合同名称</MudTh>
+        <MudTh>供应商ID</MudTh>
+        <MudTh>类型</MudTh>
+        <MudTh>金额</MudTh>
+        <MudTh>开始日期</MudTh>
+        <MudTh>结束日期</MudTh>
+        <MudTh>状态</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@(context.ContractNo ?? "-")</MudTd>
+        <MudTd>@(context.ContractName ?? "-")</MudTd>
+        <MudTd>@context.SupplierId</MudTd>
+        <MudTd>@(context.ContractType ?? "-")</MudTd>
+        <MudTd>¥@(context.TotalAmount?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>@context.StartDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>@context.EndDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "active" ? Color.Success : Color.Default)">@context.Status</MudChip></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private List<PerfumeShop.Data.Models.SupplierContract> _contracts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var suppliers = await Repo.GetSuppliersAsync();
+        foreach (var s in suppliers)
+        {
+            var contracts = await Repo.GetSupplierContractsAsync(s.SupplierId);
+            _contracts.AddRange(contracts);
+        }
+    }
+}

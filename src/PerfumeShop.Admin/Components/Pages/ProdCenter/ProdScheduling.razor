@@ -1,0 +1,108 @@
+@page "/admin/prodcenter/prod-scheduling"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>排产调度</PageTitle>
+
+<div class="ph"><h2 class="pt"><i class="fas fa-calendar-alt" style="color:#4CAF50;"></i> 排产调度</h2><div class="br"><a href="/admin/prodcenter" style="color:#4CAF50;text-decoration:none;">生产中心</a> / 排产调度</div></div>
+
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="@(_msgErr?"alert-err":"alert-ok")">@_msg</div>}
+
+<div class="sg"><div class="sc"><span class="n" style="color:#FF9800;">@_orderPending</span><span class="l">待排产订单</span></div><div class="sc"><span class="n" style="color:#FF9800;">@_poPending</span><span class="l">待生产工单</span></div><div class="sc"><span class="n" style="color:#2196F3;">@_poInProgress</span><span class="l">进行中</span></div><div class="sc"><span class="n" style="color:#4CAF50;">@_poToday</span><span class="l">今日完成</span></div></div>
+
+<div class="toolbar"><i class="fas fa-cogs" style="color:#2196F3;"></i><label>排产操作：</label>
+<button class="btn btn-success btn-sm" @onclick="BatchSchedule" disabled="@(_selIds.Count==0||_saving)"><i class="fas fa-play"></i> 批量排产（@_selIds.Count 个订单）</button>
+<span class="sd"></span>
+<label>优先级：</label><select @bind="_defaultPriority" style="width:80px;"><option value="1">普通</option><option value="2">优先</option><option value="3">紧急</option></select>
+<label>负责人：</label><input type="text" @bind="_defaultAssigned" placeholder="可选" style="width:120px;" />
+</div>
+
+<div class="info-cards">
+<div class="card"><div class="ch" style="background:rgba(255,152,0,0.08);"><span><i class="fas fa-clock"></i> 待排产订单</span><span style="font-size:12px;color:#888;"><label style="cursor:pointer;"><input type="checkbox" @bind="_selectAll" @bind:after="ToggleAll" style="margin-right:5px;" />全选</label></span></div><div class="cb"><table class="dt"><thead><tr><th style="width:40px;"></th><th>订单号</th><th>客户</th><th>产品</th><th>金额</th><th>状态</th><th>时间</th></tr></thead><tbody>
+@foreach(var o in _pendingOrders){var isSel=_selIds.Contains(o.OrderId);<tr class="@(isSel?"sel":"")"><td><input type="checkbox" checked="@isSel" @onclick="()=>ToggleOrder(o.OrderId)" /></td><td><strong>@o.OrderNo</strong></td><td>@(o.Customer??"-")</td><td>@(o.ProductName?.Length>20?o.ProductName.Substring(0,20):o.ProductName??"-")</td><td>¥@o.TotalAmount.ToString("N2")</td><td><span class="sb sb-paid">@o.Status</span></td><td style="color:#888;">@(o.CreatedAt?.ToString("yyyy-MM-dd"))</td></tr>}
+@if(!_pendingOrders.Any()){<tr><td colspan="7" class="tac tm" style="padding:40px;"><i class="fas fa-check-circle" style="font-size:32px;color:rgba(76,175,80,0.3);display:block;margin-bottom:10px;"></i>暂无待排产订单</td></tr>}
+</tbody></table></div></div>
+
+<div class="card"><div class="ch" style="background:rgba(33,150,243,0.08);"><i class="fas fa-tasks"></i> 排产进行中</div><div class="cb"><table class="dt"><thead><tr><th>工单号</th><th>订单号</th><th>配方</th><th>计划量</th><th>状态</th><th>优先级</th><th>负责人</th></tr></thead><tbody>
+@foreach(var po in _scheduledPOs){<tr><td><strong>@(po.WorkOrderNo??po.ProductionId.ToString())</strong></td><td>@(po.OrderId>0?"#"+po.OrderId:"-")</td><td>@(po.RecipeName??"-")</td><td>@po.PlannedQty</td><td><span class="sb @GetSCls(po.Status)">@GetSLbl(po.Status)</span></td><td>@(po.PriorityText??(po.Priority?.ToString()??"-"))</td><td>@(po.AssignedTo??"-")</td></tr>}
+@if(!_scheduledPOs.Any()){<tr><td colspan="7" class="tac tm" style="padding:40px;">暂无进行中工单</td></tr>}
+</tbody></table></div></div>
+</div>
+
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@code{
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+bool _loaded,_msgErr,_saving,_selectAll;
+string? _msg;int _defaultPriority=2;string _defaultAssigned="";
+int _orderPending,_poPending,_poInProgress,_poToday;
+HashSet<int> _selIds=new();
+List<PendingOrder> _pendingOrders=new();List<ProductionOrder> _scheduledPOs=new();
+
+protected override async Task OnInitializedAsync(){await LoadData();}
+
+async Task LoadData(){
+    try{
+        _orderPending=await Db.Orders.CountAsync(o=>(o.Status=="Paid"||o.Status=="Processing")&&!Db.ProductionOrders.Any(po=>po.OrderId==o.OrderId&&po.Status!="Cancelled"));
+        _poPending=await Db.ProductionOrders.CountAsync(p=>p.Status=="Pending");
+        _poInProgress=await Db.ProductionOrders.CountAsync(p=>p.Status=="InProgress");
+        _poToday=await Db.ProductionOrders.CountAsync(p=>p.Status=="Completed"&&p.CompletedAt!=null&&p.CompletedAt>=DateTime.Today);
+        _pendingOrders=await(from o in Db.Orders join u in Db.Users on o.UserId equals u.UserId into uj from u in uj.DefaultIfEmpty()
+            join oi in Db.OrderItems on o.OrderId equals oi.OrderId into oij from oi in oij.DefaultIfEmpty()
+            join p in Db.Products on (oi!=null?oi.ProductId:null) equals p.ProductId into pj from p in pj.DefaultIfEmpty()
+            where(o.Status=="Paid"||o.Status=="Processing")&&!Db.ProductionOrders.Any(po=>po.OrderId==o.OrderId&&po.Status!="Cancelled")
+            orderby o.CreatedAt
+            select new PendingOrder{OrderId=o.OrderId,OrderNo=o.OrderNo,TotalAmount=o.TotalAmount,Status=o.Status,CreatedAt=o.CreatedAt,Customer=u!=null?u.Username:null,ProductName=p!=null?p.ProductName:null}).Take(50).ToListAsync();
+        _scheduledPOs=await Db.ProductionOrders.AsNoTracking().Where(p=>p.Status=="Pending"||p.Status=="InProgress").OrderByDescending(p=>p.Priority).ThenBy(p=>p.CreatedAt).Take(30).ToListAsync();
+    }catch(Exception ex){_msg="加载失败: "+ex.Message;_msgErr=true;}
+    _loaded=true;
+}
+
+void ToggleAll(){if(_selectAll)_selIds=_pendingOrders.Select(o=>o.OrderId).ToHashSet();else _selIds.Clear();}
+void ToggleOrder(int oid){if(_selIds.Contains(oid))_selIds.Remove(oid);else _selIds.Add(oid);}
+
+async Task BatchSchedule(){
+    if(_selIds.Count==0)return;_saving=true;
+    int succ=0,fail=0;var batchNo="BATCH"+DateTime.Now.ToString("yyyyMMddHHmm");
+    try{
+        foreach(var oid in _selIds.ToList()){
+            try{
+                var exists=await Db.ProductionOrders.AnyAsync(p=>p.OrderId==oid&&p.Status!="Cancelled");
+                if(exists){fail++;continue;}
+                var info=await (from oi in Db.OrderItems join p in Db.Products on oi.ProductId equals p.ProductId where oi.OrderId==oid select new{p.RecipeId,p.ProductName,oi.Quantity}).FirstOrDefaultAsync();
+                var workNo="PO"+DateTime.Now.ToString("yyyyMMddHHmmss")+(succ+fail).ToString("D2");
+                var productName=info?.ProductName??"";var recipeId=info?.RecipeId;var qty=info?.Quantity??1;
+                await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO ProductionOrders (WorkOrderNo,OrderID,RecipeID,RecipeName,PlannedQty,Priority,Status,BatchNo,Notes,AssignedTo,CreatedAt,UpdatedAt) VALUES ({workNo},{oid},{recipeId},{productName},{qty},{_defaultPriority},{"Pending"},{batchNo},{"批量排产"},{_defaultAssigned},GETDATE(),GETDATE())");
+                var newId=await Db.ProductionOrders.Where(p=>p.WorkOrderNo==workNo).Select(p=>p.ProductionId).FirstOrDefaultAsync();
+                if(newId>0)await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO ProductionLogs (ProductionID,Status,CreatedBy,Notes,CreatedAt) VALUES ({newId},{"Pending"},{System.Environment.UserName},{("批量排产生成工单，批次号:"+batchNo)},GETDATE())");
+                await Db.Orders.Where(o=>o.OrderId==oid).ExecuteUpdateAsync(s=>s.SetProperty(o=>o.Status,"Processing").SetProperty(o=>o.UpdatedAt,DateTime.Now));
+                succ++;
+            }catch{fail++;}
+        }
+        _msg=$"批量排产完成：成功 {succ} 条，跳过 {fail} 条";_msgErr=fail>0;
+        _selIds.Clear();await LoadData();
+    }catch(Exception ex){_msg="排产失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+string GetSCls(string? s)=>s switch{"Pending"=>"sb-pending","InProgress"=>"sb-progress","Completed"=>"sb-completed",_=>"sb-default"};
+string GetSLbl(string? s)=>s switch{"Pending"=>"待生产","InProgress"=>"生产中","Completed"=>"已完成",_=>s??"-"};
+class PendingOrder{public int OrderId{get;set;}public string OrderNo{get;set;}="";public decimal TotalAmount{get;set;}public string? Status{get;set;}public DateTime? CreatedAt{get;set;}public string? Customer{get;set;}public string? ProductName{get;set;}}
+}
+
+<style>
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}.br{font-size:13px;color:#888;}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,0.06);}.sc .n{font-size:28px;font-weight:bold;}.sc .l{font-size:12px;color:#888;margin-top:5px;}
+.toolbar{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:14px 20px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}.toolbar label{font-size:12px;color:#888;}.toolbar select,.toolbar input{padding:7px 10px;background:#2d2d44;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:13px;}.toolbar select:focus,.toolbar input:focus{outline:none;border-color:#2196F3;}.sd{width:1px;height:24px;background:rgba(255,255,255,0.08);}
+.info-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;}
+.ch{padding:14px 20px;font-weight:600;font-size:15px;color:#e0e0e0;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:#888;border-bottom:1px solid rgba(255,255,255,0.04);}.dt td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03);color:#e0e0e0;font-size:13px;}tr.sel td{background:rgba(33,150,243,0.1);}.dt tr:hover td{background:rgba(255,255,255,0.03);}
+.sb{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;}.sb-paid{background:rgba(33,150,243,0.15);color:#64b5f6;}.sb-pending{background:rgba(255,152,0,0.15);color:#ffb74d;}.sb-progress{background:rgba(33,150,243,0.15);color:#64b5f6;}.sb-completed{background:rgba(76,175,80,0.15);color:#81c784;}.sb-default{background:rgba(158,158,158,0.15);color:#9e9e9e;}
+.alert-ok{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}.alert-err{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:#fff;}.btn-success{background:#4CAF50;}.btn-sm{padding:6px 12px;font-size:12px;}.btn:disabled{opacity:0.6;}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+@@media(max-width:960px){.info-cards{grid-template-columns:1fr;}}
+</style>

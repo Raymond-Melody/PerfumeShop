@@ -1,0 +1,88 @@
+﻿@page "/admin/Operation/GroupBuy"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>拼团管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-users"></i> 拼团活动管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>拼团管理</span></div></div>
+
+@if (_loaded)
+{
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert alert-success"><i class="fas fa-check-circle"></i> @_msg</div>}
+<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#7c4dff;">@_total</div><div class="stat-label">全部计划</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_active</div><div class="stat-label">进行中</div></div><div class="stat-card"><div class="stat-value" style="color:#9e9e9e;">@(_total-_active)</div><div class="stat-label">已结束/禁用</div></div><div class="stat-card"><div class="stat-value" style="color:#FF9800;">@_groups.Count</div><div class="stat-label">拼团记录</div></div></div>
+<div class="tier-wheel-panel" style="margin-bottom:20px;"><div class="wheel" style="background:@WheelGradient();"><div class="wheel-center"><div class="wheel-total">@_total</div><div class="wheel-label">计划总数</div></div></div><div class="wheel-legend"><div class="legend-item"><span class="legend-dot" style="background:#4CAF50;"></span><span class="legend-name">进行中</span><span class="legend-count">@_active 个 (@(_total>0?(int)((double)_active/_total*100):0)%)</span></div><div class="legend-item"><span class="legend-dot" style="background:#9e9e9e;"></span><span class="legend-name">已结束/禁用</span><span class="legend-count">@(_total-_active) 个</span></div></div></div>
+<button class="btn btn-primary" style="margin-bottom:20px;" @onclick="ShowForm"><i class="fas fa-plus"></i> 创建拼团计划</button>
+
+@if(_showForm){<div class="panel"><h3><i class="fas fa-@(_editId>0?"edit":"plus-circle")"></i> @(_editId>0?"编辑":"创建")拼团计划</h3>
+<form @onsubmit="HandleSave"><div class="form-row"><div class="form-group"><label>产品ID *</label><input class="form-input" type="number" @bind="_fProductId" required/></div>
+<div class="form-group"><label>成团人数 *</label><select class="form-input" @bind="_fTeamSize"><option value="2">2人团</option><option value="3">3人团</option><option value="5">5人团</option><option value="10">10人团</option></select></div>
+<div class="form-group"><label>拼团价(每人) *</label><input class="form-input" type="number" step="0.01" @bind="_fPrice" required/></div>
+<div class="form-group"><label>有效期(小时)</label><input class="form-input" type="number" @bind="_fDuration"/></div></div>
+<div class="form-row"><div class="form-group"><label>开始时间 *</label><input class="form-input" type="datetime-local" @bind-value="_fStart" @bind-value:format="yyyy-MM-ddTHH:mm" required/></div>
+<div class="form-group"><label>结束时间 *</label><input class="form-input" type="datetime-local" @bind-value="_fEnd" @bind-value:format="yyyy-MM-ddTHH:mm" required/></div>
+<div class="form-group"><label>最低开团数</label><input class="form-input" type="number" @bind="_fMin"/></div>
+<div class="form-group"><label>最高(0不限)</label><input class="form-input" type="number" @bind="_fMax"/></div>
+<div class="form-group"><label>排序</label><input class="form-input" type="number" @bind="_fSort"/></div></div>
+<div style="display:flex;gap:8px;margin-top:12px;"><button type="submit" class="btn btn-primary" disabled="@_saving"><i class="fas fa-save"></i> @(_saving?"保存中...":(_editId>0?"更新":"创建"))</button><button type="button" class="btn btn-outline" @onclick="()=>_showForm=false">取消</button></div></form></div>}
+
+<div class="panel"><h3><i class="fas fa-list"></i> 拼团计划列表</h3>
+<table class="data-table"><thead><tr><th>ID</th><th>商品</th><th>拼团价</th><th>人数</th><th>有效期</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
+<tbody>@if(_plans.Any()){@foreach(var p in _plans){var st=GetStatus(p);<tr><td>@p.PlanId</td><td style="color:#00bcd4;font-weight:500;">@GetProdName(p.ProductId)</td><td style="color:#7c4dff;font-weight:700;">@p.GroupPrice.ToString("C2")</td><td>@p.TeamSize 人</td><td>@p.DurationHours 小时</td><td style="font-size:11px;">@p.StartTime.ToString("MM-dd HH:mm")~@p.EndTime.ToString("MM-dd HH:mm")</td>
+<td><span class="badge @st.Class">@st.Label</span></td><td>
+<button class="btn btn-sm" style="background:#7c4dff;color:#fff;" @onclick="()=>Edit(p)"><i class="fas fa-edit"></i></button>
+<button class="btn btn-sm btn-outline" @onclick="()=>Toggle(p)"><i class="fas fa-power-off"></i></button>
+<button class="btn btn-sm" style="background:#c62828;color:#fff;" @onclick="()=>Delete(p.PlanId)"><i class="fas fa-trash"></i></button></td></tr>}}else{<tr><td colspan="8" class="empty-cell">暂无拼团计划</td></tr>}</tbody></table></div>
+
+<div class="panel"><h3><i class="fas fa-history"></i> 拼团记录</h3>
+<table class="data-table"><thead><tr><th>团编号</th><th>产品</th><th>团长</th><th>进度</th><th>状态</th><th>创建时间</th></tr></thead>
+<tbody>@if(_groups.Any()){@foreach(var g in _groups){<tr><td><code style="background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:3px;font-size:11px;">@g.GroupSn</code></td><td>@GetProdName(g.PlanId)</td><td>@GetUser(g.InitiatorId)</td><td>@g.CurrentSize/@g.TargetSize 人</td><td><span class="badge @GetGroupStatusClass(g.Status)">@GetGroupStatusLabel(g.Status)</span></td><td>@g.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td></tr>}}else{<tr><td colspan="6" class="empty-cell">暂无拼团记录</td></tr>}</tbody></table></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px;}.panel h3{color:#fff;margin:0 0 16px;font-size:18px;display:flex;align-items:center;gap:8px;}.panel h3 i{color:#7c4dff;}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px;}.form-group{display:flex;flex-direction:column;gap:4px;}.form-group label{font-size:12px;color:#888;}.form-input{padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;font-size:13px;}.form-input:focus{border-color:#7c4dff;outline:none;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#7c4dff,#651fff);color:#fff;}.btn-primary[disabled]{opacity:0.5;}.btn-outline{background:transparent;border:1px solid #555;color:#ccc;}.btn-sm{padding:4px 12px;font-size:11px;}
+.data-table{width:100%;border-collapse:collapse;}.data-table th{text-align:left;padding:10px 12px;background:rgba(0,0,0,0.2);color:#888;font-size:11px;text-transform:uppercase;}.data-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:#ccc;}.data-table tr:hover td{background:rgba(255,255,255,0.02);}.empty-cell{text-align:center;color:#666;padding:40px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;}.badge-active{background:rgba(76,175,80,0.2);color:#4CAF50;}.badge-inactive{background:rgba(158,158,158,0.2);color:#9e9e9e;}.badge-pending{background:rgba(255,193,7,0.2);color:#FFC107;}.badge-success{background:rgba(76,175,80,0.2);color:#4CAF50;}.badge-failed{background:rgba(244,67,54,0.2);color:#F44336;}
+.alert{padding:12px 16px;border-radius:8px;margin-bottom:16px;}.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.tier-wheel-panel{display:flex;align-items:center;gap:30px;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:20px 24px;border:1px solid rgba(255,255,255,0.05);}.wheel{width:120px;height:120px;border-radius:50%;position:relative;flex-shrink:0;}.wheel-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:76px;height:76px;background:#1a1a2e;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}.wheel-total{font-size:24px;font-weight:700;color:#fff;}.wheel-label{font-size:11px;color:#888;}.wheel-legend{display:flex;flex-direction:column;gap:8px;}.legend-item{display:flex;align-items:center;gap:8px;}.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}.legend-name{font-size:13px;color:#e0e0e0;min-width:80px;}.legend-count{font-size:12px;color:#888;}
+@@media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr);}}
+</style>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded, _showForm, _saving; private string? _msg;
+    private List<GroupBuyPlan> _plans=new(); private List<GroupBuyOrder> _groups=new();
+    private Dictionary<int,string> _pn=new(),_un=new(); private int _total,_active,_editId;
+    private string _fProductId="",_fPrice="",_fTeamSize="2",_fDuration="24",_fMin="0",_fMax="0",_fSort="0";
+    private DateTime _fStart=DateTime.Now, _fEnd=DateTime.Now.AddDays(7);
+
+    protected override async Task OnInitializedAsync(){try{await Load();_loaded=true;}catch{_loaded=true;}}
+    async Task Load(){
+        _plans=await Db.GroupBuyPlans.OrderByDescending(p=>p.StartTime).ToListAsync();_total=_plans.Count;
+        var now=DateTime.Now;_active=_plans.Count(p=>p.IsActive&&now>=p.StartTime&&now<=p.EndTime);
+        _groups=await Db.GroupBuyOrders.OrderByDescending(g=>g.CreatedAt).Take(50).ToListAsync();
+        var pids=_plans.Select(p=>p.ProductId).Distinct().Concat(_groups.Select(g=>g.PlanId)).Distinct().ToList();
+        _pn=(await Db.Products.Where(p=>pids.Contains(p.ProductId)).ToListAsync()).ToDictionary(p=>p.ProductId,p=>p.ProductName??"");
+        var uids=_groups.Select(g=>g.InitiatorId).Distinct().ToList();
+        _un=(await Db.Users.Where(u=>uids.Contains(u.UserId)).ToListAsync()).ToDictionary(u=>u.UserId,u=>u.Username??"");
+    }
+    void ShowForm(){_editId=0;_fProductId="";_fPrice="";_fTeamSize="2";_fDuration="24";_fStart=DateTime.Now;_fEnd=DateTime.Now.AddDays(7);_fMin="0";_fMax="0";_fSort="0";_showForm=true;}
+    string WheelGradient(){if(_total==0)return"conic-gradient(#3a3a4a 0turn 1turn)";var ap=$"{(double)_active/_total*100:0.##}%";var ip=$"{(double)(_total-_active)/_total*100:0.##}%";return$"conic-gradient(#4CAF50 0 {ap},#9e9e9e 0 {ip})";}
+    void Edit(GroupBuyPlan p){_editId=p.PlanId;_fProductId=p.ProductId.ToString();_fPrice=p.GroupPrice.ToString("F2");_fTeamSize=p.TeamSize.ToString();_fDuration=p.DurationHours.ToString();_fStart=p.StartTime;_fEnd=p.EndTime;_fMin=p.MinUnit.ToString();_fMax=p.MaxUnit.ToString();_fSort=p.SortOrder.ToString();_showForm=true;}
+    async Task HandleSave(){
+        _saving=true;try{
+        var pid=int.TryParse(_fProductId,out var v)?v:0;var pr=decimal.TryParse(_fPrice,out var pv)?pv:0;var ts=int.TryParse(_fTeamSize,out var tv)?tv:2;var dur=int.TryParse(_fDuration,out var dv)?dv:24;
+        if(pid<=0||pr<=0||ts<=1){_msg="请完整填写必填字段";return;}
+        var min=int.TryParse(_fMin,out var mn)?mn:0;var max=int.TryParse(_fMax,out var mx)?mx:0;var sort=int.TryParse(_fSort,out var so)?so:0;
+        if(_editId>0){await Db.GroupBuyPlans.Where(p=>p.PlanId==_editId).ExecuteUpdateAsync(s=>s.SetProperty(p=>p.ProductId,pid).SetProperty(p=>p.TeamSize,ts).SetProperty(p=>p.GroupPrice,pr).SetProperty(p=>p.MinUnit,min).SetProperty(p=>p.MaxUnit,max).SetProperty(p=>p.StartTime,_fStart).SetProperty(p=>p.EndTime,_fEnd).SetProperty(p=>p.DurationHours,dur).SetProperty(p=>p.SortOrder,sort));_msg="更新成功";}
+        else{Db.GroupBuyPlans.Add(new GroupBuyPlan{ProductId=pid,TeamSize=ts,GroupPrice=pr,MinUnit=min,MaxUnit=max,StartTime=_fStart,EndTime=_fEnd,DurationHours=dur,SortOrder=sort,IsActive=true,CreatedAt=DateTime.Now});await Db.SaveChangesAsync();_msg="创建成功";}
+        _showForm=false;await Load();}catch(Exception ex){_msg="操作失败: "+ex.Message;}_saving=false;}
+    async Task Toggle(GroupBuyPlan p){p.IsActive=!p.IsActive;await Db.GroupBuyPlans.Where(x=>x.PlanId==p.PlanId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.IsActive,p.IsActive));_active=_plans.Count(x=>x.IsActive);await InvokeAsync(StateHasChanged);}
+    async Task Delete(int id){await Db.GroupBuyPlans.Where(p=>p.PlanId==id).ExecuteDeleteAsync();_plans=_plans.Where(p=>p.PlanId!=id).ToList();_total--;_msg="已删除";;await InvokeAsync(StateHasChanged);}
+    string GetProdName(int pid)=>_pn.TryGetValue(pid,out var n)?n:$"#{pid}";
+    string GetUser(int uid)=>_un.TryGetValue(uid,out var n)?n:$"#{uid}";
+    (string Label,string Class) GetStatus(GroupBuyPlan p){var n=DateTime.Now;if(!p.IsActive)return("已禁用","badge-inactive");if(n<p.StartTime)return("未开始","badge-pending");if(n>p.EndTime)return("已结束","badge-failed");return("进行中","badge-active");}
+    static string GetGroupStatusClass(int s)=>s switch{0=>"badge-pending",1=>"badge-success",2=>"badge-failed",3=>"badge-inactive",_=>""};
+    static string GetGroupStatusLabel(int s)=>s switch{0=>"进行中",1=>"已成团",2=>"已失效",3=>"已退款",_=>"-"};
+}

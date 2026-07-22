@@ -1,0 +1,91 @@
+@page "/privacy"
+@model PerfumeShop.Api.Pages.PrivacyModel
+@{ ViewData["Title"] = Model.Lang == "en-US" ? "Privacy Policy" : "隐私政策"; }
+
+<section class="py-5">
+    <div class="container" style="max-width:800px;">
+        <!-- 语言切换 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 style="color:var(--brand);margin:0;">
+                <i class="fas fa-shield-alt"></i>
+                @(Model.Lang == "en-US" ? "Privacy Policy" : "隐私政策")
+            </h2>
+            <div>
+                <a href="?lang=zh-CN" class="btn btn-sm @(Model.Lang == "zh-CN" ? "btn-brand" : "btn-outline-brand")" style="border-radius:20px;">中文</a>
+                <a href="?lang=en-US" class="btn btn-sm @(Model.Lang == "en-US" ? "btn-brand" : "btn-outline-brand")" style="border-radius:20px;">EN</a>
+            </div>
+        </div>
+
+        <p class="text-muted mb-4">
+            @(Model.Lang == "en-US" ? $"Last updated: {Model.CurrentVersion}" : $"最后更新：{Model.CurrentVersion}")
+        </p>
+
+        @if (Model.Lang == "en-US")
+        {
+            <div class="card p-4 mb-4" style="border-radius:12px;">
+                <h4>1. Information We Collect</h4>
+                <p>We collect information you provide directly, such as your name, email address, phone number, and shipping address when you create an account or place an order. We also automatically collect certain information about your device and usage of our services.</p>
+
+                <h4>2. How We Use Your Information</h4>
+                <p>We use the information we collect to: process and fulfill your orders; personalize your fragrance experience; send you promotional communications (with your consent); improve our products and services; and comply with legal obligations.</p>
+
+                <h4>3. Data Sharing</h4>
+                <p>We do not sell your personal information. We may share your information with: service providers who assist in our operations; payment processors for transaction processing; and authorities when required by law.</p>
+
+                <h4>4. Your Rights</h4>
+                <p>You have the right to: access your personal data; correct inaccurate data; request deletion of your data (subject to a 30-day cooling period); export your data in a portable format; and opt out of marketing communications.</p>
+
+                <h4>5. Cookies</h4>
+                <p>We use cookies and similar technologies to: remember your preferences; maintain your shopping cart; analyze site traffic; and deliver personalized content. You can control cookie settings through your browser.</p>
+
+                <h4>6. Data Retention</h4>
+                <p>We retain your personal data for as long as your account is active or as needed to provide you services. Order records are retained for 7 years for tax compliance. Upon account deletion request, data is permanently removed after a 30-day cooling period.</p>
+
+                <h4>7. Contact Us</h4>
+                <p>If you have questions about this Privacy Policy, please contact us at: <a href="mailto:privacy@perfumeshop.com">privacy@perfumeshop.com</a></p>
+            </div>
+        }
+        else
+        {
+            <div class="card p-4 mb-4" style="border-radius:12px;">
+                <h4>1. 我们收集的信息</h4>
+                <p>我们收集您直接提供的信息，例如您在创建账户或下单时提供的姓名、电子邮箱、手机号码和收货地址。我们还会自动收集有关您的设备和使用我们服务的某些信息。</p>
+
+                <h4>2. 我们如何使用您的信息</h4>
+                <p>我们使用收集的信息来：处理和履行您的订单；个性化您的香氛体验；在您同意的前提下向您发送促销信息；改进我们的产品和服务；以及遵守法律义务。</p>
+
+                <h4>3. 数据共享</h4>
+                <p>我们不会出售您的个人信息。我们可能会在以下情况共享您的信息：协助我们运营的服务提供商；处理交易的支付处理商；以及法律要求时向有关部门提供。</p>
+
+                <h4>4. 您的权利</h4>
+                <p>您有权：访问您的个人数据；更正不准确的数据；请求删除您的数据（需经过30天冷静期）；以可移植格式导出您的数据；以及选择退出营销通讯。</p>
+
+                <h4>5. Cookie 使用</h4>
+                <p>我们使用 Cookie 和类似技术来：记住您的偏好设置；维护您的购物车；分析网站流量；以及提供个性化内容。您可以通过浏览器控制 Cookie 设置。</p>
+
+                <h4>6. 数据保留</h4>
+                <p>我们会在您的账户保持活跃期间或为您提供服务所需的时间内保留您的个人数据。订单记录为税务合规目的保留7年。收到账户删除请求后，数据将在30天冷静期后被永久删除。</p>
+
+                <h4>7. 联系我们</h4>
+                <p>如果您对本隐私政策有任何疑问，请联系我们：<a href="mailto:privacy@perfumeshop.com">privacy@perfumeshop.com</a></p>
+            </div>
+        }
+
+        <!-- 版本历史 -->
+        <div class="card p-4" style="border-radius:12px;background:#f7fafc;">
+            <h5 class="mb-3">
+                <i class="fas fa-history"></i>
+                @(Model.Lang == "en-US" ? "Version History" : "版本历史")
+            </h5>
+            <ul class="list-unstyled mb-0">
+                @foreach (var v in Model.Versions)
+                {
+                    <li class="mb-2 pb-2" style="border-bottom:1px solid #e2e8f0;">
+                        <strong>@v.Version</strong>
+                        <span class="text-muted ms-2">— @v.Summary</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</section>

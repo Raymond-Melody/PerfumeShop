@@ -1,0 +1,25 @@
+@page "/admin/analytics/operations"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>运营看板</PageTitle>
+<div class="ph"><h2><i class="fas fa-tachometer-alt" style="color:#2196F3;"></i> 运营看板</h2><div class="br"><a href="/admin/analytics" style="color:#2196F3;text-decoration:none;">数据分析</a> / <span>运营看板</span></div></div>
+@if(_l){
+<div class="sr"><div class="sc"><div class="sv">@_todayOrders</div><div class="sl">今日订单</div></div><div class="sc"><div class="sv" style="color:#4CAF50;">@_todayRev.ToString("N0")</div><div class="sl">今日营收</div></div><div class="sc"><div class="sv">@_todayUsers</div><div class="sl">今日新客</div></div><div class="sc"><div class="sv" style="color:#FF9800;">@_activeProducts</div><div class="sl">在售商品</div></div></div>
+<div class="tn"><a class="tl @(_tab=="orders"?"at":"")" @onclick='()=>Switch("orders")' @onclick:preventDefault>订单状态</a><a class="tl @(_tab=="customers"?"at":"")" @onclick='()=>Switch("customers")' @onclick:preventDefault>客户概览</a></div>
+@switch(_tab){
+case "orders":
+<div class="tc"><table class="ot"><thead><tr><th>订单号</th><th>客户</th><th>金额</th><th>状态</th><th>时间</th></tr></thead><tbody>@foreach(var o in _orders.Take(20)){<tr><td>@o.OrderNo</td><td>@(o.ShippingName??"-")</td><td>@((o.TotalAmount).ToString("N2"))</td><td>@(o.Status??"-")</td><td>@(o.CreatedAt?.ToString("MM-dd HH:mm")??"-")</td></tr>}@if(!_orders.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">暂无订单</td></tr>}</tbody></table></div>
+break;
+case "customers":
+<div class="tc"><table class="ot"><thead><tr><th>用户ID</th><th>用户名</th><th>邮箱</th><th>注册时间</th><th>状态</th></tr></thead><tbody>@foreach(var u in _users.Take(20)){<tr><td>#@u.UserId</td><td>@u.Username</td><td>@(u.Email??"-")</td><td>@(u.CreatedAt?.ToString("yyyy-MM-dd")??"-")</td><td><span class="sb @(u.IsActive==true?"sn":"sw")">@(u.IsActive==true?"活跃":"禁用")</span></td></tr>}@if(!_users.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">暂无客户</td></tr>}</tbody></table></div>
+break;}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.sr{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}.sv{font-size:26px;font-weight:bold;}.sl{font-size:13px;color:#888;}.tn{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:20px;}.tl{padding:12px 24px;color:#888;cursor:pointer;border-bottom:3px solid transparent;}.tl.at{color:#2196F3;border-bottom-color:#2196F3;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(33,150,243,0.1);color:#2196F3;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.sb{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}.sn{background:rgba(76,175,80,0.2);color:#81c784;}.sw{background:rgba(244,67,54,0.2);color:#e57373;}</style>
+@code{bool _l;string _tab="orders";int _todayOrders,_todayUsers,_activeProducts;decimal _todayRev;List<Order> _orders=new();List<User> _users=new();
+protected override async Task OnInitializedAsync(){try{var today=DateTime.Today;
+_todayOrders=await Db.Orders.CountAsync(o=>o.CreatedAt>=today);_todayRev=await Db.Orders.Where(o=>o.CreatedAt>=today).SumAsync(o=>o.TotalAmount);
+_todayUsers=await Db.Users.CountAsync(u=>u.CreatedAt>=today);_activeProducts=await Db.Products.CountAsync(p=>p.IsActive==true);
+_orders=await Db.Orders.AsNoTracking().OrderByDescending(o=>o.OrderId).Take(50).ToListAsync();
+_users=await Db.Users.AsNoTracking().OrderByDescending(u=>u.UserId).Take(50).ToListAsync();_l=true;}catch{_l=true;}}async Task Switch(string t){_tab=t;}}

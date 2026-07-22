@@ -132,18 +132,19 @@ Call LogAdminAction("查看积分管理", "operation", "PointTransactions", "", 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .stats-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
-        .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); text-align: center; }
-        .stat-card i { font-size: 36px; color: #667eea; margin-bottom: 10px; }
-        .stat-card h3 { font-size: 32px; margin: 10px 0; color: #333; }
-        .stat-card p { color: #666; margin: 0; }
-        .adjust-form { background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .stat-card { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
+        .stat-card i { font-size: 36px; color: #00bcd4; margin-bottom: 10px; }
+        .stat-card h3 { font-size: 32px; margin: 10px 0; color: #e0e0e0; }
+        .stat-card p { color: #b0b0b0; margin: 0; }
+        .adjust-form { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
         .form-group { flex: 1; }
-        .form-group label { display: block; margin-bottom: 8px; color: #555; font-weight: 500; }
-        .form-group input, .form-group select { width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 8px; }
-        .transactions-table { width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        .transactions-table th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; text-align: left; }
-        .transactions-table td { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; }
+        .form-group label { display: block; margin-bottom: 8px; color: #e0e0e0; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 12px 15px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; }
+        .transactions-table { width: 100%; background: transparent; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .transactions-table th { background: linear-gradient(135deg, #00bcd4 0%, #00838f 100%); color: white; padding: 15px; text-align: left; }
+        .transactions-table td { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .transactions-table tr:hover { background: rgba(0,188,212,0.05); }
         .points-positive { color: #4CAF50; font-weight: bold; }
         .points-negative { color: #f44336; font-weight: bold; }
     </style>

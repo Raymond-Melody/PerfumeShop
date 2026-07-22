@@ -1,0 +1,78 @@
+@page "/admin/system/ip-blacklist"
+@page "/admin/system/security-audit"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+
+<PageTitle>IP黑名单 & 安全审计</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-ban" style="color:#E91E63;"></i> IP黑名单 & 安全审计</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>安全</span></div></div>
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#F44336;">@_totalIps</div><div class="stat-label">封禁IP</div></div></div>
+<button class="btn-add" @onclick="OpenAddModal" style="margin-bottom:20px;">+ 添加IP黑名单</button>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>IP地址</th><th>原因</th><th>封禁时间</th><th>操作</th></tr></thead><tbody>
+@foreach(var ip in _ips){<tr><td>#@ip.Ipid</td><td style="color:#F44336;">@ip.Ipaddress</td><td>@(ip.Reason??"-")</td><td>@(ip.BlockedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td><button class="btn-delete" @onclick='()=>RemoveIp(ip.Ipid)'>解除</button></td></tr>}
+@if(!_ips.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无封禁IP</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showModal){
+<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>添加IP黑名单</h3><button class="modal-close" @onclick="CloseModal"><i class="fas fa-times"></i></button></div><div class="modal-body">
+<div class="form-group"><label>IP地址</label><input @bind="_editIp" /></div>
+<div class="form-group"><label>封禁原因</label><input @bind="_editReason" /></div>
+</div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="AddIp">封禁</button></div></div></div>
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.btn-add{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.btn-delete{background:rgba(244,67,54,0.15);color:#e57373;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:500px;max-height:85vh;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
+.modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}
+.modal-header h3{margin:0;color:#e0e0e0;font-size:18px;}
+.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}
+.modal-body{padding:25px;}
+.modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:15px;}
+.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.form-group input{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus{border-color:#E91E63;outline:none;}
+.btn-save{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+</style>
+
+@code {
+    private bool _loaded,_showModal;
+    private int _totalIps;
+    private string _msg="",_msgType="",_editIp="",_editReason="";
+    private List<Ipblacklist> _ips=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{_ips=await Db.Ipblacklists.AsNoTracking().OrderByDescending(i=>i.Ipid).Take(100).ToListAsync();_totalIps=_ips.Count;_loaded=true;}catch{_loaded=true;}
+    }
+    void OpenAddModal(){_editIp="";_editReason="";_showModal=true;}
+    void CloseModal(){_showModal=false;}
+    async Task AddIp(){
+        if(string.IsNullOrWhiteSpace(_editIp)){_msg="请输入IP地址";_msgType="err";return;}
+        try{Db.Ipblacklists.Add(new Ipblacklist{Ipaddress=_editIp,Reason=_editReason,BlockedAt=DateTime.Now});await Db.SaveChangesAsync();_msg="IP已封禁";_msgType="ok";_showModal=false;_ips=await Db.Ipblacklists.AsNoTracking().OrderByDescending(i=>i.Ipid).Take(100).ToListAsync();_totalIps=_ips.Count;}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+    async Task RemoveIp(int id){
+        try{var ip=await Db.Ipblacklists.FindAsync(id);if(ip!=null){Db.Ipblacklists.Remove(ip);await Db.SaveChangesAsync();}_msg="已解除封禁";_msgType="ok";_ips=await Db.Ipblacklists.AsNoTracking().OrderByDescending(i=>i.Ipid).Take(100).ToListAsync();_totalIps=_ips.Count;}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+}

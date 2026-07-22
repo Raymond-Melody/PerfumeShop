@@ -1,0 +1,87 @@
+<!-- V19物流管理中心 · 首页仪表盘 -->
+@page "/admin/logistics"
+@page "/admin/Logistics"
+@page "/admin/logistics/index"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>物流管理中心</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-truck" style="color:#FF9800;"></i> 物流管理中心</MudText>
+
+@if (_loaded)
+{
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+                <div style="font-size:12px;color:#888;">待发货</div>
+                <div style="font-size:32px;font-weight:700;color:#FF9800;">@_pendingShip</div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+                <div style="font-size:12px;color:#888;">在途中</div>
+                <div style="font-size:32px;font-weight:700;color:#2196F3;">@_inTransit</div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+                <div style="font-size:12px;color:#888;">已签收</div>
+                <div style="font-size:32px;font-weight:700;color:#4CAF50;">@_delivered</div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+                <div style="font-size:12px;color:#888;">退货中</div>
+                <div style="font-size:32px;font-weight:700;color:#F44336;">@_returns</div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudText Typo="Typo.h6" Class="mt-6 mb-3">最近待发货订单</MudText>
+    <MudTable Items="@_recentOrders.Take(10)" Hover="true" Dense="true" Striped="true">
+        <HeaderContent>
+            <MudTh>订单号</MudTh><MudTh>收货人</MudTh><MudTh>金额</MudTh><MudTh>状态</MudTh><MudTh>下单时间</MudTh><MudTh>操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd Style="font-weight:600;color:#00bcd4;">@context.OrderNo</MudTd>
+            <MudTd>@context.ShippingName</MudTd>
+            <MudTd>@context.TotalAmount.ToString("C2")</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.ShippingStatus)">@context.ShippingStatus</MudChip></MudTd>
+            <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.LocalShipping" Size="Size.Small" Color="Color.Warning" Href="@($"/admin/logistics/delivery-confirm/{context.OrderId}")" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private bool _loaded;
+    private int _pendingShip, _inTransit, _delivered, _returns;
+    private List<Order> _recentOrders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var orders = await Db.Orders.AsNoTracking().ToListAsync();
+        _pendingShip = orders.Count(o => o.ShippingStatus == "Pending" || (o.Status == "Paid" && string.IsNullOrEmpty(o.ShippingStatus)));
+        _inTransit = orders.Count(o => o.ShippingStatus == "InTransit" || o.ShippingStatus == "Shipped");
+        _delivered = orders.Count(o => o.ShippingStatus == "Delivered" || o.ShippingStatus == "Signed");
+        _returns = orders.Count(o => o.ShippingStatus == "Returning" || o.ShippingStatus == "Returned");
+        _recentOrders = orders.Where(o => o.ShippingStatus == "Pending" || (o.Status == "Paid" && string.IsNullOrEmpty(o.ShippingStatus)))
+            .OrderByDescending(o => o.CreatedAt).ToList();
+        _loaded = true;
+    }
+
+    private static Color GetStatusColor(string? s) => s switch
+    {
+        "Pending" => Color.Warning, "InTransit" or "Shipped" => Color.Info,
+        "Delivered" or "Signed" => Color.Success, "Returning" or "Returned" => Color.Error, _ => Color.Default
+    };
+}

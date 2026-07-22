@@ -8,12 +8,21 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.28" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PerfumeShop.Core\PerfumeShop.Core.csproj" />
     <ProjectReference Include="..\PerfumeShop.Data\PerfumeShop.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="locale\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

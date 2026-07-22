@@ -1,0 +1,44 @@
+@page "/admin/finance/payment-vouchers"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>付款凭证</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-receipt" style="color:#00bcd4;"></i> 付款凭证</h2><div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>付款凭证</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_totalCount</div><div class="stat-label">凭证总数</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#4CAF50;">¥@_totalAmount.ToString("N0")</div><div class="stat-label">总金额</div></div>
+<div class="stat-card"><div class="stat-value">@_completedCount</div><div class="stat-label">已完成</div></div></div>
+<!-- 创建按钮 -->
+<div style="margin-bottom:20px;"><button class="btn-save" @onclick='()=>_showModal=true'><i class="fas fa-plus"></i> 创建凭证</button></div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>类型</th><th>金额</th><th>状态</th><th>时间</th><th>备注</th></tr></thead><tbody>
+@foreach(var p in _items){<tr><td>#@p.RecordId</td><td>@(p.PaymentType??"-")</td><td>¥@((p.Amount??0).ToString("N2"))</td><td>@(p.Status??"-")</td><td>@(p.CreatedAt?.ToString("yyyy-MM-dd")??"-")</td><td>@(p.Remark??"-")</td></tr>}
+@if(!_items.Any()){<tr><td colspan="6" style="text-align:center;color:#666;padding:40px;">暂无凭证记录</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showModal){
+<div class="modal-overlay" @onclick='()=>_showModal=false'><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>创建凭证</h3><button class="modal-close" @onclick='()=>_showModal=false'><i class="fas fa-times"></i></button></div><div class="modal-body">
+<div class="form-group"><label>凭证类型</label><select @bind="_vchType"><option value="Payment">付款凭证</option><option value="Receipt">收款凭证</option></select></div>
+<div class="form-group"><label>金额</label><input type="number" step="0.01" @bind="_vchAmount" /></div>
+<div class="form-group"><label>备注</label><input @bind="_vchRemark" /></div>
+@if(!string.IsNullOrEmpty(_vchMsg)){<div style="margin-top:10px;color:#81C784;">@_vchMsg</div>}
+</div><div class="modal-footer"><button class="btn-secondary" @onclick='()=>_showModal=false'>取消</button><button class="btn-save" @onclick="CreateVoucher">保存</button></div></div></div>
+}
+
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.orders-table{width:100%;border-collapse:collapse;}.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;}.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;}
+.btn-save{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}.btn-save:hover{opacity:0.9;}.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:500px;max-height:85vh;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}.modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}.modal-header h3{margin:0;color:#e0e0e0;font-size:18px;}.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.modal-body{padding:25px;max-height:55vh;overflow-y:auto;}.modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}.form-group input,.form-group select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+</style>
+@code{private bool _loaded,_showModal;private int _totalCount,_completedCount;private decimal _totalAmount,_vchAmount;
+private string _vchType="Payment",_vchRemark="",_vchMsg="";private List<PaymentRecord> _items=new();
+protected override async Task OnInitializedAsync(){try{_items=await Db.PaymentRecords.AsNoTracking().OrderByDescending(p=>p.RecordId).Take(50).ToListAsync();_totalCount=_items.Count;_totalAmount=_items.Sum(p=>p.Amount??0);_completedCount=_items.Count(p=>p.Status=="Completed");_loaded=true;}catch{_loaded=true;}}
+async Task CreateVoucher(){
+if(_vchAmount<=0){_vchMsg="请输入有效金额";return;}
+try{var r=new PaymentRecord{PaymentType=_vchType,Amount=_vchAmount,Status="Pending",Remark=_vchRemark,CreatedAt=DateTime.Now};Db.PaymentRecords.Add(r);await Db.SaveChangesAsync();
+_vchMsg=$"凭证已创建: {(_vchType=="Payment"?"付款":"收款")} ¥{_vchAmount:N2}";_vchAmount=0;_vchRemark="";
+_items=await Db.PaymentRecords.AsNoTracking().OrderByDescending(p=>p.RecordId).Take(50).ToListAsync();
+_totalCount=_items.Count;_totalAmount=_items.Sum(p=>p.Amount??0);_completedCount=_items.Count(p=>p.Status=="Completed");
+}catch(Exception ex){_vchMsg=$"创建失败: {ex.Message}";}}
+}

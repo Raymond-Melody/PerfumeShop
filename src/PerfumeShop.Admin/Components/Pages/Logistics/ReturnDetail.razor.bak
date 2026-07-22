@@ -1,0 +1,30 @@
+@page "/admin/logistics/return-detail/{AfterSaleId:int}"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>退货详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">退货详情</MudText>
+@if (_item != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>售后ID:</b> @_item.AfterSalesId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>订单ID:</b> @_item.OrderId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>类型:</b> @_item.RequestType</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>状态:</b> @_item.Status</MudText></MudItem>
+    <MudItem xs="12"><MudText><b>原因:</b> @_item.Reason</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>金额:</b> ¥@_item.RefundAmount?.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>时间:</b> @_item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudText></MudItem>
+</MudGrid>
+@if (_item.Status == "pending") { <MudDivider Class="my-4" />
+    <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="@(() => Process("approved"))" Class="mr-2">批准</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@(() => Process("rejected"))">拒绝</MudButton> }
+</MudCardContent></MudCard>}
+<MudButton Variant="Variant.Text" Href="/admin/logistics/returns" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Parameter] public int AfterSaleId { get; set; }
+    private AfterSale? _item;
+    protected override async Task OnInitializedAsync() { _item = await Db.AfterSales.FindAsync(AfterSaleId); }
+    private async Task Process(string status) { await Db.AfterSales.Where(a => a.AfterSalesId == AfterSaleId).ExecuteUpdateAsync(s => s.SetProperty(a => a.Status, status)); Snackbar.Add($"已{status}", Severity.Success); }
+}

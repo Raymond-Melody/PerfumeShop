@@ -1,0 +1,40 @@
+﻿@page "/admin/finance/transactions"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+
+<PageTitle>流水管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-exchange-alt" style="color:#00bcd4;"></i> 流水管理</h2><div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>流水管理</span></div></div>
+@if(_loaded){
+<div class="tab-nav">
+<a class="tab-link @(_tab=="payment"?"active":"")" @onclick='()=>Switch("payment")' @onclick:preventDefault>支付流水</a>
+<a class="tab-link @(_tab=="refund"?"active":"")" @onclick='()=>Switch("refund")' @onclick:preventDefault>退款管理</a>
+<a class="tab-link @(_tab=="abnormal"?"active":"")" @onclick='()=>Switch("abnormal")' @onclick:preventDefault>异常监控</a>
+</div>
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_totalPayments</div><div class="stat-label">支付总笔数</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#4CAF50;">¥@_totalAmount.ToString("N0")</div><div class="stat-label">支付总金额</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#F44336;">@_refundCount</div><div class="stat-label">退款笔数</div></div></div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>类型</th><th>金额</th><th>状态</th><th>时间</th></tr></thead><tbody>
+@foreach(var p in _records){<tr><td>#@p.RecordId</td><td>@(p.PaymentType??"-")</td><td>¥@((p.Amount??0).ToString("N2"))</td><td>@(p.Status??"-")</td><td>@(p.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td></tr>}
+@if(!_records.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无流水记录</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.tab-nav{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:25px;}.tab-link{padding:15px 30px;color:#888;text-decoration:none;font-size:15px;border-bottom:3px solid transparent;cursor:pointer;}.tab-link.active{color:#00bcd4;border-bottom-color:#00bcd4;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.orders-table{width:100%;border-collapse:collapse;}.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;}.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;}
+</style>
+
+@code{
+private bool _loaded; private string _tab="payment"; private int _totalPayments,_refundCount; private decimal _totalAmount; private List<PaymentRecord> _records=new();
+protected override async Task OnInitializedAsync(){try{
+_records=await Db.PaymentRecords.AsNoTracking().OrderByDescending(p=>p.RecordId).Take(50).ToListAsync();
+_totalPayments=_records.Count;_totalAmount=_records.Sum(p=>p.Amount??0);_refundCount=await Db.RefundRecords.CountAsync();
+_loaded=true;}catch{_loaded=true;}}
+async Task Switch(string t){_tab=t;}
+}

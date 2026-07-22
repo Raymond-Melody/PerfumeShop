@@ -1,0 +1,57 @@
+@page "/admin/Purchase/OrderApprove"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>批量审批采购单</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">批量审批采购单</MudText>
+
+<MudCard>
+    <MudCardContent>
+        <MudText Typo="Typo.h6" Class="mb-2">待审批订单</MudText>
+        <MudTable Items="@_orders" Hover="true" Dense="true" MultiSelection="true" @bind-SelectedItems="_selected">
+            <HeaderContent>
+                <MudTh>采购单号</MudTh>
+                <MudTh>供应商ID</MudTh>
+                <MudTh>金额</MudTh>
+                <MudTh>创建时间</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.PurchaseNo</MudTd>
+                <MudTd>@(context.SupplierId?.ToString() ?? "-")</MudTd>
+                <MudTd>¥@(context.TotalAmount?.ToString("N2") ?? "0.00")</MudTd>
+                <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudCardContent>
+    <MudCardActions>
+        <MudText Class="mr-4">已选择 @_selected.Count 项</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="BatchApprove" Disabled="@(_selected.Count == 0)">
+            批量审批
+        </MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<PurchaseOrder> _orders = new();
+    private HashSet<PurchaseOrder> _selected = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (items, _) = await Repo.GetPurchaseOrdersAsync(status: "draft", pageSize: 100);
+        _orders = items;
+    }
+
+    private async Task BatchApprove()
+    {
+        var ids = _selected.Select(o => o.PurchaseId);
+        await Repo.BatchApproveAsync(ids, 1);
+        Snackbar.Add($"已审批 {_selected.Count} 个订单", Severity.Success);
+        var (items, _) = await Repo.GetPurchaseOrdersAsync(status: "draft", pageSize: 100);
+        _orders = items;
+        _selected = new HashSet<PurchaseOrder>();
+    }
+}

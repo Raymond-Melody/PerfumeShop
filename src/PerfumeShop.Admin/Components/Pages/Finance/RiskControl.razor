@@ -1,0 +1,44 @@
+﻿@page "/admin/finance/risk-control"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+
+<PageTitle>风控管理</PageTitle>
+<div class="ph"><h2><i class="fas fa-shield-alt" style="color:#00bcd4;"></i> 风控管理体系</h2><div class="br"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>风控管理</span></div></div>
+@if(_l){
+<div class="sr"><div class="sc"><div class="sv" style="color:#F44336;">@_aOrder</div><div class="sl">异常订单</div></div><div class="sc"><div class="sv" style="color:#FF9800;">@_ipCnt</div><div class="sl">IP黑名单</div></div><div class="sc"><div class="sv" style="color:#2196F3;">@_loginCnt</div><div class="sl">登录告警</div></div><div class="sc"><div class="sv" style="color:#9C27B0;">@_refundCnt</div><div class="sl">退款异常</div></div></div>
+<div class="tn"><a class="tl @(_tab=="orders"?"at":"")" @onclick='()=>Switch("orders")' @onclick:preventDefault>异常订单</a><a class="tl @(_tab=="ip"?"at":"")" @onclick='()=>Switch("ip")' @onclick:preventDefault>IP黑名单</a><a class="tl @(_tab=="finance"?"at":"")" @onclick='()=>Switch("finance")' @onclick:preventDefault>财务风险</a></div>
+@switch(_tab){
+case "orders":
+<div class="g2"><div class="kc"><h4><i class="fas fa-exclamation-triangle" style="color:#F44336;"></i> 异常订单</h4><div class="tc"><table class="ot"><thead><tr><th>订单ID</th><th>金额</th><th>状态</th><th>时间</th></tr></thead><tbody>@foreach(var o in _orders.Take(10)){<tr><td>#@o.OrderId</td><td>¥@((o.TotalAmount).ToString("N2"))</td><td>@(o.Status??"-")</td><td>@(o.CreatedAt?.ToString("yyyy-MM-dd")??"-")</td></tr>}@if(!_orders.Any()){<tr><td colspan="4" style="text-align:center;color:#666;padding:30px;">无异常订单</td></tr>}</tbody></table></div></div>
+<div class="kc"><h4><i class="fas fa-dollar-sign" style="color:#9C27B0;"></i> 高额订单(>500)</h4><div class="tc"><table class="ot"><thead><tr><th>订单ID</th><th>金额</th><th>客户</th><th>时间</th></tr></thead><tbody>@foreach(var o in _highOrders.Take(10)){<tr><td>#@o.OrderId</td><td style="color:#F44336;">¥@((o.TotalAmount).ToString("N2"))</td><td>@(o.ShippingName??"-")</td><td>@(o.CreatedAt?.ToString("yyyy-MM-dd")??"-")</td></tr>}@if(!_highOrders.Any()){<tr><td colspan="4" style="text-align:center;color:#666;padding:30px;">无高额订单</td></tr>}</tbody></table></div></div></div>
+break;
+case "ip":
+<div class="tc"><table class="ot"><thead><tr><th>ID</th><th>IP地址</th><th>原因</th><th>封禁时间</th></tr></thead><tbody>@foreach(var ip in _ips.Take(20)){<tr><td>#@ip.Ipid</td><td style="color:#F44336;">@(ip.Ipaddress??"-")</td><td>@(ip.Reason??"-")</td><td>@(ip.BlockedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td></tr>}@if(!_ips.Any()){<tr><td colspan="4" style="text-align:center;color:#666;padding:30px;">无黑名单</td></tr>}</tbody></table></div>
+break;
+case "finance":
+<div class="g2"><div class="kc"><h4><i class="fas fa-chart-line" style="color:#FF9800;"></i> 成本异动监控</h4><div class="tc"><table class="ot"><thead><tr><th>商品ID</th><th>产品名称</th><th>上月成本</th><th>本月成本</th><th>变动率</th></tr></thead><tbody>@foreach(var v in _variance.Take(10)){<tr><td>#@v.ProductId</td><td>@v.ProductName</td><td>¥@v.PreviousCost.ToString("N2")</td><td>¥@v.CurrentCost.ToString("N2")</td><td style="color:@(Math.Abs(v.VarianceRate)>5?"#F44336":"#4CAF50");">@(v.VarianceRate>=0?"+":"")@v.VarianceRate.ToString("F1")%</td></tr>}@if(!_variance.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">无成本异动</td></tr>}</tbody></table></div></div>
+<div class="kc"><h4><i class="fas fa-balance-scale" style="color:#E91E63;"></i> 资金预警</h4><p style="color:#888;padding:20px;">资金看板预警阈值每日自动检测。</p></div></div>
+break;}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.sr{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}.sv{font-size:26px;font-weight:bold;}.sl{font-size:13px;color:#888;margin-top:4px;}.tn{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:20px;}.tl{padding:12px 24px;color:#888;text-decoration:none;font-size:14px;border-bottom:3px solid transparent;cursor:pointer;}.tl:hover{color:#e0e0e0;}.tl.at{color:#00bcd4;border-bottom-color:#00bcd4;}.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:20px;}.kc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:20px;}.kc h4{color:#e0e0e0;margin:0 0 15px;display:flex;align-items:center;gap:10px;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:8px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:10px 14px;font-size:12px;text-align:left;}.ot td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:13px;}</style>
+
+@code{
+    bool _l;string _tab="orders";int _aOrder,_ipCnt,_loginCnt,_refundCnt;
+    List<Order> _orders=new(),_highOrders=new();List<Ipblacklist> _ips=new();List<FinanceRepository.CostVarianceRow> _variance=new();
+    protected override async Task OnInitializedAsync(){try{
+        _aOrder=await Db.Orders.CountAsync(o=>o.Status=="Cancelled"||o.Status=="Refunded");
+        _ipCnt=await Db.Ipblacklists.CountAsync();_loginCnt=await Db.LoginAlerts.CountAsync();
+        _refundCnt=await Db.RefundRecords.CountAsync(r=>r.Status=="Pending");
+        _orders=await Db.Orders.AsNoTracking().Where(o=>o.Status=="Cancelled"||o.Status=="Refunded").OrderByDescending(o=>o.CreatedAt).Take(20).ToListAsync();
+        _highOrders=await Db.Orders.AsNoTracking().Where(o=>o.TotalAmount>500).OrderByDescending(o=>o.TotalAmount).Take(20).ToListAsync();
+        _ips=await Db.Ipblacklists.AsNoTracking().OrderByDescending(i=>i.Ipid).Take(20).ToListAsync();
+        try{_variance=await FinRepo.GetCostVarianceAsync(1,20);}catch{_variance=new();}
+        _l=true;}catch{_l=true;}
+    }
+    async Task Switch(string t){_tab=t;}
+}

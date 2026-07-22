@@ -1,0 +1,64 @@
+@page "/admin/semifinished/inventory-alerts"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>库存预警</PageTitle>
+<div class="ph"><h2 class="pt"><i class="fas fa-exclamation-triangle" style="color:#f44336;"></i> 库存预警</h2><div class="br"><a href="/admin/semifinished" style="color:#2196F3;text-decoration:none;">半成品中心</a> / 库存预警</div></div>
+
+@if(_loaded){
+<div class="as"><span class="dot @(_alertOn?"dot-on":"dot-off")"></span>预警系统: @(_alertOn?"已启用":"已关闭")</div>
+
+<div class="st"><i class="fas fa-boxes" style="color:#4CAF50;"></i> 原料库存预警</div>
+<div class="sg">
+    <div class="sc info"><span class="num" style="color:#2196F3;">@_rawTotal</span><span class="label">预警总数</span></div>
+    <div class="sc critical"><span class="num" style="color:#f44336;">@_rawCritical</span><span class="label">严重（零库存）</span></div>
+    <div class="sc warning"><span class="num" style="color:#FF9800;">@_rawWarning</span><span class="label">警告（低库存）</span></div>
+</div>
+
+<div class="card"><div class="ch">原料预警清单</div><div class="cb"><table class="dt"><thead><tr><th>编码</th><th>名称</th><th>当前库存</th><th>安全库存</th><th>单位</th><th>单价</th><th>紧急程度</th></tr></thead><tbody>
+@foreach(var r in _rawAlerts){var stock=r.StockQty??0;var safety=r.SafetyStock??0;var urg=stock<=0?"high":"medium";<tr class="@(urg=="high"?"crit-row":"")"><td style="color:#888;">@r.ItemCode</td><td><strong>@r.ItemName</strong></td><td style="color:@(stock<=0?"#f44336":"#FF9800")">@string.Format("{0:F1}",stock)</td><td>@string.Format("{0:F1}",safety)</td><td>@r.Unit</td><td>@((r.UnitPrice??0).ToString("N2"))</td><td><span class="ub @(urg=="high"?"uh":"um")">@(urg=="high"?"紧急":"警告")</span></td></tr>}
+@if(!_rawAlerts.Any()){<tr><td colspan="7" class="tac tm" style="padding:30px;color:#81c784;">✓ 所有原料库存正常</td></tr>}
+</tbody></table></div></div>
+
+<div class="st"><i class="fas fa-layer-group" style="color:#FF9800;"></i> 香调库存预警</div>
+<div class="sg">
+    <div class="sc info"><span class="num" style="color:#2196F3;">@_noteTotal</span><span class="label">预警总数</span></div>
+    <div class="sc critical"><span class="num" style="color:#f44336;">@_noteCritical</span><span class="label">严重（零库存）</span></div>
+    <div class="sc warning"><span class="num" style="color:#FF9800;">@_noteWarning</span><span class="label">警告（低库存）</span></div>
+</div>
+
+<div class="card"><div class="ch">香调预警清单</div><div class="cb"><table class="dt"><thead><tr><th>香调名称</th><th>类型</th><th>当前库存</th><th>最低库存</th><th>紧急程度</th></tr></thead><tbody>
+@foreach(var n in _noteAlerts){var stock=n.StockQuantity;var min=n.MinStockLevel??0;var urg=stock<=0?"high":"medium";<tr class="@(urg=="high"?"crit-row":"")"><td><strong>@n.NoteName</strong></td><td>@n.NoteType</td><td style="color:@(stock<=0?"#f44336":"#FF9800")">@stock</td><td>@min</td><td><span class="ub @(urg=="high"?"uh":"um")">@(urg=="high"?"紧急":"警告")</span></td></tr>}
+@if(!_noteAlerts.Any()){<tr><td colspan="5" class="tac tm" style="padding:30px;color:#81c784;">✓ 所有香调库存正常</td></tr>}
+</tbody></table></div></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@code{
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+bool _loaded,_alertOn=true;int _rawTotal,_rawCritical,_rawWarning,_noteTotal,_noteCritical,_noteWarning;
+List<RawMaterialInventory> _rawAlerts=new();List<NoteAlVm> _noteAlerts=new();
+
+record NoteAlVm(string? NoteName,string? NoteType,int StockQuantity,int? MinStockLevel);
+
+protected override async Task OnInitializedAsync(){
+    try{
+        var raw=await Db.RawMaterialInventories.Where(r=>(r.StockQty??0)<=(r.SafetyStock??0)&&(r.SafetyStock??0)>0).OrderBy(r=>r.StockQty).ToListAsync();
+        _rawAlerts=raw;_rawTotal=raw.Count;_rawCritical=raw.Count(r=>(r.StockQty??0)<=0);_rawWarning=_rawTotal-_rawCritical;
+        var notes=await (from ni in Db.NoteInventories join fn in Db.FragranceNotes on ni.NoteId equals fn.NoteId where (ni.StockQuantity??0)<=(ni.MinStockLevel??0)&&(ni.MinStockLevel??0)>0 orderby ni.StockQuantity select new NoteAlVm(fn.NoteName,fn.NoteType,ni.StockQuantity??0,ni.MinStockLevel)).ToListAsync();
+        _noteAlerts=notes;_noteTotal=notes.Count;_noteCritical=notes.Count(n=>n.StockQuantity<=0);_noteWarning=_noteTotal-_noteCritical;
+    }catch{}
+    _loaded=true;
+}
+}
+
+<style>
+.ph{margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}.br{font-size:13px;color:#888;margin-top:5px;}
+.as{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;font-size:14px;margin-bottom:20px;background:rgba(76,175,80,0.15);color:#81c784;}.dot{width:8px;height:8px;border-radius:50%;}.dot-on{background:#4CAF50;}.dot-off{background:#f44336;}
+.st{font-size:16px;color:#e0e0e0;margin:25px 0 15px;display:flex;align-items:center;gap:8px;}
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:25px;}.sc{padding:25px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,0.06);background:linear-gradient(135deg,#2d2d44,#1e1e32);}.sc.info{border-top:3px solid #2196F3;}.sc.critical{border-top:3px solid #f44336;}.sc.warning{border-top:3px solid #FF9800;}.sc .num{font-size:36px;font-weight:bold;display:block;}.sc .label{font-size:12px;color:#888;display:block;margin-top:5px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.06);}.ch{padding:14px 20px;background:rgba(244,67,54,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;}.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(244,67,54,0.15);color:#e57373;padding:12px 15px;text-align:left;font-weight:600;font-size:13px;}.dt td{padding:12px 15px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e0e0e0;font-size:14px;}.dt tr:hover td{background:rgba(255,255,255,0.03);}.dt tr.crit-row td{background:rgba(244,67,54,0.08);}
+.ub{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:500;}.uh{background:rgba(244,67,54,0.2);color:#e57373;}.um{background:rgba(255,152,0,0.2);color:#ffb74d;}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+</style>

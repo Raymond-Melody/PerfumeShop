@@ -1,0 +1,106 @@
+<!-- V19物流管理 · 发货订单管理 -->
+@page "/admin/logistics/shipping"
+@page "/admin/logistics/shipping-orders"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>发货订单管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-clipboard-check" style="color:#FF9800;"></i> 发货订单管理</MudText>
+
+@if (_loaded)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="3">
+            <MudTextField @bind-Value="_searchText" Placeholder="搜索订单号/收货人..." Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+        </MudItem>
+        <MudItem xs="12" sm="2">
+            <MudSelect @bind-Value="_statusFilter" Placeholder="物流状态" Clearable="true">
+                <MudSelectItem Value="@("Pending")">待发货</MudSelectItem>
+                <MudSelectItem Value="@("InTransit")">在途中</MudSelectItem>
+                <MudSelectItem Value="@("Delivered")">已签收</MudSelectItem>
+                <MudSelectItem Value="@("Returning")">退货中</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="2">
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshData">刷新</MudButton>
+        </MudItem>
+    </MudGrid>
+
+    <MudTable Items="@GetFilteredOrders()" Hover="true" Dense="true" Striped="true">
+        <HeaderContent>
+            <MudTh>订单号</MudTh><MudTh>收货人</MudTh><MudTh>联系电话</MudTh>
+            <MudTh>收货地址</MudTh><MudTh>金额</MudTh><MudTh>物流状态</MudTh>
+            <MudTh>快递公司</MudTh><MudTh>运单号</MudTh><MudTh>操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd Style="font-weight:600;color:#00bcd4;">@context.OrderNo</MudTd>
+            <MudTd>@context.ShippingName</MudTd>
+            <MudTd>@context.ShippingPhone</MudTd>
+            <MudTd>@context.ShippingAddress</MudTd>
+            <MudTd>@context.TotalAmount.ToString("C2")</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.ShippingStatus)">@(context.ShippingStatus ?? "Pending")</MudChip></MudTd>
+            <MudTd>@context.ShippingCompany</MudTd>
+            <MudTd>@context.TrackingNumber</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.LocalShipping" Size="Size.Small" Color="Color.Warning"
+                               Href="@($"/admin/logistics/delivery-confirm/{context.OrderId}")" Title="发货确认" />
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                               Href="@($"/admin/Operation/OrderDetail/{context.OrderId}")" Title="查看订单" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private bool _loaded;
+    private List<Order> _orders = new();
+    private string _searchText = "";
+    private string? _statusFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _orders = await Db.Orders.AsNoTracking()
+            .Where(o => o.Status == "Paid" || o.Status == "Shipped" || !string.IsNullOrEmpty(o.ShippingStatus))
+            .OrderByDescending(o => o.CreatedAt).Take(200).ToListAsync();
+        _loaded = true;
+    }
+
+    private async Task RefreshData()
+    {
+        _loaded = false; StateHasChanged();
+        _orders = await Db.Orders.AsNoTracking()
+            .Where(o => o.Status == "Paid" || o.Status == "Shipped" || !string.IsNullOrEmpty(o.ShippingStatus))
+            .OrderByDescending(o => o.CreatedAt).Take(200).ToListAsync();
+        _loaded = true;
+    }
+
+    private List<Order> GetFilteredOrders()
+    {
+        var q = _orders.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var s = _searchText.Trim();
+            q = q.Where(o => o.OrderNo.Contains(s) || (o.ShippingName != null && o.ShippingName.Contains(s))
+                || (o.TrackingNumber != null && o.TrackingNumber.Contains(s)));
+        }
+        if (!string.IsNullOrWhiteSpace(_statusFilter))
+        {
+            q = q.Where(o => o.ShippingStatus == _statusFilter || (string.IsNullOrEmpty(o.ShippingStatus) && _statusFilter == "Pending"));
+        }
+        return q.ToList();
+    }
+
+    private static Color GetStatusColor(string? s) => s switch
+    {
+        "Pending" => Color.Warning, "InTransit" or "Shipped" => Color.Info,
+        "Delivered" or "Signed" => Color.Success, "Returning" or "Returned" => Color.Error, _ => Color.Warning
+    };
+}

@@ -1,0 +1,151 @@
+@page "/admin/system/users"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject SystemRepository SysRepo
+
+<PageTitle>管理员管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-users-cog" style="color:#E91E63;"></i> 管理员管理</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>管理员管理</span></div></div>
+
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_totalUsers</div><div class="stat-label">管理员总数</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_activeUsers</div><div class="stat-label">活跃</div></div><div class="stat-card"><div class="stat-value" style="color:#F44336;">@_lockedUsers</div><div class="stat-label">锁定</div></div></div>
+<div class="toolbar"><input class="search-input" @bind="_search" placeholder="搜索用户名/邮箱..." /><button class="btn-search" @onclick="Search">搜索</button><button class="btn-add" @onclick="OpenAddModal">+ 添加管理员</button></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>用户名</th><th>姓名</th><th>角色</th><th>部门</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead><tbody>
+@foreach(var u in _users){<tr><td>#@u.AdminId</td><td>@u.Username</td><td>@(u.FullName??"-")</td><td>@GetRoleName(u.RoleId)</td><td>@(u.Department??"-")</td><td><span class="status-badge @(u.IsActive==true?"status-normal":"status-warning")">@(u.IsActive==true?"正常":"锁定")</span></td><td>@(u.LastLogin?.ToString("yyyy-MM-dd HH:mm")??"从未")</td><td><button class="btn-edit" @onclick='()=>OpenEditModal(u)'>编辑</button><button class="btn-reset" @onclick='()=>ResetPwd(u.AdminId)'>重置密码</button></td></tr>}
+@if(!_users.Any()){<tr><td colspan="8" style="text-align:center;color:#666;padding:40px;">暂无管理员</td></tr>}
+</tbody></table></div>
+@RenderPagination(_totalPages)
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showModal){
+<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>@(_editing?"编辑管理员":"添加管理员")</h3><button class="modal-close" @onclick="CloseModal"><i class="fas fa-times"></i></button></div><div class="modal-body">
+<div class="form-row"><div class="form-group"><label>用户名</label><input @bind="_editUser.Username" /></div><div class="form-group"><label>姓名</label><input @bind="_editUser.FullName" /></div></div>
+<div class="form-row"><div class="form-group"><label>邮箱</label><input @bind="_editUser.Email" /></div><div class="form-group"><label>部门</label><input @bind="_editUser.Department" /></div></div>
+<div class="form-row"><div class="form-group"><label>角色</label><select @bind="_editUser.RoleId"><option value="">-- 选择角色 --</option>@foreach(var r in _roles){<option value="@r.RoleId">@r.RoleName</option>}</select></div><div class="form-group"><label>状态</label><select @bind="_editUser.IsActive"><option value="true">正常</option><option value="false">锁定</option></select></div></div>
+@if(!_editing){<div class="form-row"><div class="form-group"><label>密码</label><input type="password" @bind="_editPassword" /></div></div>}
+</div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveUser">保存</button></div></div></div>
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.search-input{padding:10px 14px;border:1px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:14px;min-width:220px;}
+.search-input:focus{border-color:#E91E63;outline:none;}
+.btn-search{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;}
+.btn-add{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;margin-left:auto;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.orders-table tr:hover{background:rgba(255,255,255,0.03);}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}
+.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}
+.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
+.btn-edit{background:rgba(233,30,99,0.15);color:#E91E63;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:6px;}
+.btn-reset{background:rgba(255,152,0,0.15);color:#FF9800;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;}
+.pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:25px;}
+.pagination button{padding:8px 14px;border-radius:6px;border:none;font-size:14px;cursor:pointer;background:#3a3a4a;color:#e0e0e0;}
+.pagination button:hover{background:#4a4a5a;}
+.pagination button.current{background:#E91E63;color:#fff;}
+.pagination button:disabled{background:#2a2a3a;color:#666;cursor:not-allowed;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:600px;max-height:85vh;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
+.modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}
+.modal-header h3{margin:0;color:#e0e0e0;font-size:18px;}
+.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}
+.modal-body{padding:25px;max-height:55vh;overflow-y:auto;}
+.modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:15px;flex:1;}
+.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus,.form-group select:focus{border-color:#E91E63;outline:none;}
+.form-row{display:flex;gap:12px;}
+.btn-save{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+@@media(max-width:768px){.form-row{flex-direction:column;}.stats-row{grid-template-columns:1fr;}}
+</style>
+
+@code {
+    private bool _loaded, _editing, _showModal;
+    private int _totalUsers, _activeUsers, _lockedUsers;
+    private int _page=1,_totalPages=1; const int PageSize=20;
+    private string _search="", _msg="", _msgType="", _editPassword="";
+    private List<AdminUser> _users=new();
+    private List<AdminRole> _roles=new();
+    private AdminUser _editUser=new(){IsActive=true};
+    private Dictionary<int,string> _roleNames=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            _roles=await Db.AdminRoles.AsNoTracking().ToListAsync();
+            _roleNames=_roles.ToDictionary(r=>r.RoleId,r=>r.RoleName??r.RoleCode);
+            await LoadData();
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+
+    string GetRoleName(int? rid)=>rid.HasValue&&_roleNames.ContainsKey(rid.Value)?_roleNames[rid.Value]:"-";
+
+    async Task LoadData(){
+        var(items,total)=await SysRepo.GetAdminUsersAsync(_page,PageSize,_search);
+        _users=items;_totalPages=(int)Math.Ceiling(total/(double)PageSize);
+        if(_page>_totalPages)_page=Math.Max(1,_totalPages);
+        _totalUsers=total;
+        _activeUsers=await Db.AdminUsers.CountAsync(u=>u.IsActive==true);
+        _lockedUsers=await Db.AdminUsers.CountAsync(u=>u.IsActive==false||u.IsLocked==true);
+    }
+
+    async Task Search(){_page=1;await LoadData();}
+    async Task GoToPage(int p){_page=p;await LoadData();}
+
+    void OpenAddModal(){_editing=false;_editUser=new(){IsActive=true};_editPassword="";_showModal=true;}
+    void OpenEditModal(AdminUser u){_editing=true;_editUser=new(){AdminId=u.AdminId,Username=u.Username,FullName=u.FullName,Email=u.Email,Department=u.Department,RoleId=u.RoleId,IsActive=u.IsActive};_editPassword="";_showModal=true;}
+    void CloseModal(){_showModal=false;}
+
+    async Task SaveUser(){
+        try{
+            if(string.IsNullOrWhiteSpace(_editUser.Username)||string.IsNullOrWhiteSpace(_editUser.Email)){_msg="用户名和邮箱不能为空";_msgType="err";return;}
+            if(!_editing&&string.IsNullOrWhiteSpace(_editPassword)){_msg="请输入密码";_msgType="err";return;}
+            if(!_editing){
+                _editUser.PasswordHash=Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(_editPassword)));
+                _editUser.CreatedAt=DateTime.Now;
+            }
+            await SysRepo.SaveAdminUserAsync(_editUser);
+            _msg=_editing?"管理员已更新":"管理员已创建";_msgType="ok";_showModal=false;
+            await LoadData();
+        }catch(Exception ex){_msg="保存失败: "+ex.Message;_msgType="err";}
+    }
+
+    async Task ResetPwd(int id){
+        try{
+            var user=await SysRepo.GetAdminUserAsync(id);
+            if(user==null)return;
+            user.PasswordHash=Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("123456")));
+            await SysRepo.SaveAdminUserAsync(user);
+            _msg=$"用户 {user.Username} 密码已重置为 123456";_msgType="ok";
+        }catch(Exception ex){_msg="重置失败: "+ex.Message;_msgType="err";}
+    }
+
+    RenderFragment RenderPagination(int totalPages)=>builder=>{
+        if(totalPages<=1)return;
+        builder.OpenElement(0,"div");builder.AddAttribute(1,"class","pagination");
+        builder.OpenElement(2,"button");builder.AddAttribute(3,"disabled",_page<=1);builder.AddAttribute(4,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(1)));builder.AddContent(5,"首页");builder.CloseElement();
+        builder.OpenElement(6,"button");builder.AddAttribute(7,"disabled",_page<=1);builder.AddAttribute(8,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(_page-1)));builder.AddContent(9,"上一页");builder.CloseElement();
+        builder.OpenElement(10,"button");builder.AddAttribute(11,"class","current");builder.AddContent(12,$"{_page}/{totalPages}");builder.CloseElement();
+        builder.OpenElement(13,"button");builder.AddAttribute(14,"disabled",_page>=totalPages);builder.AddAttribute(15,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(_page+1)));builder.AddContent(16,"下一页");builder.CloseElement();
+        builder.OpenElement(17,"button");builder.AddAttribute(18,"disabled",_page>=totalPages);builder.AddAttribute(19,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(totalPages)));builder.AddContent(20,"末页");builder.CloseElement();
+        builder.CloseElement();
+    };
+}

@@ -1,6 +1,6 @@
 <%
 ' ============================================
-' PerfumeShop Configuration V18.0
+' PerfumeShop Configuration V19.1
 ' ============================================
 
 ' V17.2: 强制 UTF-8 编码，解决中文乱码问题
@@ -21,8 +21,8 @@ Function GetSiteURL()
     GetSiteURL = proto & Request.ServerVariables("HTTP_HOST")
 End Function
 
-Const SYS_VERSION = "V18.1"
-Const SYS_VERSION_NAME = "PerfumeShop V18.1"
+Const SYS_VERSION = "V19.1"
+Const SYS_VERSION_NAME = "PerfumeShop V19.1"
 Const COOKIE_SECRET = "PerfumeShop_SecKey_2026_X9K3m"
 Const COOKIE_SECRET_V10 = "PF_V10_SHA256_Salt_7kM2xP9qR4vN8wL3jH6fD1sA5gK0"
 Const PASSWORD_PEPPER = "P3rfum3Sh0p_S@lt_2026!"

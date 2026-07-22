@@ -88,7 +88,7 @@ completedOrders = GetScalar("SELECT COUNT(*) FROM Orders WHERE Status = 'Paid'")
             border-color: rgba(0,188,212,0.2);
         }
         .stat-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 24px; color: white; }
-        .stat-card.orders .stat-icon { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-card.orders .stat-icon { background: linear-gradient(135deg, #00bcd4 0%, #00838f 100%); }
         .stat-card.revenue .stat-icon { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
         .stat-card.customers .stat-icon { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
         .stat-card.products .stat-icon { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
@@ -220,13 +220,13 @@ completedOrders = GetScalar("SELECT COUNT(*) FROM Orders WHERE Status = 'Paid'")
                 <div class="stat-icon"><i class="fas fa-users"></i></div>
                 <div class="stat-value"><%= newCustomersToday %></div>
                 <div class="stat-label">今日新客</div>
-                <div class="stat-label" style="margin-top: 5px; color: #999;">累计 <%= totalCustomers %> 人</div>
+                <div class="stat-label" style="margin-top: 5px; color: #888;">累计 <%= totalCustomers %> 人</div>
             </div>
             <div class="stat-card products">
                 <div class="stat-icon"><i class="fas fa-box"></i></div>
                 <div class="stat-value"><%= GetScalar("SELECT COUNT(*) FROM Products WHERE IsActive <> 0") %></div>
                 <div class="stat-label">在售商品</div>
-                <div class="stat-label" style="margin-top: 5px; color: #999;">累计 <%= GetScalar("SELECT COUNT(*) FROM Products") %> 款</div>
+                <div class="stat-label" style="margin-top: 5px; color: #888;">累计 <%= GetScalar("SELECT COUNT(*) FROM Products") %> 款</div>
             </div>
         </div>
         

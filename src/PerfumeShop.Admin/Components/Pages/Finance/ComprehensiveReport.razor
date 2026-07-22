@@ -1,0 +1,33 @@
+@page "/admin/finance/comprehensive-report"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>综合报表中心</PageTitle>
+<div class="ph"><h2><i class="fas fa-chart-pie" style="color:#00bcd4;"></i> 综合报表中心</h2><div class="br"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>综合报表</span></div></div>
+@if(_l){
+<div class="sr"><div class="sc"><div class="sv">@_rev.ToString("N0")</div><div class="sl">总营收</div></div><div class="sc"><div class="sv">@_ordCnt</div><div class="sl">订单数</div></div><div class="sc"><div class="sv">@_custCnt</div><div class="sl">客户数</div></div><div class="sc"><div class="sv" style="color:#4CAF50;">@_avg.ToString("N0")</div><div class="sl">客单价</div></div></div>
+<div class="tn"><a class="tl @(_tab=="info"?"at":"")" @onclick='()=>Switch("info")' @onclick:preventDefault>信息流</a><a class="tl @(_tab=="product"?"at":"")" @onclick='()=>Switch("product")' @onclick:preventDefault>产品线</a><a class="tl @(_tab=="fund"?"at":"")" @onclick='()=>Switch("fund")' @onclick:preventDefault>资金流</a></div>
+@switch(_tab){
+case "info":
+<div class="tc"><table class="ot"><thead><tr><th>月份</th><th>订单数</th><th>营收</th><th>新客户</th></tr></thead><tbody>@foreach(var m in _monthly){<tr><td>@m.Month</td><td>@m.Orders</td><td>@m.Revenue.ToString("N0")</td><td>@m.NewCust</td></tr>}@if(!_monthly.Any()){<tr><td colspan="4" style="text-align:center;color:#666;padding:30px;">暂无数据</td></tr>}</tbody></table></div>
+break;
+case "product":
+<div class="tc"><table class="ot"><thead><tr><th>产品ID</th><th>产品名称</th><th>分类</th></tr></thead><tbody>@foreach(var p in _products.Take(20)){<tr><td>#@p.ProductId</td><td>@p.ProductName</td><td>@(p.Category??"-")</td></tr>}@if(!_products.Any()){<tr><td colspan="3" style="text-align:center;color:#666;padding:30px;">暂无产品</td></tr>}</tbody></table></div>
+break;
+case "fund":
+<div class="tc"><table class="ot"><thead><tr><th>账户ID</th><th>账户名称</th></tr></thead><tbody>@foreach(var f in _funds){<tr><td>#@f.AccountId</td><td>@(f.AccountName??"-")</td></tr>}@if(!_funds.Any()){<tr><td colspan="2" style="text-align:center;color:#666;padding:30px;">暂无资金账户</td></tr>}</tbody></table></div>
+break;}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.sr{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}.sv{font-size:26px;font-weight:bold;}.sl{font-size:13px;color:#888;margin-top:4px;}.tn{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:20px;}.tl{padding:12px 24px;color:#888;cursor:pointer;border-bottom:3px solid transparent;}.tl:hover{color:#e0e0e0;}.tl.at{color:#00bcd4;border-bottom-color:#00bcd4;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}</style>
+@code{bool _l;string _tab="info";decimal _rev,_avg;int _ordCnt,_custCnt;
+List<(string Month,int Orders,decimal Revenue,int NewCust)> _monthly=new();List<Product> _products=new();List<FundAccount> _funds=new();
+protected override async Task OnInitializedAsync(){try{
+    var paid=new[]{"Paid","paid","Completed","completed","shipped","delivered"};
+    var orders=await Db.Orders.Where(o=>paid.Contains(o.Status!)).ToListAsync();
+    _rev=orders.Sum(o=>o.TotalAmount);_ordCnt=orders.Count;_custCnt=orders.Select(o=>o.UserId).Distinct().Count();_avg=_ordCnt>0?_rev/_ordCnt:0;
+    _monthly=orders.Where(o=>o.CreatedAt.HasValue).GroupBy(o=>new{o.CreatedAt!.Value.Year,o.CreatedAt!.Value.Month}).Select(g=>{var m=g.Key.Year+"-"+(g.Key.Month.ToString().PadLeft(2,'0'));return(m,g.Count(),g.Sum(o=>o.TotalAmount),g.Select(o=>o.UserId).Distinct().Count());}).OrderByDescending(x=>x.Item1).Take(12).ToList();
+    try{_products=await Db.Products.AsNoTracking().Take(20).ToListAsync();}catch{_products=new();}
+    try{_funds=await Db.FundAccounts.AsNoTracking().Take(20).ToListAsync();}catch{_funds=new();}
+    _l=true;}catch{_l=true;}}async Task Switch(string t){_tab=t;}
+}

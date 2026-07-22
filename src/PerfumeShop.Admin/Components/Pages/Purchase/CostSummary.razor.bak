@@ -1,0 +1,39 @@
+@page "/admin/Purchase/CostSummary"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>订单成本汇总</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">订单成本汇总</MudText>
+
+<MudTable Items="@_reviews" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>采购单ID</MudTh>
+        <MudTh>审查金额</MudTh>
+        <MudTh>成本分配</MudTh>
+        <MudTh>审查状态</MudTh>
+        <MudTh>审查人</MudTh>
+        <MudTh>审查时间</MudTh>
+        <MudTh>备注</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.PurchaseId</MudTd>
+        <MudTd>¥@(context.ReviewAmount?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>@(context.CostAllocation ?? "-")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small">@context.ReviewStatus</MudChip></MudTd>
+        <MudTd>@context.ReviewerId</MudTd>
+        <MudTd>@context.ReviewedAt?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>@(context.ReviewComments ?? "-")</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private List<PurchaseCostReview> _reviews = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _reviews = await Repo.GetCostReviewsAsync();
+    }
+}

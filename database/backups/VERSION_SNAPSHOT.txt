@@ -1,5 +1,77 @@
 # PerfumeShop - Version Snapshot
 # Generated: 2026-06-10
+# Last Updated: 2026-07-14 (V19.1)
+# ========================================
+
+## System Info
+- Site Name: Custom Fragrance (香水定制)
+- Version: V19.1
+- Database: SQL Server 2017 (localhost\YOURPERFUME\PerfumeShop)
+- Web Server: IIS (Classic ASP + .NET 8 反向代理)
+- AI Service: Flask (Python) 微服务
+- DB Size: 72 MB (data) + 8 MB (log)
+- Tables: 134
+- Stored Procedures: usp_BackupDatabase (backup via EXECUTE AS OWNER)
+
+## Module Structure (admin/)
+- finance:      24 pages
+- operation:    29 pages
+- purchase:     36 pages
+- system:       21 pages
+- prodcenter:   13 pages
+- techcenter:   17 pages
+- semifinished: 10 pages
+- logistics:     8 pages
+- includes:      5 pages
+- inventory:     3 pages
+- analytics:     2 pages
+Total: 334 ASP files + 303 .NET CS files + 8 Python files
+
+## Key Configuration
+- Free shipping: >= 299 yuan
+- Shipping fee: 15 yuan
+- Page size: 12 items
+- Session timeout: 60 min
+- Security headers: CSP, X-Frame-Options, X-XSS-Protection, HSTS, Permissions-Policy
+
+## Current Backup (V19.1 - 2026-07-14)
+- Database: database/backups/V19.1/PerfumeShop_V19.1_Full_20260714_121944.bak (17.09 MB, verified OK)
+- Code: database/backups/V19.1/PerfumeShop_V19.1_code_20260714_122335.zip (~89 MB, 718 items)
+- Snapshot: database/backups/V19.1/VERSION_SNAPSHOT.txt
+
+## Version History
+- V19.1 (2026-07-14): 全栈融合里程碑 — .NET 8 API/Admin + M1/M2 迁移 + 性能索引
+- V18.3 (2026-07-06): 导航修复 + V19 Phase 0 启动
+- V18.0 (2026-06-30): 运营功能大版本 (会员/积分/优惠券/秒杀/拼团/订阅/社区)
+- V17.0 (2026-06-25): 国际化 + PWA 增强 + 代码快照备份
+- V16.0 (2026-06-24): DAL 统一数据访问层 + SHA-512 密码升级
+- V15.0 (2026-06-24): 安全加固 + 功能开关体系
+- V14.0: 推荐分销系统 (Referral)
+- V13.3 (2026-06-17): 采购/财务系统完善
+- V13.0 (2026-06-12): 后台模块化重构
+- V12.0 (2026-06-10): 产品中心 + 技术中心
+- V11.5 (2026-06-10): 采购管理 + 库存优化
+- V10.5 (2026-06-10): 财务管理系统
+- V9.0 (2026-06-10): 固香品牌 + 成本核算
+- V8.0 (2026-06-05): 基础电商功能
+
+## V19 New Modules
+- v19-api/ (62 files): .NET 8 REST API + Razor Pages 前台
+- v19-admin/ (81 files): .NET 8 Blazor Server 管理后台
+- database/v19_migrations/: 里程碑迁移管理框架
+- database/v19_perf_indexes.sql: 9个性能索引
+
+## V19 Database Migrations
+- M1: Orders 扩展 (CouponCode/CouponDiscount + PointsEarned/PointsRedeemed/PointsDiscount) + ProductReviews 扩展 + ReviewImages 表
+- M2: AuthTokens 表 (JWT Refresh Token 持久化)
+
+## Known Patterns (for future iterations)
+1. conn.Execute + MoveLast = use client cursor (CursorLocation=3)
+2. ASP cannot CREATE TABLE (IIS lacks DDL permission)
+3. Chinese paths in sqlcmd pipes = garbled (use C:\temp as intermediate)
+4. Compress-Archive fails on locked .NET assemblies → exclude bin/obj
+# PerfumeShop - Version Snapshot
+# Generated: 2026-06-10
 # Last Updated: 2026-06-10 (V9 iteration start)
 # ========================================
 

@@ -1,0 +1,48 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+
+<MudThemeProvider Theme="@_theme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudMainContent Style="min-height:100vh; background:linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
+    @Body
+</MudMainContent>
+
+@code {
+    private MudTheme _theme = new()
+    {
+#pragma warning disable CS0618
+        Palette = new Palette
+        {
+            Primary = "#4361ee",
+            Secondary = "#3f37c9",
+            Info = "#00bcd4",
+            Success = "#4caf50",
+            Warning = "#ffc107",
+            Error = "#F44336",
+            Dark = "#1a1a2e",
+            TextPrimary = "#e0e0e0",
+            TextSecondary = "#b0b0b0",
+            Surface = "#2d2d44",
+            Background = "#1a1a2e",
+        },
+#pragma warning restore CS0618
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#00bcd4",
+            Secondary = "#26c6da",
+            Info = "#00bcd4",
+            Success = "#66bb6a",
+            Warning = "#ffd54f",
+            Error = "#EF5350",
+            Dark = "#0f0f1a",
+            TextPrimary = "#e0e0e0",
+            TextSecondary = "#b0b0b0",
+            Surface = "#2d2d44",
+            Background = "#1a1a2e",
+        }
+    };
+}

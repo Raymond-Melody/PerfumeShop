@@ -1,0 +1,19 @@
+@page "/admin/system/user-roles"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>用户角色分配</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">用户角色分配</MudText>
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>用户ID</MudTh><MudTh>用户名</MudTh><MudTh>角色ID</MudTh><MudTh>部门</MudTh><MudTh>操作</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.AdminId</MudTd><MudTd>@context.Username</MudTd><MudTd>@context.RoleId</MudTd><MudTd>@context.Department</MudTd>
+        <MudTd><MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Info" Href="@($"/admin/system/user-edit/{context.AdminId}")" /></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<AdminUser> _items = new();
+    protected override async Task OnInitializedAsync() { _items = await Db.AdminUsers.AsNoTracking().ToListAsync(); }
+}

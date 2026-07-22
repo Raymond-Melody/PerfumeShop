@@ -1,0 +1,22 @@
+@page "/admin/finance/payables"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>应付管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">应付管理</MudText>
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/admin/finance/payable-create" StartIcon="@Icons.Material.Filled.Add" Class="mb-4">新建应付</MudButton>
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent><MudTh>ID</MudTh><MudTh>应付单号</MudTh><MudTh>供应商</MudTh><MudTh>金额</MudTh><MudTh>已付</MudTh><MudTh>状态</MudTh><MudTh>到期日</MudTh><MudTh>操作</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.PayableId</MudTd><MudTd>@context.PayableNo</MudTd><MudTd>@context.SupplierName</MudTd><MudTd>¥@context.Amount?.ToString("F2")</MudTd><MudTd>¥@context.PaidAmount?.ToString("F2")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "paid" ? Color.Success : context.Status == "overdue" ? Color.Error : Color.Warning)">@context.Status</MudChip></MudTd>
+        <MudTd>@context.DueDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd><MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/admin/finance/payable-detail/{context.PayableId}")" /></MudTd>
+    </RowTemplate><PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<AccountsPayable> _items = new();
+    protected override async Task OnInitializedAsync() { _items = await Db.AccountsPayables.AsNoTracking().OrderByDescending(p => p.PayableId).ToListAsync(); }
+}

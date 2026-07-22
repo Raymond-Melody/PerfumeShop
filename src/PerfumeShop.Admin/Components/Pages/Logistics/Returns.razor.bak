@@ -1,0 +1,93 @@
+<!-- V19物流管理 · 退货处理 -->
+@page "/admin/logistics/returns"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject ISnackbar Snackbar
+
+<PageTitle>退货处理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-undo-alt" style="color:#F44336;"></i> 退货处理</MudText>
+
+@if (_loaded)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="3">
+            <MudSelect @bind-Value="_statusFilter" Placeholder="状态筛选" Clearable="true">
+                <MudSelectItem Value="@("Pending")">待处理</MudSelectItem>
+                <MudSelectItem Value="@("Approved")">已通过</MudSelectItem>
+                <MudSelectItem Value="@("Rejected")">已拒绝</MudSelectItem>
+                <MudSelectItem Value="@("Refunded")">已退款</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+
+    <MudTable Items="@GetFiltered()" Hover="true" Dense="true" Striped="true">
+        <HeaderContent>
+            <MudTh>售后ID</MudTh><MudTh>订单号</MudTh><MudTh>类型</MudTh>
+            <MudTh>原因</MudTh><MudTh>退款金额</MudTh><MudTh>状态</MudTh>
+            <MudTh>申请时间</MudTh><MudTh>操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>#@context.AfterSalesId</MudTd>
+            <MudTd Style="font-weight:600;color:#00bcd4;">@context.OrderId</MudTd>
+            <MudTd>@context.Type</MudTd>
+            <MudTd>@context.Reason</MudTd>
+            <MudTd Style="color:#F44336;">@context.RefundAmount?.ToString("C2")</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip></MudTd>
+            <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd>
+                @if (context.Status == "Pending")
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" OnClick="@(() => ApproveReturn(context))" Title="通过" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" OnClick="@(() => RejectReturn(context))" Title="拒绝" />
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private bool _loaded;
+    private List<AfterSale> _returns = new();
+    private string? _statusFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _returns = await Db.AfterSales.AsNoTracking().OrderByDescending(a => a.CreatedAt).Take(200).ToListAsync();
+        _loaded = true;
+    }
+
+    private List<AfterSale> GetFiltered()
+    {
+        var q = _returns.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(_statusFilter)) q = q.Where(a => a.Status == _statusFilter);
+        return q.ToList();
+    }
+
+    private async Task ApproveReturn(AfterSale item)
+    {
+        await Db.AfterSales.Where(a => a.AfterSalesId == item.AfterSalesId)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.Status, "Approved"));
+        Snackbar.Add($"退货申请 #{item.AfterSalesId} 已通过", Severity.Success);
+        item.Status = "Approved";
+    }
+
+    private async Task RejectReturn(AfterSale item)
+    {
+        await Db.AfterSales.Where(a => a.AfterSalesId == item.AfterSalesId)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.Status, "Rejected"));
+        Snackbar.Add($"退货申请 #{item.AfterSalesId} 已拒绝", Severity.Warning);
+        item.Status = "Rejected";
+    }
+
+    private static Color GetStatusColor(string? s) => s switch
+    {
+        "Pending" => Color.Warning, "Approved" => Color.Info, "Refunded" => Color.Success, "Rejected" => Color.Error, _ => Color.Default
+    };
+}

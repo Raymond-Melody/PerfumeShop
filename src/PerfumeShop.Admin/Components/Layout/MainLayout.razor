@@ -1,71 +1,381 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Authorization
+@using global::System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize]
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthState
 
-<MudThemeProvider Theme="@_theme" IsDarkMode="@_isDarkMode" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+@if (_isPortal)
+{
+    @Body
+}
+else
+{
+    <MudThemeProvider Theme="@_theme" IsDarkMode="@_isDarkMode" />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="1" Dense="true">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
-        <MudText Typo="Typo.h6">PerfumeShop 管理后台</MudText>
-        <MudSpacer />
-        <MudText Typo="Typo.body2" Class="mr-4">V19 Admin</MudText>
-        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                       Color="Color.Inherit" OnClick="@ToggleDarkMode" />
-    </MudAppBar>
+    <MudLayout Class="admin-dashboard v19-admin-layout">
+        <MudAppBar Elevation="0" Class="admin-navbar v19-admin-appbar">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
+            <MudText Typo="Typo.h6" Class="admin-nav-brand">
+                <i class="fas @_moduleHeaderIcon" style="color:@_moduleColor;"></i>
+                <span>@_moduleTitle</span>
+            </MudText>
+            <MudSpacer />
+            <MudChip Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined" Class="mr-2">V19</MudChip>
+            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" Color="Color.Inherit" OnClick="@ToggleDarkMode" />
+        </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <MudDrawerHeader>
-            <MudText Typo="Typo.h6">导航菜单</MudText>
-        </MudDrawerHeader>
-        <MudNavMenu>
-            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">运营仪表盘</MudNavLink>
+        <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="0"
+                   Class="sidebar v19-admin-drawer" Style="position:fixed;top:60px;bottom:0;overflow-y:auto;">
 
-            <MudNavGroup Title="运营管理" Icon="@Icons.Material.Filled.Store" Expanded="true">
-                <MudNavLink Href="/admin/orders" Icon="@Icons.Material.Filled.Receipt">订单管理</MudNavLink>
-                <MudNavLink Href="/admin/products" Icon="@Icons.Material.Filled.ShoppingBag">商品管理</MudNavLink>
-                <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">客户管理</MudNavLink>
-            </MudNavGroup>
+            <div class="sidebar-header" style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <h3 style="color:#e0e0e0;margin:0;font-size:16px;display:flex;align-items:center;gap:10px;">
+                    <i class="fas @_moduleHeaderIcon" style="color:@_moduleColor;"></i>
+                    @_sidebarTitle
+                </h3>
+                <p style="color:#888;font-size:11px;margin:8px 0 0;">@_moduleDesc</p>
+            </div>
 
-            <MudNavGroup Title="营销中心" Icon="@Icons.Material.Filled.Campaign" Expanded="false">
-                <MudNavLink Href="/admin/flash-sale" Icon="@Icons.Material.Filled.FlashOn">秒杀管理</MudNavLink>
-                <MudNavLink Href="/admin/group-buy" Icon="@Icons.Material.Filled.Groups">拼团管理</MudNavLink>
-                <MudNavLink Href="/admin/subscription" Icon="@Icons.Material.Filled.Subscriptions">订阅管理</MudNavLink>
-                <MudNavLink Href="/admin/points" Icon="@Icons.Material.Filled.Stars">积分管理</MudNavLink>
-            </MudNavGroup>
+            <ul class="sidebar-menu" style="list-style:none;padding:20px 0;margin:0;">
+                @foreach (var item in _currentNavItems)
+                {
+                    if (item.IsSectionTitle)
+                    {
+                        <li class="sidebar-section-title">@item.Label</li>
+                    }
+                    else
+                    {
+                        <li>
+                            <a href="@item.Url" class="@(IsActive(item.Url) ? "active" : "")">
+                                <i class="fas @item.Icon" style="width:20px;margin-right:10px;text-align:center;"></i>
+                                <span>@item.Label</span>
+                            </a>
+                        </li>
+                    }
+                }
+            </ul>
 
-            <MudNavGroup Title="系统" Icon="@Icons.Material.Filled.Settings" Expanded="false">
-                <MudNavLink Href="/admin/analytics" Icon="@Icons.Material.Filled.Analytics">数据分析</MudNavLink>
-            </MudNavGroup>
-        </MudNavMenu>
-    </MudDrawer>
+            <div class="sidebar-footer" style="padding:15px 20px;border-top:1px solid rgba(255,255,255,0.06);">
+                <a href="/" style="color:#666;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-arrow-left"></i> 返回管理中心
+                </a>
+            </div>
+        </MudDrawer>
 
-    <MudMainContent Class="pa-4">
-        @Body
-    </MudMainContent>
-</MudLayout>
+        <MudMainContent Class="main-content v19-admin-main pa-4">
+            @Body
+        </MudMainContent>
+    </MudLayout>
+}
 
 @code {
     private bool _drawerOpen = true;
-    private bool _isDarkMode = false;
+    private bool _isDarkMode = true;
+    private bool _isPortal;
+    private bool _isFinanceManager;
+    private bool _isTechManager;
+    private string _moduleTitle = "V19 管理中心";
+    private string _sidebarTitle = "管理中心";
+    private string _moduleDesc = "";
+    private string _moduleColor = "#00bcd4";
+    private string _moduleHeaderIcon = "fa-cubes";
+    private List<V18NavItem> _currentNavItems = new();
+
+    // ---- helpers ----
+    record V18NavItem(string Icon, string Label, string Url, bool IsSectionTitle = false)
+    {
+        public static V18NavItem Section(string label) => new("", label, "", IsSectionTitle: true);
+    }
+
+    private bool IsActive(string url)
+    {
+        var current = Navigation.Uri.Replace(Navigation.BaseUri, "/").ToLower().TrimEnd('/');
+        url = url.ToLower().TrimEnd('/');
+        if (string.IsNullOrEmpty(url)) return false;
+        return current == url || (url != "/" && current.StartsWith(url + "/"));
+    }
 
     private MudTheme _theme = new()
     {
-#pragma warning disable CS0618 // Palette 已废弃，MudBlazor 6.21.0 尚未提供 PaletteLight
-        Palette = new Palette
-        {
-            Primary = "#7C4DFF",
-            Secondary = "#FF4081",
-            AppbarBackground = "#7C4DFF",
-        },
-#pragma warning restore CS0618
-        PaletteDark = new PaletteDark
-        {
-            Primary = "#BB86FC",
-            Secondary = "#CF6679",
-        }
+        Palette = new() { Primary = "#00bcd4", Secondary = "#26c6da", Tertiary = "#FF9800", Info = "#00bcd4", Success = "#4caf50", Warning = "#ffc107", Error = "#F44336", Dark = "#1a1a2e", TextPrimary = "#e0e0e0", TextSecondary = "#b0b0b0", Surface = "#2d2d44", Background = "#1a1a2e", AppbarBackground = "#1a1a2e", DrawerBackground = "#1a1a2e", DrawerText = "#e0e0e0", DrawerIcon = "#00bcd4" },
+        PaletteDark = new() { Primary = "#00bcd4", Secondary = "#26c6da", Info = "#00bcd4", Success = "#66bb6a", Warning = "#ffd54f", Error = "#EF5350", Dark = "#0f0f1a", TextPrimary = "#e0e0e0", TextSecondary = "#b0b0b0", Surface = "#2d2d44", Background = "#1a1a2e", AppbarBackground = "#1a1a2e", DrawerBackground = "#1a1a2e", DrawerText = "#e0e0e0", DrawerIcon = "#00bcd4" }
     };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isPortal = Navigation.Uri == Navigation.BaseUri || Navigation.Uri == Navigation.BaseUri + "/";
+        await ReadAuthState();
+        DetectModule(Navigation.Uri);
+        Navigation.LocationChanged += async (s, e) => { _isPortal = e.Location == Navigation.BaseUri || e.Location == Navigation.BaseUri + "/"; await ReadAuthState(); DetectModule(e.Location); StateHasChanged(); };
+    }
+
+    async Task ReadAuthState()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        var roleCode = state.User.FindFirst("RoleCode")?.Value ?? "";
+        _isFinanceManager = roleCode == "FIN_MANAGER" || roleCode == "SUPER_ADMIN";
+        _isTechManager = roleCode == "TECH_MANAGER" || roleCode == "SUPER_ADMIN";
+    }
+
+    void DetectModule(string uri)
+    {
+        var p = uri.Replace(Navigation.BaseUri, "/").ToLower();
+        if      (p.StartsWith("/admin/finance"))      LoadFinance();
+        else if (p.StartsWith("/admin/purchase"))      LoadPurchase();
+        else if (p.StartsWith("/admin/techcenter"))    LoadTechCenter();
+        else if (p.StartsWith("/admin/system"))        LoadSystem();
+        else if (p.StartsWith("/admin/prodcenter"))    LoadProdCenter();
+        else if (p.StartsWith("/admin/semifinished"))  LoadSemiFinished();
+        else if (p.StartsWith("/admin/logistics"))     LoadLogistics();
+        else if (p.StartsWith("/admin/inventory"))     LoadInventory();
+        else if (p.StartsWith("/admin/analytics"))     LoadAnalytics();
+        else                                           LoadOperation();
+    }
+
+    // ===== 运营管理 =====
+    void LoadOperation()
+    {   _sidebarTitle = "运营管理中心"; _moduleTitle = "运营管理中心"; _moduleDesc = "订单 · 客户 · 商品 · 营销"; _moduleColor = "#667eea"; _moduleHeaderIcon = "fa-chart-line";
+        _currentNavItems = new() {
+            new("fa-home","运营概览","/admin/Operation/Index"),
+            V18NavItem.Section("订单与客户"),
+            new("fa-shopping-cart","订单管理","/admin/Operation/Orders"),
+            new("fa-users","客户管理","/admin/Operation/Customers"),
+            new("fa-coins","积分管理","/admin/Operation/Points"),
+            V18NavItem.Section("售后与评价"),
+            new("fa-headset","售后管理","/admin/Operation/AfterSales"),
+            new("fa-star","评价管理","/admin/Operation/ReviewsManage"),
+            V18NavItem.Section("商品与内容"),
+            new("fa-box","商品上下架","/admin/Operation/Products"),
+            new("fa-file-alt","内容页面","/admin/Operation/ContentPages"),
+            V18NavItem.Section("营销与推广"),
+            new("fa-bullhorn","营销活动","/admin/Operation/Marketing"),
+            new("fa-ticket-alt","优惠券管理","/admin/Operation/CouponManagement"),
+            new("fa-layer-group","会员等级","/admin/Operation/TierManagement"),
+            new("fa-bolt","秒杀管理","/admin/Operation/FlashSale"),
+            new("fa-users","拼团管理","/admin/Operation/GroupBuy"),
+            new("fa-box-open","订阅管理","/admin/Operation/SubscriptionPlans"),
+            new("fa-user-friends","推荐码管理","/admin/Operation/ReferralCodes"),
+            new("fa-toggle-on","支付开关","/admin/Operation/PaymentSwitch"),
+            V18NavItem.Section("社区与内容"),
+            new("fa-comments","社区帖子","/admin/Operation/CommunityPosts"),
+            new("fa-comment-dots","评论管理","/admin/Operation/CommunityComments"),
+        };
+    }
+
+    // ===== 采购管理 =====
+    void LoadPurchase()
+    {   _sidebarTitle = "采购管理中心"; _moduleTitle = "采购管理中心"; _moduleDesc = "六大品类 · 成本传导"; _moduleColor = "#FF9800"; _moduleHeaderIcon = "fa-shopping-cart";
+        _currentNavItems = new() {
+            new("fa-home","采购概览","/admin/Purchase/Dashboard"),
+            V18NavItem.Section("采购业务"),
+            new("fa-file-invoice","采购订单","/admin/Purchase/OrderList"),
+            new("fa-clipboard-check","收货入库","/admin/Purchase/Receiving"),
+            new("fa-robot","智能补货","/admin/Purchase/Replenishment"),
+            V18NavItem.Section("供应商管理"),
+            new("fa-truck","供应商管理","/admin/Purchase/SupplierManagement"),
+            new("fa-tags","价格管理","/admin/Purchase/PriceManagement"),
+            V18NavItem.Section("专项采购"),
+            new("fa-box","包装物采购","/admin/Purchase/OrderList"),
+            new("fa-wine-bottle","瓶子采购","/admin/Purchase/OrderList"),
+            new("fa-print","印刷品采购","/admin/Purchase/OrderList"),
+            new("fa-spray-can","喷头采购","/admin/Purchase/OrderList"),
+            V18NavItem.Section("品牌定香采购"),
+            new("fa-boxes","品牌定香概览","/admin/Purchase/FixedBrand"),
+            V18NavItem.Section("成本管理"),
+            new("fa-calculator","订单成本汇总","/admin/Purchase/CostSummary"),
+        };
+    }
+
+    // ===== 财务管理 =====
+    void LoadFinance()
+    {   _sidebarTitle = "财务管理中心"; _moduleTitle = "财务管理中心"; _moduleDesc = "应收应付 · 成本 · 总账 · 报表"; _moduleColor = "#00bcd4"; _moduleHeaderIcon = "fa-dollar-sign";
+        var items = new List<V18NavItem> {
+            new("fa-home","财务概览","/admin/finance"),
+            V18NavItem.Section("财务中台"),
+            new("fa-coins","成本管理","/admin/finance/cost-management"),
+            new("fa-calculator","费用分摊","/admin/finance/expense-allocation"),
+            new("fa-balance-scale","对账中心","/admin/finance/reconciliation"),
+        };
+        if (_isFinanceManager)
+        {
+            items.Add(new("fa-clipboard-check","采购审核","/admin/finance/purchase-review"));
+        }
+        items.AddRange(new[] {
+            V18NavItem.Section("资金台账"),
+            new("fa-wallet","资金看板","/admin/finance/fund-dashboard"),
+            new("fa-chart-line","现金流预测","/admin/finance/cash-flow"),
+            new("fa-exchange-alt","流水管理","/admin/finance/transactions"),
+            new("fa-file-invoice-dollar","应付账款","/admin/finance/accounts-payable"),
+            new("fa-hand-holding-usd","应收账款","/admin/finance/accounts-receivable"),
+            new("fa-receipt","付款凭证","/admin/finance/payment-vouchers"),
+            V18NavItem.Section("报表分析"),
+            new("fa-chart-line","经营利润表","/admin/finance/profit-report"),
+            new("fa-box-open","单品分析","/admin/finance/product-analysis"),
+            new("fa-bullhorn","营销统计","/admin/finance/marketing-stats"),
+            new("fa-chart-pie","预算管理","/admin/finance/budget-management"),
+            new("fa-book","总账报表","/admin/finance/gl-report"),
+            V18NavItem.Section("系统配置"),
+        });
+        if (_isFinanceManager)
+        {
+            items.Add(new("fa-credit-card","支付配置","/admin/finance/payment-config"));
+        }
+        items.AddRange(new[] {
+            new("fa-chart-bar","收入统计","/admin/finance/revenue"),
+            new("fa-file-alt","财务报表","/admin/finance/reports"),
+            new("fa-building","成本中心","/admin/finance/cost-centers"),
+            V18NavItem.Section("综合报表"),
+            new("fa-chart-pie","综合报表中心","/admin/finance/comprehensive-report"),
+            V18NavItem.Section("风控管理"),
+            new("fa-shield-alt","风控管理","/admin/finance/risk-control"),
+        });
+        _currentNavItems = items;
+    }
+
+    // ===== 技术中心 =====
+    void LoadTechCenter()
+    {   _sidebarTitle = "产品技术管理中心"; _moduleTitle = "产品技术管理中心"; _moduleDesc = "配方 · 基香 · 香调 · 产品"; _moduleColor = "#00bcd4"; _moduleHeaderIcon = "fa-flask";
+        var items = new List<V18NavItem> {
+            new("fa-home","技术概览","/admin/TechCenter"),
+            V18NavItem.Section("原料层"),
+            new("fa-wine-bottle","基香管理","/admin/TechCenter/BaseNoteManagement"),
+            V18NavItem.Section("配方层"),
+            new("fa-leaf","香调管理","/admin/TechCenter/NoteManagement"),
+            new("fa-vial","配方设置","/admin/TechCenter/FormulaManagement"),
+        };
+        if (_isTechManager)
+        {
+            items.Add(new("fa-lock","配方拆分发布 🔒","/admin/TechCenter/RecipePublish"));
+        }
+        items.AddRange(new[] {
+            V18NavItem.Section("产品层"),
+            new("fa-box-open","产品设置","/admin/TechCenter/ProductSettings"),
+            new("fa-prescription-bottle","瓶型管理","/admin/TechCenter/BottleManagement"),
+            V18NavItem.Section("审核管理"),
+            new("fa-user-check","KOL审核","/admin/TechCenter/KolReviews"),
+        });
+        _currentNavItems = items;
+    }
+
+    // ===== 系统管理 =====
+    void LoadSystem()
+    {   _sidebarTitle = "站点技术管理"; _moduleTitle = "站点技术管理"; _moduleDesc = "权限 · 安全 · 备份 · 日志"; _moduleColor = "#E91E63"; _moduleHeaderIcon = "fa-shield-alt";
+        _currentNavItems = new() {
+            new("fa-home","系统概览","/admin/system/users"),
+            V18NavItem.Section("权限管理"),
+            new("fa-users-cog","管理员管理","/admin/system/users"),
+            new("fa-user-tag","角色管理","/admin/system/roles"),
+            new("fa-history","操作日志","/admin/system/operation-log"),
+            new("fa-shield-alt","审计日志 V16","/admin/system/audit-log"),
+            V18NavItem.Section("系统安全"),
+            new("fa-shield-alt","安全审计","/admin/system/audit-log"),
+            new("fa-database","备份中心","/admin/system/backup"),
+            new("fa-ban","IP黑名单","/admin/system/users"),
+            new("fa-user-shield","登录监控","/admin/system/login-history"),
+            V18NavItem.Section("安全防护"),
+            new("fa-key","密码重置","/admin/system/admin-reset"),
+            new("fa-shield-alt","安全审计","/admin/system/security-audit"),
+            new("fa-ban","IP黑名单","/admin/system/ip-blacklist"),
+            V18NavItem.Section("站点配置"),
+            new("fa-sliders-h","站点设置","/admin/system/config"),
+            new("fa-images","图片管理","/admin/system/image-management"),
+            new("fa-check-double","数据质量","/admin/system/data-quality"),
+            V18NavItem.Section("帮助文档"),
+            new("fa-book-open","使用指南","/admin/system/guide"),
+            new("fa-code-branch","版本信息","/admin/system/version-info"),
+        };
+    }
+
+    // ===== 生产中心 =====
+    void LoadProdCenter()
+    {   _sidebarTitle = "产品生产中心"; _moduleTitle = "产品生产中心"; _moduleDesc = "香调 → 成品"; _moduleColor = "#4CAF50"; _moduleHeaderIcon = "fa-industry";
+        _currentNavItems = new() {
+            V18NavItem.Section("总览"),
+            new("fa-tachometer-alt","生产概览","/admin/prodcenter"),
+            V18NavItem.Section("生产管理"),
+            new("fa-clipboard-list","生产工单管理","/admin/prodcenter/production-management"),
+            new("fa-calendar-alt","排产调度","/admin/prodcenter/prod-scheduling"),
+            new("fa-cogs","车间作业","/admin/prodcenter/prod-workshop"),
+            new("fa-check-circle","质量检验","/admin/prodcenter/prod-qc"),
+            new("fa-warehouse","成品入库","/admin/prodcenter/prod-warehouse"),
+            new("fa-shopping-cart","订单级生产追踪","/admin/prodcenter/sync-orders"),
+            V18NavItem.Section("库存管理"),
+            new("fa-box","成品库存","/admin/prodcenter/product-inventory"),
+            new("fa-flask","瓶子库存","/admin/prodcenter/bottle-inventory"),
+            new("fa-box-open","包装物库存","/admin/prodcenter/packaging-inventory"),
+        };
+    }
+
+    // ===== 半成品管理 - 修复路由映射 =====
+    void LoadSemiFinished()
+    {   _sidebarTitle = "半成品生产中心"; _moduleTitle = "半成品生产中心"; _moduleDesc = "原料 → 基香 → 香调"; _moduleColor = "#2196F3"; _moduleHeaderIcon = "fa-flask";
+        _currentNavItems = new() {
+            V18NavItem.Section("总览"),
+            new("fa-tachometer-alt","生产概览","/admin/semifinished"),
+            V18NavItem.Section("生产管理"),
+            new("fa-cogs","Accord生产","/admin/semifinished/accord-production"),
+            new("fa-vial","基香生产","/admin/semifinished/base-note-production"),
+            new("fa-exchange-alt","车间调拨","/admin/semifinished/workshop-transfer"),
+            V18NavItem.Section("库存管理"),
+            new("fa-chart-pie","库存仪表盘","/admin/semifinished/inventory-dashboard"),
+            new("fa-boxes","原料库存","/admin/semifinished/raw-material-inventory"),
+            new("fa-database","基香库存","/admin/semifinished/base-note-inventory"),
+            new("fa-layer-group","香调库存","/admin/semifinished/note-inventory"),
+            new("fa-truck-loading","原料出库","/admin/semifinished/material-outbound"),
+            V18NavItem.Section("预警"),
+            new("fa-exclamation-triangle","库存预警","/admin/semifinished/inventory-alerts"),
+        };
+    }
+
+    // ===== 物流管理 =====
+    void LoadLogistics()
+    {   _sidebarTitle = "物流管理中心"; _moduleTitle = "物流管理中心"; _moduleDesc = "发货 → 在途 → 签收"; _moduleColor = "#FF9800"; _moduleHeaderIcon = "fa-truck";
+        _currentNavItems = new() {
+            V18NavItem.Section("总览"),
+            new("fa-tachometer-alt","物流概览","/admin/logistics"),
+            V18NavItem.Section("发货管理"),
+            new("fa-clipboard-check","待发货订单","/admin/logistics/shipping"),
+            new("fa-shipping-fast","运单管理","/admin/logistics/shipments"),
+            V18NavItem.Section("物流追踪"),
+            new("fa-route","在途跟踪","/admin/logistics/tracking"),
+            new("fa-undo-alt","退货管理","/admin/logistics/returns"),
+            V18NavItem.Section("配置"),
+            new("fa-building","物流公司","/admin/logistics/carriers"),
+            new("fa-calculator","运费管理","/admin/logistics/report"),
+        };
+    }
+
+    // ===== 库存管理 =====
+    void LoadInventory()
+    {   _sidebarTitle = "库存管理中心"; _moduleTitle = "库存管理中心"; _moduleDesc = "全品类 · 统一管控"; _moduleColor = "#00BCD4"; _moduleHeaderIcon = "fa-warehouse";
+        _currentNavItems = new() {
+            V18NavItem.Section("总览"),
+            new("fa-chart-pie","库存仪表盘","/admin/inventory"),
+            V18NavItem.Section("库存管理"),
+            new("fa-box","成品库存","/admin/prodcenter/product-inventory"),
+            new("fa-flask","瓶子库存","/admin/prodcenter/bottle-inventory"),
+            new("fa-box-open","包装物库存","/admin/prodcenter/packaging-inventory"),
+            new("fa-boxes","原料库存","/admin/semifinished/raw-material-inventory"),
+            V18NavItem.Section("库存运营"),
+            new("fa-history","库存变动","/admin/inventory/stock-movements"),
+            V18NavItem.Section("预警"),
+            new("fa-exclamation-triangle","库存预警","/admin/inventory/alerts"),
+        };
+    }
+
+    // ===== 数据分析 =====
+    void LoadAnalytics()
+    {   _sidebarTitle = "数据分析仪表盘"; _moduleTitle = "数据分析仪表盘"; _moduleDesc = "营收趋势 · 转化漏斗 · 热门产品"; _moduleColor = "#2196F3"; _moduleHeaderIcon = "fa-chart-bar";
+        _currentNavItems = new() {
+            new("fa-chart-bar","数据分析","/admin/analytics"),
+            new("fa-tachometer-alt","运营看板","/admin/analytics/operations"),
+            new("fa-chart-line","销售分析","/admin/analytics/sales"),
+        };
+    }
 
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
     private void ToggleDarkMode() => _isDarkMode = !_isDarkMode;

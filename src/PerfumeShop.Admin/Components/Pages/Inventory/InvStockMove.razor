@@ -1,0 +1,10 @@
+@page "/admin/inventory/stock-movements"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>库存变动</PageTitle>
+<div class="ph"><h2><i class="fas fa-history" style="color:#00BCD4;"></i> 库存变动记录</h2><div class="br"><a href="/admin/inventory" style="text-decoration:none;color:#00BCD4;">返回库存中心</a></div></div>
+@if(_l){<div class="tc"><table class="ot"><thead><tr><th>ID</th><th>类型</th><th>物品</th><th>变动数量</th><th>参考单号</th><th>时间</th></tr></thead><tbody>@foreach(var s in _items){<tr><td>#@s.MovementId</td><td>@(s.MovementType??"-")</td><td>@(s.ItemName??"-")</td><td>@(s.Quantity?.ToString()??"-")</td><td>@(s.ReferenceNo??"-")</td><td>@(s.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td></tr>}@if(!_items.Any()){<tr><td colspan="6" style="text-align:center;color:#666;padding:30px;">暂无变动记录</td></tr>}</tbody></table></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(0,188,212,0.1);color:#00BCD4;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}</style>
+@code{bool _l;List<StockMovement> _items=new();protected override async Task OnInitializedAsync(){try{_items=await Db.StockMovements.AsNoTracking().OrderByDescending(s=>s.MovementId).Take(100).ToListAsync();_l=true;}catch{_l=true;}}}

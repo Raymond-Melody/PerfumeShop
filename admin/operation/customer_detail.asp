@@ -97,46 +97,46 @@ On Error GoTo 0
         <link rel="stylesheet" href="/css/buttons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .customer-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; }
-        .customer-avatar { width: 80px; height: 80px; border-radius: 50%; background: white; color: #667eea; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; }
+        .customer-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding: 25px; background: linear-gradient(135deg, #00bcd4 0%, #00838f 100%); border-radius: 12px; color: white; }
+        .customer-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #2d2d44, #1e1e32); color: #00bcd4; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; }
         .customer-info h2 { margin: 0 0 5px 0; font-size: 24px; }
         .customer-info p { margin: 0; opacity: 0.9; }
-        .vip-badge-large { display: inline-block; padding: 5px 15px; background: #ffd700; color: #333; border-radius: 20px; font-size: 14px; font-weight: bold; margin-left: 10px; }
+        .vip-badge-large { display: inline-block; padding: 5px 15px; background: #ffd700; color: #1a1a2e; border-radius: 20px; font-size: 14px; font-weight: bold; margin-left: 10px; }
         .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; }
         .status-active { background: #4CAF50; color: white; }
         .status-inactive { background: #f44336; color: white; }
         
         .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
-        .info-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        .info-card h3 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px; font-size: 16px; color: #333; }
+        .info-card { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .info-card h3 { margin-top: 0; border-bottom: 2px solid rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 15px; font-size: 16px; color: #e0e0e0; }
         .info-row { display: flex; margin-bottom: 12px; font-size: 14px; }
-        .info-row .label { width: 100px; color: #666; font-weight: bold; }
-        .info-row .value { flex: 1; color: #333; }
+        .info-row .label { width: 100px; color: #b0b0b0; font-weight: bold; }
+        .info-row .value { flex: 1; color: #e0e0e0; }
         
         .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
-        .stat-box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); text-align: center; }
-        .stat-box i { font-size: 28px; color: #667eea; margin-bottom: 10px; }
-        .stat-box .number { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 5px; }
-        .stat-box .label { color: #666; font-size: 13px; }
+        .stat-box { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
+        .stat-box i { font-size: 28px; color: #00bcd4; margin-bottom: 10px; }
+        .stat-box .number { font-size: 24px; font-weight: bold; color: #e0e0e0; margin-bottom: 5px; }
+        .stat-box .label { color: #b0b0b0; font-size: 13px; }
         
-        .orders-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        .orders-section h3 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 15px; font-size: 16px; color: #333; }
+        .orders-section { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .orders-section h3 { margin-top: 0; border-bottom: 2px solid rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 15px; font-size: 16px; color: #e0e0e0; }
         .orders-table { width: 100%; border-collapse: collapse; }
-        .orders-table th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #eee; }
-        .orders-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; }
-        .orders-table tr:hover { background: #f8f9fa; }
+        .orders-table th { background: linear-gradient(135deg, #00bcd4, #00838f); padding: 12px; text-align: left; font-weight: 600; color: #fff; border-bottom: 2px solid rgba(255,255,255,0.08); }
+        .orders-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .orders-table tr:hover { background: rgba(255,255,255,0.04); }
         .order-status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-        .status-Pending { background: #fff3cd; color: #856404; }
-        .status-Paid { background: #d4edda; color: #155724; }
-        .status-Failed { background: #f8d7da; color: #721c24; }
-        .status-Refunded { background: #e2e3e5; color: #383d41; }
-        .btn-view { color: #667eea; text-decoration: none; }
+        .status-Pending { background: rgba(255,152,0,0.12); color: #ff9800; }
+        .status-Paid { background: rgba(46,125,50,0.2); color: #66bb6a; }
+        .status-Failed { background: rgba(198,40,40,0.2); color: #ef5350; }
+        .status-Refunded { background: rgba(25,118,210,0.2); color: #42a5f5; }
+        .btn-view { color: #00bcd4; text-decoration: none; }
         .btn-view:hover { text-decoration: underline; }
         
-        .not-found { text-align: center; padding: 60px 20px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        .not-found i { font-size: 64px; color: #ddd; margin-bottom: 20px; }
-        .not-found h3 { color: #666; margin-bottom: 10px; }
-        .not-found p { color: #999; }
+        .not-found { text-align: center; padding: 60px 20px; background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .not-found i { font-size: 64px; color: rgba(255,255,255,0.1); margin-bottom: 20px; }
+        .not-found h3 { color: #b0b0b0; margin-bottom: 10px; }
+        .not-found p { color: #888; }
     </style>
 </head>
 <body data-theme="operation-dark">

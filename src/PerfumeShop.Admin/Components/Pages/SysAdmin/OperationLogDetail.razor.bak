@@ -1,0 +1,25 @@
+@page "/admin/system/operation-log-detail/{LogId:long}"
+@using PerfumeShop.Data.Models
+
+<PageTitle>操作日志详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">操作日志详情</MudText>
+@if (_log != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>日志ID:</b> @_log.LogId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>级别:</b> @_log.LogLevel</MudText></MudItem>
+    <MudItem xs="12"><MudText><b>消息:</b> @_log.LogMessage</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>来源:</b> @_log.LogSource</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>行号:</b> @_log.LineNumber</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>用户:</b> @_log.UserName</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>IP:</b> @_log.Ipaddress</MudText></MudItem>
+    <MudItem xs="12"><MudText><b>URL:</b> @_log.PageUrl</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>时间:</b> @_log.CreatedAt?.ToString("yyyy-MM-dd HH:mm:ss")</MudText></MudItem>
+</MudGrid></MudCardContent></MudCard>}
+<MudButton Variant="Variant.Text" Href="/admin/system/operation-log" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public long LogId { get; set; }
+    private AppLog? _log;
+    protected override async Task OnInitializedAsync() { _log = await Db.AppLogs.FindAsync(LogId); }
+}

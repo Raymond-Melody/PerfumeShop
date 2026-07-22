@@ -2,71 +2,66 @@
 @model PerfumeShop.Api.Pages.AboutModel
 @{ ViewData["Title"] = "关于我们"; }
 
-<section class="py-4">
-    <div class="container">
-        <!-- Hero -->
-        <div class="text-center py-5 mb-5 rounded-3" style="background:linear-gradient(135deg,#7C4DFF 0%,#FF4081 100%)">
-            <h1 class="text-white display-5">关于 YourPerfume</h1>
-            <p class="text-white-50 fs-5">让每个人都能找到属于自己的独特香气</p>
-        </div>
+<!-- Hero Banner（V18 棕色渐变） -->
+<section class="about-hero">
+    <div class="container text-center">
+        <h1>关于 Custom Fragrance</h1>
+        <p>让每个人都能找到属于自己的独特香气</p>
+    </div>
+</section>
 
+<section class="page-section">
+    <div class="container">
         <!-- 品牌故事 -->
-        <div class="row g-5 mb-5">
-            <div class="col-md-6">
-                <h3 class="mb-3">品牌故事</h3>
-                <p>YourPerfume 创立于对香氛艺术的热爱与追求。我们相信，香水不仅是一种气味，更是一种自我表达的方式。</p>
+        <div class="about-grid">
+            <div class="about-story">
+                <h3>品牌故事</h3>
+                <p>Custom Fragrance 创立于对香氛艺术的热爱与追求。我们相信，香水不仅是一种气味，更是一种自我表达的方式。</p>
                 <p>从传统的法国格拉斯调香工艺到现代个性化定制技术，我们致力于为每一位客户打造独一无二的嗅觉体验。</p>
                 <p>我们的调香师团队拥有丰富的国际调香经验，结合东方与西方的香调美学，让每一瓶香水都讲述一个独特的故事。</p>
             </div>
-            <div class="col-md-6">
-                <div class="card p-4 bg-light">
-                    <h5 class="mb-3">我们的承诺</h5>
-                    <ul class="list-unstyled">
-                        <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>品质保证</strong> — 所有原料均通过IFRA国际认证</li>
-                        <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>个性定制</strong> — 三种香水类型满足不同需求</li>
-                        <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>无忧退换</strong> — 7天无理由退换货保障</li>
-                        <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>全国包邮</strong> — 满299元即享免费配送</li>
-                        <li class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i> <strong>会员福利</strong> — 积分兑换、生日特权、专属折扣</li>
-                    </ul>
-                </div>
+            <div class="about-commitments">
+                <h5>我们的承诺</h5>
+                <ul>
+                    <li><i class="fas fa-check-circle" style="color:var(--dt-color-success,#28a745)"></i> <strong>品质保证</strong> — 所有原料均通过IFRA国际认证</li>
+                    <li><i class="fas fa-check-circle" style="color:var(--dt-color-success,#28a745)"></i> <strong>个性定制</strong> — 三种香水类型满足不同需求</li>
+                    <li><i class="fas fa-check-circle" style="color:var(--dt-color-success,#28a745)"></i> <strong>无忧退换</strong> — 7天无理由退换货保障</li>
+                    <li><i class="fas fa-check-circle" style="color:var(--dt-color-success,#28a745)"></i> <strong>全国包邮</strong> — 满299元即享免费配送</li>
+                    <li><i class="fas fa-check-circle" style="color:var(--dt-color-success,#28a745)"></i> <strong>会员福利</strong> — 积分兑换、生日特权、专属折扣</li>
+                </ul>
             </div>
         </div>
 
         <!-- 三大香水类型 -->
-        <div class="mb-5">
-            <h3 class="text-center mb-4">三种香水类型</h3>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="card h-100 text-center p-4">
-                        <i class="bi bi-award fs-1 mb-3" style="color:var(--brand)"></i>
-                        <h5>自有定香固定品牌</h5>
-                        <p class="text-muted small">精选经典香型，品质稳定可靠。适合追求经典优雅风格的用户。</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card h-100 text-center p-4">
-                        <i class="bi bi-palette fs-1 mb-3" style="color:var(--brand)"></i>
-                        <h5>用户网上调制香型</h5>
-                        <p class="text-muted small">在线选择前中后调，定制专属香氛。满足个性化需求。</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card h-100 text-center p-4">
-                        <i class="bi bi-star fs-1 mb-3" style="color:var(--brand)"></i>
-                        <h5>KOL推荐香型组合</h5>
-                        <p class="text-muted small">知名博主精选搭配，紧跟潮流趋势。发现新香好选择。</p>
-                    </div>
-                </div>
+        <div class="section-header">
+            <h2>三种香水类型</h2>
+            <p>满足不同场景与风格需求</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-item">
+                <i class="fas fa-award"></i>
+                <h3>自有定香固定品牌</h3>
+                <p>精选经典香型，品质稳定可靠。适合追求经典优雅风格的用户。</p>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-palette"></i>
+                <h3>用户网上调制香型</h3>
+                <p>在线选择前中后调，定制专属香氛。满足个性化需求。</p>
+            </div>
+            <div class="feature-item">
+                <i class="fas fa-star"></i>
+                <h3>KOL推荐香型组合</h3>
+                <p>知名博主精选搭配，紧跟潮流趋势。发现新香好选择。</p>
             </div>
         </div>
 
         <!-- 数据亮点 -->
-        <div class="row g-4 text-center">
+        <div class="stats-grid">
             @foreach (var (num, label) in new[] { ("10+", "年调香经验"), ("50,000+", "满意客户"), ("200+", "香调原料"), ("99%", "好评率") })
             {
-                <div class="col-6 col-md-3">
-                    <div class="fs-2 fw-bold" style="color:var(--brand)">@num</div>
-                    <div class="text-muted">@label</div>
+                <div class="stat-item">
+                    <div class="stat-number">@num</div>
+                    <div class="stat-label">@label</div>
                 </div>
             }
         </div>

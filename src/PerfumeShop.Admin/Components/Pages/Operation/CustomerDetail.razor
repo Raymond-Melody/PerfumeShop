@@ -1,0 +1,214 @@
+@page "/admin/Operation/CustomerDetail/{UserId:int}"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>客户详情</PageTitle>
+
+@if (_loaded)
+{
+    @if (_customer == null)
+    {
+        <div class="not-found"><i class="fas fa-user-slash"></i><h3>未找到该客户</h3><p>该用户ID不存在或已被删除</p><a href="/admin/Operation/Customers" class="btn btn-primary"><i class="fas fa-arrow-left"></i> 返回客户列表</a></div>
+    }
+    else
+    {
+        <!-- 页头 -->
+        <div class="page-header">
+            <h2 class="page-title"><i class="fas fa-user" style="color:#00bcd4;"></i> 客户详情</h2>
+            <div class="breadcrumb">
+                <a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> /
+                <a href="/admin/Operation/Customers" style="color:#00bcd4;text-decoration:none;">客户管理</a> /
+                <span>客户详情</span>
+            </div>
+        </div>
+
+        <!-- 客户头部 -->
+        <div class="customer-header">
+            <div class="customer-avatar">@((_customer.Username ?? "?")[..1].ToUpper())</div>
+            <div class="customer-info">
+                <h2>@(_customer.Username ?? "-")
+                    @if (_customer.IsVip == true)
+                    {
+                        <span class="vip-badge-large"><i class="fas fa-crown"></i> VIP</span>
+                    }
+                </h2>
+                <p>
+                    <i class="fas fa-envelope"></i> @(_customer.Email ?? "-")
+                    @if (!string.IsNullOrEmpty(_customer.Phone))
+                    {
+                        <span>&nbsp;|&nbsp; <i class="fas fa-phone"></i> @_customer.Phone</span>
+                    }
+                    &nbsp;|&nbsp;
+                    @if (_customer.IsActive == true)
+                    {
+                        <span class="status-badge status-active"><i class="fas fa-check-circle"></i> 正常</span>
+                    }
+                    else
+                    {
+                        <span class="status-badge status-inactive"><i class="fas fa-ban"></i> 禁用</span>
+                    }
+                </p>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="stats-row">
+            <div class="stat-box">
+                <i class="fas fa-shopping-bag" style="color:#00bcd4;"></i>
+                <div class="stat-number">@_orderCount</div>
+                <div class="stat-label">订单总数</div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-yen-sign" style="color:#4CAF50;"></i>
+                <div class="stat-number">¥@_totalSpent.ToString("N2")</div>
+                <div class="stat-label">累计消费</div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-coins" style="color:#FFD700;"></i>
+                <div class="stat-number">@(_customer.Points ?? 0)</div>
+                <div class="stat-label">当前积分</div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-calendar-alt" style="color:#CE93D8;"></i>
+                <div class="stat-number">@(_customer.CreatedAt?.ToString("yyyy-MM-dd") ?? "-")</div>
+                <div class="stat-label">注册日期</div>
+            </div>
+        </div>
+
+        <!-- 详细信息 -->
+        <div class="detail-grid">
+            <div class="info-card">
+                <h3><i class="fas fa-id-card"></i> 基本信息</h3>
+                <div class="info-rows">
+                    <div class="info-row"><span class="info-label">用户ID:</span><span class="info-value">#@_customer.UserId</span></div>
+                    <div class="info-row"><span class="info-label">用户名:</span><span class="info-value">@(_customer.Username ?? "-")</span></div>
+                    <div class="info-row"><span class="info-label">真实姓名:</span><span class="info-value">@(_customer.FullName ?? "-")</span></div>
+                    <div class="info-row"><span class="info-label">电子邮箱:</span><span class="info-value">@(_customer.Email ?? "-")</span></div>
+                    <div class="info-row"><span class="info-label">联系电话:</span><span class="info-value">@(_customer.Phone ?? "-")</span></div>
+                    <div class="info-row"><span class="info-label">会员等级:</span><span class="info-value"><span class="tier-badge @GetTierClass()">@GetTierLabel()</span></span></div>
+                </div>
+            </div>
+            <div class="info-card">
+                <h3><i class="fas fa-map-marker-alt"></i> 地址信息</h3>
+                <div class="info-rows">
+                    <div class="info-row"><span class="info-label">所在城市:</span><span class="info-value">@(_customer.City ?? "-")</span></div>
+                    <div class="info-row"><span class="info-label">详细地址:</span><span class="info-value">@(_customer.Address ?? "-")</span></div>
+                    <div class="info-row"><span class="info-label">邮政编码:</span><span class="info-value">@(_customer.PostalCode ?? "-")</span></div>
+                    <div class="info-row"><span class="info-label">偏好香型:</span><span class="info-value"><span class="note-tag">@(_customer.PreferredNote ?? "—")</span></span></div>
+                    <div class="info-row"><span class="info-label">喜爱品类:</span><span class="info-value">@(_customer.FavoriteCategory ?? "—")</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 订单历史 -->
+        <div class="orders-section">
+            <h3><i class="fas fa-history"></i> 订单历史</h3>
+            @if (_recentOrders.Any())
+            {
+                <table class="orders-table">
+                    <thead>
+                        <tr><th>订单号</th><th>下单时间</th><th>订单金额</th><th>状态</th><th>操作</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in _recentOrders)
+                        {
+                            <tr>
+                                <td><strong style="color:#00bcd4;">#@(o.OrderNo ?? "-")</strong></td>
+                                <td>@(o.CreatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td>
+                                <td style="color:#4CAF50;">¥@o.TotalAmount.ToString("N2")</td>
+                                <td><span class="order-status @GetOrderStatusClass(o.Status)">@GetOrderStatusLabel(o.Status)</span></td>
+                                <td><a href="/admin/Operation/OrderDetail/@o.OrderId" class="action-link"><i class="fas fa-eye"></i> 查看</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state"><i class="fas fa-inbox"></i>该客户暂无订单记录</div>
+            }
+        </div>
+    }
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.3s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}.btn-primary:hover{background:linear-gradient(135deg,#00bcd4,#0097a7);}
+.customer-header{display:flex;align-items:center;gap:20px;margin-bottom:30px;padding:25px;background:linear-gradient(135deg,#00bcd4,#00838f);border-radius:14px;color:white;}.customer-avatar{width:80px;height:80px;border-radius:50%;background:rgba(0,0,0,0.3);color:white;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:bold;flex-shrink:0;}.customer-info h2{margin:0 0 5px;font-size:24px;}.customer-info p{margin:0;opacity:0.9;font-size:14px;}.vip-badge-large{display:inline-block;padding:5px 15px;background:#ffd700;color:#1a1a2e;border-radius:20px;font-size:14px;font-weight:bold;margin-left:10px;}.status-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;}.status-active{background:#4CAF50;color:white;}.status-inactive{background:#f44336;color:white;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:30px;}.stat-box{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-box i{font-size:28px;margin-bottom:10px;display:block;}.stat-number{font-size:22px;font-weight:bold;color:#e0e0e0;margin-bottom:5px;}.stat-label{color:#888;font-size:13px;}
+.detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:30px;}.info-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);}.info-card h3{margin:0 0 15px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.08);font-size:16px;color:#e0e0e0;}.info-card h3 i{color:#00bcd4;margin-right:6px;}.info-rows{display:flex;flex-direction:column;gap:8px;}.info-row{display:flex;font-size:14px;}.info-label{width:100px;color:#888;font-weight:bold;flex-shrink:0;}.info-value{flex:1;color:#e0e0e0;}
+.tier-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;}.tier-gold{background:rgba(255,215,0,0.2);color:#FFD700;}.tier-silver{background:rgba(192,192,192,0.2);color:#C0C0C0;}.tier-bronze{background:rgba(205,127,50,0.2);color:#CD853F;}.note-tag{display:inline-block;padding:2px 8px;background:rgba(0,188,212,0.12);color:#80DEEA;border-radius:8px;font-size:12px;}
+.orders-section{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);}.orders-section h3{margin:0 0 15px;font-size:16px;color:#e0e0e0;}.orders-section h3 i{color:#00bcd4;margin-right:6px;}.orders-table{width:100%;border-collapse:collapse;}.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:12px;text-align:left;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.08);}.orders-table td{padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;}.orders-table tr:hover td{background:rgba(255,255,255,0.03);}.order-status{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;}.status-Pending{background:rgba(255,152,0,0.12);color:#ff9800;}.status-Paid{background:rgba(46,125,50,0.2);color:#66bb6a;}.status-Failed{background:rgba(198,40,40,0.2);color:#ef5350;}.status-Refunded{background:rgba(25,118,210,0.2);color:#42a5f5;}.status-Processing{background:rgba(33,150,243,0.2);color:#2196f3;}.status-Shipped{background:rgba(156,39,176,0.2);color:#9C27B0;}.status-Completed{background:rgba(0,105,92,0.2);color:#4caf50;}.status-Cancelled{background:rgba(198,40,40,0.2);color:#c62828;}.action-link{color:#00bcd4;text-decoration:none;font-size:13px;}.action-link:hover{text-decoration:underline;}
+.empty-state{text-align:center;padding:40px;color:#888;}.empty-state i{font-size:48px;display:block;margin-bottom:15px;color:#555;}.not-found{text-align:center;padding:60px 20px;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:14px;border:1px solid rgba(255,255,255,0.05);}.not-found i{font-size:64px;color:rgba(255,255,255,0.1);margin-bottom:20px;}.not-found h3{color:#b0b0b0;margin-bottom:10px;}.not-found p{color:#888;}
+@@media(max-width:768px){.stats-row{grid-template-columns:1fr 1fr;}.detail-grid{grid-template-columns:1fr;}.customer-header{flex-direction:column;text-align:center;}}
+</style>
+
+@code {
+    [Parameter] public int UserId { get; set; }
+
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private bool _loaded;
+    private User? _customer;
+    private List<Order> _recentOrders = new();
+    private int _orderCount;
+    private decimal _totalSpent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _customer = await Db.Users.FirstOrDefaultAsync(u => u.UserId == UserId);
+            if (_customer != null)
+            {
+                var paidStatuses = new[] { "Paid", "paid", "shipped", "delivered" };
+                _recentOrders = await Db.Orders
+                    .Where(o => o.UserId == UserId)
+                    .OrderByDescending(o => o.CreatedAt)
+                    .Take(50)
+                    .ToListAsync();
+                _orderCount = _recentOrders.Count;
+                _totalSpent = await Db.Orders
+                    .Where(o => o.UserId == UserId && paidStatuses.Contains(o.Status!))
+                    .SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
+            }
+            _loaded = true;
+        }
+        catch { _loaded = true; }
+    }
+
+    string GetTierClass()
+    {
+        if (_orderCount == 0) return "";
+        if (_totalSpent >= 5000) return "tier-gold";
+        if (_totalSpent >= 2000) return "tier-silver";
+        return "tier-bronze";
+    }
+
+    string GetTierLabel()
+    {
+        if (_orderCount == 0) return "新客";
+        if (_totalSpent >= 5000) return "金牌";
+        if (_totalSpent >= 2000) return "银牌";
+        return "铜牌";
+    }
+
+    static string GetOrderStatusClass(string? s) => s switch
+    {
+        "Pending" => "status-Pending", "Paid" => "status-Paid", "Failed" => "status-Failed",
+        "Refunded" => "status-Refunded", "Processing" => "status-Processing",
+        "Shipped" => "status-Shipped", "Completed" => "status-Completed",
+        "Cancelled" => "status-Cancelled", _ => ""
+    };
+
+    static string GetOrderStatusLabel(string? s) => s switch
+    {
+        "Pending" => "待支付", "Paid" => "已支付", "Failed" => "支付失败",
+        "Refunded" => "已退款", "Processing" => "处理中", "Shipped" => "已发货",
+        "Completed" => "已完成", "Cancelled" => "已取消", _ => s ?? "-"
+    };
+}

@@ -1,0 +1,24 @@
+@page "/admin/logistics/tracking-detail/{OrderId:int}"
+@using PerfumeShop.Data.Models
+
+<PageTitle>物流追踪详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">物流追踪详情</MudText>
+@if (_order != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>订单号:</b> @_order.OrderNo</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>状态:</b> @_order.Status</MudText></MudItem>
+    <MudItem xs="12"><MudText><b>收货地址:</b> @_order.ShippingAddress</MudText></MudItem>
+</MudGrid></MudCardContent></MudCard>
+<MudTimeline Class="mt-4">
+    <MudTimelineItem Color="Color.Success" Variant="Variant.Filled">已下单 - @_order.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTimelineItem>
+    @if (_order.Status == "shipped" || _order.Status == "delivered") { <MudTimelineItem Color="Color.Primary" Variant="Variant.Filled">已发货</MudTimelineItem> }
+    @if (_order.Status == "delivered") { <MudTimelineItem Color="Color.Success" Variant="Variant.Filled">已签收</MudTimelineItem> }
+</MudTimeline>}
+<MudButton Variant="Variant.Text" Href="/admin/logistics/tracking" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public int OrderId { get; set; }
+    private Order? _order;
+    protected override async Task OnInitializedAsync() { _order = await Db.Orders.FindAsync(OrderId); }
+}

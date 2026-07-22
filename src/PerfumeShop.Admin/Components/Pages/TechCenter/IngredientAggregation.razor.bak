@@ -1,0 +1,60 @@
+@page "/admin/TechCenter/IngredientAggregation"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>成分聚合分析</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">成分聚合分析</MudText>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+    <MudTabPanel Text="按香调聚合" Icon="@Icons.Material.Filled.Spa">
+        <MudTable Items="_noteGroups" Dense="true" Hover="true" Striped="true" Elevation="1">
+            <HeaderContent><MudTh>香调名称</MudTh><MudTh>类型</MudTh><MudTh>成分数</MudTh><MudTh>关联配方数</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.NoteName</MudTd>
+                <MudTd><MudChip T="string" Size="Size.Small">@context.NoteType</MudChip></MudTd>
+                <MudTd>@context.IngredientCount</MudTd>
+                <MudTd>@context.RecipeCount</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+    <MudTabPanel Text="按成本聚合" Icon="@Icons.Material.Filled.AttachMoney">
+        <MudTable Items="_costGroups" Dense="true" Hover="true" Striped="true" Elevation="1">
+            <HeaderContent><MudTh>成分名称</MudTh><MudTh>香调</MudTh><MudTh>平均百分比</MudTh><MudTh>使用配方数</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.IngredientName</MudTd><MudTd>Note #@context.NoteId</MudTd>
+                <MudTd>@context.AvgPct.ToString("F2")%</MudTd><MudTd>@context.UsageCount</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private List<NoteAgg> _noteGroups = new();
+    private List<CostAgg> _costGroups = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var notes = await Db.FragranceNotes.AsNoTracking().ToListAsync();
+        var ingredients = await Db.RecipeIngredients.AsNoTracking().ToListAsync();
+        var recipeNotes = await Db.RecipeNotes.AsNoTracking().ToListAsync();
+
+        _noteGroups = notes.Select(n => new NoteAgg
+        {
+            NoteName = n.NoteName, NoteType = n.NoteType,
+            IngredientCount = ingredients.Count(i => i.NoteId == n.NoteId),
+            RecipeCount = recipeNotes.Where(rn => rn.NoteId == n.NoteId).Select(rn => rn.RecipeId).Distinct().Count()
+        }).OrderByDescending(g => g.IngredientCount).ToList();
+
+        _costGroups = ingredients.GroupBy(i => new { i.IngredientName, i.NoteId })
+            .Select(g => new CostAgg
+            {
+                IngredientName = g.Key.IngredientName ?? "Unknown", NoteId = g.Key.NoteId ?? 0,
+                AvgPct = g.Average(i => i.Percentage ?? 0), UsageCount = g.Count()
+            }).OrderByDescending(c => c.UsageCount).ToList();
+    }
+
+    private class NoteAgg { public string NoteName { get; set; } = ""; public string NoteType { get; set; } = ""; public int IngredientCount { get; set; } public int RecipeCount { get; set; } }
+    private class CostAgg { public string IngredientName { get; set; } = ""; public int NoteId { get; set; } public double AvgPct { get; set; } public int UsageCount { get; set; } }
+}

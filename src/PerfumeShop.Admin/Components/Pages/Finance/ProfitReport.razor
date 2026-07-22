@@ -1,0 +1,25 @@
+@page "/admin/finance/profit-report"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+<PageTitle>经营利润表</PageTitle>
+<div class="ph"><h2><i class="fas fa-chart-line" style="color:#00bcd4;"></i> 经营利润表</h2><div class="br"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>利润表</span></div></div>
+@if(_l){
+<div class="sr"><div class="sc"><div class="sv">¥@_rev.ToString("N0")</div><div class="sl">总营收</div></div><div class="sc"><div class="sv" style="color:#F44336;">¥@_cost.ToString("N0")</div><div class="sl">总成本</div></div><div class="sc"><div class="sv" style="color:#4CAF50;">¥@_profit.ToString("N0")</div><div class="sl">总利润</div></div><div class="sc"><div class="sv" style="color:@(_margin>20?"#4CAF50":"#FF9800");">@_margin.ToString("F1")%</div><div class="sl">利润率</div></div></div>
+<div class="tc"><table class="ot"><thead><tr><th>月份</th><th>订单数</th><th>营收</th><th>成本</th><th>利润</th><th>利润率</th></tr></thead><tbody>@foreach(var m in _monthly){decimal mp=m.Revenue-m.Cost;decimal mr=m.Revenue>0?mp/m.Revenue*100:0;<tr><td>@m.Month</td><td>@m.OrderCount</td><td>¥@m.Revenue.ToString("N0")</td><td>¥@m.Cost.ToString("N0")</td><td style="color:@(mp>=0?"#4CAF50":"#F44336");">¥@mp.ToString("N0")</td><td style="color:@(mr>=20?"#4CAF50":"#FF9800");">@mr.ToString("F1")%</td></tr>}@if(!_monthly.Any()){<tr><td colspan="6" style="text-align:center;color:#666;padding:30px;">暂无数据</td></tr>}</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.sr{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}.sv{font-size:26px;font-weight:bold;}.sl{font-size:13px;color:#888;margin-top:4px;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}</style>
+@code{bool _l;decimal _rev,_cost,_profit,_margin;List<MonthlyProfit> _monthly=new();
+protected override async Task OnInitializedAsync(){try{
+    var paid=new[]{"Paid","paid","Completed","completed","shipped","delivered"};
+    _rev=await Db.Orders.Where(o=>paid.Contains(o.Status!)).SumAsync(o=>o.TotalAmount);
+    _cost=await Db.Orders.Where(o=>paid.Contains(o.Status!)).SumAsync(o=>(decimal?)o.CostAmount)??0;
+    _profit=_rev-_cost;_margin=_rev>0?_profit/_rev*100:0;
+    _monthly=await Db.Orders.Where(o=>paid.Contains(o.Status!)).GroupBy(o=>new{o.CreatedAt!.Value.Year,o.CreatedAt!.Value.Month}).Select(g=>new MonthlyProfit{Month=g.Key.Year+"-"+(g.Key.Month.ToString().PadLeft(2,'0')),OrderCount=g.Count(),Revenue=g.Sum(o=>o.TotalAmount),Cost=g.Sum(o=>(decimal?)o.CostAmount)??0}).OrderByDescending(m=>m.Month).Take(12).ToListAsync();
+    _l=true;}catch{_l=true;}
+}
+class MonthlyProfit{public string Month="";public int OrderCount;public decimal Revenue,Cost;}
+}

@@ -1,0 +1,48 @@
+@page "/admin/system/version-info"
+@rendermode InteractiveServer
+@using System.Diagnostics
+@using Microsoft.EntityFrameworkCore
+@inject PerfumeShopContext Db
+
+<PageTitle>版本信息</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-code-branch" style="color:#E91E63;"></i> 版本信息</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>版本信息</span></div></div>
+@if(_loaded){
+<div style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:30px;border:1px solid rgba(255,255,255,0.05);max-width:700px;">
+<div style="display:grid;grid-template-columns:auto 1fr;gap:15px 20px;font-size:14px;">
+<div style="color:#888;">系统版本:</div><div style="color:#00bcd4;font-weight:600;">V19.0 (Blazor Server)</div>
+<div style="color:#888;">架构:</div><div style="color:#e0e0e0;">ASP.NET Core 8.0 + MudBlazor</div>
+<div style="color:#888;">数据库:</div><div style="color:#e0e0e0;">SQL Server @@localhost\\YOURPERFUME / PerfumeShop</div>
+<div style="color:#888;">进程内存:</div><div style="color:#e0e0e0;">@_memoryMB MB</div>
+<div style="color:#888;">运行时间:</div><div style="color:#e0e0e0;">@_uptime</div>
+<div style="color:#888;">启动时间:</div><div style="color:#e0e0e0;">@_startTime</div>
+<div style="color:#888;">路由页面:</div><div style="color:#e0e0e0;">@_routeCount 个</div>
+<div style="color:#888;">数据表:</div><div style="color:#e0e0e0;">@_tableCount 个</div>
+<div style="color:#888;">兼容:</div><div style="color:#4CAF50;">V18 Classic ASP 双栈共存</div>
+</div>
+</div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+</style>
+
+@code {
+    private bool _loaded;
+    private string _memoryMB="",_uptime="",_startTime="";
+    private int _routeCount,_tableCount;
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            var proc=Process.GetCurrentProcess();
+            _memoryMB=(proc.WorkingSet64/1024.0/1024.0).ToString("F0");
+            _uptime=(DateTime.Now-proc.StartTime).ToString(@"d\d\ h\h\ m\m");
+            _startTime=proc.StartTime.ToString("yyyy-MM-dd HH:mm");
+            _routeCount=68;
+            var entityTypes=typeof(PerfumeShop.Data.Models.PerfumeShopContext).Assembly.GetTypes().Count(t=>t.Namespace!=null&&t.Namespace.Contains("Models")&&t.IsClass&&!t.IsAbstract);
+            _tableCount=entityTypes;
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+}

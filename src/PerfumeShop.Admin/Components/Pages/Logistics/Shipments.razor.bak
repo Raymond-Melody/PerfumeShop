@@ -1,0 +1,100 @@
+<!-- V19物流管理 · 运单管理 -->
+@page "/admin/logistics/shipments"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject ISnackbar Snackbar
+
+<PageTitle>运单管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-clipboard-list" style="color:#FF9800;"></i> 运单管理</MudText>
+
+@if (_loaded)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="3">
+            <MudTextField @bind-Value="_searchText" Placeholder="搜索运单号/订单号..." Adornment="Adornment.Start"
+                           AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+        </MudItem>
+        <MudItem xs="12" sm="2">
+            <MudSelect @bind-Value="_carrierFilter" Placeholder="快递公司" Clearable="true">
+                @foreach (var c in _carrierNames)
+                {
+                    <MudSelectItem Value="@c">@c</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+
+    <MudTable Items="@GetFiltered()" Hover="true" Dense="true" Striped="true">
+        <HeaderContent>
+            <MudTh>运单号</MudTh><MudTh>订单号</MudTh><MudTh>快递公司</MudTh>
+            <MudTh>收货人</MudTh><MudTh>物流状态</MudTh><MudTh>发货时间</MudTh><MudTh>操作</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd Style="font-weight:600;color:#2196F3;">@(context.TrackingNumber ?? "-")</MudTd>
+            <MudTd Style="color:#00bcd4;">@context.OrderNo</MudTd>
+            <MudTd>@context.ShippingCompany</MudTd>
+            <MudTd>@context.ShippingName</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.ShippingStatus)">@context.ShippingStatus</MudChip></MudTd>
+            <MudTd>@context.ShippedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Color="Color.Success"
+                               OnClick="@(() => MarkDelivered(context))" Title="签收确认" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private bool _loaded;
+    private List<Order> _orders = new();
+    private List<string> _carrierNames = new();
+    private string _searchText = "";
+    private string? _carrierFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _orders = await Db.Orders.AsNoTracking()
+            .Where(o => !string.IsNullOrEmpty(o.TrackingNumber) && o.ShippingStatus != null)
+            .OrderByDescending(o => o.ShippedAt).Take(300).ToListAsync();
+        _carrierNames = _orders.Where(o => !string.IsNullOrEmpty(o.ShippingCompany))
+            .Select(o => o.ShippingCompany!).Distinct().OrderBy(c => c).ToList();
+        _loaded = true;
+    }
+
+    private List<Order> GetFiltered()
+    {
+        var q = _orders.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var s = _searchText.Trim();
+            q = q.Where(o => (o.TrackingNumber != null && o.TrackingNumber.Contains(s)) || o.OrderNo.Contains(s));
+        }
+        if (!string.IsNullOrWhiteSpace(_carrierFilter))
+            q = q.Where(o => o.ShippingCompany == _carrierFilter);
+        return q.ToList();
+    }
+
+    private async Task MarkDelivered(Order order)
+    {
+        await Db.Orders.Where(o => o.OrderId == order.OrderId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.ShippingStatus, "Delivered")
+                .SetProperty(o => o.Status, "Delivered")
+                .SetProperty(o => o.DeliveredAt, DateTime.Now)
+                .SetProperty(o => o.UpdatedAt, DateTime.Now));
+        Snackbar.Add($"运单 {order.TrackingNumber} 已签收", Severity.Success);
+        order.ShippingStatus = "Delivered";
+    }
+
+    private static Color GetStatusColor(string? s) => s switch
+    {
+        "InTransit" or "Shipped" => Color.Info, "Delivered" or "Signed" => Color.Success, _ => Color.Default
+    };
+}

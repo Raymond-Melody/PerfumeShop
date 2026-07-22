@@ -400,6 +400,14 @@
     transform: translateY(-3px);
 }
 
+/* 深色主题资金看板覆盖：防止 admin.css 白底覆盖深色内联样式 */
+.dark-theme .stat-card {
+    background: linear-gradient(135deg, #2d2d44 0%, #1e1e32 100%);
+    color: #e0e0e0;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
 .stat-icon {
     width: 60px;
     height: 60px;

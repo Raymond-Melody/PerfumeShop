@@ -1,0 +1,23 @@
+@page "/admin/finance/receivable-detail/{ReceivableId:int}"
+@using PerfumeShop.Data.Models
+
+<PageTitle>应收详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">应收详情</MudText>
+@if (_item != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>应收ID:</b> @_item.ReceivableId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>单号:</b> @_item.ReceivableNo</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>客户:</b> @_item.CustomerName</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>金额:</b> ¥@_item.Amount?.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>已收:</b> ¥@_item.ReceivedAmount?.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>状态:</b> @_item.Status</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>到期日:</b> @_item.DueDate?.ToString("yyyy-MM-dd")</MudText></MudItem>
+</MudGrid></MudCardContent></MudCard>}
+<MudButton Variant="Variant.Text" Href="/admin/finance/receivables" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public int ReceivableId { get; set; }
+    private AccountsReceivable? _item;
+    protected override async Task OnInitializedAsync() { _item = await Db.AccountsReceivables.FindAsync(ReceivableId); }
+}

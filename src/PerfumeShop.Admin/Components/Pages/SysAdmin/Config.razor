@@ -1,0 +1,50 @@
+@page "/admin/system/config"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject SystemRepository SysRepo
+
+<PageTitle>站点设置</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-sliders-h" style="color:#E91E63;"></i> 站点设置</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>站点设置</span></div></div>
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="settings-grid">
+@foreach(var s in _settings){
+<div class="setting-card" style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:10px;padding:20px;border:1px solid rgba(255,255,255,0.05);margin-bottom:12px;">
+<div style="display:flex;align-items:center;justify-content:space-between;">
+<div><div style="color:#e0e0e0;font-weight:600;">@(s.SettingName??s.SettingKey)</div><div style="color:#888;font-size:12px;">@(s.Description??s.SettingKey)</div></div>
+<div style="display:flex;gap:8px;align-items:center;">
+<input style="padding:8px 12px;border:1px solid #3a3a4a;border-radius:6px;background:#1a1a2e;color:#e0e0e0;width:300px;" @bind="s.SettingValue" />
+<button style="background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;" @onclick='()=>SaveSetting(s)'>保存</button>
+</div>
+</div>
+</div>
+}
+@if(!_settings.Any()){<div style="text-align:center;color:#666;padding:40px;">暂无站点设置</div>}
+</div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+</style>
+
+@code {
+    private bool _loaded;
+    private string _msg="",_msgType="";
+    private List<SiteSetting> _settings=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{_settings=await SysRepo.GetSettingsAsync();_loaded=true;}catch{_loaded=true;}
+    }
+    async Task SaveSetting(SiteSetting s){
+        try{s.UpdatedAt=DateTime.Now;await SysRepo.SaveSettingAsync(s);_msg=$"{s.SettingName} 已保存";_msgType="ok";}
+        catch(Exception ex){_msg="保存失败: "+ex.Message;_msgType="err";}
+    }
+}

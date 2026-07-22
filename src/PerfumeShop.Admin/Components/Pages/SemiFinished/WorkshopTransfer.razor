@@ -1,0 +1,86 @@
+@page "/admin/semifinished/workshop-transfer"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>车间调拨</PageTitle>
+<div class="ph"><h2 class="pt"><i class="fas fa-exchange-alt" style="color:#00BCD4;"></i> 车间调拨管理</h2><button class="btn btn-primary" @onclick="OpenTransferModal">+ 新建调拨</button><div class="br"><a href="/admin/semifinished" style="color:#2196F3;text-decoration:none;">半成品中心</a> / 车间调拨</div></div>
+
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="@(_msgErr?"alert-err":"alert-ok")">@_msg</div>}
+
+<div class="sg"><div class="sc"><span class="n" style="color:#00BCD4;">@_items.Count</span><span class="l">总调拨单</span></div><div class="sc"><span class="n" style="color:#FF9800;">@_cntPending</span><span class="l">待审批</span></div><div class="sc"><span class="n" style="color:#2196F3;">@_cntApproved</span><span class="l">已批准</span></div><div class="sc"><span class="n" style="color:#4CAF50;">@_cntFulfilled</span><span class="l">已收货</span></div></div>
+
+<div class="card"><div class="ch">调拨记录（半成品车间→成品车间）</div><div class="cb"><table class="dt"><thead><tr><th>ID</th><th>单号</th><th>类型</th><th>状态</th><th>申请人</th><th>日期</th><th>操作</th></tr></thead><tbody>
+@foreach(var w in _items){var st=w.Status??"";<tr><td>#@w.OutboundId</td><td><strong>@w.OutboundNo</strong></td><td>@w.OutboundType</td><td><span class="@GetCls(st)">@GetLbl(st)</span></td><td>@w.RequestedBy</td><td style="color:#888;">@(w.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@if(st=="Requested"){<button class="btn btn-success btn-sm" @onclick="()=>HandleApprove(w,true)">批准</button><button class="btn btn-danger btn-sm" @onclick="()=>HandleApprove(w,false)">拒绝</button>}else if(st=="Approved"){<button class="btn btn-primary btn-sm" @onclick="()=>HandleFulfill(w)">确认收货</button>}</td></tr>}
+@if(!_items.Any()){<tr><td colspan="7" class="tac tm" style="padding:40px;">暂无调拨记录</td></tr>}
+</tbody></table></div></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showModal){<div class="mo" @onclick="()=>_showModal=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>新建调拨单</h3><button class="mcl" @onclick="()=>_showModal=false">&times;</button></div>
+<div class="fg"><label>出库类型</label><select @bind="_tType" class="fi"><option value="">请选择</option><option value="生产领用">生产领用</option><option value="研发领用">研发领用</option><option value="车间调拨">车间调拨</option><option value="其他出库">其他出库</option></select></div>
+<div class="fg"><label>备注</label><textarea @bind="_tNotes" class="fi" rows="2"></textarea></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showModal=false">取消</button><button class="btn btn-primary" @onclick="CreateTransfer" disabled="@_saving">提交调拨</button></div>
+</div></div>}
+
+@code{
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+bool _loaded,_msgErr,_showModal,_saving;string? _msg;int _cntPending,_cntApproved,_cntFulfilled;
+List<MaterialOutbound> _items=new();
+string _tType="",_tNotes="";
+
+protected override async Task OnInitializedAsync(){await Load();}
+async Task Load(){
+    try{
+        _items=await Db.MaterialOutbounds.OrderByDescending(x=>x.CreatedAt).Take(50).ToListAsync();
+        _cntPending=_items.Count(x=>x.Status=="Requested");_cntApproved=_items.Count(x=>x.Status=="Approved");_cntFulfilled=_items.Count(x=>x.Status=="Fulfilled");
+    }catch(Exception ex){_msg="加载失败: "+ex.Message;_msgErr=true;}
+    _loaded=true;
+}
+
+void OpenTransferModal(){_tType="";_tNotes="";_showModal=true;}
+
+async Task CreateTransfer(){
+    if(string.IsNullOrEmpty(_tType))return;_saving=true;
+    try{
+        var no="TRF"+DateTime.Now.ToString("yyyyMMddHHmmss");
+        // MaterialOutbound 为 keyless 实体，改用参数化原始SQL插入
+        await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO MaterialOutbound (OutboundNo,OutboundType,Status,RequestedBy,OutboundDate,Notes,CreatedAt) VALUES ({no},{_tType},'Requested','admin',GETDATE(),{_tNotes},GETDATE())");
+        _msg="调拨申请成功！单号："+no;_msgErr=false;_showModal=false;await Load();
+    }catch(Exception ex){_msg="创建失败: "+ex.Message;_msgErr=true;_showModal=false;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+async Task HandleApprove(MaterialOutbound w,bool approve){
+    _saving=true;
+    try{
+        var nst=approve?"Approved":"Rejected";
+        await Db.MaterialOutbounds.Where(x=>x.OutboundId==w.OutboundId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.Status,nst));
+        _msg=approve?"调拨已批准":"调拨已拒绝";_msgErr=false;await Load();
+    }catch(Exception ex){_msg="操作失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+async Task HandleFulfill(MaterialOutbound w){
+    _saving=true;
+    try{await Db.MaterialOutbounds.Where(x=>x.OutboundId==w.OutboundId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.Status,"Fulfilled"));_msg="调拨已确认收货";_msgErr=false;await Load();}
+    catch(Exception ex){_msg="操作失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+string GetCls(string s)=>s switch{"Requested"=>"s-rq","Approved"=>"s-ap","Fulfilled"=>"s-fl","Rejected"=>"s-rj",_=>"s-confirmed"};
+string GetLbl(string s)=>s switch{"Requested"=>"待审批","Approved"=>"已批准","Fulfilled"=>"已收货","Rejected"=>"已拒绝",_=>s};
+}
+
+<style>
+.ph{margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}.br{font-size:13px;color:#888;margin-top:5px;}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,0.06);}.sc .n{font-size:28px;font-weight:bold;display:block;}.sc .l{font-size:12px;color:#888;display:block;margin-top:5px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.06);}.ch{padding:14px 20px;background:rgba(0,188,212,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;}.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(0,188,212,0.15);color:#80deea;padding:12px 15px;text-align:left;font-weight:600;font-size:13px;}.dt td{padding:12px 15px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e0e0e0;font-size:14px;}.dt tr:hover td{background:rgba(255,255,255,0.03);}
+.s-rq{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(255,152,0,0.15);color:#ffb74d;}.s-ap{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(33,150,243,0.15);color:#64b5f6;}.s-fl{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(76,175,80,0.15);color:#81c784;}.s-rj{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(244,67,54,0.15);color:#e57373;}.s-confirmed{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(76,175,80,0.15);color:#81c784;}
+.alert-ok{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}.alert-err{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.mo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);width:90%;max-width:500px;padding:30px;border-radius:15px;border:1px solid rgba(255,255,255,0.06);}.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.06);}.mh h3{margin:0;font-size:18px;color:#e0e0e0;}.mcl{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.mft{display:flex;justify-content:flex-end;gap:10px;margin-top:25px;}
+.fg{margin-bottom:18px;}.fg label{display:block;margin-bottom:6px;font-weight:600;color:#e0e0e0;font-size:13px;}.fi{width:100%;padding:10px 12px;background:#2d2d44;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:14px;}.fi:focus{outline:none;border-color:#00BCD4;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:#fff;}.btn-primary{background:#00BCD4;}.btn-success{background:#4CAF50;}.btn-danger{background:#f44336;}.btn--neutral{background:#555;}.btn-sm{padding:6px 12px;font-size:12px;}.btn:disabled{opacity:0.6;}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+</style>

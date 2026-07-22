@@ -73,7 +73,7 @@ json = json & """activeSupplierPrices"":" & rs("Cnt") & ","
 rs.Close
 
 ' 6. 财务总览
-Set rs = conn.Execute("SELECT ISNULL(SUM(TotalAmount),0) AS Revenue, ISNULL(SUM(ISNULL(TotalCost,0)),0) AS TotalCost FROM Orders WHERE Status NOT IN ('Cancelled','Pending')")
+Set rs = conn.Execute("SELECT ISNULL(SUM(TotalAmount),0) AS Revenue, ISNULL(SUM(ISNULL(CostAmount,0)),0) AS TotalCost FROM Orders WHERE Status NOT IN ('Cancelled','Pending')")
 json = json & """financeSummary"":{"
 If Not rs.EOF Then
     json = json & """revenue"":" & CDbl(rs("Revenue")) & ",""totalCost"":" & CDbl(rs("TotalCost"))
@@ -82,7 +82,7 @@ json = json & "},"
 rs.Close
 
 ' 7. 有成本的订单数
-Set rs = conn.Execute("SELECT COUNT(*) AS Cnt FROM Orders WHERE TotalCost > 0")
+Set rs = conn.Execute("SELECT COUNT(*) AS Cnt FROM Orders WHERE CostAmount > 0")
 json = json & """ordersWithCost"":" & rs("Cnt")
 rs.Close
 

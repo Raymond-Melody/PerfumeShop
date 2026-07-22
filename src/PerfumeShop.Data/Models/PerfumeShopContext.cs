@@ -33,6 +33,10 @@ public partial class PerfumeShopContext : DbContext
 
     public virtual DbSet<AppLog> AppLogs { get; set; }
 
+    public virtual DbSet<Area> Areas { get; set; }
+
+    public virtual DbSet<AuthToken> AuthTokens { get; set; }
+
     public virtual DbSet<BaseNote> BaseNotes { get; set; }
 
     public virtual DbSet<BottleInventory> BottleInventories { get; set; }
@@ -230,6 +234,8 @@ public partial class PerfumeShopContext : DbContext
     public virtual DbSet<RegistrationAttempt> RegistrationAttempts { get; set; }
 
     public virtual DbSet<ReviewLike> ReviewLikes { get; set; }
+    
+    public virtual DbSet<ReviewImage> ReviewImages { get; set; }
 
     public virtual DbSet<RolePermission> RolePermissions { get; set; }
 
@@ -489,6 +495,11 @@ public partial class PerfumeShopContext : DbContext
 
             entity.HasIndex(e => new { e.LogLevel, e.CreatedAt }, "IX_AppLogs_Level").IsDescending(false, true);
 
+            // V19: v18_perf_indexes.sql — 过滤索引（仅ERROR/WARN级别）
+            entity.HasIndex(e => new { e.LogLevel, e.CreatedAt }, "IX_AppLogs_Level_Date")
+                .IsDescending(false, true)
+                .HasFilter("([LogLevel]='ERROR' OR [LogLevel]='WARN')");
+
             entity.Property(e => e.LogId).HasColumnName("LogID");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.Ipaddress)
@@ -502,6 +513,33 @@ public partial class PerfumeShopContext : DbContext
                 .HasMaxLength(200)
                 .HasColumnName("PageURL");
             entity.Property(e => e.UserName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<Area>(entity =>
+        {
+            entity.HasKey(e => e.AreaId);
+            entity.ToTable("Areas");
+            entity.Property(e => e.AreaId).HasColumnName("AreaID");
+            entity.Property(e => e.AreaName).HasMaxLength(100);
+            entity.Property(e => e.ParentId).HasColumnName("ParentID");
+        });
+
+        modelBuilder.Entity<AuthToken>(entity =>
+        {
+            entity.HasKey(e => e.TokenId);
+
+            entity.ToTable("AuthTokens");
+
+            entity.HasIndex(e => new { e.Token, e.ExpiresAt }, "IX_AuthTokens_Token_ExpiresAt");
+            entity.HasIndex(e => e.UserId, "IX_AuthTokens_UserId");
+
+            entity.Property(e => e.TokenId).HasColumnName("TokenID");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+            entity.Property(e => e.Token).HasMaxLength(128).IsRequired();
+            entity.Property(e => e.Source).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.IpAddress).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(GETUTCDATE())");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<BaseNote>(entity =>
@@ -768,7 +806,8 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<ExpenseRecord>(entity =>
         {
-            entity.HasNoKey();
+            // V20: ExpenseID为IDENTITY列，必须配置主键以支持Add/ExecuteDelete写操作（HasNoKey导致写入抛异常）
+            entity.HasKey(e => e.ExpenseId);
 
             entity.HasIndex(e => e.Period, "IX_ExpenseRecords_Period");
 
@@ -1378,7 +1417,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<Order>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.OrderId).HasName("PK_Orders");
 
             entity.HasIndex(e => e.CreatedAt, "IX_Orders_CreatedAt");
 
@@ -1390,6 +1429,10 @@ public partial class PerfumeShopContext : DbContext
 
             entity.HasIndex(e => e.UserId, "IX_Orders_UserID");
 
+            // V19: v18_perf_indexes.sql 复合索引 — 用户订单列表 + 后台状态管理
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt }, "IX_Orders_UserID_CreatedAt").IsDescending(false, true);
+            entity.HasIndex(e => new { e.Status, e.CreatedAt }, "IX_Orders_Status_CreatedAt").IsDescending(false, true);
+
             entity.Property(e => e.ChannelSource).HasMaxLength(50);
             entity.Property(e => e.CostAmount).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.OrderId)
@@ -1397,6 +1440,8 @@ public partial class PerfumeShopContext : DbContext
                 .HasColumnName("OrderID");
             entity.Property(e => e.OrderNo).HasMaxLength(50);
             entity.Property(e => e.PaymentMethod).HasMaxLength(50);
+            entity.Property(e => e.CouponCode).HasMaxLength(50);
+            entity.Property(e => e.CouponDiscount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.PointsDiscount).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.ProfitAmount).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.RefundAmount).HasColumnType("decimal(19, 4)");
@@ -1508,6 +1553,9 @@ public partial class PerfumeShopContext : DbContext
             entity.Property(e => e.UnitPrice)
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(10, 2)");
+
+            // V19: v18_perf_indexes.sql — OrderID+ProductID 复合索引
+            entity.HasIndex(e => new { e.OrderId, e.ProductId }, "IX_OrderItems_OrderID_ProductID");
         });
 
         modelBuilder.Entity<PackagingInventory>(entity =>
@@ -1582,7 +1630,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<PointTransaction>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.TransactionId);
 
             entity.Property(e => e.CreatedBy).HasMaxLength(50);
             entity.Property(e => e.Description).HasMaxLength(255);
@@ -1761,11 +1809,19 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<Product>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.ProductId).HasName("PK_Products");
 
             entity.HasIndex(e => e.IsActive, "IX_Products_IsActive");
 
             entity.HasIndex(e => e.ProductType, "IX_Products_ProductType");
+
+            // V19: v18_perf_indexes.sql 复合索引 — 对齐 Classic ASP 版本关键索引策略
+            entity.HasIndex(e => new { e.ProductType, e.IsActive }, "IX_Products_ProductType_IsActive");
+            entity.HasIndex(e => new { e.Category, e.IsActive }, "IX_Products_Category_IsActive");
+            entity.HasIndex(e => new { e.IsActive, e.CreatedAt }, "IX_Products_CreatedAt_Active").IsDescending(false, true);
+            entity.HasIndex(e => new { e.ProductType, e.IsActive, e.Kolid }, "IX_Products_KOL_Active")
+                .HasFilter("([ProductType]='KOL' AND [IsActive]<>(0))");
+            entity.HasIndex(e => e.ProductName, "IX_Products_ProductName");
 
             entity.Property(e => e.BasePrice).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.Bomcost)
@@ -1905,7 +1961,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<ProductReview>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.ReviewId);
 
             entity.HasIndex(e => new { e.ProductId, e.Status }, "IX_ProductReviews_ProductID");
 
@@ -1916,6 +1972,28 @@ public partial class PerfumeShopContext : DbContext
                 .HasColumnName("ReviewID");
             entity.Property(e => e.Status).HasMaxLength(20);
             entity.Property(e => e.UserId).HasColumnName("UserID");
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.AIFeelingSummary).HasMaxLength(2000);
+
+            entity.HasMany(e => e.Images)
+                .WithOne(e => e.Review)
+                .HasForeignKey(e => e.ReviewId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ReviewImage>(entity =>
+        {
+            entity.HasKey(e => e.ImageId);
+
+            entity.ToTable("ReviewImages");
+
+            entity.HasIndex(e => e.ReviewId, "IX_ReviewImages_ReviewId");
+
+            entity.Property(e => e.ImageId)
+                .ValueGeneratedOnAdd()
+                .HasColumnName("ImageID");
+            entity.Property(e => e.ReviewId).HasColumnName("ReviewID");
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
         });
 
         modelBuilder.Entity<ProductTypeConfig>(entity =>
@@ -2313,7 +2391,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<ReconciliationLog>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.LogId);
 
             entity.Property(e => e.Difference).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.LogId)
@@ -2442,7 +2520,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<SiteSetting>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.SettingKey);
 
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.SecurityLockoutMinutes)
@@ -2669,6 +2747,8 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<User>(entity =>
         {
+            entity.HasKey(e => e.UserId).HasName("PK_Users");
+
             entity.HasIndex(e => e.CreatedAt, "IX_Users_CreatedAt");
 
             entity.HasIndex(e => e.Email, "IX_Users_Email");
@@ -2859,6 +2939,11 @@ public partial class PerfumeShopContext : DbContext
                 .ValueGeneratedOnAdd()
                 .HasColumnName("TransferID");
             entity.Property(e => e.TransferNo).HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.HasKey(e => e.TokenId);
         });
 
         OnModelCreatingPartial(modelBuilder);

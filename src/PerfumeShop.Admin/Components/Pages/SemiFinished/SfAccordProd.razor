@@ -1,0 +1,129 @@
+@page "/admin/semifinished/accord-production"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>Accord生产</PageTitle>
+<div class="ph"><h2 class="pt"><i class="fas fa-cogs" style="color:#2196F3;"></i> Accord生产</h2><div class="br"><a href="/admin/semifinished" style="color:#2196F3;text-decoration:none;">半成品中心</a> / Accord生产</div></div>
+
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="@(_msgErr?"alert-err":"alert-ok")">@_msg</div>}
+
+<div class="sg"><div class="sc"><span class="n" style="color:#2196F3;">@_statProgress</span><span class="l">生产中</span></div><div class="sc"><span class="n" style="color:#4CAF50;">@_statCompleted</span><span class="l">今日完成</span></div><div class="sc"><span class="n" style="color:@(_statLowStock>0?"#f44336":"#4CAF50");">@_statLowStock</span><span class="l">原料低库存预警</span></div></div>
+
+<div class="card"><div class="ch">已发布香调配方</div><div class="cb"><table class="dt"><thead><tr><th>配方名称</th><th>批量(ml)</th><th>操作</th></tr></thead><tbody>
+@foreach(var r in _recipes){<tr><td><strong>@r.RecipeName</strong></td><td>@r.BatchSize</td><td><button class="btn btn-primary btn-sm" @onclick="()=>OpenProdModal(r)">开始生产</button></td></tr>}
+@if(!_recipes.Any()){<tr><td colspan="3" class="tac tm" style="padding:40px;">暂无已发布的香调配方</td></tr>}
+</tbody></table></div></div>
+
+<div class="card"><div class="ch">Accord生产记录</div><div class="cb"><table class="dt"><thead><tr><th>批次号</th><th>香调</th><th>计划量</th><th>实际量</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>
+@foreach(var p in _productions){<tr><td><strong>@p.BatchNo</strong></td><td>@p.NoteName</td><td>@p.PlannedQty</td><td>@(p.ActualQty?.ToString()??"-")</td><td><span class="@GetSCls(p.Status)">@GetSLbl(p.Status)</span></td><td style="color:#888;font-size:13px;">@(p.StartedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@if(p.Status=="Completed"){<button class="btn btn-success btn-sm" @onclick="()=>OpenQCModal(p)">质检</button>}</td></tr>}
+@if(!_productions.Any()){<tr><td colspan="7" class="tac tm" style="padding:40px;">暂无生产记录</td></tr>}
+</tbody></table></div></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showProdModal){<div class="mo" @onclick="()=>_showProdModal=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>开始Accord生产</h3><button class="mcl" @onclick="()=>_showProdModal=false">&times;</button></div>
+<div class="fg"><label>计划生产量 (ml)</label><input type="number" @bind="_prodQty" class="fi" min="1"/></div>
+<div class="fg"><label>备注</label><input type="text" @bind="_prodNotes" class="fi"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showProdModal=false">取消</button><button class="btn btn-primary" @onclick="StartProd" disabled="@_submitting">@(_submitting?"提交中...":"确认开始生产")</button></div>
+</div></div>}
+
+@if(_showQCModal){<div class="mo" @onclick="()=>_showQCModal=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>质量检验</h3><button class="mcl" @onclick="()=>_showQCModal=false">&times;</button></div>
+<div class="fg"><label>检验结果</label><select @bind="_qcResult" class="fi"><option value="">请选择</option><option value="Pass">合格</option><option value="Fail">不合格</option></select></div>
+<div class="fg"><label>检验备注</label><input type="text" @bind="_qcNotes" class="fi"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showQCModal=false">取消</button><button class="btn btn-success" @onclick="SubmitQC" disabled="@_submitting">提交检验结果</button></div>
+</div></div>}
+
+@code{
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+bool _loaded,_msgErr,_submitting,_showProdModal,_showQCModal;string? _msg;
+int _statProgress,_statCompleted,_statLowStock;
+List<RecipeAccord> _recipes=new();List<AccordProduction> _productions=new();
+RecipeAccord? _modalRecipe;double _prodQty=100;string _prodNotes="";
+AccordProduction? _qcProd;string _qcResult="",_qcNotes="";
+
+protected override async Task OnInitializedAsync(){await LoadData();}
+async Task LoadData(){
+    try{
+        _statProgress=await Db.AccordProductions.CountAsync(a=>a.Status=="InProgress");
+        _statCompleted=await Db.AccordProductions.CountAsync(a=>(a.Status=="Completed"||a.Status=="QC")&&a.CompletedAt!=null&&a.CompletedAt>=DateTime.Today);
+        _statLowStock=await Db.RawMaterialInventories.CountAsync(r=>r.StockQty!=null&&r.SafetyStock!=null&&r.StockQty<=r.SafetyStock&&r.SafetyStock>0);
+        _recipes=await Db.RecipeAccords.Where(ra=>ra.Status=="Published").OrderByDescending(ra=>ra.PublishedAt).ToListAsync();
+        _productions=await Db.AccordProductions.OrderByDescending(a=>a.ProductionId).Take(30).ToListAsync();
+    }catch(Exception ex){_msg="加载失败: "+ex.Message;_msgErr=true;}
+    _loaded=true;
+}
+
+void OpenProdModal(RecipeAccord r){_modalRecipe=r;_prodQty=r.BatchSize??100;_prodNotes="";_showProdModal=true;}
+
+async Task StartProd(){
+    if(_modalRecipe==null||_prodQty<=0)return;_submitting=true;
+    try{
+        var mats=await Db.RecipeAccordMaterials.Where(m=>m.AccordRecipeId==_modalRecipe.AccordRecipeId).ToListAsync();
+        bool stockOk=true;var insufficient="";
+        foreach(var m in mats){
+            var stock=await Db.RawMaterialInventories.FirstOrDefaultAsync(r=>r.MaterialId==m.MaterialId);
+            var need=(m.Percentage??0)/100*_prodQty;
+            if((stock==null?0:stock.StockQty??0)<need){stockOk=false;insufficient+=m.MaterialName+"(需"+need.ToString("F1")+"g) ";}
+        }
+        if(!stockOk){_msg="原材料库存不足: "+insufficient;_msgErr=true;_showProdModal=false;}
+        else{
+            var batchNo="ACP"+DateTime.Now.ToString("yyyyMMddHHmmss");
+            var note=await Db.FragranceNotes.FirstOrDefaultAsync(n=>n.NoteId==_modalRecipe.NoteId);
+            var noteName=note!=null?note.NoteName:null;
+            var noteId=_modalRecipe.NoteId??0;
+            var recipeId=_modalRecipe.AccordRecipeId;
+            var qty=_prodQty;var notes=_prodNotes;
+            // DbContext启用了EnableRetryOnFailure，裸BeginTransaction会报错，必须用执行策略包裹；keyless实体用原始SQL插入
+            var strategy=Db.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async()=>{
+                using var tx=await Db.Database.BeginTransactionAsync();
+                try{
+                    await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO AccordProductions (BatchNo,AccordRecipeID,PlannedQty,ActualQty,Status,StartedAt,CompletedAt,WorkCenter,Notes,CreatedAt,UpdatedAt,NoteID,NoteName) VALUES ({batchNo},{recipeId},{qty},{qty},'Completed',GETDATE(),GETDATE(),'SEMI',{notes},GETDATE(),GETDATE(),{noteId},{noteName})");
+                    var prodId=await Db.AccordProductions.Where(a=>a.BatchNo==batchNo).Select(a=>a.ProductionId).FirstOrDefaultAsync();
+                    foreach(var m in mats){
+                        var need=(m.Percentage??0)/100*qty;var mid=m.MaterialId;var mname=m.MaterialName;
+                        await Db.RawMaterialInventories.Where(r=>r.MaterialId==mid).ExecuteUpdateAsync(s=>s.SetProperty(r=>r.StockQty,r=>(r.StockQty??0)-need).SetProperty(r=>r.UpdatedAt,DateTime.Now));
+                        await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO AccordProductionDetails (ProductionID,MaterialID,MaterialName,PlannedQty,ActualQty) VALUES ({prodId},{mid},{mname},{need},{need})");
+                    }
+                    var niExists=await Db.NoteInventories.AnyAsync(n=>n.NoteId==noteId);
+                    if(niExists) await Db.NoteInventories.Where(n=>n.NoteId==noteId).ExecuteUpdateAsync(s=>s.SetProperty(n=>n.StockQuantity,n=>(n.StockQuantity??0)+(int)qty).SetProperty(n=>n.UpdatedAt,DateTime.Now));
+                    else await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO NoteInventory (NoteID,StockQuantity,MinStockLevel,UpdatedAt) VALUES ({noteId},{(int)qty},50,GETDATE())");
+                    await tx.CommitAsync();
+                }catch{await tx.RollbackAsync();throw;}
+            });
+            _msg="香调生产完成！批次："+batchNo;_msgErr=false;
+        }
+        _showProdModal=false;await LoadData();
+    }catch(Exception ex){_msg="生产失败，数据已回滚: "+ex.Message;_msgErr=true;_showProdModal=false;}
+    _submitting=false;await InvokeAsync(StateHasChanged);
+}
+
+void OpenQCModal(AccordProduction p){_qcProd=p;_qcResult="";_qcNotes="";_showQCModal=true;}
+async Task SubmitQC(){
+    if(_qcProd==null||string.IsNullOrEmpty(_qcResult))return;_submitting=true;
+    try{
+        if(_qcResult=="Pass")await Db.AccordProductions.Where(a=>a.ProductionId==_qcProd.ProductionId).ExecuteUpdateAsync(s=>s.SetProperty(a=>a.Status,"QC"));
+        else await Db.AccordProductions.Where(a=>a.ProductionId==_qcProd.ProductionId).ExecuteUpdateAsync(s=>s.SetProperty(a=>a.Status,"QC_Fail"));
+        _msg=_qcResult=="Pass"?"质检通过！香调已可用":"质检未通过，需返工处理";_msgErr=_qcResult!="Pass";
+        _showQCModal=false;await LoadData();
+    }catch(Exception ex){_msg="提交失败: "+ex.Message;_msgErr=true;}
+    _submitting=false;await InvokeAsync(StateHasChanged);
+}
+
+string GetSCls(string? s)=>s switch{"InProgress"=>"sb-ip","Completed"=>"sb-cp","QC"=>"sb-qc",_=>"sb-fl"};
+string GetSLbl(string? s)=>s switch{"InProgress"=>"生产中","Completed"=>"已完成","QC"=>"已质检","QC_Fail"=>"未通过",_=>s??"-"};
+}
+
+<style>
+.ph{margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}.br{font-size:13px;color:#888;margin-top:5px;}
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:25px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,0.06);}.sc .n{font-size:32px;font-weight:bold;display:block;}.sc .l{font-size:13px;color:#888;display:block;margin-top:5px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.06);}.ch{padding:14px 20px;background:rgba(33,150,243,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;}.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(33,150,243,0.15);color:#64b5f6;padding:12px 15px;text-align:left;font-weight:600;font-size:13px;}.dt td{padding:12px 15px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e0e0e0;font-size:14px;}.dt tr:hover td{background:rgba(255,255,255,0.03);}
+.sb-ip{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(33,150,243,0.15);color:#64b5f6;}.sb-cp{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(76,175,80,0.15);color:#81c784;}.sb-qc{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(156,39,176,0.15);color:#ce93d8;}.sb-fl{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;background:rgba(244,67,54,0.15);color:#e57373;}
+.alert-ok{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}.alert-err{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.mo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);width:90%;max-width:550px;padding:30px;border-radius:15px;border:1px solid rgba(255,255,255,0.06);}.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.06);}.mh h3{margin:0;font-size:18px;color:#e0e0e0;}.mcl{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}
+.mft{display:flex;justify-content:flex-end;gap:10px;margin-top:25px;}.fg{margin-bottom:18px;}.fg label{display:block;margin-bottom:6px;font-weight:600;color:#e0e0e0;font-size:13px;}.fi{width:100%;padding:10px 12px;background:#2d2d44;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:14px;}.fi:focus{outline:none;border-color:#2196F3;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:#fff;}.btn-primary{background:#2196F3;}.btn-success{background:#4CAF50;}.btn--neutral{background:#555;}.btn-sm{padding:6px 12px;font-size:12px;}.btn:disabled{opacity:0.6;cursor:not-allowed;}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+</style>

@@ -1,0 +1,22 @@
+@page "/admin/finance/reconciliations"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>对账管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">对账管理</MudText>
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>ID</MudTh><MudTh>订单号</MudTh><MudTh>订单金额</MudTh><MudTh>支付金额</MudTh><MudTh>差异</MudTh><MudTh>状态</MudTh><MudTh>对账日期</MudTh><MudTh>操作</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.LogId</MudTd><MudTd>@context.OrderNo</MudTd><MudTd>¥@context.OrderAmount?.ToString("F2")</MudTd><MudTd>¥@context.PaymentAmount?.ToString("F2")</MudTd>
+        <MudTd Color="@((context.Difference ?? 0) != 0 ? Color.Error : Color.Success)">¥@context.Difference?.ToString("F2")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "matched" ? Color.Success : Color.Warning)">@context.Status</MudChip></MudTd>
+        <MudTd>@context.ReconcileDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd><MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/admin/finance/reconciliation-detail/{context.LogId}")" /></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<ReconciliationLog> _items = new();
+    protected override async Task OnInitializedAsync() { _items = await Db.ReconciliationLogs.AsNoTracking().OrderByDescending(r => r.LogId).ToListAsync(); }
+}

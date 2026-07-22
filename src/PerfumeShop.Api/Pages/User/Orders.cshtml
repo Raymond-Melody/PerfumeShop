@@ -1,0 +1,212 @@
+﻿@page "/user/orders"
+@model PerfumeShop.Api.Pages.User.OrdersModel
+@{ ViewData["Title"] = "我的订单"; Layout = "_Layout"; }
+
+@section Styles {
+<style>
+.breadcrumb { padding: 12px 0; font-size: 14px; color: #888; }
+.breadcrumb a { color: var(--dt-color-primary, #8B4513); text-decoration: none; }
+.breadcrumb .separator { margin: 0 8px; }
+.user-center { display: flex; gap: 30px; }
+.user-nav { flex: 0 0 200px; }
+.user-nav .nav-list { list-style: none; padding: 0; }
+.user-nav .nav-list li a { display: block; padding: 12px 16px; color: #555; text-decoration: none; border-radius: 8px; font-size: 14px; transition: background 0.2s; }
+.user-nav .nav-list li a:hover, .user-nav .nav-list li a.active { background: #f5ebe0; color: var(--dt-color-primary, #8B4513); }
+.user-main { flex: 1; min-width: 0; }
+.user-card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
+.card-title { font-size: 20px; margin-bottom: 20px; color: #333; }
+.card-title i { margin-right: 8px; color: var(--dt-color-primary, #8B4513); }
+.order-filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.order-filters a { padding: 6px 16px; border-radius: 20px; font-size: 14px; text-decoration: none; color: #555; background: #f5f5f5; transition: all 0.2s; }
+.order-filters a:hover { background: #f5ebe0; color: var(--dt-color-primary, #8B4513); }
+.order-filters a.active { background: var(--dt-color-primary, #8B4513); color: #fff; }
+.orders-list { display: flex; flex-direction: column; gap: 16px; }
+.order-item { border: 1px solid #eee; border-radius: 10px; padding: 20px; transition: box-shadow 0.2s; }
+.order-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.order-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; }
+.order-no { font-weight: 600; color: #333; font-size: 14px; }
+.order-date { color: #999; font-size: 13px; }
+.order-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.status-Pending { background: #fff3cd; color: #856404; }
+.status-Paid, .status-Completed { background: #d4edda; color: #155724; }
+.status-Failed, .status-Cancelled { background: #f8d7da; color: #721c24; }
+.status-Refunded { background: #e2e3e5; color: #383d41; }
+.status-Shipped { background: #cce5ff; color: #004085; }
+.order-body { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.order-summary { flex: 1; }
+.order-amount { font-size: 18px; color: var(--dt-color-primary, #8B4513); font-weight: 700; margin-bottom: 6px; }
+.order-products { font-size: 14px; color: #666; }
+.order-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.order-actions .btn { padding: 6px 16px; font-size: 13px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+.btn-pay { background: var(--dt-color-primary, #8B4513); color: #fff; border: none; cursor: pointer; }
+.btn-detail { background: transparent; color: var(--dt-color-primary, #8B4513); border: 1px solid var(--dt-color-primary, #8B4513); }
+.btn-danger-sm { background: transparent; color: #dc3545; border: 1px solid #dc3545; cursor: pointer; }
+.empty-orders { text-align: center; padding: 60px 20px; color: #888; }
+.empty-orders i { font-size: 48px; margin-bottom: 16px; color: #ccc; }
+.empty-orders h3 { color: #555; margin-bottom: 8px; }
+.pagination { display: flex; justify-content: center; gap: 4px; margin-top: 24px; }
+.pagination a, .pagination span { padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 14px; color: #555; background: #f5f5f5; border: 1px solid #eee; }
+.pagination a:hover { background: #f5ebe0; }
+.pagination .active { background: var(--dt-color-primary, #8B4513); color: #fff; border-color: var(--dt-color-primary, #8B4513); }
+.pagination .disabled { opacity: 0.5; pointer-events: none; }
+@@media (max-width: 768px) {
+    .user-center { flex-direction: column; }
+    .user-nav { flex: auto; }
+    .order-header, .order-body { flex-direction: column; align-items: flex-start; }
+}
+</style>
+}
+
+<!-- 面包屑 -->
+<div class="breadcrumb">
+    <div class="container">
+        <a href="/">首页</a>
+        <span class="separator">/</span>
+        <a href="/user">个人中心</a>
+        <span class="separator">/</span>
+        <span>我的订单</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="user-center">
+        <!-- 侧导航 -->
+        <nav class="user-nav">
+            <ul class="nav-list">
+                <li><a href="/user"><i class="fas fa-tachometer-alt"></i> 账户概览</a></li>
+                <li><a href="/user/orders" class="active"><i class="fas fa-list"></i> 我的订单</a></li>
+                <li><a href="/user/favorites"><i class="fas fa-heart"></i> 我的收藏</a></li>
+                <li><a href="/user/addresses"><i class="fas fa-map-marker-alt"></i> 收货地址</a></li>
+            </ul>
+        </nav>
+
+        <!-- 主内容 -->
+        <div class="user-main">
+            <div class="user-card">
+                <h2 class="card-title"><i class="fas fa-list"></i> 我的订单</h2>
+
+                <!-- 状态筛选 -->
+                <div class="order-filters">
+                    <a href="/user/orders" class="@(Model.StatusFilter == null ? "active" : "")">全部订单</a>
+                    <a href="/user/orders?status=Pending" class="@(Model.StatusFilter == "Pending" ? "active" : "")">待支付</a>
+                    <a href="/user/orders?status=Paid" class="@(Model.StatusFilter == "Paid" ? "active" : "")">已支付</a>
+                    <a href="/user/orders?status=Shipped" class="@(Model.StatusFilter == "Shipped" ? "active" : "")">已发货</a>
+                    <a href="/user/orders?status=Completed" class="@(Model.StatusFilter == "Completed" ? "active" : "")">已完成</a>
+                    <a href="/user/orders?status=Cancelled" class="@(Model.StatusFilter == "Cancelled" ? "active" : "")">已取消</a>
+                </div>
+
+                @if (Model.Orders.Any())
+                {
+                    <div class="orders-list">
+                        @foreach (var order in Model.Orders)
+                        {
+                            <div class="order-item">
+                                <div class="order-header">
+                                    <span class="order-no">订单号: @order.OrderNo</span>
+                                    <span class="order-date">@order.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</span>
+                                    <span class="order-status status-@order.Status">
+                                        @GetStatusText(order.Status)
+                                    </span>
+                                </div>
+                                <div class="order-body">
+                                    <div class="order-summary">
+                                        <div class="order-amount">¥@order.TotalAmount.ToString("F2")</div>
+                                        <div class="order-products">
+                                            @(GetOrderSummary(order.Notes))
+                                        </div>
+                                    </div>
+                                    <div class="order-actions">
+                                        @if (order.Status == "Pending")
+                                        {
+                                            <a href="/checkout?order_id=@order.OrderId" class="btn btn-pay">立即支付</a>
+                                        }
+                                        <a href="/user/order-detail?id=@order.OrderId" class="btn btn-detail">查看详情</a>
+                                        @if (order.Status == "Completed" || order.Status == "Cancelled" || order.Status == "Refunded")
+                                        {
+                                            <button class="btn btn-danger-sm" onclick="deleteOrder(@order.OrderId)">删除</button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- 分页 -->
+                    @if (Model.TotalPages > 1)
+                    {
+                        <div class="pagination">
+                            @if (Model.CurrentPage > 1)
+                            {
+                                <a href="/user/orders?page=@(Model.CurrentPage - 1)@(Model.StatusFilter != null ? $"&status={Model.StatusFilter}" : "")">上一页</a>
+                            }
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                if (i == Model.CurrentPage)
+                                {
+                                    <span class="active">@i</span>
+                                }
+                                else
+                                {
+                                    <a href="/user/orders?page=@i@(Model.StatusFilter != null ? $"&status={Model.StatusFilter}" : "")">@i</a>
+                                }
+                            }
+                            @if (Model.CurrentPage < Model.TotalPages)
+                            {
+                                <a href="/user/orders?page=@(Model.CurrentPage + 1)@(Model.StatusFilter != null ? $"&status={Model.StatusFilter}" : "")">下一页</a>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-orders">
+                        <i class="fas fa-inbox"></i>
+                        <h3>暂无订单</h3>
+                        <p>您还没有任何订单记录</p>
+                        <a href="/products" class="btn btn-brand">去购物</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function deleteOrder(orderId) {
+    if (!confirm('确定要删除这个订单吗？此操作不可撤销。')) return;
+    fetch('/api/Orders/' + orderId + '?userId=@Model.UserId', { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.message) alert(data.message);
+            if (data.message && data.message.includes('成功')) location.reload();
+        })
+        .catch(() => alert('删除请求失败，请稍后重试'));
+}
+</script>
+}
+
+@functions {
+    string GetStatusText(string? status) => status switch
+    {
+        "Pending" => "待支付",
+        "Paid" => "已支付",
+        "Shipped" => "已发货",
+        "Completed" => "已完成",
+        "Cancelled" => "已取消",
+        "Failed" => "支付失败",
+        "Refunded" => "已退款",
+        _ => status ?? "未知"
+    };
+
+    string GetOrderSummary(string? notes)
+    {
+        if (string.IsNullOrEmpty(notes)) return "-";
+        if (notes.Contains("商品详情: "))
+        {
+            var productPart = notes.Split("商品详情: ").LastOrDefault()?.Split(" | ").FirstOrDefault() ?? notes;
+            return productPart.Length > 50 ? productPart[..50] + "..." : productPart;
+        }
+        return notes.Length > 50 ? notes[..50] + "..." : notes;
+    }
+}

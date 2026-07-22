@@ -1,0 +1,127 @@
+@page "/admin/prodcenter/order-production-detail/{OrderId:int}"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>订单生产详情</PageTitle>
+
+<div class="ph"><h2 class="pt"><i class="fas fa-search-location" style="color:#4CAF50;"></i> 订单生产详情</h2><div class="br"><a href="/admin/prodcenter/sync-orders" style="color:#4CAF50;text-decoration:none;">订单追踪</a> / 详情</div></div>
+
+@if(_loaded){
+@if(_order==null){<div class="alert-err">订单不存在</div>}else{
+
+<div class="card"><div class="ch" style="background:rgba(76,175,80,0.06);"><i class="fas fa-shopping-cart" style="color:#4CAF50;"></i> 订单 #@_order.OrderNo</div>
+<div class="cb"><div class="og">
+<div class="oi"><span class="l">订单号</span><span class="v">#@_order.OrderNo</span></div>
+<div class="oi"><span class="l">收货人</span><span class="v">@(_order.ShippingName??"-")</span></div>
+<div class="oi"><span class="l">金额</span><span class="v" style="color:#4CAF50;">¥@_order.TotalAmount.ToString("N2")</span></div>
+<div class="oi"><span class="l">订单状态</span><span class="v"><span class="sb @GetOrderCls(_order.Status)">@GetOrderLbl(_order.Status)</span></span></div>
+<div class="oi"><span class="l">下单时间</span><span class="v">@(_order.CreatedAt?.ToString("yyyy-MM-dd"))</span></div>
+<div class="oi"><span class="l">生产阶段</span><span class="v" style="color:#2196F3;">@(_currentStage>=0?"第 "+(_currentStage+1)+"/5 阶段":"未排产")</span></div>
+</div></div></div>
+
+<div class="card"><div class="ch" style="background:rgba(33,150,243,0.06);"><i class="fas fa-tasks" style="color:#2196F3;"></i> 生产进度追踪</div>
+<div class="cb"><div class="ps">
+@for(int i=0;i<5;i++){var cls=i<_currentStage?"done":i==_currentStage?"active":_currentStage==-2&&i==2?"fail":"pending";var connector=i<_currentStage?"done":"pending";
+<div class="si"><div class="sic @cls"><i class="fas @_stageIcons[i]"></i></div><div class="sil">@_stageNames[i]</div><div class="sit">@(_stageTimes[i]??"-")</div></div>@if(i<4){<div class="sco @connector"></div>}}
+</div></div></div>
+
+<div class="card"><div class="ch" style="background:rgba(255,152,0,0.06);"><i class="fas fa-clipboard-list" style="color:#FF9800;"></i> 关联生产工单</div>
+<div class="cb"><table class="dt"><thead><tr><th>工单号</th><th>配方名</th><th>计划量</th><th>状态</th><th>优先级</th><th>负责人</th><th>创建时间</th><th>开始时间</th><th>完成时间</th></tr></thead><tbody>
+@foreach(var po in _pos){<tr><td><strong>@(po.WorkOrderNo??po.ProductionId.ToString())</strong></td><td>@(po.RecipeName??"-")</td><td>@po.PlannedQty</td><td><span class="sb @GetPOCls(po.Status)">@GetPOLbl(po.Status)</span></td><td>@(po.PriorityText??(po.Priority?.ToString()??"-"))</td><td>@(po.AssignedTo??"-")</td><td style="color:#888;">@(po.CreatedAt?.ToString("yyyy-MM-dd"))</td><td style="color:#888;">@(po.StartedAt?.ToString("yyyy-MM-dd"))</td><td style="color:#888;">@(po.CompletedAt?.ToString("yyyy-MM-dd"))</td></tr>}
+@if(!_pos.Any()){<tr><td colspan="9" class="tac tm" style="padding:30px;">暂无关联工单</td></tr>}
+</tbody></table></div></div>
+
+@if(_details.Any()){
+<div class="card" id="ic"><div class="ch" style="background:rgba(255,152,0,0.06);"><i class="fas fa-flask" style="color:#FF9800;"></i> 商品配方信息（生产工单附件）</div>
+<div class="cb">@foreach(var d in _details){
+<div class="pi"><div class="pih"><strong>@d.ProductName</strong><span class="sb @GetTypeCls(d.ProductType)">@GetTypeLbl(d.ProductType)</span></div>
+<div class="pim">数量: @d.Quantity @if(!string.IsNullOrEmpty(d.VolumeName)){<span>| 容量: @(d.VolumeMl?.ToString()) ml (@d.VolumeName)</span>} @if(!string.IsNullOrEmpty(d.BottleName)){<span>| 瓶身: @d.BottleName</span>} @if(!string.IsNullOrEmpty(d.CustomLabel)){<span>| 刻字: @d.CustomLabel</span>}</div>
+@if(d.TopNotes.Any()||d.MidNotes.Any()||d.BaseNotes.Any()){
+<div class="pnb"><div class="pnt"><i class="fas fa-chart-pie"></i> 香调配比</div>
+@if(d.TopNotes.Any()){<div class="pnl">前调: @string.Join(", ",d.TopNotes)</div>}
+@if(d.MidNotes.Any()){<div class="pnl">中调: @string.Join(", ",d.MidNotes)</div>}
+@if(d.BaseNotes.Any()){<div class="pnl">后调: @string.Join(", ",d.BaseNotes)</div>}
+</div>}
+@if(d.ProductType=="custom"||d.ProductType=="kol"){
+@if(d.Ingredients.Any()){<div class="pib"><div class="pit"><i class="fas fa-list-ul"></i> 成分清单（随产品附客户）</div><div class="pil">@string.Join("、",d.Ingredients)</div></div>}
+else{<div class="piw"><i class="fas fa-exclamation-triangle"></i> 暂无成分数据（请检查基香配置或配方关联）</div>}
+}
+@if(d.ProductType=="standard"){<div class="pii"><i class="fas fa-info-circle"></i> 品牌定香产品已随包装附成分说明书，无需额外打印</div>}
+</div>}
+</div></div>}
+
+<div class="card"><div class="ch" style="background:rgba(156,39,176,0.06);"><i class="fas fa-history" style="color:#9C27B0;"></i> 生产日志</div>
+<div class="cb">@if(_logs.Any()){<div class="tl"><div class="tl-line"></div>
+@foreach(var l in _logs){<div class="tli"><div class="tl-dot"></div><div class="tlc"><div class="tlt">@(l.CreatedAt?.ToString("yyyy-MM-dd HH:mm"))</div><div><strong>@(l.CreatedBy??"-")</strong> — @(l.Notes??"-") <span style="color:#888;font-size:11px;">[@(l.Status??"-")]</span></div></div></div>}
+</div>}else{<div class="tac tm" style="padding:30px;">暂无生产日志</div>}</div></div>
+
+}}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@code{
+[Parameter] public int OrderId{get;set;}
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+bool _loaded;int _currentStage=-1;string? _latestPOStatus;string[] _stageNames={"排产","生产","质检","入库","发货"};string[] _stageIcons={"calendar-alt","cogs","check-circle","warehouse","truck"};string?[] _stageTimes=new string?[5];
+Order? _order;List<ProductionOrder> _pos=new();List<ProductionLog> _logs=new();
+List<DetailInfo> _details=new();
+
+protected override async Task OnInitializedAsync(){
+    try{
+        _order=await Db.Orders.AsNoTracking().FirstOrDefaultAsync(o=>o.OrderId==OrderId);
+        if(_order!=null){
+            _pos=await Db.ProductionOrders.AsNoTracking().Where(p=>p.OrderId==OrderId).OrderByDescending(p=>p.CreatedAt).ToListAsync();
+            var poIds=_pos.Select(p=>p.ProductionId).ToList();
+            _logs=await Db.ProductionLogs.AsNoTracking().Where(l=>poIds.Contains(l.ProductionId)).OrderByDescending(l=>l.CreatedAt).Take(50).ToListAsync();
+
+            _latestPOStatus=await Db.ProductionOrders.Where(p=>p.OrderId==OrderId).OrderByDescending(p=>p.UpdatedAt).Select(p=>p.Status).FirstOrDefaultAsync();
+            _currentStage=GetStageIndex(_latestPOStatus);
+            if(_currentStage>=0)for(int i=0;i<=_currentStage&&i<5;i++){
+                var stage=_pos.OrderBy(p=>p.CreatedAt).Skip(i).FirstOrDefault();
+                _stageTimes[i]=i switch{0=>stage?.CreatedAt?.ToString("yyyy-MM-dd"),1=>stage?.StartedAt?.ToString("yyyy-MM-dd"),2=>_pos.Any(p=>p.Status=="QC_Passed")?_pos.FirstOrDefault(p=>p.Status=="QC_Passed")?.QcpassedAt?.ToString("yyyy-MM-dd"):null,3=>_pos.FirstOrDefault(p=>p.Status=="WarehouseIn")?.WarehouseInAt?.ToString("yyyy-MM-dd"),4=>_pos.FirstOrDefault(p=>p.Status=="ShippedOut")?.ShippedOutAt?.ToString("yyyy-MM-dd"),_=>null};
+            }
+
+            var details=await Db.OrderDetails.AsNoTracking().Where(d=>d.OrderId==OrderId).ToListAsync();
+            foreach(var d in details){
+                var prod=await Db.Products.AsNoTracking().FirstOrDefaultAsync(p=>p.ProductId==d.ProductId);
+                var type=prod?.ProductType??"";
+                var noteSelections=await Db.OrderDetailNoteSelections.AsNoTracking().Where(s=>s.DetailId==d.DetailId).ToListAsync();
+                var top=new List<string>();var mid=new List<string>();var baseN=new List<string>();
+                foreach(var ns in noteSelections){
+                    var note=await Db.FragranceNotes.AsNoTracking().FirstOrDefaultAsync(n=>n.NoteId==ns.NoteId);
+                    var name=(note?.NoteName??"未知")+" ("+ns.Percentage+"%)";
+                    if(ns.NoteType=="前调"||ns.NoteType=="Top")top.Add(name);else if(ns.NoteType=="中调"||ns.NoteType=="Middle")mid.Add(name);else if(ns.NoteType=="后调"||ns.NoteType=="Base")baseN.Add(name);
+                }
+                var ingrs=await Db.OrderIngredients.AsNoTracking().Where(i=>i.DetailId==d.DetailId).Select(i=>i.IngredientName).ToListAsync();
+                _details.Add(new DetailInfo{DetailId=d.DetailId,ProductName=d.ProductName??"-",ProductType=type,Quantity=d.Quantity,VolumeName=d.VolumeName,VolumeMl=d.VolumeMl,BottleName=d.BottleName,CustomLabel=d.CustomLabel,TopNotes=top,MidNotes=mid,BaseNotes=baseN,Ingredients=ingrs});
+            }
+        }
+    }catch(Exception){}
+    _loaded=true;
+}
+
+int GetStageIndex(string? s)=>s switch{"Pending"=>0,"InProgress"=>1,"Completed"=>2,"QC_Passed"=>3,"QC_Fail"=>-2,"WarehouseIn"=>4,"ShippedOut"=>4,_=>-1};
+
+string GetOrderCls(string? s)=>s switch{"Paid"=>"sb-paid","Processing"=>"sb-progress","Shipped"=>"sb-shipped","Completed"=>"sb-completed",_=>"sb-default"};
+string GetOrderLbl(string? s)=>s switch{"Paid"=>"已付款","Processing"=>"处理中","Shipped"=>"已发货","Completed"=>"已完成",_=>s??"-"};
+string GetPOCls(string? s)=>s switch{"Pending"=>"sb-progress","InProgress"=>"sb-progress","Completed"=>"sb-completed","QC_Passed"=>"sb-qc","QC_Fail"=>"sb-fail","WarehouseIn"=>"sb-warehouse","ShippedOut"=>"sb-shipped",_=>"sb-default"};
+string GetPOLbl(string? s)=>s switch{"Pending"=>"待生产","InProgress"=>"生产中","Completed"=>"待质检","QC_Passed"=>"已质检","QC_Fail"=>"未通过","WarehouseIn"=>"已入库","ShippedOut"=>"已发货",_=>s??"-"};
+string GetTypeCls(string? s)=>s switch{"custom"=>"sb-progress","kol"=>"sb-shipped","standard"=>"sb-paid",_=>"sb-default"};
+string GetTypeLbl(string? s)=>s switch{"custom"=>"定制香水","kol"=>"KOL推荐","standard"=>"品牌定香",_=>s??"-"};
+class DetailInfo{public int DetailId;public string ProductName="",ProductType="";public int Quantity;public string? VolumeName,BottleName,CustomLabel;public int? VolumeMl;public List<string> TopNotes=new(),MidNotes=new(),BaseNotes=new(),Ingredients=new();}
+}
+
+<style>
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}.br{font-size:13px;color:#888;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;}.ch{padding:14px 20px;font-weight:600;font-size:15px;color:#e0e0e0;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px;}.cb{padding:16px 20px;overflow-x:auto;}
+.og{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}.oi .l{font-size:11px;color:#888;margin-bottom:4px;}.oi .v{font-size:16px;font-weight:600;color:#e0e0e0;}
+.ps{display:flex;align-items:center;justify-content:center;gap:0;padding:20px 0;}.si{display:flex;flex-direction:column;align-items:center;min-width:80px;}.sic{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all 0.3s;margin-bottom:8px;}.sic.done{background:rgba(76,175,80,0.2);color:#4CAF50;border:2px solid #4CAF50;}.sic.active{background:rgba(33,150,243,0.2);color:#2196F3;border:2px solid #2196F3;animation:pulse 2s infinite;}.sic.pending{background:rgba(255,255,255,0.05);color:#555;border:2px solid rgba(255,255,255,0.08);}.sic.fail{background:rgba(244,67,54,0.2);color:#f44336;border:2px solid #f44336;}.sil{font-size:12px;font-weight:600;color:#e0e0e0;}.sit{font-size:10px;color:#666;margin-top:2px;}.sco{flex:1;height:2px;min-width:30px;}.sco.done{background:#4CAF50;}.sco.pending{background:rgba(255,255,255,0.08);}@@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(33,150,243,0.4);}50%{box-shadow:0 0 0 8px rgba(33,150,243,0);}}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(255,152,0,0.12);color:#ffb74d;padding:12px 14px;text-align:left;font-weight:600;font-size:13px;}.dt td{padding:10px 14px;color:#e0e0e0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);}.dt tr:hover td{background:rgba(255,255,255,0.03);}
+.pi{border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:14px;margin-bottom:12px;background:rgba(0,0,0,0.15);}.pih{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}.pih strong{color:#e0e0e0;font-size:14px;}.pim{font-size:12px;color:#888;margin-bottom:8px;}
+.pnb{padding:8px 10px;background:rgba(33,150,243,0.06);border-radius:6px;border-left:3px solid #2196F3;margin-bottom:8px;}.pnt{font-size:11px;color:#64b5f6;margin-bottom:4px;}.pnl{font-size:12px;color:#e0e0e0;}
+.pib{padding:8px 10px;background:rgba(76,175,80,0.06);border-radius:6px;border-left:3px solid #4CAF50;}.pit{font-size:11px;color:#81c784;margin-bottom:4px;}.pil{font-size:12px;color:#e0e0e0;line-height:1.6;}
+.piw{padding:8px 10px;background:rgba(255,152,0,0.06);border-radius:6px;border-left:3px solid #FF9800;font-size:12px;color:#ffb74d;}.pii{padding:6px 10px;font-size:11px;color:#666;font-style:italic;}
+.tl{position:relative;padding-left:30px;}.tl-line{position:absolute;left:14px;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.06);}.tli{position:relative;padding:8px 0 20px 10px;}.tl-dot{position:absolute;left:-20px;top:12px;width:10px;height:10px;border-radius:50%;background:#4CAF50;}.tlt{font-size:11px;color:#666;}
+.sb{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;}.sb-paid{background:rgba(33,150,243,0.15);color:#64b5f6;}.sb-progress{background:rgba(255,152,0,0.15);color:#ffb74d;}.sb-shipped{background:rgba(156,39,176,0.15);color:#ce93d8;}.sb-completed{background:rgba(76,175,80,0.15);color:#81c784;}.sb-qc{background:rgba(156,39,176,0.15);color:#ce93d8;}.sb-fail{background:rgba(244,67,54,0.15);color:#e57373;}.sb-warehouse{background:rgba(0,188,212,0.15);color:#80deea;}.sb-default{background:rgba(158,158,158,0.15);color:#9e9e9e;}
+.alert-err{padding:30px;text-align:center;border-radius:8px;background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+</style>

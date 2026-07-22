@@ -156,34 +156,30 @@ Set rsAllCoupons = PE_CouponGetAll()
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #1a1a2e; color: #e0e0e0; }
-        .main-content { color: #e0e0e0; padding: 24px; }
+        .main-content { color: #e0e0e0; padding: 24px; margin-left: 260px; }
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .page-title { font-size: 22px; color: #fff; display: flex; align-items: center; gap: 10px; }
-        .page-title i { color: #ff8f00; }
+        .page-title { font-size: 24px; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .page-title i { color: #00bcd4; }
         
         .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
         .stat-card { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 20px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); text-align: center; }
-        .stat-value { font-size: 28px; font-weight: bold; color: #ff8f00; }
+        .stat-value { font-size: 28px; font-weight: bold; color: #00bcd4; }
         .stat-label { font-size: 13px; color: #888; margin-top: 4px; }
         
-        .panel { background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 12px; padding: 24px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px; }
-        .panel h3 { color: #fff; margin: 0 0 16px; font-size: 18px; display: flex; align-items: center; gap: 8px; }
-        .panel h3 i { color: #ff8f00; }
+        .admin-card { background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 12px; padding: 24px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px; }
+        .admin-card h3 { color: #fff; margin: 0 0 16px; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+        .admin-card h3 i { color: #00bcd4; }
         
         .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
         .form-group { display: flex; flex-direction: column; gap: 4px; }
         .form-group label { font-size: 12px; color: #888; font-weight: 500; }
         .form-group input, .form-group select, .form-group textarea {
-            padding: 8px 12px; border: 1px solid #3a3a4a; border-radius: 6px; background: #1a1a2e; color: #e0e0e0; font-size: 13px;
+            padding: 8px 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; background: rgba(255,255,255,0.04); color: #e0e0e0; font-size: 13px;
         }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #ff8f00; outline: none; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #00bcd4; outline: none; }
         .form-group textarea { resize: vertical; min-height: 60px; }
         
-        .btn { padding: 8px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
-        .btn-primary { background: linear-gradient(135deg, #ff8f00, #f57c00); color: #fff; }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,143,0,0.3); }
-        .btn-danger { background: #c62828; color: #fff; }
-        .btn-sm { padding: 4px 12px; font-size: 11px; }
+        /* 按钮样式由 /css/buttons.css 统一管理系统提供，类名: .btn .btn--primary .btn--danger .btn--sm */
         
         .coupon-table { width: 100%; border-collapse: collapse; }
         .coupon-table th { text-align: left; padding: 10px 12px; background: rgba(0,0,0,0.2); color: #888; font-size: 11px; text-transform: uppercase; }
@@ -237,7 +233,7 @@ Set rsAllCoupons = PE_CouponGetAll()
         </div>
         
         <!-- 创建/编辑表单 -->
-        <div class="panel">
+        <div class="admin-card">
             <h3><i class="fas fa-<% If isEditMode Then %>edit<% Else %>plus-circle<% End If %>"></i> <% If isEditMode Then %>编辑优惠券<% Else %>创建优惠券<% End If %></h3>
             <form method="post">
                 <% If isEditMode Then %>
@@ -319,7 +315,7 @@ Set rsAllCoupons = PE_CouponGetAll()
                     </div>
                 </div>
                 <div style="margin-top:12px;display:flex;gap:8px;">
-                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                    <button type="submit" name="action" value="save" class="btn btn--primary">
                         <i class="fas fa-save"></i> <% If isEditMode Then %>更新<% Else %>创建<% End If %>优惠券
                     </button>
                     <% If isEditMode Then %>
@@ -330,7 +326,7 @@ Set rsAllCoupons = PE_CouponGetAll()
         </div>
         
         <!-- 优惠券列表 -->
-        <div class="panel">
+        <div class="admin-card">
             <h3><i class="fas fa-list"></i> 优惠券列表</h3>
             <table class="coupon-table">
                 <thead>
@@ -362,7 +358,7 @@ Set rsAllCoupons = PE_CouponGetAll()
                     %>
                     <tr>
                         <td><%= cid %></td>
-                        <td><strong style="color:#ff8f00;"><%= ccode %></strong></td>
+                        <td><strong style="color:#00bcd4;"><%= ccode %></strong></td>
                         <td><%= cname %></td>
                         <td><%= tBadge %></td>
                         <td><%= FormatNumber(cval, 0) %></td>
@@ -371,8 +367,8 @@ Set rsAllCoupons = PE_CouponGetAll()
                         <td style="font-size:11px;"><%= Left(cfrom, 10) %><br>~<%= Left(cto, 10) %></td>
                         <td><span class="badge <% If cactive Then %>badge-active<% Else %>badge-inactive<% End If %>"><% If cactive Then %>启用<% Else %>禁用<% End If %></span></td>
                         <td>
-                            <a href="?edit_id=<%= cid %>" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> 编辑</a>
-                            <a href="?action=delete&id=<%= cid %>" class="btn btn-sm btn-danger" onclick="return confirm('确认删除 <%= ccode %>？')"><i class="fas fa-trash"></i></a>
+                            <a href="?edit_id=<%= cid %>" class="btn btn--sm btn--primary"><i class="fas fa-edit"></i> 编辑</a>
+                            <a href="?action=delete&id=<%= cid %>" class="btn btn--sm btn--danger" onclick="return confirm('确认删除 <%= ccode %>？')"><i class="fas fa-trash"></i></a>
                         </td>
                     </tr>
                     <%

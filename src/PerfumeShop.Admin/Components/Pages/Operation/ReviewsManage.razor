@@ -1,0 +1,185 @@
+@page "/admin/Operation/ReviewsManage"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>评价管理</PageTitle>
+
+<div class="page-header">
+    <h2 class="page-title"><i class="fas fa-star-half-alt"></i> 评价管理</h2>
+    <div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>评价管理</span></div>
+</div>
+
+@if (_loaded)
+{
+    <div class="stats-row">
+        <div class="stat-card"><div class="stat-value" style="color:#FF9800;">@_pending</div><div class="stat-label">待审核</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_approved</div><div class="stat-label">已通过</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:#f44336;">@_rejected</div><div class="stat-label">已拒绝</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:#00bcd4;">@_total</div><div class="stat-label">全部评价</div></div>
+    </div>
+
+    <div class="filter-bar">
+        <select class="filter-select" @bind="_statusFilter">
+            <option value="">全部状态</option>
+            <option value="pending">待审核</option>
+            <option value="approved">已通过</option>
+            <option value="rejected">已拒绝</option>
+        </select>
+        <input type="text" class="filter-input" @bind="_keyword" @bind:event="oninput" placeholder="搜索评价/用户名..." />
+        <button class="btn btn-outline btn-sm" @onclick="ResetFilter"><i class="fas fa-undo"></i> 重置</button>
+        @if(_selected.Count>0){
+        <span style="margin-left:auto;color:#00bcd4;font-size:13px;align-self:center;">已选 @_selected.Count 条</span>
+        <button class="action-btn approve" @onclick="BatchApprove"><i class="fas fa-check"></i> 批量通过</button>
+        <button class="action-btn reject" @onclick="BatchReject"><i class="fas fa-times"></i> 批量拒绝</button>
+        }
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead><tr><th style="width:36px;"><input type="checkbox" checked="@_allSelected" @onchange="ToggleSelectAll" /></th><th>ID</th><th>用户</th><th>商品</th><th>评分</th><th>内容</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
+            <tbody>
+                @if (_displayReviews.Any())
+                {
+                    @foreach (var r in _displayReviews.Skip((_page - 1) * 20).Take(20))
+                    {
+                        <tr>
+                            <td><input type="checkbox" checked="@_selected.Contains(r.ReviewId)" @onchange="()=>ToggleSelect(r.ReviewId)" /></td>
+                            <td>#@r.ReviewId</td>
+                            <td>@GetUserName(r.UserId)</td>
+                            <td style="color:#00bcd4;">@GetProdName(r.ProductId)</td>
+                            <td>@for (int i = 0; i < (r.Rating ?? 0); i++) {<i class="fas fa-star" style="color:#FFD700;font-size:11px;"></i>}</td>
+                            <td>@(r.Comment?.Length > 40 ? r.Comment[..40] + "..." : r.Comment)</td>
+                            <td><span class="status-badge @GetSC(r.Status)">@GetSL(r.Status)</span></td>
+                            <td>@r.CreatedAt?.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <button class="action-btn detail" @onclick='()=>ShowDetail(r)'>详情</button>
+                                @if (r.Status == "pending")
+                                {
+                                    <button class="action-btn approve" @onclick='()=>Approve(r.ReviewId)'>通过</button>
+                                    <button class="action-btn reject" @onclick='()=>Reject(r.ReviewId)'>拒绝</button>
+                                }
+                                else
+                                {
+                                    <button class="action-btn cancel" @onclick='()=>CancelReview(r.ReviewId)'>取消</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="9" class="empty-cell">暂无评价数据</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (_totalPages > 1)
+    {
+        <div class="pagination">
+            @for (int p = 1; p <= _totalPages; p++)
+            {
+                var pi = p;
+                <a href="javascript:void(0)" class="@(pi==_page?"page-item active":"page-item")" @onclick="()=>GoPage(pi)" @onclick:preventDefault>@pi</a>
+            }
+        </div>
+    }
+
+@if(_showDetail&&_detailReview!=null){<div class="modal-overlay show" @onclick="()=>_showDetail=false"><div class="modal" @onclick:stopPropagation="true"><div class="modal-header"><h3>评价详情 #@_detailReview.ReviewId</h3><button class="modal-close" @onclick="()=>_showDetail=false">&times;</button></div><div class="modal-body"><div class="detail-row"><label>用户</label><p>@GetUserName(_detailReview.UserId)</p></div><div class="detail-row"><label>商品</label><p style="color:#00bcd4;">@GetProdName(_detailReview.ProductId)</p></div><div class="detail-row"><label>标题</label><p>@(_detailReview.Title??"（无标题）")</p></div><div class="detail-row"><label>评分</label><p>@for(int i=0;i<(_detailReview.Rating??0);i++){<i class="fas fa-star" style="color:#FFD700;"></i>} @(_detailReview.Rating??0) 分</p></div><div class="detail-row"><label>内容</label><p style="min-height:60px;white-space:pre-wrap;">@(_detailReview.Comment??"（无内容）")</p></div><div class="detail-row"><label>状态</label><p><span class="status-badge @GetSC(_detailReview.Status)">@GetSL(_detailReview.Status)</span></p></div><div class="detail-row"><label>时间</label><p>@_detailReview.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</p></div></div><div class="modal-footer"><button class="btn btn-outline" @onclick="()=>_showDetail=false">关闭</button>@if(_detailReview.Status=="pending"){<button class="btn btn-primary" @onclick="()=>Approve(_detailReview.ReviewId)">通过</button><button class="btn btn-danger" @onclick="()=>Reject(_detailReview.ReviewId)">拒绝</button>}else{<button class="btn btn-outline" @onclick="()=>CancelReview(_detailReview.ReviewId)">取消（重置为待审核）</button>}</div></div></div>}
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.filter-bar{display:flex;gap:12px;align-items:center;margin-bottom:20px;padding:15px 20px;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.05);}.filter-select{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:8px 12px;font-size:13px;cursor:pointer;min-width:120px;}.filter-select:focus{border-color:#00bcd4;outline:none;}.filter-select option{background:#2d2d44;color:#e0e0e0;}.filter-input{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:8px 12px;font-size:13px;min-width:180px;}.filter-input:focus{border-color:#00bcd4;outline:none;}.filter-input::placeholder{color:#666;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.data-table{width:100%;border-collapse:collapse;}.data-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:12px 14px;font-size:13px;text-align:left;font-weight:600;}.data-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.data-table tr:last-child td{border-bottom:none;}.data-table tr:hover td{background:rgba(255,255,255,0.03);}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}.status-pending{background:rgba(255,152,0,0.2);color:#ff9800;}.status-approved{background:rgba(76,175,80,0.2);color:#4caf50;}.status-rejected{background:rgba(244,67,54,0.2);color:#f44336;}
+.action-btn{padding:4px 8px;border-radius:4px;font-size:11px;border:none;cursor:pointer;margin-right:4px;}.action-btn.approve{background:rgba(76,175,80,0.2);color:#66bb6a;}.action-btn.approve:hover{background:#4CAF50;color:#fff;}.action-btn.reject{background:rgba(244,67,54,0.2);color:#ef5350;}.action-btn.reject:hover{background:#f44336;color:#fff;}.action-btn.detail{background:rgba(0,188,212,0.2);color:#4dd0e1;}.action-btn.detail:hover{background:#00bcd4;color:#fff;}.action-btn.cancel{background:rgba(255,152,0,0.2);color:#ffa726;}.action-btn.cancel:hover{background:#ff9800;color:#fff;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;}.btn-outline{background:rgba(255,255,255,0.05);color:#b0b0b0;border:1px solid rgba(255,255,255,0.1);}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;}.btn-danger{background:#c62828;color:#fff;}.btn-sm{padding:5px 12px;font-size:11px;}.empty-cell{text-align:center;color:#666;padding:40px;}
+.pagination{display:flex;justify-content:center;gap:8px;margin-top:20px;}.page-item{padding:8px 14px;background:#2d2d44;border-radius:6px;text-decoration:none;color:#b0b0b0;border:1px solid rgba(255,255,255,0.05);cursor:pointer;font-size:14px;}.page-item:hover,.page-item.active{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;}.modal{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:16px;border:1px solid rgba(255,255,255,0.1);padding:30px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;}.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}.modal-header h3{color:#fff;margin:0;font-size:18px;}.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.detail-row{margin-bottom:12px;}.detail-row label{display:block;color:#999;font-size:12px;margin-bottom:4px;}.detail-row p{background:rgba(255,255,255,0.05);color:#e0e0e0;padding:10px;border-radius:6px;margin:0;border:1px solid rgba(255,255,255,0.08);}.modal-footer{margin-top:20px;display:flex;justify-content:flex-end;gap:8px;}
+}</style>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded;
+    private List<ProductReview> _reviews = new();
+    private Dictionary<int, string> _pn = new(), _un = new();
+    private string? _statusFilter, _keyword = "";
+    private int _total, _pending, _approved, _rejected, _page = 1, _totalPages = 1;
+    private HashSet<int> _selected = new();
+    private bool _showDetail;
+    private ProductReview? _detailReview;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { await LoadData(); _loaded = true; } catch { _loaded = true; }
+    }
+
+    async Task LoadData()
+    {
+        _reviews = await Db.ProductReviews.AsNoTracking().OrderByDescending(r => r.CreatedAt).Take(200).ToListAsync();
+        _total = _reviews.Count; _pending = _reviews.Count(r => r.Status == "pending");
+        _approved = _reviews.Count(r => r.Status == "approved"); _rejected = _reviews.Count(r => r.Status == "rejected");
+        var pids = _reviews.Select(r => r.ProductId ?? 0).Distinct().ToList();
+        var uids = _reviews.Select(r => r.UserId).Distinct().ToList();
+        _pn = (await Db.Products.Where(p => pids.Contains(p.ProductId)).ToListAsync()).ToDictionary(p => p.ProductId, p => p.ProductName ?? "");
+        _un = (await Db.Users.Where(u => uids.Contains(u.UserId)).ToListAsync()).ToDictionary(u => u.UserId, u => u.Username ?? "");
+    }
+
+    IEnumerable<ProductReview> _displayReviews
+    {
+        get
+        {
+            var q = _reviews.AsEnumerable();
+            if (!string.IsNullOrEmpty(_statusFilter)) q = q.Where(r => r.Status == _statusFilter);
+            if (!string.IsNullOrWhiteSpace(_keyword))
+            {
+                var kw = _keyword.Trim().ToLower();
+                q = q.Where(r => (r.Comment != null && r.Comment.ToLower().Contains(kw)) || _un.TryGetValue(r.UserId, out var un) && un.ToLower().Contains(kw));
+            }
+            var list = q.ToList();
+            _totalPages = Math.Max(1, (int)Math.Ceiling((double)list.Count / 20));
+            if (_page > _totalPages) _page = 1;
+            return list;
+        }
+    }
+
+    async Task ResetFilter() { _statusFilter = null; _keyword = ""; _page = 1; await InvokeAsync(StateHasChanged); }
+    async Task GoPage(int p) { _page = p; await InvokeAsync(StateHasChanged); }
+
+    async Task Approve(int id) { await UpdateStatus(id, "approved"); if(_showDetail&&_detailReview!=null)_detailReview.Status="approved"; }
+    async Task Reject(int id) { await UpdateStatus(id, "rejected"); if(_showDetail&&_detailReview!=null)_detailReview.Status="rejected"; }
+    async Task CancelReview(int id) { await UpdateStatus(id, "pending"); if(_showDetail&&_detailReview!=null)_detailReview.Status="pending"; }
+    void ShowDetail(ProductReview r){_detailReview=r;_showDetail=true;}
+
+    async Task UpdateStatus(int id, string st)
+    {
+        await Db.ProductReviews.Where(r => r.ReviewId == id).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, st).SetProperty(r => r.UpdatedAt, DateTime.Now));
+        await LoadData();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool _allSelected => _displayReviews.Any() && _displayReviews.All(r => _selected.Contains(r.ReviewId));
+    void ToggleSelect(int id) { if (!_selected.Add(id)) _selected.Remove(id); }
+    void ToggleSelectAll(ChangeEventArgs e) { var on = e.Value is bool b && b; _selected.Clear(); if (on) { foreach (var r in _displayReviews) _selected.Add(r.ReviewId); } }
+    async Task BatchApprove() => await BatchUpdate("approved");
+    async Task BatchReject() => await BatchUpdate("rejected");
+    async Task BatchUpdate(string st)
+    {
+        if (_selected.Count == 0) return;
+        var ids = _selected.ToList();
+        await Db.ProductReviews.Where(r => ids.Contains(r.ReviewId)).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, st).SetProperty(r => r.UpdatedAt, DateTime.Now));
+        _selected.Clear();
+        await LoadData();
+    }
+
+    string GetProdName(int? pid) => pid.HasValue && _pn.TryGetValue(pid.Value, out var n) ? n : "-";
+    string GetUserName(int uid) => _un.TryGetValue(uid, out var n) ? n : $"#{uid}";
+    static string GetSC(string? s) => s switch { "pending" => "status-pending", "approved" => "status-approved", "rejected" => "status-rejected", _ => "" };
+    static string GetSL(string? s) => s switch { "pending" => "待审核", "approved" => "已通过", "rejected" => "已拒绝", _ => s ?? "-" };
+}

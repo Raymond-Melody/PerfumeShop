@@ -1,0 +1,23 @@
+@page "/admin/finance/refund-detail/{RefundId:int}"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>退款详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">退款详情</MudText>
+@if (_item != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>退款ID:</b> @_item.RefundId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>订单ID:</b> @_item.OrderId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>退款金额:</b> ¥@_item.RefundAmount.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>状态:</b> @_item.Status</MudText></MudItem>
+    <MudItem xs="12"><MudText><b>原因:</b> @_item.RefundReason</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>创建时间:</b> @_item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudText></MudItem>
+</MudGrid></MudCardContent></MudCard>}
+<MudButton Variant="Variant.Text" Href="/admin/finance/refunds" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public int RefundId { get; set; }
+    private RefundRecord? _item;
+    protected override async Task OnInitializedAsync() { _item = await Db.RefundRecords.FindAsync(RefundId); }
+}

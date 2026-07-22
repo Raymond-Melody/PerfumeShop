@@ -1,0 +1,63 @@
+@page "/admin/prodcenter/prod-qc"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>质检记录</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">质检记录</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_statusFilter" Placeholder="质检状态" Clearable="true">
+            <MudSelectItem Value="@("QC_Review")">待审核</MudSelectItem>
+            <MudSelectItem Value="@("Completed")">已通过</MudSelectItem>
+            <MudSelectItem Value="@("QC_Fail")">不合格</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<ProductionOrder>>>(ServerReload))" Hover="true" Dense="true" Striped="true" RowsPerPage="15">
+    <HeaderContent>
+        <MudTh>工单号</MudTh><MudTh>配方</MudTh><MudTh>完成时间</MudTh>
+        <MudTh>质检状态</MudTh><MudTh>质检备注</MudTh><MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.WorkOrderNo</MudTd>
+        <MudTd>@(context.RecipeName ?? "-")</MudTd>
+        <MudTd>@context.CompletedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "Completed" ? Color.Success : context.Status == "QC_Fail" ? Color.Error : Color.Warning)">@(context.Status ?? "-")</MudChip></MudTd>
+        <MudTd>@(context.Qcnotes ?? "-")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                           OnClick="@(() => UpdateQc(context, "Completed"))" Title="通过" />
+            <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Color="Color.Error"
+                           OnClick="@(() => UpdateQc(context, "QC_Fail"))" Title="不合格" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    private string _statusFilter = "";
+
+    private async Task<TableData<ProductionOrder>> ServerReload(TableState state)
+    {
+        var query = Db.ProductionOrders.AsNoTracking().Where(p => p.Status == "Completed" || p.Status == "QC_Review" || p.Status == "QC_Fail");
+        if (!string.IsNullOrWhiteSpace(_statusFilter)) query = query.Where(p => p.Status == _statusFilter);
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(p => p.CompletedAt).Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<ProductionOrder> { TotalItems = total, Items = items };
+    }
+
+    private async Task UpdateQc(ProductionOrder po, string status)
+    {
+        var item = await Db.ProductionOrders.FirstOrDefaultAsync(p => p.ProductionId == po.ProductionId);
+        if (item != null)
+        {
+            item.Status = status; item.QcpassedAt = status == "Completed" ? DateTime.Now : null; item.UpdatedAt = DateTime.Now;
+            Db.ProductionLogs.Add(new ProductionLog { ProductionId = item.ProductionId, Status = status, Notes = "质检审核", CreatedBy = "QC", CreatedAt = DateTime.Now });
+            await Db.SaveChangesAsync(); Snackbar.Add("质检结果已更新", Severity.Success);
+        }
+    }
+}

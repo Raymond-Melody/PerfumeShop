@@ -1,0 +1,38 @@
+<!-- V19系统管理 · 安全审计面板 -->
+@page "/admin/system/security-audit"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>安全审计</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-shield-alt" style="color:#E91E63;"></i> 安全审计</MudText>
+@if (_loaded)
+{
+    <MudGrid>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">审计事件</div><div style="font-size:28px;font-weight:700;color:#00bcd4;">@_auditCount</div></MudPaper></MudItem>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">登录失败</div><div style="font-size:28px;font-weight:700;color:#F44336;">@_loginFailures</div></MudPaper></MudItem>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">活跃Session</div><div style="font-size:28px;font-weight:700;color:#4CAF50;">@_activeSessions</div></MudPaper></MudItem>
+    </MudGrid>
+    <MudText Typo="Typo.h6" Class="mt-6 mb-3">审计日志</MudText>
+    <MudTable Items="@_auditLogs.Take(30)" Hover="true" Dense="true" Striped="true">
+        <HeaderContent><MudTh>ID</MudTh><MudTh>管理员</MudTh><MudTh>操作</MudTh><MudTh>模块</MudTh><MudTh>目标</MudTh><MudTh>IP</MudTh><MudTh>时间</MudTh></HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.LogId</MudTd><MudTd>@context.AdminName</MudTd><MudTd>@context.Action</MudTd>
+            <MudTd>@context.Module</MudTd><MudTd>@context.TargetTable</MudTd>
+            <MudTd>@context.IpAddress</MudTd><MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded; private int _auditCount, _loginFailures, _activeSessions;
+    private List<AdminAuditLog> _auditLogs = new();
+    protected override async Task OnInitializedAsync()
+    {
+        _auditLogs = await Db.AdminAuditLogs.AsNoTracking().OrderByDescending(l => l.LogId).Take(200).ToListAsync();
+        _auditCount = _auditLogs.Count;
+        _loginFailures = _auditLogs.Count(l => l.Action != null && l.Action.Contains("登录失败"));
+        _activeSessions = await Db.AuthTokens.AsNoTracking().Where(t => t.ExpiresAt > DateTime.Now).CountAsync();
+        _loaded = true;
+    }
+}

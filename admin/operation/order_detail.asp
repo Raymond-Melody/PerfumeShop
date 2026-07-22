@@ -100,28 +100,28 @@ Set rsDetails = ExecuteQuery("SELECT od.*, p.ProductType FROM OrderDetails od LE
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .order-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
-        .info-group { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
-        .info-group h3 { margin-top: 0; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; font-size: 16px; color: #333; }
+        .info-group { background: rgba(255,255,255,0.04); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); }
+        .info-group h3 { margin-top: 0; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 15px; font-size: 16px; color: #e0e0e0; }
         .info-row { display: flex; margin-bottom: 8px; font-size: 14px; }
-        .info-row .label { width: 100px; color: #666; font-weight: bold; }
-        .info-row .value { flex: 1; color: #333; }
+        .info-row .label { width: 100px; color: #b0b0b0; font-weight: bold; }
+        .info-row .value { flex: 1; color: #e0e0e0; }
         .status-Pending { color: #f39c12; }
         .status-Paid { color: #27ae60; font-weight: bold; }
         .status-Failed { color: #e74c3c; }
         
-        .product-card { border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
-        .product-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #eee; padding-bottom: 10px; margin-bottom: 10px; }
-        .product-name { font-weight: bold; font-size: 16px; color: #007bff; }
+        .product-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 15px; margin-bottom: 15px; background: linear-gradient(135deg, #2d2d44, #1e1e32); }
+        .product-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 10px; }
+        .product-name { font-weight: bold; font-size: 16px; color: #00bcd4; }
         
         .custom-detail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
         .note-section { font-size: 13px; }
-        .note-section h4 { font-size: 14px; margin-bottom: 5px; color: #555; }
-        .note-item { margin-bottom: 3px; display: flex; justify-content: space-between; padding: 2px 5px; background: #f5f5f5; border-radius: 3px; }
+        .note-section h4 { font-size: 14px; margin-bottom: 5px; color: #e0e0e0; }
+        .note-item { margin-bottom: 3px; display: flex; justify-content: space-between; padding: 2px 5px; background: rgba(255,255,255,0.04); border-radius: 3px; }
         
-        .ingredients-box { margin-top: 30px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
-        .ingredients-header { background: #f1f8ff; padding: 12px 15px; border-bottom: 1px solid #e0e0e0; font-weight: bold; color: #0366d6; }
+        .ingredients-box { margin-top: 30px; background: linear-gradient(135deg, #2d2d44, #1e1e32); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
+        .ingredients-header { background: rgba(0,188,212,0.1); padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: bold; color: #00bcd4; }
         .ingredients-list { padding: 15px; display: flex; flex-wrap: wrap; gap: 8px; }
-        .ingredient-tag { background: #e1ecf4; color: #39739d; padding: 4px 10px; border-radius: 15px; font-size: 12px; border: 1px solid #cedee7; }
+        .ingredient-tag { background: rgba(25,118,210,0.2); color: #00bcd4; padding: 4px 10px; border-radius: 15px; font-size: 12px; border: 1px solid rgba(255,255,255,0.08); }
         
         .action-bar { margin-bottom: 20px; display: flex; gap: 10px; }
     </style>
@@ -130,6 +130,13 @@ Set rsDetails = ExecuteQuery("SELECT od.*, p.ProductType FROM OrderDetails od LE
     <!--#include file="includes/nav.asp"-->
     
     <div class="main-content">
+        <div class="page-header">
+            <h2 class="page-title"><i class="fas fa-file-alt"></i> 订单详情 #<%= orderNo %></h2>
+            <div class="breadcrumb">
+                <a href="index.asp">运营中心</a> / <a href="orders.asp">订单管理</a> / <span>订单详情</span>
+            </div>
+        </div>
+        
         <div class="admin-card">
             <div class="admin-card-header">
                 <h2 class="admin-card-title">订单详情 #<%= orderNo %></h2>
@@ -300,13 +307,13 @@ Set rsDetails = ExecuteQuery("SELECT od.*, p.ProductType FROM OrderDetails od LE
                                     productTypeAdmin = rsDetails("ProductType") & ""
                                     Select Case productTypeAdmin
                                         Case "Fixed"
-                                            Response.Write "<span style='background:#2196f3;color:white;padding:2px 8px;border-radius:3px;font-size:12px;'>品牌定香</span>"
+                                            Response.Write "<span style='background:#00bcd4;color:white;padding:2px 8px;border-radius:3px;font-size:12px;'>品牌定香</span>"
                                         Case "Custom"
-                                            Response.Write "<span style='background:#4caf50;color:white;padding:2px 8px;border-radius:3px;font-size:12px;'>用户定制</span>"
+                                            Response.Write "<span style='background:#00838f;color:white;padding:2px 8px;border-radius:3px;font-size:12px;'>用户定制</span>"
                                         Case "KOL"
-                                            Response.Write "<span style='background:#9c27b0;color:white;padding:2px 8px;border-radius:3px;font-size:12px;'>KOL推荐</span>"
+                                            Response.Write "<span style='background:#7b1fa2;color:white;padding:2px 8px;border-radius:3px;font-size:12px;'>KOL推荐</span>"
                                         Case Else
-                                            Response.Write "<span style='background:#95a5a6;color:white;padding:2px 8px;border-radius:3px;font-size:12px;'>未知类型</span>"
+                                            Response.Write "<span style='background:#888;color:white;padding:2px 8px;border-radius:3px;font-size:12px;'>未知类型</span>"
                                     End Select
                                     %>
                                 </span>
@@ -484,7 +491,7 @@ Set rsDetails = ExecuteQuery("SELECT od.*, p.ProductType FROM OrderDetails od LE
                 </div>
                 
                 <% If notes <> "" Then %>
-                <div class="info-group" style="margin-top: 20px; background: #fffbe6; border-color: #ffe58f;">
+                <div class="info-group" style="margin-top: 20px; background: rgba(255,193,7,0.1); border-color: rgba(255,193,7,0.3);">
                     <h3><i class="fas fa-sticky-note"></i> 交易说明 / 备注</h3>
                     <div style="font-size: 14px; white-space: pre-wrap;"><%= notes %></div>
                 </div>

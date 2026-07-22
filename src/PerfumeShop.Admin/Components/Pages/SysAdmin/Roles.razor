@@ -1,0 +1,91 @@
+@page "/admin/system/roles"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject SystemRepository SysRepo
+
+<PageTitle>角色管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-user-tag" style="color:#E91E63;"></i> 角色管理</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>角色管理</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_totalRoles</div><div class="stat-label">角色总数</div></div></div>
+<button class="btn-add" @onclick="OpenAddModal" style="margin-bottom:20px;">+ 添加角色</button>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>角色名称</th><th>角色代码</th><th>说明</th><th>可访问模块</th><th>操作</th></tr></thead><tbody>
+@foreach(var r in _roles){<tr><td>#@r.RoleId</td><td>@r.RoleName</td><td style="color:#E91E63;">@r.RoleCode</td><td>@(r.Description??"-")</td><td>@(r.ModuleAccess??"-")</td><td><button class="btn-edit" @onclick='()=>OpenEditModal(r)'>编辑</button><button class="btn-delete" @onclick='()=>DeleteRole(r.RoleId)'>删除</button></td></tr>}
+@if(!_roles.Any()){<tr><td colspan="6" style="text-align:center;color:#666;padding:40px;">暂无角色</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showModal){
+<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>@(_editing?"编辑角色":"添加角色")</h3><button class="modal-close" @onclick="CloseModal"><i class="fas fa-times"></i></button></div><div class="modal-body">
+<div class="form-group"><label>角色名称</label><input @bind="_editRole.RoleName" /></div>
+<div class="form-group"><label>角色代码</label><input @bind="_editRole.RoleCode" /></div>
+<div class="form-group"><label>说明</label><input @bind="_editRole.Description" /></div>
+<div class="form-group"><label>可访问模块(逗号分隔)</label><input @bind="_editRole.ModuleAccess" placeholder="operation,finance,purchase,techcenter,system,inventory,logistics,prodcenter,semifinished,analytics" /></div>
+</div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveRole">保存</button></div></div></div>
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.btn-add{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.orders-table tr:hover{background:rgba(255,255,255,0.03);}
+.btn-edit{background:rgba(233,30,99,0.15);color:#E91E63;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:6px;}
+.btn-delete{background:rgba(244,67,54,0.15);color:#e57373;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:600px;max-height:85vh;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
+.modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}
+.modal-header h3{margin:0;color:#e0e0e0;font-size:18px;}
+.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}
+.modal-body{padding:25px;max-height:55vh;overflow-y:auto;}
+.modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:15px;}
+.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus,.form-group select:focus{border-color:#E91E63;outline:none;}
+.btn-save{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+</style>
+
+@code {
+    private bool _loaded,_editing,_showModal;
+    private int _totalRoles;
+    private string _msg="",_msgType="";
+    private List<AdminRole> _roles=new();
+    private AdminRole _editRole=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{_roles=await SysRepo.GetRolesAsync();_totalRoles=_roles.Count;_loaded=true;}catch{_loaded=true;}
+    }
+    void OpenAddModal(){_editing=false;_editRole=new();_showModal=true;}
+    void OpenEditModal(AdminRole r){_editing=true;_editRole=new(){RoleId=r.RoleId,RoleName=r.RoleName,RoleCode=r.RoleCode,Description=r.Description,ModuleAccess=r.ModuleAccess};_showModal=true;}
+    void CloseModal(){_showModal=false;}
+    async Task SaveRole(){
+        try{
+            if(string.IsNullOrWhiteSpace(_editRole.RoleName)||string.IsNullOrWhiteSpace(_editRole.RoleCode)){_msg="角色名称和代码不能为空";_msgType="err";return;}
+            if(!_editing)_editRole.CreatedAt=DateTime.Now;
+            else _editRole.UpdatedAt=DateTime.Now;
+            await SysRepo.SaveRoleAsync(_editRole);
+            _msg=_editing?"角色已更新":"角色已创建";_msgType="ok";_showModal=false;
+            _roles=await SysRepo.GetRolesAsync();_totalRoles=_roles.Count;
+        }catch(Exception ex){_msg="保存失败: "+ex.Message;_msgType="err";}
+    }
+    async Task DeleteRole(int id){
+        try{await SysRepo.DeleteRoleAsync(id);_msg="角色已删除";_msgType="ok";_roles=await SysRepo.GetRolesAsync();_totalRoles=_roles.Count;}
+        catch(Exception ex){_msg="删除失败: "+ex.Message;_msgType="err";}
+    }
+}

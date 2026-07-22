@@ -1,0 +1,30 @@
+@page "/admin/logistics/shipping-detail/{OrderId:int}"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>发货详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">发货详情</MudText>
+@if (_order != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>订单ID:</b> @_order.OrderId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>订单号:</b> @_order.OrderNo</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>客户ID:</b> @_order.UserId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>金额:</b> ¥@_order.TotalAmount.ToString("F2")</MudText></MudItem>
+    <MudItem xs="12"><MudText><b>地址:</b> @_order.ShippingAddress</MudText></MudItem>
+</MudGrid>
+<MudDivider Class="my-4" />
+<MudSelect @bind-Value="_carrierId" Label="承运商" Class="mb-4">@foreach (var c in _carriers) { <MudSelectItem Value="@c.CompanyId">@c.CompanyName</MudSelectItem> }</MudSelect>
+<MudTextField @bind-Value="_trackingNo" Label="物流单号" />
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="Ship">确认发货</MudButton>
+</MudCardContent></MudCard>}
+<MudButton Variant="Variant.Text" Href="/admin/logistics/shipping" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Parameter] public int OrderId { get; set; }
+    private Order? _order; private List<ShippingCompany> _carriers = new(); private int _carrierId; private string _trackingNo = "";
+    protected override async Task OnInitializedAsync() { _order = await Db.Orders.FindAsync(OrderId); _carriers = await Db.ShippingCompanies.AsNoTracking().Where(c => c.IsActive == true).ToListAsync(); }
+    private async Task Ship() { await Db.Orders.Where(o => o.OrderId == OrderId).ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, "shipped")); Snackbar.Add("发货成功", Severity.Success); Nav.NavigateTo("/admin/logistics/shipping"); }
+}

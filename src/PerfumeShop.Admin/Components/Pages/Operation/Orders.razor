@@ -1,0 +1,104 @@
+@page "/admin/Operation/Orders"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+<PageTitle>订单管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-shopping-cart" style="color:#00bcd4;"></i> 订单管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>订单管理</span></div></div>
+@if(_loaded){
+<!-- 统计概览 -->
+<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#FF9800;">@_pendingCount</div><div class="stat-label">待付款</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_paidCount</div><div class="stat-label">已支付</div></div><div class="stat-card"><div class="stat-value" style="color:#2196F3;">@_processingCount</div><div class="stat-label">处理中</div></div><div class="stat-card"><div class="stat-value" style="color:#9C27B0;">@_shippedCount</div><div class="stat-label">已发货</div></div><div class="stat-card"><div class="stat-value" style="color:#e0e0e0;">@_totalOrders</div><div class="stat-label">全部订单</div></div></div>
+<!-- 筛选栏 -->
+<div class="filter-bar"><form class="filter-form" @onsubmit="ApplyFilter"><div class="filter-group"><label>订单状态</label><select class="filter-select" @bind="_statusFilter"><option value="">全部状态</option><option value="Pending">待付款</option><option value="Paid">已支付</option><option value="Processing">处理中</option><option value="Shipped">已发货</option><option value="Completed">已完成</option><option value="Cancelled">已取消</option></select></div><div class="filter-group"><label>时间范围</label><select class="filter-select" @bind="_dateFilter"><option value="">全部时间</option><option value="today">今日</option><option value="week">本周</option><option value="month">本月</option></select></div><div class="filter-group"><label>关键词搜索</label><input type="text" class="filter-input" @bind="_keyword" @bind:event="oninput" placeholder="订单号/客户姓名"/></div><div class="filter-group filter-actions"><button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> 筛选</button><button type="button" class="btn btn-outline" @onclick="ResetFilter"><i class="fas fa-undo"></i> 重置</button></div></form></div>
+<!-- 订单列表 -->
+<div class="table-container"><table class="orders-table"><thead><tr><th>订单号</th><th>客户信息</th><th>订单金额</th><th>下单时间</th><th>状态</th><th>操作</th></tr></thead><tbody>@if(_filteredOrders.Any()){@foreach(var o in _filteredOrders.Skip((_currentPage-1)*_pageSize).Take(_pageSize)){<tr><td><div class="order-no">#@(o.OrderNo??"-")</div></td><td><div class="customer-info"><span class="customer-name">@GetCustomerName(o.UserId)</span>@if(!string.IsNullOrEmpty(GetCustomerPhone(o.UserId))){<span class="customer-contact"><i class="fas fa-phone"></i> @GetCustomerPhone(o.UserId)</span>}</div></td><td><div class="order-amount">¥@o.TotalAmount.ToString("N2")</div><div class="order-items">@GetItemCount(o.OrderId) 件商品</div></td><td>@(o.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td><span class="status-badge @GetStatusClass(o.Status)">@GetStatusLabel(o.Status)</span></td><td><div class="action-btns"><a href="/admin/Operation/OrderDetail/@o.OrderId" class="action-btn view"><i class="fas fa-eye"></i> 查看</a><a href="/admin/Operation/OrderEdit/@o.OrderId" class="action-btn edit"><i class="fas fa-edit"></i> 编辑</a></div></td></tr>}}else{<tr><td colspan="6" class="empty-cell">暂无订单数据</td></tr>}</tbody></table></div>
+<!-- 分页 -->
+@if(_totalPages>1){<div class="pagination">@for(int p=1;p<=_totalPages;p++){var pi=p;<a href="javascript:void(0)" class="@(pi==_currentPage?"page-item active":"page-item")" @onclick="()=>GoToPage(pi)" @onclick:preventDefault>@pi</a>}</div>}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;transition:transform 0.2s;}.stat-card:hover{transform:translateY(-3px);}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.filter-bar{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.05);}.filter-form{display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;}.filter-group{display:flex;flex-direction:column;gap:6px;}.filter-group label{font-size:13px;color:#888;font-weight:500;}.filter-select{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e0e0e0;padding:10px 14px;font-size:14px;min-width:140px;cursor:pointer;}.filter-select:focus{border-color:#00bcd4;outline:none;}.filter-select option{background:#2d2d44;color:#e0e0e0;}.filter-input{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e0e0e0;padding:10px 14px;font-size:14px;min-width:180px;}.filter-input:focus{border-color:#00bcd4;outline:none;}.filter-input::placeholder{color:#666;}.filter-actions{padding-top:20px;}.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.3s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}.btn-primary:hover{background:linear-gradient(135deg,#00bcd4,#0097a7);}.btn-outline{background:rgba(255,255,255,0.05);color:#b0b0b0;border:1px solid rgba(255,255,255,0.1);}.btn-outline:hover{background:rgba(255,255,255,0.1);color:#fff;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.orders-table{width:100%;border-collapse:collapse;}.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.08);}.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.orders-table tr:last-child td{border-bottom:none;}.orders-table tr:hover td{background:rgba(255,255,255,0.03);}.order-no{font-weight:600;color:#00bcd4;}.customer-info{display:flex;flex-direction:column;}.customer-name{font-weight:500;color:#e0e0e0;}.customer-contact{font-size:12px;color:#888;margin-top:3px;}.order-amount{font-size:16px;font-weight:600;color:#e0e0e0;}.order-items{font-size:12px;color:#888;margin-top:3px;}.status-badge{display:inline-block;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;}.status-pending{background:rgba(255,152,0,0.12);color:#e65100;}.status-paid{background:rgba(46,125,50,0.2);color:#4caf50;}.status-processing{background:rgba(25,118,210,0.2);color:#2196f3;}.status-shipped{background:rgba(123,31,162,0.2);color:#9C27B0;}.status-completed{background:rgba(0,105,92,0.2);color:#4caf50;}.status-cancelled{background:rgba(198,40,40,0.2);color:#c62828;}.action-btns{display:flex;gap:8px;}.action-btn{padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;transition:all 0.3s;display:inline-flex;align-items:center;gap:4px;}.action-btn.view{background:rgba(25,118,210,0.2);color:#00bcd4;}.action-btn.view:hover{background:#00bcd4;color:white;}.action-btn.edit{background:rgba(255,152,0,0.12);color:#e65100;}.action-btn.edit:hover{background:#e65100;color:white;}.empty-cell{text-align:center;color:#666;padding:40px;}
+.pagination{display:flex;justify-content:center;gap:8px;margin-top:25px;}.page-item{padding:10px 16px;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:8px;text-decoration:none;color:#b0b0b0;border:1px solid rgba(255,255,255,0.05);transition:all 0.3s;font-size:14px;cursor:pointer;}.page-item:hover,.page-item.active{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}@@media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr);}.filter-form{flex-direction:column;}.orders-table{font-size:12px;}}
+</style>
+@code{
+[Inject] private PerfumeShopContext Db{get;set;}=default!;
+private bool _loaded;
+private List<Order> _allOrders=new();
+private int _totalOrders,_pendingCount,_paidCount,_processingCount,_shippedCount;
+private string? _statusFilter,_dateFilter,_keyword="";
+private int _currentPage=1,_pageSize=20,_totalPages=1;
+private Dictionary<int,(string Name,string Phone)> _customers=new();
+private Dictionary<int,int> _itemCounts=new();
+
+protected override async Task OnInitializedAsync(){
+try{
+await LoadData();
+_loaded=true;
+}catch{_loaded=true;}
+}
+
+async Task LoadData(){
+_allOrders=await Db.Orders.OrderByDescending(o=>o.CreatedAt).ToListAsync();
+_totalOrders=await Db.Orders.CountAsync();
+_pendingCount=await Db.Orders.CountAsync(o=>o.Status=="Pending");
+_paidCount=await Db.Orders.CountAsync(o=>o.Status=="Paid");
+_processingCount=await Db.Orders.CountAsync(o=>o.Status=="Processing");
+_shippedCount=await Db.Orders.CountAsync(o=>o.Status=="Shipped");
+var uids=_allOrders.Select(o=>o.UserId).Distinct().ToList();
+var us=await Db.Users.Where(u=>uids.Contains(u.UserId)).ToListAsync();
+_customers=us.ToDictionary(u=>u.UserId,u=>(u.FullName??u.Username??"",u.Phone??""));
+var oids=_allOrders.Select(o=>o.OrderId).ToList();
+_itemCounts=await Db.OrderDetails.Where(od=>oids.Contains(od.OrderId)).GroupBy(od=>od.OrderId).Select(g=>new{OrderId=g.Key,Count=g.Sum(od=>od.Quantity)}).ToDictionaryAsync(x=>x.OrderId,x=>x.Count);
+}
+
+IEnumerable<Order> _filteredOrders{
+get{
+var q=_allOrders.AsEnumerable();
+if(!string.IsNullOrEmpty(_statusFilter))q=q.Where(o=>o.Status==_statusFilter);
+if(!string.IsNullOrEmpty(_dateFilter)){
+var today=DateTime.Today;
+q=_dateFilter switch{
+"today"=>q.Where(o=>o.CreatedAt.HasValue&&o.CreatedAt.Value.Date==today),
+"week"=>q.Where(o=>o.CreatedAt.HasValue&&o.CreatedAt.Value>=today.AddDays(-7)),
+"month"=>q.Where(o=>o.CreatedAt.HasValue&&o.CreatedAt.Value>=today.AddMonths(-1)),
+_=>q
+};
+}
+if(!string.IsNullOrEmpty(_keyword)){
+var kw=_keyword.Trim().ToLower();
+var matchedUids=_customers.Where(kv=>kv.Value.Name.ToLower().Contains(kw)||kv.Value.Phone.Contains(kw)).Select(kv=>kv.Key).ToHashSet();
+q=q.Where(o=>(o.OrderNo??"").ToLower().Contains(kw)||matchedUids.Contains(o.UserId)||o.UserId.ToString().Contains(kw));
+}
+var list=q.ToList();
+_totalPages=Math.Max(1,(int)Math.Ceiling((double)list.Count/_pageSize));
+if(_currentPage>_totalPages)_currentPage=1;
+return list;
+}
+}
+
+string GetCustomerName(int uid)=>_customers.TryGetValue(uid,out var c)?c.Name:$"#{uid}";
+string GetCustomerPhone(int uid)=>_customers.TryGetValue(uid,out var c)?c.Phone:"";
+int GetItemCount(int oid)=>_itemCounts.TryGetValue(oid,out var c)?c:0;
+
+async Task ApplyFilter(){
+_currentPage=1;
+await InvokeAsync(StateHasChanged);
+}
+
+async Task ResetFilter(){
+_statusFilter=null;
+_dateFilter=null;
+_keyword="";
+_currentPage=1;
+await InvokeAsync(StateHasChanged);
+}
+
+async Task GoToPage(int page){
+_currentPage=page;
+await InvokeAsync(StateHasChanged);
+}
+
+static string GetStatusClass(string? s)=>s switch{"Pending"=>"status-pending","Paid"=>"status-paid","Processing"=>"status-processing","Shipped"=>"status-shipped","Completed"=>"status-completed","Cancelled"=>"status-cancelled",_=>""};
+static string GetStatusLabel(string? s)=>s switch{"Pending"=>"待付款","Paid"=>"已支付","Processing"=>"处理中","Shipped"=>"已发货","Completed"=>"已完成","Cancelled"=>"已取消",_=>s??"-"};
+}

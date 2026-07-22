@@ -1,0 +1,115 @@
+@page "/admin/semifinished/note-inventory"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>香调库存</PageTitle>
+<div class="ph"><h2 class="pt"><i class="fas fa-layer-group" style="color:#FF9800;"></i> 香调库存管理</h2><div class="br"><a href="/admin/semifinished" style="color:#2196F3;text-decoration:none;">半成品中心</a> / 香调库存</div></div>
+
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="@(_msgErr?"alert-err":"alert-ok")">@_msg</div>}
+
+<div class="sg"><div class="sc"><span class="n" style="color:#FF9800;">@_niTotal</span><span class="l">香调种类</span></div><div class="sc"><span class="n" style="color:#4CAF50;">@_niTotalQty</span><span class="l">总库存量</span></div><div class="sc"><span class="n" style="color:#f44336;">@_niLowStock</span><span class="l">低库存预警</span></div><div class="sc"><span class="n" style="color:#888;">@_niZeroStock</span><span class="l">零库存</span></div></div>
+
+<div class="ft"><a href="/admin/semifinished/note-inventory" class="@(string.IsNullOrEmpty(_filterType)?"fta":"ft")">全部</a><a href="/admin/semifinished/note-inventory?type=Top" class="@(_filterType=="Top"?"fta":"ft")">前调</a><a href="/admin/semifinished/note-inventory?type=Middle" class="@(_filterType=="Middle"?"fta":"ft")">中调</a><a href="/admin/semifinished/note-inventory?type=Base" class="@(_filterType=="Base"?"fta":"ft")">后调</a></div>
+
+<div class="card"><div class="ch">香调库存清单</div><div class="cb"><table class="dt"><thead><tr><th>香调名称</th><th>类型</th><th>基香</th><th>库存量</th><th>最低库存</th><th>价格加成</th><th>操作</th></tr></thead><tbody>
+@foreach(var n in _notes){var qty=n.StockQuantity??0;var min=n.MinStockLevel??0;var pct=min>0?Math.Min(100,(qty/(double)min)*100):100;var scls=qty<=0?"danger":qty<=min?"warning":"safe";<tr class="@(min>0&&qty<=min?"low":"")"><td><strong>@n.NoteName</strong></td><td style="color:@(n.NoteType=="Top"?"#f44336":n.NoteType=="Middle"?"#FF9800":"#2196F3")">@(n.NoteType=="Top"?"前调":n.NoteType=="Middle"?"中调":"后调")</td><td>@n.BaseNoteName</td><td>@qty<div class="sbar"><div class="sbar-f @scls" style="width:@(pct)%;"></div></div></td><td>@min</td><td>@((n.PriceAddition??0).ToString("C2"))</td><td><button class="btn btn-primary btn-sm" @onclick="()=>OpenEditModal(n)">编辑</button><button class="btn btn-success btn-sm" @onclick="()=>OpenRestockModal(n)">入库</button><button class="btn btn-warning btn-sm" @onclick="()=>OpenOutModal(n)">出库</button></td></tr>}
+@if(!_notes.Any()){<tr><td colspan="7" class="tac tm" style="padding:40px;">暂无香调库存数据</td></tr>}
+</tbody></table></div></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showEdit){<div class="mo" @onclick="()=>_showEdit=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>编辑库存 - @_eName</h3><button class="mcl" @onclick="()=>_showEdit=false">&times;</button></div>
+<div class="fg"><label>当前库存量</label><input type="number" @bind="_eQty" class="fi" required/></div>
+<div class="fg"><label>最低库存水平</label><input type="number" @bind="_eMin" class="fi"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showEdit=false">取消</button><button class="btn btn-primary" @onclick="HandleUpdate" disabled="@_saving">保存</button></div>
+</div></div>}
+
+@if(_showOut){<div class="mo" @onclick="()=>_showOut=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>香调出库 - @_oName</h3><button class="mcl" @onclick="()=>_showOut=false">&times;</button></div>
+<div class="fg"><label>出库数量</label><input type="number" @bind="_oAddQty" class="fi" required min="1"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showOut=false">取消</button><button class="btn btn-warning" @onclick="HandleOutbound" disabled="@_saving">确认出库</button></div>
+</div></div>}
+
+@if(_showRestock){<div class="mo" @onclick="()=>_showRestock=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>香调入库存 - @_rName</h3><button class="mcl" @onclick="()=>_showRestock=false">&times;</button></div>
+<div class="fg"><label>入库数量</label><input type="number" @bind="_rAddQty" class="fi" required min="1"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showRestock=false">取消</button><button class="btn btn-success" @onclick="HandleRestock" disabled="@_saving">确认入库</button></div>
+</div></div>}
+
+@code{
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+[Inject] NavigationManager Nav{get;set;}=default!;
+bool _loaded,_msgErr,_saving,_showEdit,_showRestock,_showOut;string? _msg,_filterType;
+int _niTotal,_niLowStock,_niZeroStock,_niTotalQty;
+List<NtVm> _notes=new();
+int _eId,_eQty,_eMin;string _eName="";
+int _rId,_rAddQty;string _rName="";
+int _oId,_oAddQty;string _oName="";
+
+record NtVm(int NoteId,string? NoteName,string? NoteType,string? BaseNoteName,int? StockQuantity,int? MinStockLevel,decimal? PriceAddition);
+
+protected override async Task OnInitializedAsync(){
+    var uri=new Uri(Nav.Uri);_filterType=System.Web.HttpUtility.ParseQueryString(uri.Query)["type"]??"";
+    await LoadData();
+}
+
+async Task LoadData(){
+    try{
+        var invs=await Db.NoteInventories.ToListAsync();
+        var notes=await Db.FragranceNotes.ToListAsync();
+        var bases=await Db.BaseNotes.ToListAsync();
+        var joined=invs.Select(i=>{
+            var f=notes.FirstOrDefault(x=>x.NoteId==i.NoteId);
+            var bn=f!=null?bases.FirstOrDefault(b=>b.BaseNoteId==(f.BaseNoteId??-1)):null;
+            return new NtVm(i.NoteId,f!=null?f.NoteName:("香调#"+i.NoteId),f?.NoteType,bn?.BaseNoteName,i.StockQuantity,i.MinStockLevel,f?.PriceAddition);
+        });
+        if(!string.IsNullOrEmpty(_filterType))joined=joined.Where(x=>x.NoteType==_filterType);
+        _notes=joined.OrderBy(x=>x.NoteType).ThenBy(x=>x.NoteName).ToList();
+        _niTotal=invs.Count;
+        _niTotalQty=invs.Sum(n=>n.StockQuantity??0);
+        _niLowStock=invs.Count(n=>(n.StockQuantity??0)<=(n.MinStockLevel??0)&&(n.MinStockLevel??0)>0);
+        _niZeroStock=invs.Count(n=>(n.StockQuantity??0)<=0);
+    }catch(Exception ex){_msg="加载失败: "+ex.Message;_msgErr=true;}
+    _loaded=true;
+}
+
+void OpenEditModal(NtVm n){_eId=n.NoteId;_eQty=n.StockQuantity??0;_eMin=n.MinStockLevel??0;_eName=n.NoteName??"";_showEdit=true;}
+async Task HandleUpdate(){
+    if(_eId<=0)return;_saving=true;
+    try{await Db.NoteInventories.Where(n=>n.NoteId==_eId).ExecuteUpdateAsync(s=>s.SetProperty(n=>n.StockQuantity,_eQty).SetProperty(n=>n.MinStockLevel,_eMin).SetProperty(n=>n.UpdatedAt,DateTime.Now));_msg="库存更新成功";_msgErr=false;_showEdit=false;await LoadData();}
+    catch(Exception ex){_msg="更新失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+void OpenRestockModal(NtVm n){_rId=n.NoteId;_rName=n.NoteName??"";_rAddQty=0;_showRestock=true;}
+async Task HandleRestock(){
+    if(_rId<=0||_rAddQty<=0)return;_saving=true;
+    try{await Db.NoteInventories.Where(n=>n.NoteId==_rId).ExecuteUpdateAsync(s=>s.SetProperty(n=>n.StockQuantity,n=>(n.StockQuantity??0)+_rAddQty).SetProperty(n=>n.UpdatedAt,DateTime.Now).SetProperty(n=>n.LastRestockDate,DateTime.Now));_msg="入库成功";_msgErr=false;_showRestock=false;await LoadData();}
+    catch(Exception ex){_msg="入库失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+void OpenOutModal(NtVm n){_oId=n.NoteId;_oName=n.NoteName??"";_oAddQty=0;_showOut=true;}
+async Task HandleOutbound(){
+    if(_oId<=0||_oAddQty<=0)return;_saving=true;
+    try{
+        var cur=await Db.NoteInventories.Where(n=>n.NoteId==_oId).Select(n=>n.StockQuantity).FirstOrDefaultAsync()??0;
+        if(_oAddQty>cur){_msg="库存不足！当前库存: "+cur;_msgErr=true;}
+        else{await Db.NoteInventories.Where(n=>n.NoteId==_oId).ExecuteUpdateAsync(s=>s.SetProperty(n=>n.StockQuantity,n=>(n.StockQuantity??0)-_oAddQty).SetProperty(n=>n.UpdatedAt,DateTime.Now));_msg="出库成功";_msgErr=false;_showOut=false;await LoadData();}
+    }catch(Exception ex){_msg="出库失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+}
+
+<style>
+.ph{margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}.br{font-size:13px;color:#888;margin-top:5px;}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,0.06);}.sc .n{font-size:28px;font-weight:bold;display:block;}.sc .l{font-size:12px;color:#888;display:block;margin-top:5px;}
+.ft{display:flex;gap:8px;margin-bottom:15px;}.fta{padding:6px 16px;border-radius:16px;font-size:13px;text-decoration:none;color:#fff;background:#FF9800;border:1px solid #FF9800;}.ft{padding:6px 16px;border-radius:16px;font-size:13px;text-decoration:none;color:#888;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.06);}.ch{padding:14px 20px;background:rgba(255,152,0,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;}.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(255,152,0,0.15);color:#ffb74d;padding:12px 15px;text-align:left;font-weight:600;font-size:13px;}.dt td{padding:12px 15px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e0e0e0;font-size:14px;}.dt tr:hover td{background:rgba(255,255,255,0.03);}.dt tr.low td{background:rgba(244,67,54,0.06);}
+.sbar{height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;}.sbar-f{height:100%;border-radius:3px;}.sbar-f.safe{background:#4CAF50;}.sbar-f.warning{background:#FF9800;}.sbar-f.danger{background:#f44336;}
+.alert-ok{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}.alert-err{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.mo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);width:90%;max-width:500px;padding:30px;border-radius:15px;border:1px solid rgba(255,255,255,0.06);}.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.06);}.mh h3{margin:0;font-size:18px;color:#e0e0e0;}.mcl{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.mft{display:flex;justify-content:flex-end;gap:10px;margin-top:25px;}
+.fg{margin-bottom:18px;}.fg label{display:block;margin-bottom:6px;font-weight:600;color:#e0e0e0;font-size:13px;}.fi{width:100%;padding:10px 12px;background:#2d2d44;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:14px;}.fi:focus{outline:none;border-color:#2196F3;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:#fff;}.btn-primary{background:#2196F3;}.btn-success{background:#4CAF50;}.btn-warning{background:#FF9800;}.btn--neutral{background:#555;}.btn-sm{padding:6px 12px;font-size:12px;}.btn:disabled{opacity:0.6;}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+</style>

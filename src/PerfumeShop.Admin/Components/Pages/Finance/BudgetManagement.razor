@@ -1,0 +1,11 @@
+@page "/admin/finance/budget-management"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>预算管理</PageTitle>
+<div class="ph"><h2><i class="fas fa-chart-pie" style="color:#00bcd4;"></i> 预算管理</h2><div class="br"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>预算管理</span></div></div>
+@if(_l){
+<div class="tc"><table class="ot"><thead><tr><th>预算ID</th><th>预算名称</th><th>类别</th><th>预算金额</th><th>实际金额</th><th>执行率</th><th>状态</th></tr></thead><tbody>@foreach(var b in _items){var rate=b.BudgetAmount>0?((b.ActualAmount??0m)/b.BudgetAmount.Value*100m):0m;<tr><td>#@b.BudgetId</td><td>@(b.BudgetName??"-")</td><td>@(b.Category??"-")</td><td>@((b.BudgetAmount??0).ToString("N0"))</td><td>@((b.ActualAmount??0).ToString("N0"))</td><td style="color:@(rate>80?"#F44336":rate>50?"#FF9800":"#4CAF50");">@rate.ToString("F1")%</td><td>@(b.Status??"-")</td></tr>}@if(!_items.Any()){<tr><td colspan="7" style="text-align:center;color:#666;padding:30px;">暂无预算计划</td></tr>}</tbody></table></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}</style>
+@code{bool _l;List<BudgetPlan> _items=new();protected override async Task OnInitializedAsync(){try{_items=await Db.BudgetPlans.AsNoTracking().OrderByDescending(b=>b.BudgetId).Take(20).ToListAsync();_l=true;}catch{_l=true;}}}

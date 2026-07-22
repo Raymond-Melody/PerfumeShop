@@ -1,0 +1,65 @@
+@page "/admin/system/login-history"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject SystemRepository SysRepo
+
+<PageTitle>登录监控</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-user-shield" style="color:#E91E63;"></i> 登录监控</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>登录监控</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#F44336;">@_failedLogins</div><div class="stat-label">失败登录</div></div><div class="stat-card"><div class="stat-value">@_totalAlerts</div><div class="stat-label">告警总数</div></div></div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>用户名</th><th>IP</th><th>结果</th><th>时间</th></tr></thead><tbody>
+@foreach(var l in _alerts){<tr><td>#@l.AlertId</td><td>@(l.AdminId?.ToString()??"-")</td><td>@(l.Ipaddress??"-")</td><td><span class="status-badge @(l.AlertLevel=="HIGH"?"status-warning":"status-normal")">@(l.AlertType??"登录")</span></td><td>@(l.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td></tr>}
+@if(!_alerts.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无登录记录</td></tr>}
+</tbody></table></div>
+@RenderPagination(_totalPages)
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}
+.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}
+.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
+.pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:25px;}
+.pagination button{padding:8px 14px;border-radius:6px;border:none;font-size:14px;cursor:pointer;background:#3a3a4a;color:#e0e0e0;}
+.pagination button.current{background:#E91E63;color:#fff;}
+.pagination button:disabled{background:#2a2a3a;color:#666;cursor:not-allowed;}
+</style>
+
+@code {
+    private bool _loaded;
+    private int _failedLogins,_totalAlerts,_page=1,_totalPages=1; const int PageSize=20;
+    private List<LoginAlert> _alerts=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            var(items,total)=await SysRepo.GetLoginAlertsAsync(1,PageSize);
+            _alerts=items;_totalAlerts=total;_totalPages=(int)Math.Ceiling(total/(double)PageSize);
+            _failedLogins=await Db.LoginAlerts.CountAsync(l=>l.AlertLevel=="HIGH");
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+    async Task GoToPage(int p){_page=p;var(items,total)=await SysRepo.GetLoginAlertsAsync(p,PageSize);_alerts=items;_totalAlerts=total;_totalPages=(int)Math.Ceiling(total/(double)PageSize);}
+    RenderFragment RenderPagination(int tp)=>builder=>{
+        if(tp<=1)return;
+        builder.OpenElement(0,"div");builder.AddAttribute(1,"class","pagination");
+        builder.OpenElement(2,"button");builder.AddAttribute(3,"disabled",_page<=1);builder.AddAttribute(4,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(1)));builder.AddContent(5,"首页");builder.CloseElement();
+        builder.OpenElement(6,"button");builder.AddAttribute(7,"disabled",_page<=1);builder.AddAttribute(8,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(_page-1)));builder.AddContent(9,"上一页");builder.CloseElement();
+        builder.OpenElement(10,"button");builder.AddAttribute(11,"class","current");builder.AddContent(12,$"{_page}/{tp}");builder.CloseElement();
+        builder.OpenElement(13,"button");builder.AddAttribute(14,"disabled",_page>=tp);builder.AddAttribute(15,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(_page+1)));builder.AddContent(16,"下一页");builder.CloseElement();
+        builder.OpenElement(17,"button");builder.AddAttribute(18,"disabled",_page>=tp);builder.AddAttribute(19,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(tp)));builder.AddContent(20,"末页");builder.CloseElement();
+        builder.CloseElement();
+    };
+}

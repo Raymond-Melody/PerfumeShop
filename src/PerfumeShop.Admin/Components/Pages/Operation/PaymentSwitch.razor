@@ -1,0 +1,62 @@
+﻿@page "/admin/Operation/PaymentSwitch"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>支付开关控制</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-toggle-on"></i> 支付开关控制</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>支付开关</span></div></div>
+<div class="warning-box"><i class="fas fa-exclamation-triangle"></i><strong>权限说明：</strong>此处仅控制支付功能开关，具体参数配置请联系财务管理员。</div>
+
+@if (_loaded)
+{
+@if (!string.IsNullOrEmpty(_msg)) { <div class="alert @(_msgClass)"><i class="fas fa-@(_msgClass=="alert-success"?"check-circle":"exclamation-circle")"></i> @_msg</div> }
+<div class="switch-container">
+<div class="payment-item"><div class="payment-info"><div class="payment-icon" style="background:#1677FF;"><i class="fas fa-alipay"></i></div><div class="payment-details"><h4>支付宝支付</h4><p>支付宝扫码支付、快捷支付</p></div></div><label class="toggle-switch"><input type="checkbox" @bind="_alipay" /><span class="slider"></span></label></div>
+<div class="payment-item"><div class="payment-info"><div class="payment-icon" style="background:#07C160;"><i class="fas fa-weixin"></i></div><div class="payment-details"><h4>微信支付</h4><p>微信扫码支付、公众号支付</p></div></div><label class="toggle-switch"><input type="checkbox" @bind="_wechat" /><span class="slider"></span></label></div>
+<div class="payment-item"><div class="payment-info"><div class="payment-icon" style="background:#4CAF50;"><i class="fas fa-university"></i></div><div class="payment-details"><h4>银行转账</h4><p>银行卡转账、网银支付</p></div></div><label class="toggle-switch"><input type="checkbox" @bind="_bank" /><span class="slider"></span></label></div>
+<div class="payment-item"><div class="payment-info"><div class="payment-icon" style="background:#009CDE;"><i class="fas fa-paypal"></i></div><div class="payment-details"><h4>PayPal</h4><p>国际支付、信用卡支付</p></div></div><label class="toggle-switch"><input type="checkbox" @bind="_paypal" /><span class="slider"></span></label></div>
+<div class="payment-item"><div class="payment-info"><div class="payment-icon" style="background:#FF9800;"><i class="fas fa-truck"></i></div><div class="payment-details"><h4>货到付款</h4><p>收货时现金支付</p></div></div><label class="toggle-switch"><input type="checkbox" @bind="_cod" /><span class="slider"></span></label></div>
+<div class="payment-item"><div class="payment-info"><div class="payment-icon" style="background:#635BFF;"><i class="fas fa-credit-card"></i></div><div class="payment-details"><h4>Stripe</h4><p>国际信用卡、Apple Pay、Google Pay</p></div></div><label class="toggle-switch"><input type="checkbox" @bind="_stripe" /><span class="slider"></span></label></div>
+<div class="payment-item"><div class="payment-info"><div class="payment-icon" style="background:#E31D1A;"><i class="fas fa-cc-unionpay"></i></div><div class="payment-details"><h4>银联支付</h4><p>银联卡支付、云闪付</p></div></div><label class="toggle-switch"><input type="checkbox" @bind="_unionpay" /><span class="slider"></span></label></div>
+<div style="text-align:center;margin-top:30px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);">
+<button type="button" class="btn-save" disabled="@_saving" @onclick="HandleSave"><i class="fas fa-save"></i> @(_saving?"保存中...":"保存设置")</button></div></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.warning-box{background:rgba(255,152,0,0.12);border-left:4px solid #ff9800;padding:15px;margin-bottom:25px;border-radius:8px;color:#FFB74D;font-size:14px;}
+.switch-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:30px;border-radius:14px;border:1px solid rgba(255,255,255,0.05);}
+.payment-item{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid rgba(255,255,255,0.06);}.payment-item:last-child{border-bottom:none;}.payment-info{display:flex;align-items:center;gap:20px;}
+.payment-icon{width:50px;height:50px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;color:white;flex-shrink:0;}.payment-details h4{margin:0 0 3px;color:#e0e0e0;}.payment-details p{margin:0;color:#888;font-size:12px;}
+.toggle-switch{position:relative;width:60px;height:30px;}.toggle-switch input{opacity:0;width:0;height:0;}.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:rgba(255,255,255,0.15);transition:.4s;border-radius:30px;}.slider:before{position:absolute;content:"";height:22px;width:22px;left:4px;bottom:4px;background-color:white;transition:.4s;border-radius:50%;}input:checked+.slider{background-color:#4CAF50;}input:checked+.slider:before{transform:translateX(30px);}
+.btn-save{padding:10px 30px;background:linear-gradient(135deg,#00bcd4,#00838f);color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;}.btn-save:disabled{opacity:0.5;cursor:not-allowed;}
+.alert{padding:15px;border-radius:8px;margin-bottom:20px;}.alert-success{background:rgba(76,175,80,0.15);color:#4CAF50;border:1px solid rgba(76,175,80,0.3);}.alert-error{background:rgba(244,67,54,0.15);color:#ef9a9a;border:1px solid rgba(244,67,54,0.3);}
+</style>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded, _saving, _alipay=true, _wechat=true, _bank=true, _paypal, _cod=true, _stripe, _unionpay;
+    private string? _msg, _msgClass="alert-success";
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            var ss=await Db.SiteSettings.Where(s=>s.SettingKey!=null&&s.SettingKey.StartsWith("Enable")).ToListAsync();
+            _alipay=GetVal(ss,"EnableAlipay");_wechat=GetVal(ss,"EnableWechatPay");_bank=GetVal(ss,"EnableBankTransfer");
+            _paypal=GetVal(ss,"EnablePayPal");_cod=GetVal(ss,"EnableCOD");_stripe=GetVal(ss,"EnableStripe");
+            _unionpay=GetVal(ss,"EnableUnionPay");_loaded=true;
+        }catch{_loaded=true;}
+    }
+    static bool GetVal(List<SiteSetting> ss,string k)=>ss.FirstOrDefault(s=>s.SettingKey==k)?.SettingValue=="1";
+
+    async Task HandleSave(){
+        _saving=true;_msg=null;
+        try{
+            var items=new (string,bool)[]{("EnableAlipay",_alipay),("EnableWechatPay",_wechat),("EnableBankTransfer",_bank),("EnablePayPal",_paypal),("EnableCOD",_cod),("EnableStripe",_stripe),("EnableUnionPay",_unionpay)};
+            foreach(var(key,val)in items){
+                var v=val?"1":"0";
+                await Db.Database.ExecuteSqlRawAsync("IF EXISTS(SELECT 1 FROM SiteSettings WHERE SettingKey={0}) UPDATE SiteSettings SET SettingValue={1} WHERE SettingKey={0} ELSE INSERT INTO SiteSettings(SettingKey,SettingValue,Description) VALUES({0},{1},{0})",key,v);
+            }
+            _msg="支付开关设置已保存";_msgClass="alert-success";
+        }catch(Exception ex){_msg="保存失败: "+ex.Message;_msgClass="alert-error";}
+        _saving=false;
+        await InvokeAsync(StateHasChanged);
+    }
+}

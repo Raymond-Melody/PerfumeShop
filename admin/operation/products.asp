@@ -158,37 +158,6 @@ Set rsProducts = ExecuteQuery(sql)
     <link rel="stylesheet" href="/css/buttons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* 深色主题 */
-        body {
-            background: #1a1a2e;
-            color: #e0e0e0;
-        }
-        .main-content {
-            color: #e0e0e0;
-        }
-        
-        /* 页面标题区 */
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-        }
-        .page-title {
-            font-size: 24px;
-            color: #fff;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .page-title i { color: #00bcd4; }
-        .breadcrumb { font-size: 13px; color: #888; }
-        .breadcrumb a { color: #00bcd4; text-decoration: none; }
-        .breadcrumb a:hover { text-decoration: underline; }
-        
         /* 提示横幅 */
         .info-banner {
             background: rgba(0,188,212,0.1);
@@ -286,7 +255,7 @@ Set rsProducts = ExecuteQuery(sql)
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: #666;
+            color: #b0b0b0;
             font-size: 36px;
         }
         .product-card:hover .product-card-image img {
@@ -316,7 +285,7 @@ Set rsProducts = ExecuteQuery(sql)
         .product-title i { color: #00bcd4; flex-shrink: 0; }
         .product-id {
             font-size: 11px;
-            color: #999;
+            color: #888;
             background: rgba(0,0,0,0.3);
             padding: 2px 8px;
             border-radius: 4px;
@@ -396,15 +365,15 @@ Set rsProducts = ExecuteQuery(sql)
             grid-column: 1 / -1;
             text-align: center;
             padding: 60px 20px;
-            color: #666;
+            color: #b0b0b0;
         }
         .empty-state i {
             font-size: 48px;
             margin-bottom: 15px;
-            color: #555;
+            color: #e0e0e0;
         }
         .empty-state h3 { color: #888; margin-bottom: 10px; }
-        .empty-state p { color: #666; font-size: 14px; }
+        .empty-state p { color: #b0b0b0; font-size: 14px; }
         
         /* 模态框深色 */
         .admin-modal-content {
@@ -804,8 +773,8 @@ Set rsProducts = ExecuteQuery(sql)
             document.getElementById('viewBasePrice').textContent = '¥' + parseFloat(price).toFixed(2);
             document.getElementById('viewProductType').textContent = productTypeNames[type] || type;
             document.getElementById('viewIsActive').innerHTML = active != '0' ? 
-                '<span style="color: #27ae60;"><i class="fas fa-check-circle"></i> 上架中</span>' : 
-                '<span style="color: #e74c3c;"><i class="fas fa-times-circle"></i> 已下架</span>';
+                '<span style="color: #66bb6a;"><i class="fas fa-check-circle"></i> 上架中</span>' : 
+                '<span style="color: #ef5350;"><i class="fas fa-times-circle"></i> 已下架</span>';
             document.getElementById('viewImage').src = image || '/images/default-product.svg';
             
             document.getElementById('productModal').style.display = 'block';

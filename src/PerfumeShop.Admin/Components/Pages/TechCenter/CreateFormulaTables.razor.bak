@@ -1,0 +1,51 @@
+@page "/admin/TechCenter/CreateFormulaTables"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>配方建表工具</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">配方相关表结构</MudText>
+
+<MudAlert Severity="Severity.Info" Class="mb-4">查看技术中心相关数据表的当前状态和记录数。</MudAlert>
+
+<MudGrid>
+    @foreach (var t in _tables)
+    {
+        <MudItem xs="12" sm="6" md="4">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="mb-2">@t.Name</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">记录数: <strong>@t.Count</strong></MudText>
+                    <MudChip T="string" Size="Size.Small" Color="@(t.Count > 0 ? Color.Success : Color.Warning)" Class="mt-2">
+                        @(t.Count > 0 ? "有数据" : "空表")
+                    </MudChip>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<TableInfo> _tables = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tables = new List<TableInfo>
+        {
+            new("Recipes", await Db.Recipes.CountAsync()),
+            new("RecipeNotes", await Db.RecipeNotes.CountAsync()),
+            new("RecipeIngredients", await Db.RecipeIngredients.CountAsync()),
+            new("RecipeAccords", await Db.RecipeAccords.CountAsync()),
+            new("RecipeAccordMaterials", await Db.RecipeAccordMaterials.CountAsync()),
+            new("RecipeProducts", await Db.RecipeProducts.CountAsync()),
+            new("RecipeProductNotes", await Db.RecipeProductNotes.CountAsync()),
+            new("RecipePublishLog", await Db.RecipePublishLogs.CountAsync()),
+            new("FragranceNotes", await Db.FragranceNotes.CountAsync()),
+            new("BaseNotes", await Db.BaseNotes.CountAsync()),
+            new("Ingredients", await Db.Ingredients.CountAsync()),
+            new("Formulas", await Db.Formulas.CountAsync()),
+        };
+    }
+
+    private record TableInfo(string Name, int Count);
+}

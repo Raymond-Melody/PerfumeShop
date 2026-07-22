@@ -1,0 +1,36 @@
+@page "/admin/prodcenter/prod-workshop"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>车间管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">车间管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4"><MudPaper Class="pa-4" Elevation="2"><MudText Typo="Typo.caption">调配车间</MudText><MudText Typo="Typo.h5">@_blendCount 个在产</MudText></MudPaper></MudItem>
+    <MudItem xs="12" sm="4"><MudPaper Class="pa-4" Elevation="2"><MudText Typo="Typo.caption">灌装车间</MudText><MudText Typo="Typo.h5">@_fillCount 个在产</MudText></MudPaper></MudItem>
+    <MudItem xs="12" sm="4"><MudPaper Class="pa-4" Elevation="2"><MudText Typo="Typo.caption">包装车间</MudText><MudText Typo="Typo.h5">@_packCount 个在产</MudText></MudPaper></MudItem>
+</MudGrid>
+
+<MudText Typo="Typo.h6" Class="mb-2">进行中工单</MudText>
+<MudTable Items="@_inProgress" Hover="true" Dense="true" Striped="true" RowsPerPage="15">
+    <HeaderContent><MudTh>工单号</MudTh><MudTh>配方</MudTh><MudTh>分配人</MudTh><MudTh>开始时间</MudTh><MudTh>状态</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.WorkOrderNo</MudTd><MudTd>@(context.RecipeName ?? "-")</MudTd>
+        <MudTd>@(context.AssignedTo ?? "-")</MudTd><MudTd>@context.StartedAt?.ToString("MM-dd HH:mm")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="Color.Info">@(context.Status ?? "-")</MudChip></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private int _blendCount, _fillCount, _packCount;
+    private List<ProductionOrder> _inProgress = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _inProgress = await Db.ProductionOrders.AsNoTracking().Where(p => p.Status == "InProgress").OrderBy(p => p.StartedAt).ToListAsync();
+        _blendCount = _inProgress.Count(p => (p.AssignedTo ?? "").Contains("调配"));
+        _fillCount = _inProgress.Count(p => (p.AssignedTo ?? "").Contains("灌装"));
+        _packCount = _inProgress.Count(p => (p.AssignedTo ?? "").Contains("包装"));
+    }
+}

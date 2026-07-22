@@ -1,0 +1,304 @@
+﻿@page "/user/order-detail"
+@model PerfumeShop.Api.Pages.User.OrderDetailModel
+@{ ViewData["Title"] = "订单详情"; Layout = "_Layout"; }
+
+@section Styles {
+<style>
+.breadcrumb { padding: 12px 0; font-size: 14px; color: #888; }
+.breadcrumb a { color: var(--dt-color-primary, #8B4513); text-decoration: none; }
+.breadcrumb .separator { margin: 0 8px; }
+.user-center { display: flex; gap: 30px; }
+.user-nav { flex: 0 0 200px; }
+.user-nav .nav-list { list-style: none; padding: 0; }
+.user-nav .nav-list li a { display: block; padding: 12px 16px; color: #555; text-decoration: none; border-radius: 8px; font-size: 14px; transition: background 0.2s; }
+.user-nav .nav-list li a:hover, .user-nav .nav-list li a.active { background: #f5ebe0; color: var(--dt-color-primary, #8B4513); }
+.user-main { flex: 1; min-width: 0; }
+.user-card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); }
+.card-title { font-size: 20px; margin-bottom: 20px; color: #333; }
+.card-title i { margin-right: 8px; color: var(--dt-color-primary, #8B4513); }
+.order-detail { display: flex; flex-direction: column; gap: 24px; }
+.order-basic-info { background: #fafafa; border-radius: 10px; padding: 20px; }
+.info-row { display: flex; padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+.info-row:last-child { border-bottom: none; }
+.info-row .label { flex: 0 0 100px; color: #888; }
+.info-row .value { flex: 1; color: #333; }
+.info-row .value.amount { font-size: 18px; font-weight: 700; color: var(--dt-color-primary, #8B4513); }
+.order-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.status-Pending { background: #fff3cd; color: #856404; }
+.status-Paid, .status-Completed { background: #d4edda; color: #155724; }
+.status-Cancelled, .status-Failed { background: #f8d7da; color: #721c24; }
+.status-Shipped { background: #cce5ff; color: #004085; }
+.status-Refunded { background: #e2e3e5; color: #383d41; }
+.order-products-section h3 { font-size: 16px; margin-bottom: 16px; color: #333; }
+.products-list { display: flex; flex-direction: column; gap: 12px; }
+.product-item { border: 1px solid #eee; border-radius: 8px; padding: 16px; }
+.product-item .base-info { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+.product-item .custom-info { font-size: 13px; color: #666; padding: 2px 0; }
+.product-item .ingredients-info { font-size: 12px; color: #888; margin-top: 6px; }
+.order-actions-bar { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid #eee; }
+.order-actions-bar .btn { padding: 10px 24px; border-radius: 8px; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary-action { background: var(--dt-color-primary, #8B4513); color: #fff; border: none; cursor: pointer; }
+.btn-outline-action { background: transparent; color: var(--dt-color-primary, #8B4513); border: 1px solid var(--dt-color-primary, #8B4513); }
+.btn-success-action { background: #28a745; color: #fff; border: none; }
+.delivery-timeline { padding: 20px 0; }
+.timeline-item { display: flex; gap: 16px; padding-bottom: 20px; position: relative; }
+.timeline-item::before { content: ''; position: absolute; left: 15px; top: 30px; bottom: 0; width: 2px; background: #eee; }
+.timeline-item:last-child::before { display: none; }
+.timeline-dot { width: 32px; height: 32px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.timeline-dot.active { background: var(--dt-color-primary, #8B4513); }
+.timeline-dot.active i { color: #fff; }
+.timeline-content h4 { font-size: 14px; margin-bottom: 4px; }
+.timeline-content p { font-size: 13px; color: #888; }
+@@media (max-width: 768px) {
+    .user-center { flex-direction: column; }
+    .user-nav { flex: auto; }
+    .info-row { flex-direction: column; }
+    .info-row .label { margin-bottom: 4px; }
+}
+</style>
+}
+
+<!-- 面包屑 -->
+<div class="breadcrumb">
+    <div class="container">
+        <a href="/">首页</a>
+        <span class="separator">/</span>
+        <a href="/user">个人中心</a>
+        <span class="separator">/</span>
+        <a href="/user/orders">我的订单</a>
+        <span class="separator">/</span>
+        <span>订单详情</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="user-center">
+        <!-- 侧导航 -->
+        <nav class="user-nav">
+            <ul class="nav-list">
+                <li><a href="/user"><i class="fas fa-tachometer-alt"></i> 账户概览</a></li>
+                <li><a href="/user/orders" class="active"><i class="fas fa-list"></i> 我的订单</a></li>
+                <li><a href="/user/favorites"><i class="fas fa-heart"></i> 我的收藏</a></li>
+                <li><a href="/user/addresses"><i class="fas fa-map-marker-alt"></i> 收货地址</a></li>
+            </ul>
+        </nav>
+
+        <!-- 主内容 -->
+        <div class="user-main">
+            <div class="user-card">
+                <h2 class="card-title"><i class="fas fa-file-invoice"></i> 订单详情</h2>
+
+                <div class="order-detail">
+                    <!-- 订单基本信息 -->
+                    <div class="order-basic-info">
+                        <div class="info-row">
+                            <span class="label">订单号:</span>
+                            <span class="value">@Model.Order?.OrderNo</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">订单金额:</span>
+                            <span class="value amount">¥@Model.Order?.TotalAmount.ToString("F2")</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">支付方式:</span>
+                            <span class="value">@GetPaymentMethodText(Model.Order?.PaymentMethod)</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">订单状态:</span>
+                            <span class="value">
+                                <span class="order-status status-@Model.Order?.Status">
+                                    @GetStatusText(Model.Order?.Status)
+                                </span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">下单时间:</span>
+                            <span class="value">@Model.Order?.CreatedAt?.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                        </div>
+                        @if (Model.Order?.UpdatedAt != null)
+                        {
+                            <div class="info-row">
+                                <span class="label">更新时间:</span>
+                                <span class="value">@Model.Order.UpdatedAt?.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                            </div>
+                        }
+                        <div class="info-row">
+                            <span class="label">收货人:</span>
+                            <span class="value">@Model.Order?.ShippingName</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">联系电话:</span>
+                            <span class="value">@Model.Order?.ShippingPhone</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">收货地址:</span>
+                            <span class="value">@Model.Order?.ShippingAddress @Model.Order?.ShippingCity</span>
+                        </div>
+                        @if (Model.Order?.CouponDiscount > 0)
+                        {
+                            <div class="info-row">
+                                <span class="label">优惠券抵扣:</span>
+                                <span class="value" style="color:#16a34a">-¥@Model.Order.CouponDiscount?.ToString("F2") (@Model.Order.CouponCode)</span>
+                            </div>
+                        }
+                        @if (Model.Order?.PointsDiscount > 0)
+                        {
+                            <div class="info-row">
+                                <span class="label">积分抵扣:</span>
+                                <span class="value" style="color:#16a34a">-¥@Model.Order.PointsDiscount?.ToString("F2") (@Model.Order.PointsRedeemed 积分)</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- 配送进度 -->
+                    <div class="delivery-timeline">
+                        <h3 style="font-size:16px;margin-bottom:16px;"><i class="fas fa-truck"></i> 配送进度</h3>
+                        <div class="timeline-item">
+                            <div class="timeline-dot active"><i class="fas fa-check"></i></div>
+                            <div class="timeline-content">
+                                <h4>订单已创建</h4>
+                                <p>@Model.Order?.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</p>
+                            </div>
+                        </div>
+                        @if (Model.Order?.Status == "Paid" || Model.Order?.Status == "Shipped" || Model.Order?.Status == "Completed")
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-dot active"><i class="fas fa-check"></i></div>
+                                <div class="timeline-content">
+                                    <h4>支付完成</h4>
+                                    <p>@Model.Order.UpdatedAt?.ToString("yyyy-MM-dd HH:mm")</p>
+                                </div>
+                            </div>
+                        }
+                        @if (Model.Order?.Status == "Shipped" || Model.Order?.Status == "Completed")
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-dot active"><i class="fas fa-check"></i></div>
+                                <div class="timeline-content">
+                                    <h4>已发货 - @Model.Order.ShippingCompany</h4>
+                                    <p>@Model.Order.ShippedAt?.ToString("yyyy-MM-dd HH:mm") | 运单号: @Model.Order.TrackingNumber</p>
+                                </div>
+                            </div>
+                        }
+                        @if (Model.Order?.Status == "Completed")
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-dot active"><i class="fas fa-check"></i></div>
+                                <div class="timeline-content">
+                                    <h4>已送达</h4>
+                                    <p>@Model.Order.DeliveredAt?.ToString("yyyy-MM-dd HH:mm")</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- 订单商品列表 -->
+                    <div class="order-products-section">
+                        <h3><i class="fas fa-box-open"></i> 订单商品</h3>
+                        <div class="products-list">
+                            @if (Model.Details.Any())
+                            {
+                                @foreach (var d in Model.Details)
+                                {
+                                    <div class="product-item">
+                                        <div class="base-info">
+                                            <strong>@d.ProductName</strong> ×@d.Quantity |
+                                            单价: ¥@d.UnitPrice.ToString("F2") |
+                                            小计: ¥@d.Subtotal.ToString("F2")
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(d.TopNoteName))
+                                        {
+                                            <div class="custom-info"><i class="fas fa-wind"></i> 前调: @d.TopNoteName</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(d.MiddleNoteName))
+                                        {
+                                            <div class="custom-info"><i class="fas fa-leaf"></i> 中调: @d.MiddleNoteName</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(d.BaseNoteName))
+                                        {
+                                            <div class="custom-info"><i class="fas fa-mountain"></i> 后调: @d.BaseNoteName</div>
+                                        }
+                                        @if (d.VolumeMl != null)
+                                        {
+                                            <div class="custom-info"><i class="fas fa-flask"></i> 容量: @d.VolumeMl ml (@d.VolumeName)</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(d.BottleName))
+                                        {
+                                            <div class="custom-info"><i class="fas fa-wine-bottle"></i> 瓶身: @d.BottleName</div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(d.CustomLabel))
+                                        {
+                                            <div class="custom-info"><i class="fas fa-tag"></i> 刻字: @d.CustomLabel</div>
+                                        }
+                                        @if (Model.NoteSelections.Any(ns => ns.DetailId == d.DetailId))
+                                        {
+                                            <div class="custom-info" style="margin-top:6px;">
+                                                <strong>香调配比:</strong>
+                                                @foreach (var ns in Model.NoteSelections.Where(ns => ns.DetailId == d.DetailId).GroupBy(ns => ns.NoteType))
+                                                {
+                                                    <div style="padding-left:12px;">@ns.Key: @string.Join(", ", ns.Select(n => $"{n.NoteName} ({n.Percentage}%)"))</div>
+                                                }
+                                            </div>
+                                        }
+                                        @if (Model.Ingredients.Any(i => i.DetailId == d.DetailId))
+                                        {
+                                            <div class="ingredients-info">
+                                                <i class="fas fa-flask"></i> 成分: @string.Join(", ", Model.Ingredients.Where(i => i.DetailId == d.DetailId).Select(i => i.IngredientName).Distinct().OrderBy(n => n))
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="product-item"><p>暂无订单商品详情</p></div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="order-actions-bar">
+                        @if (Model.Order?.Status == "Pending")
+                        {
+                            <a href="/checkout?order_id=@Model.Order.OrderId" class="btn btn-primary-action">立即支付</a>
+                        }
+                        @if (Model.HasCustomOrKol)
+                        {
+                            <a href="/order_ingredients?order_id=@Model.Order?.OrderId" class="btn btn-success-action" target="_blank">
+                                <i class="fas fa-list-ul"></i> 查看所有产品成分
+                            </a>
+                        }
+                        <a href="/user/orders" class="btn btn-outline-action">返回订单列表</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetStatusText(string? status) => status switch
+    {
+        "Pending" => "待支付",
+        "Paid" => "已支付",
+        "Shipped" => "已发货",
+        "Completed" => "已完成",
+        "Cancelled" => "已取消",
+        "Failed" => "支付失败",
+        "Refunded" => "已退款",
+        _ => status ?? "未知"
+    };
+
+    string GetPaymentMethodText(string? method)
+    {
+        if (string.IsNullOrEmpty(method)) return "在线支付";
+        return method.ToLower() switch
+        {
+            "1" or "wechat" => "微信支付",
+            "2" or "alipay" => "支付宝",
+            "3" or "paypal" => "PayPal",
+            "4" or "cod" => "货到付款",
+            _ => method
+        };
+    }
+}

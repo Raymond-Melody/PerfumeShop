@@ -1,0 +1,50 @@
+@page "/admin/TechCenter/PublishLogs"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>发布日志</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">发布日志</MudText>
+
+<MudGrid Class="mb-3">
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_typeFilter" Placeholder="发布类型" Clearable="true">
+            <MudSelectItem Value="@("Accord")">Accord</MudSelectItem>
+            <MudSelectItem Value="@("Product")">Product</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="3" Class="d-flex align-end">
+        <MudText Typo="Typo.body2" Color="Color.Secondary">共 @_total 条日志</MudText>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<RecipePublishLog>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="30">
+    <HeaderContent>
+        <MudTh>LogID</MudTh><MudTh>发布时间</MudTh><MudTh>类型</MudTh><MudTh>配方ID</MudTh>
+        <MudTh>目标ID</MudTh><MudTh>操作人</MudTh><MudTh>IP</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.LogId</MudTd>
+        <MudTd>@context.PublishedAt?.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.PublishType == "Accord" ? Color.Primary : Color.Secondary)">@context.PublishType</MudChip></MudTd>
+        <MudTd>@context.RecipeId</MudTd><MudTd>@context.TargetRecipeId</MudTd>
+        <MudTd>@context.PublishedBy</MudTd><MudTd>@context.Ipaddress</MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private MudTable<RecipePublishLog>? _table;
+    private string? _typeFilter;
+    private int _total;
+
+    private async Task<TableData<RecipePublishLog>> ServerReload(TableState state)
+    {
+        var q = Db.RecipePublishLogs.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(_typeFilter)) q = q.Where(l => l.PublishType == _typeFilter);
+        _total = await q.CountAsync();
+        var items = await q.OrderByDescending(l => l.PublishedAt).Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<RecipePublishLog> { TotalItems = _total, Items = items };
+    }
+}

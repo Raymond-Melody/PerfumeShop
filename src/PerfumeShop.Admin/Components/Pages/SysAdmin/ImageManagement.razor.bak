@@ -1,0 +1,51 @@
+<!-- V19系统管理 · 图片资源管理 -->
+@page "/admin/system/image-management"
+@inject IWebHostEnvironment Env
+
+<PageTitle>图片资源管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-images" style="color:#E91E63;"></i> 图片资源管理</MudText>
+
+@if (_loaded)
+{
+    <MudPaper Class="pa-6" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+        <MudGrid>
+            <MudItem xs="6" sm="3"><MudPaper Class="pa-3 text-center" Elevation="0" Style="background:rgba(255,255,255,0.03);border-radius:8px;"><div style="font-size:12px;color:#888;">产品图</div><div style="font-size:24px;font-weight:700;color:#4CAF50;">@_productCount</div></MudPaper></MudItem>
+            <MudItem xs="6" sm="3"><MudPaper Class="pa-3 text-center" Elevation="0" Style="background:rgba(255,255,255,0.03);border-radius:8px;"><div style="font-size:12px;color:#888;">瓶子图</div><div style="font-size:24px;font-weight:700;color:#9C27B0;">@_bottleCount</div></MudPaper></MudItem>
+            <MudItem xs="6" sm="3"><MudPaper Class="pa-3 text-center" Elevation="0" Style="background:rgba(255,255,255,0.03);border-radius:8px;"><div style="font-size:12px;color:#888;">香调图</div><div style="font-size:24px;font-weight:700;color:#2196F3;">@_notesCount</div></MudPaper></MudItem>
+            <MudItem xs="6" sm="3"><MudPaper Class="pa-3 text-center" Elevation="0" Style="background:rgba(255,255,255,0.03);border-radius:8px;"><div style="font-size:12px;color:#888;">上传图</div><div style="font-size:24px;font-weight:700;color:#FF9800;">@_uploadCount</div></MudPaper></MudItem>
+        </MudGrid>
+    </MudPaper>
+    <MudText Typo="Typo.h6" Class="mt-6 mb-3">目录清单</MudText>
+    <MudTable Items="@_dirs" Hover="true" Dense="true" Striped="true">
+        <HeaderContent><MudTh>目录</MudTh><MudTh>文件数</MudTh><MudTh>大小</MudTh></HeaderContent>
+        <RowTemplate><MudTd>@context.Path</MudTd><MudTd>@context.Count</MudTd><MudTd>@context.Size</MudTd></RowTemplate>
+    </MudTable>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+
+@code {
+    private bool _loaded;
+    private int _productCount, _bottleCount, _notesCount, _uploadCount;
+    private List<(string Path, int Count, string Size)> _dirs = new();
+
+    protected override void OnInitialized()
+    {
+        var www = global::System.IO.Path.Combine(Env.ContentRootPath, "wwwroot", "images");
+        _productCount = CountFiles(global::System.IO.Path.Combine(www, "products"));
+        _bottleCount = CountFiles(global::System.IO.Path.Combine(www, "bottles"));
+        _notesCount = CountFiles(global::System.IO.Path.Combine(www, "notes"));
+        _uploadCount = CountFiles(global::System.IO.Path.Combine(www, "uploads"));
+
+        _dirs = new() {
+            ("/images/products/", _productCount, FormatSize(DirSize(global::System.IO.Path.Combine(www, "products")))),
+            ("/images/bottles/", _bottleCount, FormatSize(DirSize(global::System.IO.Path.Combine(www, "bottles")))),
+            ("/images/notes/", _notesCount, FormatSize(DirSize(global::System.IO.Path.Combine(www, "notes")))),
+            ("/images/uploads/", _uploadCount, FormatSize(DirSize(global::System.IO.Path.Combine(www, "uploads"))))
+        };
+        _loaded = true;
+    }
+
+    private static int CountFiles(string p) { try { return global::System.IO.Directory.Exists(p) ? global::System.IO.Directory.GetFiles(p).Length : 0; } catch { return 0; } }
+    private static long DirSize(string p) { try { return global::System.IO.Directory.Exists(p) ? new global::System.IO.DirectoryInfo(p).GetFiles().Sum(f => f.Length) : 0; } catch { return 0; } }
+    private static string FormatSize(long b) => b >= 1048576 ? $"{b / 1048576.0:F1} MB" : b >= 1024 ? $"{b / 1024.0:F1} KB" : $"{b} B";
+}

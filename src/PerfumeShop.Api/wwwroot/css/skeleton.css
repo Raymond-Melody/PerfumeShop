@@ -1,0 +1,211 @@
+/* ============================================
+   PerfumeShop V14.6 - 骨架屏加载样式
+   ============================================ */
+
+/* 骨架屏基础样式 */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* 产品卡片骨架 */
+.product-skeleton {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.product-skeleton .skeleton-image {
+    width: 100%;
+    height: 200px;
+    background: #e0e0e0;
+}
+
+.product-skeleton .skeleton-title {
+    height: 20px;
+    width: 80%;
+    margin: 12px auto;
+}
+
+.product-skeleton .skeleton-desc {
+    height: 14px;
+    width: 90%;
+    margin: 8px auto;
+}
+
+.product-skeleton .skeleton-price {
+    height: 24px;
+    width: 60%;
+    margin: 12px auto;
+}
+
+.product-skeleton .skeleton-btn {
+    height: 36px;
+    width: 100px;
+    margin: 12px auto;
+}
+
+/* 产品详情骨架 */
+.product-detail-skeleton {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.product-detail-skeleton .skeleton-gallery {
+    width: 100%;
+    height: 400px;
+    background: #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.product-detail-skeleton .skeleton-title {
+    height: 32px;
+    width: 70%;
+    margin-bottom: 12px;
+}
+
+.product-detail-skeleton .skeleton-price {
+    height: 36px;
+    width: 40%;
+    margin-bottom: 16px;
+}
+
+.product-detail-skeleton .skeleton-desc {
+    height: 16px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.product-detail-skeleton .skeleton-desc.short {
+    width: 80%;
+}
+
+.product-detail-skeleton .skeleton-specs {
+    margin-top: 20px;
+}
+
+.product-detail-skeleton .skeleton-spec-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.product-detail-skeleton .skeleton-spec-label {
+    height: 16px;
+    width: 80px;
+}
+
+.product-detail-skeleton .skeleton-spec-value {
+    height: 16px;
+    width: 120px;
+}
+
+/* 购物车骨架 */
+.cart-skeleton {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.cart-skeleton .skeleton-item {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.cart-skeleton .skeleton-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.cart-skeleton .skeleton-item-image {
+    width: 100px;
+    height: 100px;
+    background: #e0e0e0;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.cart-skeleton .skeleton-item-info {
+    flex: 1;
+}
+
+.cart-skeleton .skeleton-item-title {
+    height: 20px;
+    width: 70%;
+    margin-bottom: 8px;
+}
+
+.cart-skeleton .skeleton-item-price {
+    height: 24px;
+    width: 50%;
+    margin-bottom: 8px;
+}
+
+.cart-skeleton .skeleton-item-qty {
+    height: 32px;
+    width: 100px;
+}
+
+/* 列表页骨架容器 */
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+}
+
+@media (max-width: 991px) {
+    .skeleton-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+@media (max-width: 576px) {
+    .skeleton-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .product-skeleton .skeleton-image {
+        height: 150px;
+    }
+}
+
+/* 暗黑模式适配 */
+[data-theme="dark"] .skeleton {
+    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+}
+
+[data-theme="dark"] .product-skeleton,
+[data-theme="dark"] .product-detail-skeleton,
+[data-theme="dark"] .cart-skeleton {
+    background: rgba(30, 30, 30, 0.8);
+}
+
+[data-theme="dark"] .product-skeleton .skeleton-image,
+[data-theme="dark"] .cart-skeleton .skeleton-item-image,
+[data-theme="dark"] .product-detail-skeleton .skeleton-gallery {
+    background: #3a3a3a;
+}
+
+/* 淡出动画 */
+.skeleton-fade-out {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}

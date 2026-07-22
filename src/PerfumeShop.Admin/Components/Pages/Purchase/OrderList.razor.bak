@@ -1,0 +1,92 @@
+@page "/admin/Purchase/OrderList"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>采购订单列表</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">采购订单管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudTextField @bind-Value="_searchText" Placeholder="搜索采购单号..." Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_statusFilter" Placeholder="状态筛选" Clearable="true">
+            <MudSelectItem Value="@("draft")">草稿</MudSelectItem>
+            <MudSelectItem Value="@("approved")">已审批</MudSelectItem>
+            <MudSelectItem Value="@("received")">已收货</MudSelectItem>
+            <MudSelectItem Value="@("cancelled")">已取消</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_typeFilter" Placeholder="采购类型" Clearable="true">
+            <MudSelectItem Value="@("Packaging")">包装物</MudSelectItem>
+            <MudSelectItem Value="@("Bottle")">瓶子</MudSelectItem>
+            <MudSelectItem Value="@("Printing")">印刷品</MudSelectItem>
+            <MudSelectItem Value="@("SprayHead")">喷头</MudSelectItem>
+            <MudSelectItem Value="@("BaseNote")">基调原料</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/admin/Purchase/OrderCreate"
+                   StartIcon="@Icons.Material.Filled.Add">新建</MudButton>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<PurchaseOrder>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>采购单号</MudTh>
+        <MudTh>供应商ID</MudTh>
+        <MudTh>类型</MudTh>
+        <MudTh>金额</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>创建时间</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.PurchaseNo</MudTd>
+        <MudTd>@context.SupplierId</MudTd>
+        <MudTd>@(context.OrderType ?? "-")</MudTd>
+        <MudTd>¥@(context.TotalAmount?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                           Href="@($"/admin/Purchase/OrderDetail?id={context.PurchaseId}")" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private MudTable<PurchaseOrder>? _table;
+    private string _searchText = "";
+    private string? _statusFilter;
+    private string? _typeFilter;
+
+    private async Task<TableData<PurchaseOrder>> ServerReload(TableState state)
+    {
+        var (items, total) = await Repo.GetPurchaseOrdersAsync(
+            status: _statusFilter, orderType: _typeFilter,
+            search: string.IsNullOrWhiteSpace(_searchText) ? null : _searchText,
+            page: state.Page + 1, pageSize: state.PageSize);
+        return new TableData<PurchaseOrder> { TotalItems = total, Items = items };
+    }
+
+    private Color GetStatusColor(string? status) => status?.ToLower() switch
+    {
+        "draft" => Color.Warning,
+        "approved" => Color.Info,
+        "received" => Color.Success,
+        "cancelled" => Color.Error,
+        _ => Color.Default
+    };
+}

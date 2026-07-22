@@ -1,0 +1,115 @@
+@page "/admin/Operation/Customers"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+<PageTitle>客户CRM画像</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-users" style="color:#00bcd4;"></i> 客户CRM画像</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>客户管理</span></div></div>
+@if(_loaded){
+<!-- 统计卡片（第一行4项） -->
+<div class="stats-cards"><div class="stat-card"><i class="fas fa-users" style="color:#00bcd4;font-size:28px;"></i><h3>@_totalUsers</h3><p>总客户数</p></div><div class="stat-card green"><i class="fas fa-user-plus" style="color:#4CAF50;font-size:28px;"></i><h3>@_todayUsers</h3><p>今日新增</p></div><div class="stat-card gold"><i class="fas fa-crown" style="color:#FFD700;font-size:28px;"></i><h3>@_vipCount</h3><p>VIP会员</p></div><div class="stat-card purple"><i class="fas fa-gem" style="color:#CE93D8;font-size:28px;"></i><h3>@_highValueCount</h3><p>高价值客户(&ge;¥1000)</p></div></div>
+<!-- 统计卡片（第二行3项） -->
+<div class="stats-sub"><div class="stat-card"><p style="font-size:12px;color:#888;margin:0;">累计营收</p><h3 style="font-size:22px;color:#4CAF50;">¥@_totalRevenue.ToString("N0")</h3></div><div class="stat-card"><p style="font-size:12px;color:#888;margin:0;">客均消费</p><h3 style="font-size:22px;color:#00bcd4;">¥@_avgSpent.ToString("N0")</h3></div><div class="stat-card"><p style="font-size:12px;color:#888;margin:0;">转化率</p><h3 style="font-size:22px;color:#FF9800;">@_conversionRate.ToString("F1")%</h3></div></div>
+<!-- 等级筛选 -->
+<div class="filter-tabs"><a href="javascript:void(0)" class="filter-tab @(_tierFilter==null?"active":"")" @onclick='()=>SetTier(null)'><i class="fas fa-users"></i> 全部</a>@foreach(var t in _tiers){<a href="javascript:void(0)" class="filter-tab @(_tierFilter==t.TierCode?"active":"")" @onclick="()=>SetTier(t.TierCode)"><i class="fas @(t.IconClass??"fa-crown")"></i> @t.TierName</a>}</div>
+<!-- 客户列表 -->
+<div class="table-container"><table class="customers-table"><thead><tr><th>客户</th><th>等级</th><th>累计消费</th><th>订单数</th><th>偏好香型</th><th>最后购买</th><th>注册时间</th><th>操作</th></tr></thead><tbody>@if(_filteredUsers.Any()){@foreach(var u in _filteredUsers.Skip((_currentPage-1)*_pageSize).Take(_pageSize)){var spent=_spentDict.TryGetValue(u.UserId,out var s)?s:0;var ordCnt=_orderCountDict.TryGetValue(u.UserId,out var c)?c:0;var lastOrd=_lastOrderDict.TryGetValue(u.UserId,out var lo)?lo:null;var tier=ordCnt>0?GetTierFor(spent):null;<tr><td><div style="display:flex;align-items:center;gap:12px;"><div class="user-avatar">@((u.Username??"?")[..1].ToUpper())</div><div><div style="font-weight:600;">@(u.Username??"-")</div><div class="cell-secondary">@(u.Email??"-")</div></div>@if(u.IsVip==true){<span class="vip-badge">VIP</span>}</div></td><td>@if(tier!=null){<span class="tier-badge" style="@TierStyle(tier)">@tier.TierName</span>}else{<span style="color:#b0b0b0;font-size:12px;">新客</span>}</td><td class="amount-text">¥@spent.ToString("N0")</td><td>@ordCnt</td><td>@if(!string.IsNullOrEmpty(u.PreferredNote)){<span class="note-tag">@u.PreferredNote</span>}else{<span style="color:#b0b0b0;">—</span>}</td><td class="cell-secondary">@(lastOrd?.ToString("yyyy-MM-dd")??"—")</td><td class="cell-secondary">@(u.CreatedAt?.ToString("yyyy-MM-dd")??"—")</td><td><a href="/admin/Operation/CustomerDetail/@u.UserId" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i> 详情</a></td></tr>}}else{<tr><td colspan="8" class="empty-cell">暂无客户数据</td></tr>}</tbody></table></div>
+<!-- 分页 -->
+@if(_totalPages>1){<div class="pagination">@for(int p=1;p<=_totalPages;p++){var pi=p;<a href="javascript:void(0)" class="@(pi==_currentPage?"page-item active":"page-item")" @onclick="()=>GoToPage(pi)" @onclick:preventDefault>@pi</a>}</div>}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px;}.stats-sub{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:20px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;transition:transform 0.2s;}.stat-card:hover{transform:translateY(-2px);}.stat-card h3{font-size:28px;margin:8px 0;color:#00bcd4;font-weight:700;}.stat-card p{color:#888;margin:0;font-size:13px;}.stat-card.gold h3{color:#FFD700;}.stat-card.green h3{color:#4CAF50;}.stat-card.purple h3{color:#CE93D8;}
+.filter-tabs{display:flex;gap:10px;margin-bottom:20px;}.filter-tab{padding:8px 16px;border-radius:20px;font-size:13px;text-decoration:none;color:#888;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);transition:all 0.2s;cursor:pointer;}.filter-tab:hover,.filter-tab.active{background:rgba(0,188,212,0.15);color:#00bcd4;border-color:rgba(0,188,212,0.3);}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.customers-table{width:100%;border-collapse:collapse;}.customers-table th{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;padding:12px 16px;text-align:left;font-size:13px;font-weight:600;}.customers-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:#e0e0e0;}.customers-table tr:last-child td{border-bottom:none;}.customers-table tr:hover td{background:rgba(255,255,255,0.03);}.user-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#00bcd4,#00838f);color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;flex-shrink:0;}.vip-badge{display:inline-block;padding:3px 8px;background:#FFD700;color:#1a1a2e;border-radius:10px;font-size:11px;font-weight:bold;}.tier-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}.tier-gold{background:rgba(255,215,0,0.2);color:#FFD700;border:1px solid rgba(255,215,0,0.3);}.tier-silver{background:rgba(192,192,192,0.2);color:#C0C0C0;border:1px solid rgba(192,192,192,0.3);}.tier-bronze{background:rgba(205,127,50,0.2);color:#CD853F;border:1px solid rgba(205,127,50,0.3);}.amount-text{color:#4CAF50;font-weight:600;}.note-tag{display:inline-block;padding:2px 8px;background:rgba(0,188,212,0.12);color:#80DEEA;border-radius:8px;font-size:11px;}.cell-secondary{font-size:12px;color:#888;}.empty-cell{text-align:center;color:#666;padding:40px;}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.3s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}.btn-primary:hover{background:linear-gradient(135deg,#00bcd4,#0097a7);}.btn-sm{padding:5px 12px;font-size:12px;border-radius:6px;}
+.pagination{display:flex;justify-content:center;gap:8px;margin-top:25px;}.page-item{padding:10px 16px;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:8px;text-decoration:none;color:#b0b0b0;border:1px solid rgba(255,255,255,0.05);transition:all 0.3s;font-size:14px;cursor:pointer;}.page-item:hover,.page-item.active{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}
+@@media(max-width:768px){.stats-cards{grid-template-columns:1fr 1fr;}.stats-sub{grid-template-columns:1fr;}}
+</style>
+@code{
+[Inject] private PerfumeShopContext Db{get;set;}=default!;
+private bool _loaded;
+private List<User> _allUsers=new();
+private List<MemberTier> _tiers=new();
+private Dictionary<int,decimal> _spentDict=new();
+private Dictionary<int,int> _orderCountDict=new();
+private Dictionary<int,DateTime?> _lastOrderDict=new();
+private int _totalUsers,_todayUsers,_vipCount,_highValueCount;
+private decimal _totalRevenue,_avgSpent,_conversionRate;
+private string? _tierFilter;
+private int _currentPage=1,_pageSize=20,_totalPages=1;
+
+protected override async Task OnInitializedAsync(){
+try{
+await LoadData();
+_loaded=true;
+}catch{_loaded=true;}
+}
+
+async Task LoadData(){
+_tiers=await Db.MemberTiers.Where(t=>t.IsActive).OrderBy(t=>t.SortOrder).ThenBy(t=>t.MinSpent).ToListAsync();
+// Load all users
+_allUsers=await Db.Users.OrderByDescending(u=>u.CreatedAt).ToListAsync();
+_totalUsers=_allUsers.Count;
+var today=DateTime.Today;
+_todayUsers=_allUsers.Count(u=>u.CreatedAt.HasValue&&u.CreatedAt.Value.Date==today);
+_vipCount=_allUsers.Count(u=>u.IsVip==true);
+
+// Calculate order stats from Orders table
+var paidStatuses=new[]{"Paid","paid","shipped","delivered"};
+var paidOrders=await Db.Orders.Where(o=>paidStatuses.Contains(o.Status!)).ToListAsync();
+_totalRevenue=paidOrders.Sum(o=>o.TotalAmount);
+
+var userIds=_allUsers.Select(u=>u.UserId).ToHashSet();
+// Spent per user
+_spentDict=paidOrders.GroupBy(o=>o.UserId).ToDictionary(g=>g.Key,g=>g.Sum(o=>o.TotalAmount));
+// Order count per user
+_orderCountDict=paidOrders.GroupBy(o=>o.UserId).ToDictionary(g=>g.Key,g=>g.Count());
+// Last order per user
+_lastOrderDict=paidOrders.GroupBy(o=>o.UserId).ToDictionary(g=>g.Key,g=>g.Max(o=>o.CreatedAt));
+
+// High value count (≥1000)
+_highValueCount=_spentDict.Count(kv=>kv.Value>=1000);
+
+// Avg spent
+var usersWithOrders=_spentDict.Where(kv=>kv.Value>0).ToList();
+_avgSpent=usersWithOrders.Any()?usersWithOrders.Average(kv=>kv.Value):0;
+
+// Conversion rate
+var usersWithPaidOrders=await Db.Orders.Where(o=>paidStatuses.Contains(o.Status!)).Select(o=>o.UserId).Distinct().CountAsync();
+_conversionRate=_totalUsers>0?(decimal)usersWithPaidOrders/_totalUsers*100:0;
+}
+
+IEnumerable<User> _filteredUsers{
+get{
+var q=_allUsers.AsEnumerable();
+// Apply tier filter based on spent amount
+if(!string.IsNullOrEmpty(_tierFilter)){
+q=q.Where(u=>{
+var spent=_spentDict.TryGetValue(u.UserId,out var s)?s:0;
+var ordCnt=_orderCountDict.TryGetValue(u.UserId,out var c)?c:0;
+if(ordCnt==0)return false;
+var t=GetTierFor(spent);
+return t!=null&&t.TierCode==_tierFilter;
+});
+}
+var list=q.ToList();
+_totalPages=Math.Max(1,(int)Math.Ceiling((double)list.Count/_pageSize));
+if(_currentPage>_totalPages)_currentPage=1;
+return list;
+}
+}
+
+MemberTier? GetTierFor(decimal spent)=>_tiers.FirstOrDefault(t=>spent>=t.MinSpent&&(t.MaxSpent==null||spent<t.MaxSpent));
+string TierStyle(MemberTier t){var c=string.IsNullOrEmpty(t.Color)?"#00bcd4":t.Color;return $"background:{c}22;color:{c};border:1px solid {c}55;";}
+
+async Task SetTier(string? tier){
+_tierFilter=tier;
+_currentPage=1;
+await InvokeAsync(StateHasChanged);
+}
+
+async Task GoToPage(int page){
+_currentPage=page;
+await InvokeAsync(StateHasChanged);
+}
+}

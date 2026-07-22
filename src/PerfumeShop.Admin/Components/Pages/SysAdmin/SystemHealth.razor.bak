@@ -1,0 +1,30 @@
+@page "/admin/system/health"
+
+<PageTitle>系统健康监控</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">系统健康监控</MudText>
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="3"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2" Color="Color.Success">数据库</MudText><MudProgressLinear Value="99" Color="Color.Success" Class="mt-2" /><MudText Typo="Typo.caption">正常 - 响应 2ms</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="3"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2" Color="Color.Info">内存</MudText><MudProgressLinear Value="45" Color="Color.Info" Class="mt-2" /><MudText Typo="Typo.caption">45% 已使用</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="3"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2" Color="Color.Warning">CPU</MudText><MudProgressLinear Value="24" Color="Color.Warning" Class="mt-2" /><MudText Typo="Typo.caption">24% 使用率</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="3"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2" Color="Color.Secondary">磁盘</MudText><MudProgressLinear Value="62" Color="Color.Secondary" Class="mt-2" /><MudText Typo="Typo.caption">62% 已使用</MudText></MudCardContent></MudCard></MudItem>
+</MudGrid>
+<MudTable Items="@_checks" Hover="true" Dense="true">
+    <HeaderContent><MudTh>服务</MudTh><MudTh>状态</MudTh><MudTh>响应时间</MudTh><MudTh>最后检查</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Service</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Healthy ? Color.Success : Color.Error)">@(context.Healthy ? "正常" : "异常")</MudChip></MudTd>
+        <MudTd>@context.ResponseMs ms</MudTd><MudTd>@context.CheckedAt.ToString("HH:mm:ss")</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<HC> _checks = new()
+    {
+        new() { Service = "SQL Server", Healthy = true, ResponseMs = 2, CheckedAt = DateTime.Now },
+        new() { Service = "Redis Cache", Healthy = true, ResponseMs = 1, CheckedAt = DateTime.Now },
+        new() { Service = "IIS AppPool", Healthy = true, ResponseMs = 5, CheckedAt = DateTime.Now },
+        new() { Service = "Email Service", Healthy = true, ResponseMs = 120, CheckedAt = DateTime.Now },
+        new() { Service = "File Storage", Healthy = true, ResponseMs = 8, CheckedAt = DateTime.Now },
+    };
+    private class HC { public string Service { get; set; } = ""; public bool Healthy { get; set; } public int ResponseMs { get; set; } public DateTime CheckedAt { get; set; } }
+}

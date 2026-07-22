@@ -94,3 +94,12 @@ Desktop.ini
 appsettings.*.json
 !appsettings.json
 !appsettings.Development.json
+
+# 构建发布目录
+publish/
+
+# Node modules
+node_modules/
+
+# Playwright 浏览器缓存
+**/.cache/ms-playwright/

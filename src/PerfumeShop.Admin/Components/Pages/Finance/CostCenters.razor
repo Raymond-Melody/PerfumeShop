@@ -1,0 +1,23 @@
+@page "/admin/finance/cost-centers"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+<PageTitle>成本中心</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-building" style="color:#00bcd4;"></i> 成本中心</h2><div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>成本中心</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_centerCount</div><div class="stat-label">成本中心数</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">¥@_totalCost.ToString("N0")</div><div class="stat-label">总成本</div></div><div class="stat-card"><div class="stat-value">@_productCount</div><div class="stat-label">关联产品</div></div></div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>中心编号</th><th>名称</th><th>类型</th><th>状态</th></tr></thead><tbody>
+@foreach(var c in _centers){<tr><td>#@c.CenterId</td><td>@(c.CenterCode??"-")</td><td>@(c.CenterName??"-")</td><td>@(c.CenterType??"-")</td><td>@(c.IsActive==true?"活跃":"停用")</td></tr>}
+@if(!_centers.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无成本中心</td></tr>}
+</tbody></table></div>
+<div style="margin-top:30px;"><h4 style="color:#e0e0e0;margin-bottom:15px;"><i class="fas fa-project-diagram"></i> 成本传导链（原材料→产品→订单）</h4>
+<div class="table-container"><table class="orders-table"><thead><tr><th>商品</th><th>BOM</th><th>采购</th><th>包装</th><th>其他</th><th>单位总成本</th></tr></thead><tbody>
+@foreach(var c in _chain){<tr><td>@c.ProductName</td><td class="cost-value">¥@c.BomItems.ToString("N2")</td><td class="cost-value">¥@c.PurchaseItems.ToString("N2")</td><td class="cost-value">¥@c.PackagingItems.ToString("N2")</td><td class="cost-value">¥@c.OtherItems.ToString("N2")</td><td class="cost-value" style="color:#00bcd4;">¥@c.UnitCost.ToString("N2")</td></tr>}
+@if(!_chain.Any()){<tr><td colspan="6" style="text-align:center;color:#666;padding:40px;">暂无成本数据</td></tr>}</tbody></table></div></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.orders-table{width:100%;border-collapse:collapse;}.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;}.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;}.cost-value{font-family:'Courier New',monospace;font-weight:600;}</style>
+@code{private bool _loaded;private int _centerCount,_productCount;private decimal _totalCost;private List<CostCenter> _centers=new();private List<FinanceRepository.CostChainRow> _chain=new();
+protected override async Task OnInitializedAsync(){try{_centers=await FinRepo.GetCostCentersAsync();_centerCount=_centers.Count;_totalCost=await FinRepo.GetTotalCostAsync();_productCount=await FinRepo.GetProductCountAsync();_chain=await FinRepo.GetCostChainAsync();_loaded=true;}catch{_loaded=true;}}}

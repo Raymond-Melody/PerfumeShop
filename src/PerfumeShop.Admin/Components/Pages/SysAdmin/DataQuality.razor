@@ -1,0 +1,58 @@
+@page "/admin/system/data-quality"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+
+<PageTitle>数据质量</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-check-double" style="color:#E91E63;"></i> 数据质量检查</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>数据质量</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_totalChecks</div><div class="stat-label">检查项</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_passedChecks</div><div class="stat-label">通过</div></div><div class="stat-card"><div class="stat-value" style="color:#F44336;">@_failedChecks</div><div class="stat-label">异常</div></div></div>
+@foreach(var c in _checks){
+<div style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:10px;padding:15px 20px;border:1px solid rgba(255,255,255,0.05);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+<div><div style="color:#e0e0e0;font-weight:600;">@c.Name</div><div style="color:#888;font-size:12px;">@c.Detail</div></div>
+<span class="status-badge @(c.Passed?"status-normal":"status-warning")">@(c.Passed?"正常":"异常")</span>
+</div>
+}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}
+.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}
+.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
+</style>
+
+@code {
+    private bool _loaded;
+    private int _totalChecks,_passedChecks,_failedChecks;
+    private List<(string Name,string Detail,bool Passed)> _checks=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            var totalOrders=await Db.Orders.CountAsync();
+            var totalProducts=await Db.Products.CountAsync();
+            var totalUsers=await Db.Users.CountAsync();
+            var orphanItems=await Db.OrderItems.CountAsync(oi=>!Db.Orders.Any(o=>o.OrderId==oi.OrderId));
+            var negativeCost=await Db.ProductCosts.CountAsync(c=>(c.UnitCost??0)<0);
+            var noRoleAdmins=await Db.AdminUsers.CountAsync(u=>u.RoleId==null);
+
+            _checks.Add(("订单完整性",$"订单{totalOrders}个",totalOrders>0));
+            _checks.Add(("商品完整性",$"商品{totalProducts}个",totalProducts>0));
+            _checks.Add(("客户完整性",$"用户{totalUsers}个",totalUsers>0));
+            _checks.Add(("订单-明细一致性",$"孤立订单明细{orphanItems}个",orphanItems==0));
+            _checks.Add(("负成本检查",$"负成本项{negativeCost}个",negativeCost==0));
+            _checks.Add(("管理员角色完整性",$"无角色管理员{noRoleAdmins}个",noRoleAdmins==0));
+
+            _totalChecks=_checks.Count;_passedChecks=_checks.Count(c=>c.Passed);_failedChecks=_checks.Count(c=>!c.Passed);
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+}

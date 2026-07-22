@@ -1,0 +1,18 @@
+@page "/admin/system/scheduled-task-edit"
+
+<PageTitle>编辑定时任务</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">编辑定时任务</MudText>
+<MudGrid><MudItem xs="12" md="6"><MudForm>
+    <MudTextField @bind-Value="_name" Label="任务名" Required="true" />
+    <MudTextField @bind-Value="_cron" Label="Cron表达式" HelperText="例: 0 2 * * *" />
+    <MudSwitch @bind-Value="_enabled" Label="启用" Color="Color.Success" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="Save">保存</MudButton>
+    <MudButton Variant="Variant.Text" Href="/admin/system/scheduled-tasks" Class="mt-4 ml-2">返回</MudButton>
+</MudForm></MudItem></MudGrid>
+
+@code {
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private string _name = "", _cron = ""; private bool _enabled = true;
+    private void Save() { Snackbar.Add("保存成功", Severity.Success); Nav.NavigateTo("/admin/system/scheduled-tasks"); }
+}

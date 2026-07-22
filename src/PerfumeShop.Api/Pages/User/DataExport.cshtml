@@ -1,0 +1,75 @@
+@page "/user/data-export"
+@model PerfumeShop.Api.Pages.User.DataExportModel
+@{ ViewData["Title"] = "数据导出"; }
+
+<section class="py-4">
+    <div class="container" style="max-width:800px;">
+        <nav class="breadcrumb-nav mb-3" style="font-size:.85rem;color:#999;">
+            <a href="/" style="color:#8B4513;text-decoration:none;">首页</a> /
+            <a href="/user" style="color:#8B4513;text-decoration:none;">个人中心</a> /
+            <span>数据导出</span>
+        </nav>
+
+        <div class="text-center mb-5">
+            <h2 style="color:var(--brand);"><i class="fas fa-download"></i> 数据导出</h2>
+            <p class="text-muted">根据数据保护法规，您可以导出我们持有的您的个人数据副本。</p>
+        </div>
+
+        <!-- 导出类型选择 -->
+        <div class="row g-4 mb-4">
+            @foreach (var (type, icon, title, desc) in new[] {
+                ("all", "bi-file-earmark-zip", "全部数据", "导出所有个人数据（推荐）"),
+                ("orders", "bi-bag", "订单记录", "所有历史订单详情"),
+                ("reviews", "bi-star", "评价记录", "您的所有商品评价"),
+                ("favorites", "bi-heart", "收藏列表", "您的收藏商品记录"),
+            })
+            {
+                <div class="col-md-6">
+                    <div class="card h-100 text-center p-4" style="border-radius:12px;transition:box-shadow .2s;cursor:pointer;"
+                         onclick="exportData('@type')">
+                        <i class="bi @icon" style="font-size:2.5rem;color:#667eea;margin-bottom:12px;"></i>
+                        <h5>@title</h5>
+                        <p class="text-muted small mb-0">@desc</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- 日期范围选择 -->
+        <div class="card p-4 mb-4" style="border-radius:12px;">
+            <h5 class="mb-3">日期范围（可选）</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small">开始日期</label>
+                    <input type="date" id="dateFrom" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small">结束日期</label>
+                    <input type="date" id="dateTo" class="form-control" />
+                </div>
+            </div>
+        </div>
+
+        <!-- 导出说明 -->
+        <div class="card p-4" style="border-radius:12px;background:#f7fafc;">
+            <h5 class="mb-3">导出内容包含：</h5>
+            <ul class="list-unstyled mb-3">
+                <li class="mb-2"><i class="fas fa-user" style="color:#667eea;width:20px;margin-right:8px;"></i> 个人资料（用户名、邮箱、姓名、手机）</li>
+                <li class="mb-2"><i class="fas fa-map-marker-alt" style="color:#667eea;width:20px;margin-right:8px;"></i> 收货地址</li>
+                <li class="mb-2"><i class="fas fa-shopping-bag" style="color:#667eea;width:20px;margin-right:8px;"></i> 订单记录</li>
+                <li class="mb-2"><i class="fas fa-heart" style="color:#667eea;width:20px;margin-right:8px;"></i> 收藏列表</li>
+            </ul>
+            <p class="text-muted small mb-0">
+                <i class="fas fa-lock"></i> 密码等敏感信息不会包含在导出数据中。数据导出操作会被记录在审计日志中。
+            </p>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+<script>
+function exportData(type) {
+    window.location.href = '/api/user/1/export?type=' + encodeURIComponent(type);
+}
+</script>
+}

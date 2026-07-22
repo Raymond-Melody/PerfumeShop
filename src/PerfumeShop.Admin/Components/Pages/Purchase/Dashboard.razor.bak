@@ -1,0 +1,125 @@
+@page "/admin/Purchase/Dashboard"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>采购概览</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">采购管理中心</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Color="Color.Primary">待处理订单</MudText>
+                <MudText Typo="Typo.h4">@_pendingCount</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Color="Color.Info">已审批订单</MudText>
+                <MudText Typo="Typo.h4">@_approvedCount</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Color="Color.Success">本月采购额</MudText>
+                <MudText Typo="Typo.h4">¥@_monthlyAmount.ToString("N0")</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Color="Color.Warning">库存预警</MudText>
+                <MudText Typo="Typo.h4">@_lowStockCount</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudCard>
+            <MudCardHeader>
+                <MudText Typo="Typo.h6">快捷操作</MudText>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudStack Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/admin/Purchase/OrderCreate"
+                               StartIcon="@Icons.Material.Filled.Add">新建采购单</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Info" Href="/admin/Purchase/Receiving"
+                               StartIcon="@Icons.Material.Filled.Inventory">收货入库</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Href="/admin/Purchase/SupplierManagement"
+                               StartIcon="@Icons.Material.Filled.Business">供应商管理</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Tertiary" Href="/admin/Purchase/Replenishment"
+                               StartIcon="@Icons.Material.Filled.AutoFixHigh">智能补货</MudButton>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudCard>
+            <MudCardHeader>
+                <MudText Typo="Typo.h6">最近采购订单</MudText>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTable Items="@_recentOrders" Hover="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>采购单号</MudTh>
+                        <MudTh>供应商</MudTh>
+                        <MudTh>金额</MudTh>
+                        <MudTh>状态</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.PurchaseNo</MudTd>
+                        <MudTd>@context.SupplierId</MudTd>
+                        <MudTd>¥@(context.TotalAmount?.ToString("N2") ?? "0.00")</MudTd>
+                        <MudTd>
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private int _pendingCount;
+    private int _approvedCount;
+    private decimal _monthlyAmount;
+    private int _lowStockCount;
+    private List<PurchaseOrder> _recentOrders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (pending, _) = await Repo.GetPurchaseOrdersAsync(status: "draft", pageSize: 1);
+        _pendingCount = pending.Count > 0 ? (await Repo.GetPurchaseOrdersAsync(status: "draft", pageSize: 1)).Total : 0;
+
+        var (approved, _) = await Repo.GetPurchaseOrdersAsync(status: "approved", pageSize: 1);
+        _approvedCount = approved.Count > 0 ? (await Repo.GetPurchaseOrdersAsync(status: "approved", pageSize: 1)).Total : 0;
+
+        var (recent, _) = await Repo.GetPurchaseOrdersAsync(pageSize: 5);
+        _recentOrders = recent;
+        _monthlyAmount = recent.Where(o => o.CreatedAt >= DateTime.Now.AddMonths(-1)).Sum(o => o.TotalAmount ?? 0);
+
+        var lowStock = await Repo.GetLowStockPackagingAsync();
+        _lowStockCount = lowStock.Count;
+    }
+
+    private Color GetStatusColor(string? status) => status?.ToLower() switch
+    {
+        "draft" => Color.Warning,
+        "approved" => Color.Info,
+        "received" => Color.Success,
+        "cancelled" => Color.Error,
+        _ => Color.Default
+    };
+}

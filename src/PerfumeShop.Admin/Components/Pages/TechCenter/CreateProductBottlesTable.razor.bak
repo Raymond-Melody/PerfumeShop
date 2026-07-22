@@ -1,0 +1,66 @@
+@page "/admin/TechCenter/CreateProductBottlesTable"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>产品瓶型表</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">产品-瓶型关联管理</MudText>
+
+<MudAlert Severity="Severity.Info" Class="mb-4">管理产品与瓶型的关联关系及自定义定价。</MudAlert>
+
+<MudGrid Class="mb-3">
+    <MudItem xs="12" sm="4">
+        <MudSelect @bind-Value="_productId" Label="选择产品" OnSelectedValuesChanged="LoadBottles">
+            @foreach (var p in _products)
+            {
+                <MudSelectItem Value="@p.ProductId">@p.ProductName</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+@if (_productId > 0)
+{
+    <MudTable Items="_bottles" Dense="true" Hover="true" Striped="true" Elevation="1">
+        <HeaderContent><MudTh>ID</MudTh><MudTh>瓶型ID</MudTh><MudTh>自定义价格</MudTh></HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Id</MudTd><MudTd>@context.BottleId</MudTd>
+            <MudTd>¥@(context.CustomPrice?.ToString("F2") ?? "标准价")</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudText Typo="Typo.h5" Class="mt-6 mb-3">全部瓶型库存</MudText>
+<MudTable Items="_allBottles" Dense="true" Hover="true" Striped="true" Elevation="1">
+    <HeaderContent>
+        <MudTh>瓶型ID</MudTh><MudTh>名称</MudTh><MudTh>类型</MudTh><MudTh>库存</MudTh><MudTh>安全库存</MudTh>
+        <MudTh>单价</MudTh><MudTh>状态</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.BottleId</MudTd><MudTd>@context.BottleName</MudTd>
+        <MudTd>@(context.BottleType ?? "-")</MudTd>
+        <MudTd>@(context.StockQty?.ToString("F0") ?? "0")</MudTd>
+        <MudTd>@(context.SafetyStock?.ToString("F0") ?? "0")</MudTd>
+        <MudTd>¥@(context.UnitPrice?.ToString("F2") ?? "0.00")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.IsActive == true ? Color.Success : Color.Default)">@(context.IsActive == true ? "启用" : "停用")</MudChip></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<Product> _products = new();
+    private List<BottleStyle> _allBottles = new();
+    private List<ProductBottleStyle> _bottles = new();
+    private int _productId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _products = await Db.Products.OrderBy(p => p.ProductName).ToListAsync();
+        _allBottles = await Db.BottleStyles.OrderBy(b => b.BottleName).ToListAsync();
+    }
+
+    private async Task LoadBottles(int productId)
+    {
+        _productId = productId;
+        _bottles = productId > 0 ? await Db.ProductBottleStyles.Where(b => b.ProductId == productId).ToListAsync() : new();
+    }
+}

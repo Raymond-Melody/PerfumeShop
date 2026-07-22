@@ -1,0 +1,302 @@
+/* =============================================
+   V19.4 Finance Dark Theme
+   包含: operation-dark 设计令牌 + 营运中心深色主题统一样式
+   ============================================= */
+
+/* === 设计令牌 (operation-dark 主题变量) === */
+[data-theme="operation-dark"], [data-theme="finance-dark"] {
+  --dt-color-primary: #00bcd4;
+  --dt-color-primary-hover: #00838f;
+  --dt-color-primary-light: #26c6da;
+  --dt-color-secondary: #0097a7;
+  --dt-color-accent: rgba(0,188,212,0.12);
+  --dt-color-success: #4CAF50;
+  --dt-color-success-hover: #388E3C;
+  --dt-color-warning: #ffc107;
+  --dt-color-warning-hover: #ffa000;
+  --dt-color-danger: #F44336;
+  --dt-color-danger-hover: #D32F2F;
+  --dt-color-info: #2196F3;
+  --dt-color-info-hover: #1976D2;
+  --dt-color-neutral: #6c757d;
+  --dt-color-neutral-hover: #5a6268;
+  --dt-color-purple: #9C27B0;
+  --dt-color-purple-hover: #7B1FA2;
+  --dt-color-cyan: #00BCD4;
+  --dt-color-cyan-hover: #0097A7;
+  --dt-color-pink: #E91E63;
+  --dt-color-pink-hover: #C2185B;
+  --dt-color-white: #ffffff;
+  --dt-color-black: #000000;
+  --dt-color-text: #e0e0e0;
+  --dt-color-text-light: #b0b0b0;
+  --dt-color-text-muted: #777777;
+  --dt-color-bg: #1a1a2e;
+  --dt-color-bg-light: #2d2d44;
+  --dt-color-bg-dark: #0f0f1a;
+  --dt-color-border: rgba(255,255,255,0.08);
+  --dt-shadow-sm: 0 4px 15px rgba(0,0,0,0.2);
+  --dt-shadow-md: 0 6px 25px rgba(0,0,0,0.4);
+  --dt-shadow-lg: 0 10px 40px rgba(0,0,0,0.5);
+  --dt-shadow-glow-primary: 0 4px 15px rgba(0,188,212,0.3);
+  --dt-shadow-glow-success: 0 4px 15px rgba(76,175,80,0.3);
+  --dt-shadow-glow-danger: 0 4px 15px rgba(244,67,54,0.3);
+  --dt-shadow-glow-warning: 0 4px 15px rgba(255,193,7,0.3);
+  --dt-shadow-glow-info: 0 4px 15px rgba(33,150,243,0.3);
+  --dt-color-bg-card: #1e1e32;
+  --dt-color-success-light: #66bb6a;
+  --dt-color-danger-light: #ef5350;
+  --dt-color-orange: #ff9800;
+  --dt-color-gold: #ffd700;
+  --dt-color-teal: #1abc9c;
+}
+
+/* === 全局基础 === */
+body {
+  background: var(--dt-color-bg) !important;
+  color: var(--dt-color-text) !important;
+}
+.main-content {
+  color: var(--dt-color-text);
+}
+
+/* === 侧边栏暗色主题 === */
+.sidebar {
+  background: linear-gradient(180deg, #16213e 0%, var(--dt-color-bg) 100%) !important;
+  border-right: 1px solid rgba(255,255,255,0.05);
+}
+.sidebar-menu a {
+  color: var(--dt-color-text-light) !important;
+}
+.sidebar-menu a:hover,
+.sidebar-menu a.active {
+  background: var(--dt-color-accent) !important;
+  color: var(--dt-color-primary) !important;
+  border-left-color: var(--dt-color-primary) !important;
+}
+
+/* === 页面标题与面包屑 === */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--dt-color-border);
+}
+.page-title {
+  font-size: 24px;
+  color: var(--dt-color-white) !important;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-title i { color: var(--dt-color-primary); }
+.breadcrumb {
+  font-size: 13px;
+  color: #888;
+}
+.breadcrumb a {
+  color: var(--dt-color-primary) !important;
+  text-decoration: none;
+}
+.breadcrumb a:hover { text-decoration: underline; }
+
+/* === 卡片容器 === */
+.admin-card, .info-card, .stat-card, .summary-item,
+.form-container, .switch-container, .adjust-form,
+.info-group.info-card, .orders-section {
+  background: linear-gradient(135deg, var(--dt-color-bg-light) 0%, var(--dt-color-bg-card) 100%) !important;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+}
+
+/* === 统计卡片 === */
+.stats-cards, .stats-summary, .stats-row {
+  display: grid;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+.stat-card, .summary-item, .stat-box {
+  background: linear-gradient(135deg, var(--dt-color-bg-light) 0%, var(--dt-color-bg-card) 100%) !important;
+  padding: 25px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* === 表格 === */
+.admin-table, .orders-table, .customers-table,
+.coupons-table, .campaigns-table, .reviews-table, .transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent !important;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.admin-table th, .orders-table th, .customers-table th,
+.coupons-table th, .campaigns-table th, .reviews-table th, .transactions-table th {
+  background: linear-gradient(135deg, var(--dt-color-primary) 0%, var(--dt-color-primary-hover) 100%) !important;
+  color: var(--dt-color-white) !important;
+  padding: 15px;
+  text-align: left;
+  font-weight: 500;
+}
+.admin-table td, .orders-table td, .customers-table td,
+.coupons-table td, .campaigns-table td, .reviews-table td, .transactions-table td {
+  padding: 15px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  color: var(--dt-color-text);
+}
+.admin-table tr:hover, .orders-table tr:hover, .customers-table tr:hover,
+.coupons-table tr:hover, .campaigns-table tr:hover, .reviews-table tr:hover, .transactions-table tr:hover {
+  background: rgba(255,255,255,0.04) !important;
+}
+.admin-table tr:last-child td, .orders-table tr:last-child td,
+.coupons-table tr:last-child td, .reviews-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* === 筛选栏 === */
+.filter-bar {
+  background: linear-gradient(135deg, var(--dt-color-bg-light) 0%, var(--dt-color-bg-card) 100%) !important;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.filter-form {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.filter-group label {
+  font-size: 13px;
+  color: var(--dt-color-text-light) !important;
+  font-weight: 500;
+}
+.filter-group select, .filter-group input {
+  padding: 10px 15px;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 150px;
+  background: var(--dt-color-border) !important;
+  color: var(--dt-color-text) !important;
+  transition: all 0.2s ease;
+}
+.filter-group select:focus, .filter-group input:focus {
+  border-color: var(--dt-color-primary) !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0,188,212,0.15);
+}
+
+/* === 分页 === */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 25px;
+}
+.pagination a, .pagination span {
+  padding: 10px 15px;
+  background: linear-gradient(135deg, var(--dt-color-bg-light) 0%, var(--dt-color-bg-card) 100%) !important;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--dt-color-text) !important;
+  border: 1px solid var(--dt-color-border);
+  transition: all 0.2s ease;
+}
+.pagination a:hover { background: rgba(0,188,212,0.2) !important; }
+.pagination a.active {
+  background: linear-gradient(135deg, var(--dt-color-primary) 0%, var(--dt-color-primary-hover) 100%) !important;
+  color: var(--dt-color-white) !important;
+}
+
+/* === 状态标签 === */
+.status-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+.status-active, .status-paid, .status-approved, .status-completed {
+  background: rgba(46,125,50,0.2) !important; color: var(--dt-color-success-light) !important;
+}
+.status-inactive, .status-cancelled, .status-rejected {
+  background: rgba(198,40,40,0.2) !important; color: var(--dt-color-danger-light) !important;
+}
+.status-pending { background: rgba(255,152,0,0.12) !important; color: #e65100 !important; }
+.status-processing { background: rgba(25,118,210,0.2) !important; color: #2196f3 !important; }
+.status-shipped { background: rgba(123,31,162,0.2) !important; color: #9C27B0 !important; }
+
+/* === 响应式 === */
+@media (max-width: 768px) {
+  .stats-cards, .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .filter-form { flex-direction: column; }
+}
+@media (max-width: 480px) {
+  .stats-cards, .stats-row { grid-template-columns: 1fr; }
+}
+
+/* =============================================
+   V19.6 财务中心统一UI标准（卡片/表格/导航/预设）
+   所有财务页面共享，避免重复定义
+   ============================================= */
+
+/* === 统计卡（带彩色左边框，对齐V18） === */
+.stat-card.matched{border-left:4px solid var(--dt-color-success)!important;}
+.stat-card.short,.stat-card.over{border-left:4px solid var(--dt-color-danger)!important;}
+.stat-card.missing{border-left:4px solid var(--dt-color-orange)!important;}
+.stat-card.supplier{border-left:4px solid var(--dt-color-primary)!important;}
+
+/* === 卡片式表单（对齐V18 .reconcile-form） === */
+.recon-card {
+  background:linear-gradient(135deg,var(--dt-color-bg-light) 0%,var(--dt-color-bg-card) 100%);
+  border-radius:12px;padding:30px;
+  border:1px solid rgba(255,255,255,0.06);max-width:640px;
+}
+
+/* === Tab导航（对齐V18） === */
+.tab-nav{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:25px;}
+.tab-link{padding:15px 30px;color:#888;text-decoration:none;font-size:15px;border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:8px;}
+.tab-link:hover{color:#e0e0e0;background:#2d2d44;}
+.tab-link.active{color:var(--dt-color-primary);border-bottom-color:var(--dt-color-primary);}
+
+/* === 预设按钮（日期快捷选择） === */
+.preset-btn{
+  padding:8px 14px;border:1px solid var(--dt-color-primary);border-radius:20px;
+  background:transparent;color:var(--dt-color-primary);cursor:pointer;
+  font-size:13px;transition:all 0.2s;
+}
+.preset-btn:hover{background:rgba(0,188,212,0.15);}
+
+/* === 导出按钮 === */
+.btn-export{
+  background:var(--dt-color-success);color:#fff;padding:10px 18px;border:none;
+  border-radius:6px;cursor:pointer;font-size:13px;
+  display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+}
+.btn-export:hover{background:var(--dt-color-success-hover);}
+
+/* === 保存/操作按钮 === */
+.btn-save{background:var(--dt-color-primary);color:#fff;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;font-size:14px;}
+.btn-save:hover{opacity:0.85;}
+
+/* === 表格容器 === */
+.table-container{
+  background:linear-gradient(135deg,var(--dt-color-bg-light),var(--dt-color-bg-card));
+  border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);
+}
+.table-container .orders-table th{background:rgba(0,188,212,0.1)!important;color:var(--dt-color-primary)!important;padding:14px 16px;font-size:13px;}
+.table-container .orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);}
+
+/* === 汇总行 === */
+.total-row td{font-weight:bold;background:rgba(0,188,212,0.08)!important;}
+
+/* === KPI卡片hover（Index页保留） === */
+.kpi-card:hover{transform:translateY(-3px);box-shadow:0 6px 25px rgba(0,0,0,0.4);}

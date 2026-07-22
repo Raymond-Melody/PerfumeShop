@@ -55,9 +55,13 @@ public partial class Order
 
     public int UserId { get; set; }
 
-    public int PointsEarned { get; set; }
+    public int? PointsEarned { get; set; }
 
-    public int PointsRedeemed { get; set; }
+    public int? PointsRedeemed { get; set; }
 
-    public decimal PointsDiscount { get; set; }
+    public decimal? PointsDiscount { get; set; }
+
+    public string? CouponCode { get; set; }
+
+    public decimal? CouponDiscount { get; set; }
 }

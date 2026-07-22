@@ -1,0 +1,189 @@
+/* ============================================
+   PerfumeShop V14.6 - 筛选优化样式
+   ============================================ */
+
+/* 筛选计数 */
+.filter-count {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.filter-count .count-badge {
+    display: inline-block;
+    min-width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    background: var(--primary-color);
+    color: #fff;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 13px;
+    margin: 0 4px;
+}
+
+/* 清空筛选按钮 */
+.btn-clear-all {
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: #fff;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-clear-all:hover {
+    background: #dc3545;
+    color: #fff;
+}
+
+.btn-clear-all i {
+    font-size: 14px;
+}
+
+/* 筛选面包屑 */
+.filter-breadcrumbs {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.filter-breadcrumbs::before {
+    content: '筛选：';
+    font-size: 14px;
+    color: #6c757d;
+    margin-right: 4px;
+}
+
+/* 筛选标签 */
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #fff;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.filter-tag:hover {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.filter-tag i {
+    font-size: 12px;
+    margin-left: 2px;
+}
+
+.filter-tag i:hover {
+    color: #dc3545;
+}
+
+/* 筛选提示消息 */
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.filter-toast {
+    animation: slideInUp 0.3s ease;
+}
+
+/* 暗黑模式适配 */
+[data-theme="dark"] .filter-count {
+    color: #B0B0B0;
+}
+
+[data-theme="dark"] .filter-breadcrumbs {
+    background: rgba(30, 30, 30, 0.5);
+}
+
+[data-theme="dark"] .filter-breadcrumbs::before {
+    color: #999;
+}
+
+[data-theme="dark"] .filter-tag {
+    background: rgba(50, 50, 50, 0.8);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+[data-theme="dark"] .filter-tag:hover {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+[data-theme="dark"] .btn-clear-all {
+    background: rgba(50, 50, 50, 0.8);
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+[data-theme="dark"] .btn-clear-all:hover {
+    background: #dc3545;
+    color: #fff;
+}
+
+/* 移动端适配 */
+@media (max-width: 991px) {
+    .filter-breadcrumbs {
+        margin-top: 12px;
+        padding: 10px;
+    }
+    
+    .filter-breadcrumbs::before {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .filter-tag {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    
+    .btn-clear-all {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .filter-toast {
+        bottom: 70px;
+    }
+}
+
+@media (max-width: 576px) {
+    .filter-count {
+        font-size: 13px;
+    }
+    
+    .filter-count .count-badge {
+        min-width: 20px;
+        height: 20px;
+        line-height: 20px;
+        font-size: 12px;
+    }
+}

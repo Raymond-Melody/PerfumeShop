@@ -1,0 +1,93 @@
+﻿@page "/admin/finance/cash-flow"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+
+<PageTitle>现金流预测</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-chart-line" style="color:#00bcd4;"></i> 现金流预测</h2><div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>现金流预测</span></div></div>
+@if(_loaded){
+var data = _cf;
+<!-- 资金总览仪表 -->
+<div class="stats-grid">
+<div class="stat-card" style="border-top:4px solid #00bcd4;"><div class="num cyan-num">¥@data.FundBalance.ToString("N0")</div><div class="label">资金账户余额</div></div>
+<div class="stat-card" style="border-top:4px solid #4CAF50;"><div class="num green-num">¥@data.CashIn.ToString("N0")</div><div class="label">近30天收入</div></div>
+<div class="stat-card" style="border-top:4px solid #f44336;"><div class="num red-num">¥@data.CashOut.ToString("N0")</div><div class="label">近30天支出</div></div>
+<div class="stat-card" style="border-top:4px solid @(data.NetCashFlow>=0?"#4CAF50":"#f44336");"><div class="num @(data.NetCashFlow>=0?"green-num":"red-num")">¥@Math.Abs(data.NetCashFlow).ToString("N0")</div><div class="label">@(data.NetCashFlow>=0?"净流入":"净流出")</div></div>
+</div>
+
+<!-- 现金流预测管道 -->
+<div class="flow-indicator">
+<div class="flow-item"><div class="value green-num">¥@data.FundBalance.ToString("N0")</div><div class="label">当前余额</div></div>
+<div class="flow-arrow"><i class="fas fa-plus-circle" style="color:#4CAF50;"></i></div>
+<div class="flow-item"><div class="value green-num">¥@data.ArDue30.ToString("N0")</div><div class="label">30天到期应收</div></div>
+<div class="flow-arrow"><i class="fas fa-minus-circle" style="color:#f44336;"></i></div>
+<div class="flow-item"><div class="value red-num">¥@data.ApDue30.ToString("N0")</div><div class="label">30天到期应付</div></div>
+<div class="flow-arrow"><i class="fas fa-equals"></i></div>
+<div class="flow-item"><div class="value @(data.ProjectedCash>=0?"cyan-num":"red-num")">¥@data.ProjectedCash.ToString("N0")</div><div class="label">预测余额</div></div>
+</div>
+
+<!-- 预警 -->
+@if(data.ApOverdue>0){<div class="alert-danger"><i class="fas fa-exclamation-triangle"></i> 逾期应付：¥@data.ApOverdue.ToString("N0")，请尽快安排付款</div>}
+@if(data.ArOverdue>0){<div class="alert-warning"><i class="fas fa-exclamation-circle"></i> 逾期应收：¥@data.ArOverdue.ToString("N0")，请跟催收款</div>}
+@if(data.ProjectedCash<0){<div class="alert-danger"><i class="fas fa-skull-crossbones"></i> 资金预警：30天预测余额为负，需采取措施</div>}
+
+<div class="grid-3">
+<div class="card"><div class="card-header"><i class="fas fa-file-invoice-dollar"></i> 应付概况</div><div class="card-body">
+<div style="margin-bottom:10px"><span style="color:#888">未付余额：</span><strong class="red-num">¥@data.ApBalance.ToString("N0")</strong></div>
+<div style="margin-bottom:10px"><span style="color:#888">30天到期：</span><strong style="color:#FF9800;">¥@data.ApDue30.ToString("N0")</strong></div>
+<div><span style="color:#888">已逾期：</span><strong class="red-num">¥@data.ApOverdue.ToString("N0")</strong></div>
+</div></div>
+<div class="card"><div class="card-header"><i class="fas fa-hand-holding-usd"></i> 应收概况</div><div class="card-body">
+<div style="margin-bottom:10px"><span style="color:#888">未收余额：</span><strong class="green-num">¥@data.ArBalance.ToString("N0")</strong></div>
+<div style="margin-bottom:10px"><span style="color:#888">30天到期：</span><strong style="color:#2196F3;">¥@data.ArDue30.ToString("N0")</strong></div>
+<div><span style="color:#888">已逾期：</span><strong style="color:#FF9800;">¥@data.ArOverdue.ToString("N0")</strong></div>
+</div></div>
+<div class="card"><div class="card-header"><i class="fas fa-lightbulb"></i> 决策建议</div><div class="card-body">
+@if(data.ProjectedCash < 0){
+<p style="color:#EF9A9A;"><i class="fas fa-exclamation-triangle"></i> 预测资金缺口 ¥@Math.Abs(data.ProjectedCash).ToString("N0")，建议：</p>
+<ul style="color:#b0b0b0;font-size:13px;padding-left:20px;line-height:1.8;"><li>加速催收逾期应收</li><li>协商延期支付应付</li><li>考虑短期融资</li></ul>
+}else if(data.ProjectedCash < data.FundBalance * 0.3m){
+<p style="color:#FFB74D;"><i class="fas fa-exclamation-circle"></i> 资金偏紧，建议：</p>
+<ul style="color:#b0b0b0;font-size:13px;padding-left:20px;line-height:1.8;"><li>控制非必要支出</li><li>优化付款节奏</li></ul>
+}else{
+<p style="color:#81C784;"><i class="fas fa-check-circle"></i> 资金状况良好</p>
+<p style="color:#b0b0b0;font-size:13px;">预测余额可覆盖30天应付需求</p>
+}
+</div></div>
+</div>
+
+<div style="text-align:center;margin-top:20px;">
+<a href="/admin/finance/fund-dashboard" style="padding:10px 25px;background:#2d2d44;color:#e0e0e0;border-radius:8px;text-decoration:none;display:inline-block;">前往资金看板 <i class="fas fa-arrow-right"></i></a>
+</div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:25px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-card .num{font-size:28px;font-weight:700;}
+.stat-card .label{font-size:13px;color:#888;margin-top:5px;}
+.green-num{color:#4CAF50;}.red-num{color:#f44336;}.blue-num{color:#2196F3;}.cyan-num{color:#00bcd4;}
+.flow-indicator{display:flex;align-items:center;gap:20px;padding:25px;background:linear-gradient(135deg,rgba(0,188,212,0.08),rgba(33,150,243,0.08));border-radius:12px;margin-bottom:20px;flex-wrap:wrap;}
+.flow-item{flex:1;text-align:center;min-width:100px;}
+.flow-item .value{font-size:24px;font-weight:700;}
+.flow-item .label{font-size:12px;color:#888;margin-top:4px;}
+.flow-arrow{font-size:24px;color:#888;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:20px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.card-header{padding:15px 20px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;color:#e0e0e0;}
+.card-body{padding:20px;color:#e0e0e0;}
+.alert-danger{background:rgba(244,67,54,0.15);border:1px solid rgba(244,67,54,0.3);color:#EF9A9A;padding:15px;border-radius:8px;margin-bottom:15px;}
+.alert-warning{background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.3);color:#FFB74D;padding:15px;border-radius:8px;margin-bottom:15px;}
+@@media(max-width:768px){.stats-grid,.grid-3{grid-template-columns:1fr;}.flow-indicator{flex-direction:column;}}
+</style>
+
+@code{
+private bool _loaded; private FinanceRepository.CashFlowData _cf = new();
+protected override async Task OnInitializedAsync(){try{_cf=await FinRepo.GetCashFlowDataAsync();_loaded=true;}catch{_loaded=true;}}
+}

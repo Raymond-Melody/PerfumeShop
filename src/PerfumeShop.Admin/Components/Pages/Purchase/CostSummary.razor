@@ -1,0 +1,23 @@
+@page "/admin/Purchase/CostSummary"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>订单成本汇总</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-calculator" style="color:#FF9800;"></i> 订单成本汇总</h2><div class="breadcrumb"><a href="/admin/Purchase/Dashboard" style="color:#FF9800;text-decoration:none;">采购中心</a> / <span>成本汇总</span></div></div>
+@if(_loaded){
+<div class="table-container"><table class="orders-table"><thead><tr><th>采购单号</th><th>供应商ID</th><th>金额</th><th>状态</th><th>日期</th></tr></thead><tbody>
+@foreach(var o in _items){<tr><td>@(o.PurchaseNo??o.PurchaseId.ToString())</td><td>@(o.SupplierId?.ToString()??"-")</td><td>@((o.TotalAmount??0).ToString("N2"))</td><td><span class="sb sn">@(o.Status??"-")</span></td><td>@(o.OrderDate?.ToString("yyyy-MM-dd")??"-")</td></tr>}
+@if(!_items.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无采购成本记录</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(255,152,0,0.1);color:#FF9800;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.sb{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}.sn{background:rgba(76,175,80,0.2);color:#81c784;}
+</style>
+@code{private bool _loaded;private List<PurchaseOrder> _items=new();protected override async Task OnInitializedAsync(){try{_items=await Db.PurchaseOrders.AsNoTracking().Where(o=>o.Status=="completed").OrderByDescending(o=>o.PurchaseId).Take(50).ToListAsync();_loaded=true;}catch{_loaded=true;}}}

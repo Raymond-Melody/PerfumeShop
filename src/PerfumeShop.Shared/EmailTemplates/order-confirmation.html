@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单确认 #{{ORDER_NO}}</title>
+    <style>
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+        .header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 40px 30px; text-align: center; }
+        .header h1 { color: #e8d5b7; margin: 0; font-size: 24px; font-weight: 300; }
+        .content { padding: 40px 30px; }
+        .content h2 { color: #1a1a2e; font-size: 20px; }
+        .content p { color: #555; line-height: 1.8; font-size: 15px; }
+        .order-info { background: #f9f9f9; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .order-info .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .order-info .row:last-child { border-bottom: none; }
+        .order-info .label { color: #888; }
+        .order-info .value { color: #1a1a2e; font-weight: bold; }
+        .btn { display: inline-block; background: #1a1a2e; color: #e8d5b7; padding: 14px 36px; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+        .footer { background: #f9f9f9; padding: 20px 30px; text-align: center; color: #999; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>订单确认 #{{ORDER_NO}}</h1>
+        </div>
+        <div class="content">
+            <h2>亲爱的 {{FULL_NAME}}，</h2>
+            <p>感谢您的订单！我们已收到您的订单，将尽快为您处理。</p>
+            <div class="order-info">
+                <div class="row">
+                    <span class="label">订单号</span>
+                    <span class="value">#{{ORDER_NO}}</span>
+                </div>
+                <div class="row">
+                    <span class="label">订单金额</span>
+                    <span class="value">¥{{TOTAL_AMOUNT}}</span>
+                </div>
+            </div>
+            <p style="text-align: center;">
+                <a href="{{ORDER_URL}}" class="btn">查看订单详情</a>
+            </p>
+            <p>如有问题，请联系我们的客服团队。</p>
+        </div>
+        <div class="footer">
+            <p>&copy; {{YEAR}} {{SITE_NAME}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

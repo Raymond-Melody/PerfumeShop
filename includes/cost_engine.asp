@@ -588,13 +588,17 @@ Function CE_GetCachedProductUnitCost(productId)
 End Function
 
 ' 安全数值转换
+' V19修复：MSOLEDBSQL(DataTypeCompatibility=0) 下 DECIMAL/NUMERIC 以 adNumeric 变体返回，
+' VBScript 的 IsNumeric() 对该类型返回 False（TypeName 为空），原判断误将有效小数当成非数字返回0，
+' 进而导致成本引擎把全部成本清零。改为直接 CDbl 转换并用错误兜底，不再依赖 IsNumeric。
 Function CE_SafeNum(val)
-    If IsNull(val) Or IsEmpty(val) Or val = "" Or Not IsNumeric(val) Then
+    On Error Resume Next
+    CE_SafeNum = 0
+    If IsNull(val) Or IsEmpty(val) Then Exit Function
+    CE_SafeNum = CDbl(val)
+    If Err.Number <> 0 Then
         CE_SafeNum = 0
-    Else
-        On Error Resume Next
-        CE_SafeNum = CDbl(val)
-        If Err.Number <> 0 Then CE_SafeNum = 0 : Err.Clear
+        Err.Clear
     End If
 End Function
 
@@ -914,24 +918,41 @@ Sub CE_UpdateAllProductCosts()
     count = 0
     On Error Resume Next
     
+    ' V19修复：预加载成本缓存（顺序查询、互不嵌套），随后用O(1)缓存计算，
+    ' 从根本上规避 forward-only 游标下嵌套查询导致的"连接繁忙"清零问题。
+    Call CE_PreloadAllCostData()
+    
+    ' 先将所有 ProductID 缓冲到数组，再关闭 rsProducts，
+    ' 避免在遍历 forward-only 游标时嵌套 conn.Execute 触发"连接繁忙"（无MARS），
+    ' 该问题会导致内层计算查询静默失败并返回0，进而把全部产品成本清零。
+    Dim idBuf, idArr, bufI
+    idBuf = ""
     Set rsProducts = conn.Execute("SELECT ProductID FROM Products WHERE IsActive=1")
     If Not rsProducts Is Nothing Then
         Do While Not rsProducts.EOF
-            pid = CE_SafeNum(rsProducts("ProductID"))
+            idBuf = idBuf & CStr(rsProducts("ProductID")) & ","
+            rsProducts.MoveNext
+        Loop
+        rsProducts.Close
+    End If
+    Set rsProducts = Nothing
+    
+    If Len(idBuf) > 0 Then
+        idArr = Split(Left(idBuf, Len(idBuf)-1), ",")
+        For bufI = 0 To UBound(idArr)
+            pid = CE_SafeNum(idArr(bufI))
             If pid > 0 Then
-                bomCost = CE_CalculateProductBOMCost(pid)
-                unitCost = CE_CalculateProductUnitCost(pid)
+                bomCost = CE_GetCachedProductBOMCost(pid)
+                unitCost = CE_GetCachedProductUnitCost(pid)
+                If unitCost <= 0 Then unitCost = bomCost
                 
                 updateSQL = "UPDATE Products SET BOMCost=" & bomCost & ", UnitCost=" & unitCost & " WHERE ProductID=" & pid
                 conn.Execute updateSQL
                 If Err.Number = 0 Then count = count + 1
                 Err.Clear
             End If
-            rsProducts.MoveNext
-        Loop
-        rsProducts.Close
+        Next
     End If
-    Set rsProducts = Nothing
     
     Session("CE_LastUpdateCount") = count
     Session("CE_LastUpdateTime") = Now()
@@ -961,35 +982,37 @@ Sub CE_UpdateOrderCosts(orderId)
     
     On Error Resume Next
     
-    Set rsDetails = conn.Execute("SELECT DetailID, ProductID, Quantity FROM OrderDetails WHERE OrderID=" & orderId)
-    If Not rsDetails Is Nothing Then
-        Do While Not rsDetails.EOF
-            productId = CE_SafeNum(rsDetails("ProductID"))
-            qty = CE_SafeNum(rsDetails("Quantity"))
-            unitCost = CE_CalculateProductUnitCost(productId)
-            orderCost = orderCost + (unitCost * qty)
-            rsDetails.MoveNext
-        Loop
-        rsDetails.Close
+    ' V19修复：用单条联表查询直接从 Products.UnitCost 汇总订单成本，
+    ' 避免逐行嵌套 CE_CalculateProductUnitCost 及"记录集打开时执行UPDATE"导致的连接繁忙
+    Dim rsC
+    Set rsC = conn.Execute("SELECT ISNULL(SUM(od.Quantity * ISNULL(p.UnitCost,0)),0) AS Cost " & _
+        "FROM OrderDetails od LEFT JOIN Products p ON od.ProductID=p.ProductID WHERE od.OrderID=" & orderId)
+    If Not rsC Is Nothing Then
+        If Not rsC.EOF Then orderCost = CE_SafeNum(rsC(0))
+        rsC.Close
     End If
-    Set rsDetails = Nothing
+    Set rsC = Nothing
     
     ' 更新订单的成本和利润
-    Dim totalAmount, shippingFee, profitAmount
+    Dim totalAmount, shippingFee, profitAmount, gotOrder
     Dim rsOrder
+    gotOrder = False
     Set rsOrder = conn.Execute("SELECT TotalAmount, ShippingFee FROM Orders WHERE OrderID=" & orderId)
     If Not rsOrder Is Nothing Then
         If Not rsOrder.EOF Then
             totalAmount = CE_SafeNum(rsOrder("TotalAmount"))
             shippingFee = CE_SafeNum(rsOrder("ShippingFee"))
-            profitAmount = totalAmount - orderCost - shippingFee
-            If profitAmount < 0 Then profitAmount = 0
-            
-            conn.Execute "UPDATE Orders SET CostAmount=" & orderCost & ", ProfitAmount=" & profitAmount & " WHERE OrderID=" & orderId
+            gotOrder = True
         End If
         rsOrder.Close
     End If
     Set rsOrder = Nothing
+    
+    If gotOrder Then
+        profitAmount = totalAmount - orderCost - shippingFee
+        If profitAmount < 0 Then profitAmount = 0
+        conn.Execute "UPDATE Orders SET CostAmount=" & orderCost & ", ProfitAmount=" & profitAmount & " WHERE OrderID=" & orderId
+    End If
     
     ' V10: 记录订单成本分摊明细
     CE_RecordOrderCostAllocation orderId
@@ -1002,16 +1025,26 @@ Sub CE_UpdateAllOrderCosts()
     Dim rsOrders, oid
     
     On Error Resume Next
+    ' V19修复：先缓冲所有 OrderID，再关闭游标，避免遍历时嵌套查询导致连接繁忙
+    Dim oidBuf, oidArr, oBufI
+    oidBuf = ""
     Set rsOrders = conn.Execute("SELECT OrderID FROM Orders WHERE Status NOT IN ('Pending','Cancelled')")
     If Not rsOrders Is Nothing Then
         Do While Not rsOrders.EOF
-            oid = CE_SafeNum(rsOrders("OrderID"))
-            If oid > 0 Then CE_UpdateOrderCosts oid
+            oidBuf = oidBuf & CStr(rsOrders("OrderID")) & ","
             rsOrders.MoveNext
         Loop
         rsOrders.Close
     End If
     Set rsOrders = Nothing
+    
+    If Len(oidBuf) > 0 Then
+        oidArr = Split(Left(oidBuf, Len(oidBuf)-1), ",")
+        For oBufI = 0 To UBound(oidArr)
+            oid = CE_SafeNum(oidArr(oBufI))
+            If oid > 0 Then CE_UpdateOrderCosts oid
+        Next
+    End If
     
     Session("CE_LastOrderUpdateTime") = Now()
 End Sub
@@ -1071,38 +1104,56 @@ Sub CE_RecordOrderCostAllocation(orderId)
     Set rsOrder = Nothing
     If orderNo = "" Then Exit Sub
     
+    ' V19修复：先清除该订单旧的分摊记录，避免重复执行"自动更新订单利润"时累积重复行
+    conn.Execute "DELETE FROM OrderCostAllocation WHERE OrderID=" & orderId
+    Err.Clear
+    
     ' 获取订单明细及产品成本
-    Set rsDetails = conn.Execute("SELECT od.DetailID, od.ProductID, p.ProductName, od.Quantity, p.UnitCost " & _
+    ' V19修复：先缓冲明细（Chr(31)字段分隔/Chr(30)行分隔），再关闭游标，
+    ' 避免遍历时嵌套 INSERT 与 CE_CalculateProductUnitCost 查询导致连接繁忙
+    Dim recBuf, recArr, rBufI, recFields
+    recBuf = ""
+    Set rsDetails = conn.Execute("SELECT od.ProductID, p.ProductName, od.Quantity, ISNULL(p.UnitCost,0) AS UnitCost " & _
         "FROM OrderDetails od LEFT JOIN Products p ON od.ProductID = p.ProductID " & _
         "WHERE od.OrderID=" & orderId)
-    
     If Not rsDetails Is Nothing Then
         Do While Not rsDetails.EOF
-            detailId = CE_SafeNum(rsDetails("DetailID"))
-            productId = CE_SafeNum(rsDetails("ProductID"))
-            productName = CStr(rsDetails("ProductName") & "")
-            qty = CE_SafeNum(rsDetails("Quantity"))
-            unitCost = CE_SafeNum(rsDetails("UnitCost"))
-            
-            ' 如果产品成本未计算，重新计算
-            If unitCost <= 0 Then
-                unitCost = CE_CalculateProductUnitCost(productId)
-            End If
-            
-            totalCost = unitCost * qty
-            
-            If totalCost > 0 Then
-                allocSql = "INSERT INTO OrderCostAllocation (OrderID, OrderNo, CostType, ItemCode, ItemName, UnitCost, Quantity, TotalCost, AllocatedAt, CreatedAt) VALUES (" & _
-                    orderId & ", '" & orderNo & "', 'Product', '" & CStr(productId) & "', '" & Replace(productName, "'", "''") & "', " & _
-                    unitCost & ", " & qty & ", " & totalCost & ", GETDATE(), GETDATE())"
-                conn.Execute allocSql
-                If Err.Number <> 0 Then Err.Clear
-            End If
-            
+            recBuf = recBuf & CStr(CE_SafeNum(rsDetails("ProductID"))) & Chr(31) & _
+                     Replace(CStr(rsDetails("ProductName") & ""), Chr(30), "") & Chr(31) & _
+                     CStr(CE_SafeNum(rsDetails("Quantity"))) & Chr(31) & _
+                     CStr(CE_SafeNum(rsDetails("UnitCost"))) & Chr(30)
             rsDetails.MoveNext
         Loop
         rsDetails.Close
     End If
     Set rsDetails = Nothing
+    
+    If Len(recBuf) > 0 Then
+        recArr = Split(Left(recBuf, Len(recBuf)-1), Chr(30))
+        For rBufI = 0 To UBound(recArr)
+            recFields = Split(recArr(rBufI), Chr(31))
+            If UBound(recFields) >= 3 Then
+                productId = CE_SafeNum(recFields(0))
+                productName = recFields(1)
+                qty = CE_SafeNum(recFields(2))
+                unitCost = CE_SafeNum(recFields(3))
+                
+                ' 如果产品成本未计算，重新计算
+                If unitCost <= 0 Then
+                    unitCost = CE_CalculateProductUnitCost(productId)
+                End If
+                
+                totalCost = unitCost * qty
+                
+                If totalCost > 0 Then
+                    allocSql = "INSERT INTO OrderCostAllocation (OrderID, OrderNo, CostType, ItemCode, ItemName, UnitCost, Quantity, TotalCost, AllocatedAt, CreatedAt) VALUES (" & _
+                        orderId & ", '" & orderNo & "', 'Product', '" & CStr(productId) & "', '" & Replace(productName, "'", "''") & "', " & _
+                        unitCost & ", " & qty & ", " & totalCost & ", GETDATE(), GETDATE())"
+                    conn.Execute allocSql
+                    If Err.Number <> 0 Then Err.Clear
+                End If
+            End If
+        Next
+    End If
 End Sub
 %>

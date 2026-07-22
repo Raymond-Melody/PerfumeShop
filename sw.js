@@ -4,11 +4,11 @@
  */
 
 // ── 缓存配置 ──
-var CACHE_VERSION = 'perfumeshop-v18';
+var CACHE_VERSION = 'perfumeshop-v19';
 var CACHE_STATIC = CACHE_VERSION + '-static';
 var CACHE_DYNAMIC = CACHE_VERSION + '-dynamic';
 var CACHE_IMAGES = CACHE_VERSION + '-images';
-var OFFLINE_PAGE = '/offline.html';
+var OFFLINE_PAGE = '/offline';
 
 // 缓存过期时间（毫秒）
 var MAX_AGE_STATIC = 365 * 24 * 60 * 60 * 1000;  // 1 年
@@ -18,45 +18,41 @@ var MAX_AGE_IMAGES = 30 * 24 * 60 * 60 * 1000;    // 30 天
 // 静态核心资源（安装时预缓存）
 var STATIC_ASSETS = [
   '/',
-  '/index.asp',
-  '/products.asp',
-  '/about.asp',
-  '/contact.asp',
-  '/customize.asp',
-  '/subscribe.asp',
-  '/community.asp',
-  '/flash_sale.asp',
-  '/group_buy.asp',
-  '/fragrance_quiz.asp',
-  '/css/design-tokens.css?v=18.0',
-  '/css/style.css?v=18.0',
-  '/css/pages.css?v=18.0',
-  '/css/buttons.css?v=18.0',
-  '/css/responsive.css?v=18.0',
-  '/css/mobile-first.css?v=18.0',
-  '/css/lazy-load.css?v=18.0',
-  '/css/cart-animation.css?v=18.0',
-  '/css/filter-optimization.css?v=18.0',
-  '/css/theme.css?v=18.0',
-  '/css/skeleton.css?v=18.0',
-  '/js/main.js?v=18.0',
-  '/js/lazy-load.js?v=18.0',
-  '/js/theme-toggle.js?v=18.0',
-  '/js/skeleton-loader.js?v=18.0',
-  '/js/mobile-gestures.js?v=18.0',
-  '/js/push-manager.js?v=18.0',
+  '/products',
+  '/about',
+  '/contact',
+  '/customize',
+  '/subscribe',
+  '/community',
+  '/flash-sale',
+  '/group-buy',
+  '/fragrance-quiz',
+  '/css/design-tokens.css?v=19.0',
+  '/css/style.css?v=19.0',
+  '/css/pages.css?v=19.0',
+  '/css/buttons.css?v=19.0',
+  '/css/responsive.css?v=19.0',
+  '/css/mobile-first.css?v=19.0',
+  '/css/lazy-load.css?v=19.0',
+  '/css/cart-animation.css?v=19.0',
+  '/css/filter-optimization.css?v=19.0',
+  '/css/theme.css?v=19.0',
+  '/css/skeleton.css?v=19.0',
+  '/js/main.js?v=19.0',
+  '/js/lazy-load.js?v=19.0',
+  '/js/theme-toggle.js?v=19.0',
+  '/js/skeleton-loader.js?v=19.0',
+  '/js/mobile-gestures.js?v=19.0',
+  '/js/push-manager.js?v=19.0',
   '/images/default-product.svg',
   '/images/default-avatar.svg',
-  OFFLINE_PAGE,
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
-  'https://code.jquery.com/jquery-3.6.0.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js'
 ];
 
 // 跨域白名单
 var CDN_HOSTS = [
-  'cdnjs.cloudflare.com',
-  'code.jquery.com',
-  'cdn.ampproject.org'
+  'cdnjs.cloudflare.com'
 ];
 
 // ── 工具函数 ──
@@ -316,7 +312,7 @@ self.addEventListener('push', function(event) {
     badge: '/images/icons/icon-72x72.png',
     vibrate: [100, 50, 100],
     data: {
-      url: data.url || '/index.asp',
+      url: data.url || '/',
       dateOfArrival: Date.now(),
       primaryKey: data.id || 1
     },
@@ -337,7 +333,7 @@ self.addEventListener('push', function(event) {
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
 
-  var targetUrl = (event.notification.data && event.notification.data.url) || '/index.asp';
+  var targetUrl = (event.notification.data && event.notification.data.url) || '/';
 
   if (event.action === 'close') return;
 
@@ -470,4 +466,4 @@ self.addEventListener('message', function(event) {
   }
 });
 
-console.log('[SW V18] Service Worker loaded');
+console.log('[SW V19] Service Worker loaded');

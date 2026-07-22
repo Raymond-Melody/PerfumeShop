@@ -1,0 +1,179 @@
+@page "/user/coupons"
+@model PerfumeShop.Api.Pages.User.CouponsModel
+@{ ViewData["Title"] = "我的优惠券"; }
+
+@section Styles {
+<style>
+.coupon-card { display:flex; border-radius:12px; overflow:hidden; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; }
+.coupon-card:hover { transform: translateY(-2px); }
+.stats-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:24px; }
+.stat-card { background:#fff; border-radius:12px; padding:20px; display:flex; align-items:center; gap:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.stat-icon { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.stat-value { font-size:24px; font-weight:bold; display:block; }
+.stat-label { font-size:13px; color:#888; }
+@@media (max-width: 768px) {
+    .coupon-card { flex-direction: column; }
+    .coupon-card > div:first-child { width: 100% !important; min-height: 80px !important; }
+}
+</style>
+}
+
+<!-- 面包屑 -->
+<div class="breadcrumb">
+    <div class="container">
+        <a href="/">首页</a><span class="separator">/</span>
+        <a href="/user">个人中心</a><span class="separator">/</span>
+        <span>我的优惠券</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="user-center">
+        <aside class="user-side">
+            <div class="user-card">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="/user">账户概览</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/orders">我的订单</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/favorites">我的收藏</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/points">我的积分</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/coupons">我的优惠券</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/addresses">收货地址</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/settings">账户设置</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <div class="user-main">
+            <div class="welcome-section">
+                <h1><i class="fas fa-ticket-alt" style="color:#2e7d32;"></i> 我的优惠券</h1>
+                <p>管理您的优惠券，享受更多优惠</p>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card" style="border-top:3px solid #4CAF50;">
+                    <div class="stat-icon" style="background:#e8f5e9;color:#4CAF50;"><i class="fas fa-ticket-alt"></i></div>
+                    <div class="stat-info"><span class="stat-value">@Model.AvailableCount</span><span class="stat-label">可用</span></div>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #2196F3;">
+                    <div class="stat-icon" style="background:#e3f2fd;color:#2196F3;"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info"><span class="stat-value">@Model.UsedCount</span><span class="stat-label">已使用</span></div>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #9e9e9e;">
+                    <div class="stat-icon" style="background:#f5f5f5;color:#9e9e9e;"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info"><span class="stat-value">@Model.ExpiredCount</span><span class="stat-label">已过期</span></div>
+                </div>
+            </div>
+
+            <!-- Tab 切换 -->
+            <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid #e0e0e0;">
+                <a href="?tab=available" style="padding:10px 24px;text-decoration:none;font-weight:500;@(Model.CurrentTab == "available" ? "color:#4CAF50;border-bottom:2px solid #4CAF50;margin-bottom:-2px;" : "color:#666;")">
+                    <i class="fas fa-ticket-alt"></i> 可用 (@Model.AvailableCount)
+                </a>
+                <a href="?tab=used" style="padding:10px 24px;text-decoration:none;font-weight:500;@(Model.CurrentTab == "used" ? "color:#2196F3;border-bottom:2px solid #2196F3;margin-bottom:-2px;" : "color:#666;")">
+                    <i class="fas fa-check-circle"></i> 已使用 (@Model.UsedCount)
+                </a>
+                <a href="?tab=expired" style="padding:10px 24px;text-decoration:none;font-weight:500;@(Model.CurrentTab == "expired" ? "color:#9e9e9e;border-bottom:2px solid #9e9e9e;margin-bottom:-2px;" : "color:#666;")">
+                    <i class="fas fa-clock"></i> 已过期 (@Model.ExpiredCount)
+                </a>
+            </div>
+
+            <!-- 优惠券列表 -->
+            @if (Model.DisplayItems.Any())
+            {
+                <div class="coupon-list">
+                    @foreach (var item in Model.DisplayItems)
+                    {
+                        var typeColor = CouponsModel.GetTypeColor(item.CouponType);
+                        var valueText = CouponsModel.GetValueText(item.CouponType, item.DiscountValue);
+                        var typeLabel = CouponsModel.GetTypeLabel(item.CouponType);
+                        var condText = item.MinSpend > 0 ? $"满¥{item.MinSpend:F0}" : "无门槛";
+                        if (item.CouponType?.ToLower() == "percentage" && item.MaxDiscount > 0)
+                            condText += $" · 最高¥{item.MaxDiscount:F0}";
+                        var opacity = Model.CurrentTab != "available" ? "opacity:0.55;" : "";
+
+                        <div class="coupon-card" style="@opacity">
+                            <div style="width:110px;background:linear-gradient(135deg, @typeColor, @(typeColor)dd);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 8px;text-align:center;min-height:120px;">
+                                <div style="font-size:28px;font-weight:bold;line-height:1;">@valueText</div>
+                                <div style="font-size:11px;opacity:0.9;margin-top:4px;">@typeLabel</div>
+                            </div>
+                            <div style="flex:1;padding:16px 20px;background:#fff;display:flex;flex-direction:column;justify-content:space-between;">
+                                <div>
+                                    <h4 style="margin:0 0 4px;font-size:16px;">@item.CouponName</h4>
+                                    @if (!string.IsNullOrEmpty(item.Description))
+                                    {
+                                        <p style="margin:0 0 8px;font-size:13px;color:#888;">@item.Description</p>
+                                    }
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                        <span style="background:#f5f5f5;padding:2px 8px;border-radius:4px;font-size:11px;color:#666;">@condText</span>
+                                        @if (!string.IsNullOrEmpty(item.ApplicableCategory))
+                                        {
+                                            <span style="background:#f5f5f5;padding:2px 8px;border-radius:4px;font-size:11px;color:#999;">@item.ApplicableCategory</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                                    <div style="font-size:11px;color:#bbb;">
+                                        @if (item.ValidTo.HasValue)
+                                        {
+                                            <text>有效期至 @item.ValidTo.Value.ToString("yyyy-MM-dd")</text>
+                                        }
+                                    </div>
+                                    <div style="display:flex;gap:8px;align-items:center;">
+                                        @if (Model.CurrentTab == "available")
+                                        {
+                                            <button onclick="copyCode('@item.CouponCode')" style="background:none;border:1px solid #4CAF50;color:#4CAF50;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;">
+                                                <i class="fas fa-copy"></i> 复制
+                                            </button>
+                                            <a href="/checkout?coupon=@item.CouponCode" style="background:#4CAF50;color:#fff;padding:4px 12px;border-radius:4px;font-size:11px;text-decoration:none;">去使用</a>
+                                        }
+                                        else if (Model.CurrentTab == "used")
+                                        {
+                                            <span style="color:#2196F3;font-size:11px;"><i class="fas fa-check"></i> 已使用</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:#9e9e9e;font-size:11px;"><i class="fas fa-clock"></i> 已过期</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div style="text-align:center;padding:60px 20px;color:#999;">
+                    <i class="fas fa-ticket-alt" style="font-size:56px;display:block;margin-bottom:16px;color:#ddd;"></i>
+                    <p style="font-size:16px;">
+                        @(Model.CurrentTab switch {
+                            "used" => "暂无已使用的优惠券",
+                            "expired" => "暂无过期优惠券",
+                            _ => "暂无可用优惠券"
+                        })
+                    </p>
+                    <a href="/products" style="color:#4CAF50;">去购物 →</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function copyCode(code) {
+    navigator.clipboard.writeText(code).then(() => {
+        alert('优惠码已复制: ' + code);
+    }).catch(() => {
+        var input = document.createElement('input');
+        input.value = code;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        alert('优惠码已复制: ' + code);
+    });
+}
+</script>
+}

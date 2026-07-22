@@ -1,85 +1,392 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="@ViewData["Lang"]?.ToString() ?? "zh-CN"">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - YourPerfume 定制你的专属香氛</title>
-    <meta name="description" content="YourPerfume 香水定制平台 - 从前调到后调，每一个选择都是你的独特表达" />
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-          integrity="sha384-XtzBx5NJx8QSoWJmQUVUdONUGDMVGJCYOzuLSefYBpGBGqJMM7WGpBBb5h4iYWd" crossorigin="anonymous" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>@ViewData["Title"] - Custom Fragrance 定制你的专属香氛</title>
+    <meta name="description" content="@(ViewData["Description"]?.ToString() ?? "Custom Fragrance 香水定制平台 - 从前调到后调，每一个选择都是你的独特表达")" />
+    <meta name="keywords" content="香水定制,个性化香水,定制香氛,专属香水" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#8B4513" />
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="香氛定制" />
+
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous" />
+
+    <!-- Resource Preload -->
+    <link rel="preload" href="/css/design-tokens.css?v=19.0" as="style" />
+    <link rel="preload" href="/css/style.css?v=19.0" as="style" />
+
+    <!-- ===== V19 Design System CSS (migrated from V18.3) ===== -->
+    <link rel="stylesheet" href="/css/design-tokens.css?v=19.0" />
+    <link rel="stylesheet" href="/css/theme.css?v=19.0" />
+    <link rel="stylesheet" href="/css/style.css?v=19.0" />
+    <link rel="stylesheet" href="/css/pages.css?v=19.0" />
+    <link rel="stylesheet" href="/css/buttons.css?v=19.0" />
+    <link rel="stylesheet" href="/css/responsive.css?v=19.0" />
+    <link rel="stylesheet" href="/css/mobile-first.css?v=19.0" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="/css/lazy-load.css?v=19.0" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="/css/cart-animation.css?v=19.0" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="/css/filter-optimization.css?v=19.0" />
+    <link rel="stylesheet" href="/css/skeleton.css?v=19.0" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="/css/v19-pages.css?v=19.0" />
+
+    <!-- Font Awesome 6 (异步加载，不阻塞渲染) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+          integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer"
+          media="print" onload="this.media='all'" />
+
+    <!-- V19 Inline Styles -->
     <style>
-        :root { --brand: #7C4DFF; --brand-light: #B388FF; --brand-dark: #651FFF; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-        .navbar-brand { font-weight: 700; color: var(--brand) !important; }
-        .btn-brand { background: var(--brand); color: #fff; border: none; }
-        .btn-brand:hover { background: var(--brand-dark); color: #fff; }
-        .hero-banner { background: linear-gradient(135deg, var(--brand) 0%, #E1BEE7 100%); color: #fff; padding: 80px 0; text-align: center; }
-        .hero-banner h1 { font-size: 2.5rem; font-weight: 700; }
-        .product-card { transition: transform .2s, box-shadow .2s; border: none; border-radius: 12px; overflow: hidden; }
-        .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(124,77,255,.15); }
-        .product-card .card-img-top { height: 220px; object-fit: cover; background: #f5f0ff; }
-        .product-card .price { color: var(--brand); font-weight: 700; font-size: 1.2rem; }
-        .badge-sale { position: absolute; top: 10px; left: 10px; background: #FF1744; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: .8rem; }
-        footer { background: #1a1a2e; color: #ccc; padding: 40px 0 20px; margin-top: auto; }
-        footer a { color: var(--brand-light); text-decoration: none; }
-        footer a:hover { color: #fff; }
-        .section-title { font-weight: 700; color: #333; border-left: 4px solid var(--brand); padding-left: 12px; }
+        /* 品牌按钮 - 全站统一 */
+        .btn-brand, a.btn-brand {
+            background: var(--dt-color-primary, var(--primary-color, #8B4513));
+            color: #fff; border: none;
+            padding: var(--btn-padding-x-md, 18px) var(--btn-padding-x-lg, 24px);
+            border-radius: var(--dt-radius-full, 9999px);
+            cursor: pointer; font-weight: var(--dt-font-weight-medium, 500);
+            transition: background var(--dt-transition-fast, 150ms ease);
+            display: inline-flex; align-items: center; gap: 6px;
+            text-decoration: none;
+        }
+        .btn-brand:hover { background: var(--dt-color-primary-hover, var(--primary-hover, #6B3410)); }
+        .btn-outline-brand {
+            background: transparent;
+            color: var(--dt-color-primary, var(--primary-color, #8B4513));
+            border: 2px solid var(--dt-color-primary, var(--primary-color, #8B4513));
+            padding: var(--btn-padding-x-md, 18px) var(--btn-padding-x-lg, 24px);
+            border-radius: var(--dt-radius-full, 9999px);
+            cursor: pointer; font-weight: var(--dt-font-weight-medium, 500);
+            transition: all var(--dt-transition-fast, 150ms ease);
+            display: inline-flex; align-items: center; gap: 6px;
+            text-decoration: none;
+        }
+        .btn-outline-brand:hover { background: var(--dt-color-primary, var(--primary-color, #8B4513)); color: #fff; }
+        /* 通用布局辅助 */
+        .page-section { padding: 60px 0; }
+        .mb-xs { margin-bottom: var(--dt-space-xs, 4px); } .mb-sm { margin-bottom: var(--dt-space-sm, 8px); }
+        .mb-md { margin-bottom: var(--dt-space-md, 12px); } .mb-lg { margin-bottom: var(--dt-space-xl, 24px); }
+        .text-center { text-align: center; }
+
+        /* V19: 语言切换器 */
+        .lang-switcher { margin-left: 15px; font-size: 13px; display: inline-flex; align-items: center; }
+        .lang-link { color: rgba(255,255,255,0.8); text-decoration: none; padding: 2px 4px; transition: color 0.2s; cursor: pointer; background: none; border: none; font-size: inherit; }
+        .lang-link:hover { color: #fff; }
+        .lang-link.active { color: #fff; font-weight: bold; }
+        .lang-divider { color: rgba(255,255,255,0.4); margin: 0 3px; }
+
+        /* V19: 主题切换按钮（内嵌头部） */
+        .theme-toggle-btn {
+            background: none; border: none; color: rgba(255,255,255,0.85);
+            cursor: pointer; font-size: 1rem; padding: 6px 8px; margin-left: 10px;
+            transition: color 0.2s, transform 0.2s; border-radius: 50%;
+        }
+        .theme-toggle-btn:hover { color: #fff; transform: rotate(15deg); }
+
+        /* V19: 用户下拉菜单增强 */
+        .user-info.dropdown { position: relative; }
+        .user-info.dropdown .dropdown-menu {
+            display: none; position: absolute; top: 100%; right: 0;
+            background: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 180px; z-index: 1000; padding: 8px 0; margin-top: 8px;
+        }
+        .user-info.dropdown:hover .dropdown-menu,
+        .user-info.dropdown.active .dropdown-menu { display: block; }
+        .user-info.dropdown .dropdown-menu a {
+            display: block; padding: 10px 18px; color: #333; text-decoration: none;
+            font-size: 14px; transition: background 0.15s;
+        }
+        .user-info.dropdown .dropdown-menu a:hover { background: #f5f5f5; color: #8B4513; }
+        .user-info.dropdown .dropdown-menu a i { margin-right: 8px; width: 16px; text-align: center; color: #999; }
+
+        /* V19: 秒杀/拼团等热链样式 */
+        .nav-hot { color: #e65100 !important; font-weight: 600; position: relative; }
+        .nav-hot::after { content: 'HOT'; position: absolute; top: -1px; right: -4px; font-size: 9px; background: linear-gradient(135deg, #ff416c, #ff4b2b); color: #fff; padding: 1px 5px; border-radius: 3px; line-height: 1.4; font-weight: 700; letter-spacing: 0.5px; pointer-events: none; z-index: 1; }
+        .nav-hot:hover { color: #bf360c !important; background: rgba(230,81,0,0.06) !important; }
     </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+<body data-theme="light" class="theme-light has-mobile-nav has-bottom-nav">
+    <script>
+        /* V19: 主题初始化 — localStorage + Cookie 双存储，SSR 友好 */
+        (function(){
+            var THEME_KEY = 'perfumeshop_theme';
+            var saved = localStorage.getItem(THEME_KEY);
+            var cookieTheme = (document.cookie.match(/(?:^|;)\s*perfumeshop_theme=([^;]+)/) || [])[1];
+            var theme = saved || cookieTheme;
+            if (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                theme = 'dark';
+            }
+            if (!theme) theme = 'light';
+            document.body.setAttribute('data-theme', theme);
+            document.body.className = document.body.className.replace(/theme-(light|dark)/g, '') + ' theme-' + theme;
+            /* 同步写入 Cookie 供 SSR 使用 */
+            document.cookie = 'perfumeshop_theme=' + theme + '; path=/; max-age=31536000; SameSite=Lax';
+        })();
+    </script>
+    <!-- 顶部公告栏 -->
+    <div class="top-bar">
         <div class="container">
-            <a class="navbar-brand" href="/"><i class="bi bi-flower1"></i> YourPerfume</a>
-            <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#mainNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="mainNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">首页</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products">全部商品</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products?type=custom">定制香水</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products?type=fixed">成品香水</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/customize"><i class="bi bi-palette"></i> 定制</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/flash-sale"><i class="bi bi-lightning-charge text-danger"></i> 秒杀</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/group-buy">拼团</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/subscribe">订阅</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/community">社区</a></li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="/cart"><i class="bi bi-cart3"></i> 购物车</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user"><i class="bi bi-person"></i> 我的</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">更多</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/fragrance-quiz"><i class="bi bi-stars"></i> 香氛测试</a></li>
-                            <li><a class="dropdown-item" href="/about">关于我们</a></li>
-                            <li><a class="dropdown-item" href="/contact">联系我们</a></li>
-                        </ul>
-                    </li>
-                </ul>
+            <span><i class="fas fa-gift"></i> 专业个性化定制香水</span>
+            <span class="top-bar-right">
+                <i class="fas fa-phone"></i> 400-888-8888
+                <span class="lang-switcher">
+                    <button class="lang-link" data-lang="zh-CN" onclick="switchLang('zh-CN')">中文</button>
+                    <span class="lang-divider">|</span>
+                    <button class="lang-link" data-lang="en-US" onclick="switchLang('en-US')">EN</button>
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <!-- 主头部 -->
+    <header class="main-header">
+        <div class="container">
+            <div class="header-wrapper">
+                <!-- Logo -->
+                <div class="logo">
+                    <a href="/"><i class="fas fa-spray-can"></i> <span>香氛定制</span></a>
+                </div>
+
+                <!-- 搜索框 -->
+                <div class="search-box" id="searchBox">
+                    <form action="/products" method="get" autocomplete="off">
+                        <input type="text" name="keyword" id="searchKeyword" placeholder="搜索您想要的香水..." autocomplete="off" />
+                        <button type="submit"><i class="fas fa-search"></i></button>
+                        <div class="search-suggestions" id="searchSuggestions"></div>
+                    </form>
+                </div>
+
+                <!-- V18 桌面窄屏汉堡菜单按钮（992-1050px显示） -->
+                <button class="hamburger-btn desktop-hamburger" id="desktopHamburgerBtn" aria-label="打开菜单">
+                    <span></span><span></span><span></span>
+                </button>
+
+                <!-- 用户菜单 -->
+                <div class="user-menu">
+                    <!-- TODO: 从 AuthService 获取登录状态，当前硬编码为未登录 -->
+                    <a href="/login" class="btn-login"><i class="fas fa-sign-in-alt"></i> 登录</a>
+                    <a href="/register" class="btn-register">注册</a>
+                    <a href="/cart" class="cart-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-count" id="cartCount">0</span>
+                    </a>
+                    <!-- V19: 主题切换按钮 -->
+                    <button class="theme-toggle-btn" id="themeToggleBtn" aria-label="切换主题" title="切换明暗主题">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
             </div>
+        </div>
+    </header>
+
+    <!-- 主导航栏（三阶段：桌面全展开 → 平板折叠 → 移动汉堡菜单） -->
+    <nav class="main-nav pc-only" id="mainNav">
+        <div class="container">
+            <ul class="nav-list" id="navList">
+                <li><a href="/"><i class="fas fa-home"></i> 首页</a></li>
+                <li><a href="/products"><i class="fas fa-flask"></i> 全部香水</a></li>
+                <li><a href="/customize"><i class="fas fa-magic"></i> 定制香水</a></li>
+                <li><a href="/about"><i class="fas fa-book"></i> 品牌故事</a></li>
+                <li><a href="/contact"><i class="fas fa-envelope"></i> 联系我们</a></li>
+                <li><a href="/flash-sale" class="nav-hot"><i class="fas fa-bolt"></i> 秒杀</a></li>
+                <li><a href="/group-buy" class="nav-hot"><i class="fas fa-users"></i> 拼团</a></li>
+                <li><a href="/subscribe" class="nav-hot"><i class="fas fa-box-open"></i> 订阅</a></li>
+                <li><a href="/community" class="nav-hot"><i class="fas fa-comments"></i> 社区</a></li>
+            </ul>
         </div>
     </nav>
 
-    <main>
+    <!-- V19: 导航栏 active 状态检测（复刻 V18 header.asp） -->
+    <script>
+    (function() {
+        var currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+        var navAnchors = document.querySelectorAll('.main-nav .nav-list > li > a');
+        var bestMatch = null, bestScore = 0;
+        navAnchors.forEach(function(a) {
+            var href = a.getAttribute('href');
+            if (!href) return;
+            var hrefNorm = href.toLowerCase().replace(/\/$/, '');
+            var hrefPath = hrefNorm.split('?')[0];
+            if (currentPath === hrefPath || currentPath === hrefNorm) {
+                a.classList.add('active');
+                bestMatch = a; bestScore = 100;
+            } else if (hrefPath !== '/' && hrefPath !== '' && currentPath.indexOf(hrefPath) === 0) {
+                var score = hrefPath.length;
+                if (score > bestScore) { bestMatch = a; bestScore = score; }
+            }
+        });
+        if (bestMatch && bestScore < 100 && bestScore > 0) {
+            bestMatch.classList.add('active');
+        }
+    })();
+    </script>
+
+    <!-- V19: 动态溢出检测 — 导航栏超宽时自动切换汉堡菜单（复刻 V18 三阶段） -->
+    <script>
+    (function() {
+        'use strict';
+        var mainNav = document.querySelector('.main-nav');
+        var navList = document.querySelector('.nav-list');
+        var desktopBtn = document.getElementById('desktopHamburgerBtn');
+        if (!mainNav || !navList) return;
+
+        var container = mainNav.querySelector('.container');
+        var body = document.body;
+        var checking = false;
+        var isResizeChecking = false;
+
+        function measureOverflow() {
+            if (mainNav.offsetParent === null) return null;
+            var listWidth = navList.scrollWidth;
+            var containerWidth = container ? container.clientWidth : mainNav.clientWidth;
+            if (containerWidth <= 0) return null;
+            return listWidth > containerWidth + 4;
+        }
+
+        function applyOverflow(overflows) {
+            if (overflows) {
+                body.classList.add('nav-overflow');
+            } else {
+                body.classList.remove('nav-overflow');
+            }
+        }
+
+        function checkOverflow(allowRemove) {
+            if (checking) return;
+            checking = true;
+            requestAnimationFrame(function() {
+                if (!allowRemove && body.classList.contains('nav-overflow')) {
+                    checking = false;
+                    return;
+                }
+                var overflows = measureOverflow();
+                if (overflows === null) { checking = false; return; }
+                applyOverflow(overflows);
+                checking = false;
+            });
+        }
+
+        /* 初始检测 */
+        (function initCheck() {
+            if (checking) return;
+            checking = true;
+            requestAnimationFrame(function() {
+                var overflows = measureOverflow();
+                if (overflows !== null) applyOverflow(overflows);
+                checking = false;
+            });
+        })();
+
+        /* ResizeObserver：仅检测缩小方向 */
+        if (container && window.ResizeObserver) {
+            var ro = new ResizeObserver(function(entries) {
+                if (isResizeChecking) return;
+                if (!body.classList.contains('nav-overflow')) {
+                    checkOverflow(false);
+                }
+            });
+            ro.observe(container);
+        }
+
+        /* 窗口 resize：完整检测 */
+        var resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                if (checking) return;
+                checking = true;
+                isResizeChecking = true;
+                var hadOverflow = body.classList.contains('nav-overflow');
+                if (hadOverflow) body.classList.remove('nav-overflow');
+                var overflows = measureOverflow();
+                if (overflows === null) {
+                    if (hadOverflow) body.classList.add('nav-overflow');
+                } else {
+                    applyOverflow(overflows);
+                }
+                isResizeChecking = false;
+                checking = false;
+            }, 100);
+        });
+    })();
+    </script>
+
+    <!-- 移动端导航栏（阶段3: <768px 显示） -->
+    <nav class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-left">
+            <button class="hamburger-btn" id="hamburgerBtn" aria-label="打开菜单">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        <a href="/" class="mobile-logo">香氛定制</a>
+        <div class="mobile-nav-right">
+            <a href="/cart" class="touch-target" style="position:relative">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count badge" id="mobileCartCount" style="position:absolute;top:2px;right:-4px;background:#dc3545;color:#fff;font-size:0.6rem;padding:1px 5px;border-radius:10px;min-width:16px;text-align:center;display:none">0</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- 移动端侧边菜单遮罩 -->
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <!-- 移动端侧边菜单（抽屉） -->
+    <nav class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header">
+            <h3><i class="fas fa-spray-can"></i> 香氛定制</h3>
+            <button class="close-menu-btn" id="closeMenuBtn" aria-label="关闭菜单">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="mobile-menu-list">
+            <li><a href="/"><i class="fas fa-home"></i> 首页</a></li>
+            <li><a href="/products"><i class="fas fa-box"></i> 所有产品</a></li>
+            <li><a href="/customize"><i class="fas fa-magic"></i> 定制香水</a></li>
+            <li><a href="/flash-sale"><i class="fas fa-bolt"></i> 限时秒杀</a></li>
+            <li><a href="/group-buy"><i class="fas fa-users"></i> 拼团优惠</a></li>
+            <li><a href="/community"><i class="fas fa-comments"></i> 香氛社区</a></li>
+            <li><a href="/subscribe"><i class="fas fa-box-open"></i> 订阅盒子</a></li>
+            <li><a href="/about"><i class="fas fa-info-circle"></i> 关于我们</a></li>
+            <li><a href="/contact"><i class="fas fa-phone"></i> 联系我们</a></li>
+            <li class="divider"></li>
+            <!-- TODO: 根据登录状态动态渲染用户菜单 -->
+            <li><a href="/login"><i class="fas fa-sign-in-alt"></i> 登录</a></li>
+            <li><a href="/register"><i class="fas fa-user-plus"></i> 注册</a></li>
+        </ul>
+        <div class="mobile-menu-footer">
+            &copy; @DateTime.Now.Year 香氛定制
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
         @RenderBody()
     </main>
 
-    <footer>
+    <!-- 页脚 -->
+    <footer class="main-footer">
         <div class="container">
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <h5><i class="bi bi-flower1"></i> YourPerfume</h5>
-                    <p class="small">定制你的专属香氛<br/>从前调到后调，每一个选择都是你的独特表达</p>
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4><i class="fas fa-flask"></i> Custom Fragrance</h4>
+                    <p>定制你的专属香氛<br/>从前调到后调，每一个选择都是你的独特表达</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="微信"><i class="fab fa-weixin"></i></a>
+                        <a href="#" aria-label="微博"><i class="fab fa-weibo"></i></a>
+                        <a href="#" aria-label="小红书"><i class="fas fa-book-open"></i></a>
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <h6>购物指南</h6>
-                    <ul class="list-unstyled small">
+                <div class="footer-section">
+                    <h4>购物指南</h4>
+                    <ul>
                         <li><a href="/products">全部商品</a></li>
                         <li><a href="/products?type=fixed">成品香水</a></li>
                         <li><a href="/flash-sale">限时秒杀</a></li>
@@ -87,28 +394,183 @@
                         <li><a href="/subscribe">订阅盒子</a></li>
                     </ul>
                 </div>
-                <div class="col-md-2">
-                    <h6>客户服务</h6>
-                    <ul class="list-unstyled small">
+                <div class="footer-section">
+                    <h4>客户服务</h4>
+                    <ul>
                         <li><a href="/user/orders">我的订单</a></li>
                         <li><a href="/user/favorites">我的收藏</a></li>
+                        <li><a href="/user/points">积分商城</a></li>
                         <li><a href="/contact">联系我们</a></li>
-                        <li><a href="/about">关于我们</a></li>
                         <li><a href="/fragrance-quiz">香氛测试</a></li>
                     </ul>
                 </div>
-                <div class="col-md-4">
-                    <h6>关于我们</h6>
-                    <p class="small">YourPerfume 是专业的香水定制平台，汇聚全球顶级调香师，为您提供独一无二的香氛体验。</p>
+                <div class="footer-section">
+                    <h4>联系我们</h4>
+                    <p><i class="fas fa-phone"></i> 400-888-8888</p>
+                    <p><i class="fas fa-envelope"></i> contact@perfumeshop.com</p>
+                    <p><i class="fas fa-clock"></i> 周一至周五 9:00-18:00</p>
                 </div>
             </div>
-            <hr class="border-secondary" />
-            <p class="text-center small mb-0">&copy; @DateTime.Now.Year YourPerfume. All rights reserved. | V19 .NET 8</p>
+            <div class="footer-bottom">
+                <p>&copy; @DateTime.Now.Year Custom Fragrance. All rights reserved. | <a href="/privacy">隐私政策</a> | <a href="/terms">服务条款</a> | V19 .NET 8 + V18.3 CSS</p>
+            </div>
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous" defer></script>
+    <!-- 返回顶部 -->
+    <a href="#" class="back-to-top" id="backToTop" aria-label="返回顶部"><i class="fas fa-arrow-up"></i></a>
+
+    <!-- 底部移动端导航（仅移动端显示） -->
+    <nav class="bottom-nav">
+        <a href="/" class="bottom-nav-item"><i class="fas fa-home"></i><span>首页</span></a>
+        <a href="/products" class="bottom-nav-item"><i class="fas fa-th-large"></i><span>分类</span></a>
+        <a href="/cart" class="bottom-nav-item"><i class="fas fa-shopping-cart"></i><span>购物车</span></a>
+        <a href="/user" class="bottom-nav-item"><i class="fas fa-user"></i><span>我的</span></a>
+    </nav>
+
+    <!-- ===== jQuery 3.7.1 (defer异步加载，不阻塞渲染) ===== -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+            integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+eZaIJ8UfDSo53pP+hIh6Fj0Q5uk/g5mEZjg=="
+            crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+
+    <!-- ===== V19 Core JS ===== -->
+    <script src="/js/theme-toggle.js?v=19.0" defer></script>
+    <script src="/js/main.js?v=19.0" defer></script>
+    <script src="/js/mobile-gestures.js?v=19.0" defer></script>
+
+    <!-- ===== V19 Web Components ===== -->
+    <script src="/js/components/product-card.js?v=19.0" defer></script>
+    <script src="/js/components/review-stars.js?v=19.0" defer></script>
+    <script src="/js/components/search-autocomplete.js?v=19.0" defer></script>
+
+    <!-- ===== V19 Enhanced JS ===== -->
+    <script src="/js/cart-animation.js?v=19.0" defer></script>
+    <script src="/js/lazy-load.js?v=19.0" defer></script>
+    <script src="/js/skeleton-loader.js?v=19.0" defer></script>
+
+    <!-- V19: 移动端菜单交互 + 主题切换 + i18n（复刻 V18 mobile_nav.asp 脚本） -->
+    <script>
+    (function() {
+        'use strict';
+
+        /* === 移动端侧边菜单开关 === */
+        var hamburgerBtn = document.getElementById('hamburgerBtn');
+        var desktopHamburgerBtn = document.getElementById('desktopHamburgerBtn');
+        var closeMenuBtn = document.getElementById('closeMenuBtn');
+        var mobileMenu = document.getElementById('mobileMenu');
+        var overlay = document.getElementById('mobileMenuOverlay');
+        var body = document.body;
+
+        function openMenu() {
+            if (!mobileMenu || !overlay) return;
+            mobileMenu.classList.add('active');
+            overlay.classList.add('active');
+            if (hamburgerBtn) hamburgerBtn.classList.add('active');
+            if (desktopHamburgerBtn) desktopHamburgerBtn.classList.add('active');
+            body.style.overflow = 'hidden';
+        }
+
+        function closeMenu() {
+            if (!mobileMenu || !overlay) return;
+            mobileMenu.classList.remove('active');
+            overlay.classList.remove('active');
+            if (hamburgerBtn) hamburgerBtn.classList.remove('active');
+            if (desktopHamburgerBtn) desktopHamburgerBtn.classList.remove('active');
+            body.style.overflow = '';
+        }
+
+        if (hamburgerBtn) hamburgerBtn.addEventListener('click', openMenu);
+        if (desktopHamburgerBtn) desktopHamburgerBtn.addEventListener('click', openMenu);
+        if (closeMenuBtn) closeMenuBtn.addEventListener('click', closeMenu);
+        if (overlay) overlay.addEventListener('click', closeMenu);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('active')) closeMenu();
+        });
+
+        /* === 侧边菜单 + 底部导航 active 高亮 === */
+        function setActiveNav() {
+            var currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+            var sideLinks = document.querySelectorAll('.mobile-menu-list a');
+            var bestMatch = null, bestScore = 0;
+            sideLinks.forEach(function(link) {
+                link.classList.remove('active');
+                var href = link.getAttribute('href');
+                if (!href) return;
+                var hrefNorm = href.toLowerCase();
+                if (currentPath === hrefNorm) {
+                    link.classList.add('active');
+                    bestMatch = link; bestScore = 100;
+                } else if (hrefNorm !== '/' && currentPath.indexOf(hrefNorm) === 0) {
+                    var score = hrefNorm.length;
+                    if (score > bestScore) { bestMatch = link; bestScore = score; }
+                }
+            });
+            if (bestMatch && bestScore < 100 && bestScore > 0) bestMatch.classList.add('active');
+
+            var bottomLinks = document.querySelectorAll('.bottom-nav-item');
+            var bestBottom = null, bestScoreB = 0;
+            bottomLinks.forEach(function(link) {
+                link.classList.remove('active');
+                var href = link.getAttribute('href');
+                if (!href) return;
+                var hrefNorm = href.toLowerCase();
+                if (currentPath === hrefNorm) {
+                    link.classList.add('active');
+                    bestBottom = link; bestScoreB = 100;
+                } else if (hrefNorm !== '/' && currentPath.indexOf(hrefNorm) === 0) {
+                    var score = hrefNorm.length;
+                    if (score > bestScoreB) { bestBottom = link; bestScoreB = score; }
+                }
+            });
+            if (bestBottom && bestScoreB < 100 && bestScoreB > 0) bestBottom.classList.add('active');
+        }
+        setActiveNav();
+        window.addEventListener('popstate', setActiveNav);
+
+        /* === V19: 主题切换按钮集成 === */
+        var themeBtn = document.getElementById('themeToggleBtn');
+        if (themeBtn) {
+            var currentTheme = document.body.getAttribute('data-theme') || 'light';
+            var icon = themeBtn.querySelector('i');
+            if (icon) icon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            themeBtn.addEventListener('click', function() {
+                var t = document.body.getAttribute('data-theme') || 'light';
+                var next = t === 'dark' ? 'light' : 'dark';
+                document.body.setAttribute('data-theme', next);
+                document.body.className = document.body.className.replace(/theme-(light|dark)/g, '') + ' theme-' + next;
+                localStorage.setItem('perfumeshop_theme', next);
+                document.cookie = 'perfumeshop_theme=' + next + '; path=/; max-age=31536000; SameSite=Lax';
+                if (icon) icon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                /* 同步到 theme-toggle.js 的全局 API */
+                if (window.setTheme) window.setTheme(next);
+            });
+        }
+
+        /* === V19: i18n 语言切换 === */
+        window.switchLang = function(lang) {
+            document.cookie = 'PERFUME_LANG=' + lang + '; path=/; max-age=31536000; SameSite=Lax';
+            /* 简单方案：添加查询参数重载 */
+            var url = new URL(window.location.href);
+            url.searchParams.set('lang', lang);
+            window.location.href = url.toString();
+        };
+        /* 高亮当前语言 */
+        var langCookie = (document.cookie.match(/(?:^|;)\s*PERFUME_LANG=([^;]+)/) || [])[1] || 'zh-CN';
+        document.querySelectorAll('.lang-link').forEach(function(btn) {
+            if (btn.getAttribute('data-lang') === langCookie) btn.classList.add('active');
+        });
+    })();
+    </script>
+
+    <!-- PWA Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function() {});
+            });
+        }
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

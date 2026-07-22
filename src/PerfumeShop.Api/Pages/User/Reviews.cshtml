@@ -1,0 +1,137 @@
+@page "/user/reviews"
+@model PerfumeShop.Api.Pages.User.ReviewsModel
+@{ ViewData["Title"] = "我的评价"; }
+
+<section class="py-4">
+    <div class="container">
+        <!-- 面包屑 -->
+        <nav class="breadcrumb-nav mb-3" style="font-size:.85rem;color:#999;">
+            <a href="/" style="color:#8B4513;text-decoration:none;">首页</a> /
+            <a href="/user" style="color:#8B4513;text-decoration:none;">个人中心</a> /
+            <span>我的评价</span>
+        </nav>
+
+        <div class="row g-4">
+            <!-- 侧边栏 -->
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="/user" class="list-group-item list-group-item-action">账户概览</a>
+                    <a href="/user/orders" class="list-group-item list-group-item-action">我的订单</a>
+                    <a href="/user/favorites" class="list-group-item list-group-item-action">我的收藏</a>
+                    <a href="/user/reviews" class="list-group-item list-group-item-action active">我的评价</a>
+                    <a href="/user/addresses" class="list-group-item list-group-item-action">收货地址</a>
+                    <a href="/user/subscription" class="list-group-item list-group-item-action">我的订阅</a>
+                    <a href="/user/referrals" class="list-group-item list-group-item-action">我的推荐</a>
+                    <a href="/user/data-export" class="list-group-item list-group-item-action">数据导出</a>
+                    <a href="/user/account-delete" class="list-group-item list-group-item-action text-danger">账户注销</a>
+                </div>
+            </div>
+
+            <!-- 主内容 -->
+            <div class="col-md-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 style="color:var(--brand);margin:0;"><i class="fas fa-star"></i> 我的评价</h2>
+                    <span class="text-muted">共 <strong>@Model.TotalReviews</strong> 条评价</span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Message))
+                {
+                    <div class="alert alert-success py-2 px-3" style="border-radius:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;">@Model.Message</div>
+                }
+                @if (!string.IsNullOrEmpty(Model.Error))
+                {
+                    <div class="alert alert-error py-2 px-3" style="border-radius:8px;background:#fce4ec;color:#c62828;border:1px solid #f8bbd0;">@Model.Error</div>
+                }
+
+                @if (!Model.Reviews.Any())
+                {
+                    <div class="text-center py-5" style="color:#bbb;">
+                        <i class="far fa-comment-dots" style="font-size:3rem;display:block;margin-bottom:12px;"></i>
+                        <h5 style="color:#888;">暂无评价</h5>
+                        <p>你还没有对任何产品进行评价，快去探索并分享你的感受吧！</p>
+                        <a href="/products" class="btn-brand" style="display:inline-flex;align-items:center;gap:6px;">浏览商品</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var r in Model.Reviews)
+                        {
+                            var img = string.IsNullOrEmpty(r.ProductImage) ? "/images/default-product.svg" : r.ProductImage;
+                            var stars = string.Concat(Enumerable.Range(1, 5).Select(i => i <= (r.Rating ?? 0) ? "★" : "☆"));
+                            <div class="card p-3" style="border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <img src="@img" alt="@r.ProductName" loading="lazy"
+                                         style="width:56px;height:56px;border-radius:8px;object-fit:cover;background:#f5f5f5;flex-shrink:0;"
+                                         onerror="this.src='/images/default-product.svg'" />
+                                    <div style="min-width:0;flex:1;">
+                                        <a href="/product/@r.ProductId" style="font-weight:600;font-size:.95rem;color:#333;text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            @r.ProductName
+                                        </a>
+                                        <div style="font-size:.85rem;color:#ff9800;margin-top:2px;">
+                                            @stars
+                                            <span style="color:#aaa;margin-left:8px;font-size:.75rem;">@r.CreatedAt?.ToString("yyyy-MM-dd")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(r.Title))
+                                {
+                                    <h6 class="mb-1" style="font-size:.95rem;color:#444;">@r.Title</h6>
+                                }
+                                <p class="mb-2" style="font-size:.88rem;color:#666;line-height:1.6;">@r.Comment</p>
+                                @if (!string.IsNullOrEmpty(r.AIFeelingSummary))
+                                {
+                                    <div class="mb-2 p-2" style="background:#f3e5f5;border-radius:6px;font-size:.82rem;color:#6a1b9a;">
+                                        <i class="fas fa-robot"></i> AI 感受总结：@r.AIFeelingSummary
+                                    </div>
+                                }
+                                <div class="d-flex align-items-center gap-3" style="font-size:.8rem;">
+                                    @if (r.IsVerifiedPurchase)
+                                    {
+                                        <span style="display:inline-flex;align-items:center;gap:3px;background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:.75rem;">
+                                            <i class="fas fa-check-circle"></i> 已验证购买
+                                        </span>
+                                    }
+                                    <span style="color:#999;"><i class="far fa-heart"></i> @r.LikeCount</span>
+                                    <button class="btn btn-sm ms-auto" style="padding:4px 12px;font-size:.8rem;border-radius:6px;border:1px solid #fce4ec;color:#c62828;background:#fff;cursor:pointer;"
+                                            onclick="confirmDeleteReview(@r.ReviewId)">
+                                        <i class="fas fa-trash-alt"></i> 删除
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @if (Model.TotalPages > 1)
+                    {
+                        <nav class="d-flex justify-content-center gap-2 mt-4">
+                            @for (int pg = 1; pg <= Model.TotalPages; pg++)
+                            {
+                                var isActive = pg == Model.CurrentPage;
+                                <a href="/user/reviews?page=@pg"
+                                   style="display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;
+                                          background:@(isActive ? "#8B4513" : "#fff");
+                                          border:1px solid @(isActive ? "#8B4513" : "#ddd");
+                                          border-radius:6px;font-size:.85rem;color:@(isActive ? "#fff" : "#666");
+                                          text-decoration:none;">
+                                    @pg
+                                </a>
+                            }
+                        </nav>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+<script>
+function confirmDeleteReview(reviewId) {
+    if (!confirm('确定要删除这条评价吗？此操作不可撤销。')) return;
+    fetch('/api/user/1/reviews/' + reviewId, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(d => { if (d.success) location.reload(); else alert(d.message || '删除失败'); });
+}
+</script>
+}

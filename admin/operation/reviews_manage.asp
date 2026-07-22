@@ -101,29 +101,29 @@ Dim recentApproved : recentApproved = CLng("0" & GetScalar("SELECT COUNT(*) FROM
         .stat-card.pending .num { color: #FF9800; }
         .stat-card.approved .num { color: #4CAF50; }
         .stat-card.rejected .num { color: #f44336; }
-        .msg { padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; }
-        .msg-success { background: rgba(76,175,80,0.15); color: #4CAF50; border: 1px solid rgba(76,175,80,0.3); }
+        .alert { padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; }
+        .alert-success { background: rgba(76,175,80,0.15); color: #4CAF50; border: 1px solid rgba(76,175,80,0.3); }
         .filter-bar { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
         .filter-bar form { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .filter-bar select, .filter-bar input { padding: 10px 15px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; background: #1a1a2e; color: #e0e0e0; font-size: 14px; }
+        .filter-bar select, .filter-bar input { padding: 10px 15px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; background: rgba(255,255,255,0.04); color: #e0e0e0; font-size: 14px; }
         .filter-bar select:focus, .filter-bar input:focus { border-color: #00bcd4; outline: none; }
-        .card { background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; overflow: hidden; }
-        .card-header { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
-        .card-body { padding: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 12px; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; color: #999; }
-        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; }
-        tr:hover { background: rgba(255,255,255,0.03); }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-        .badge-pending { background: rgba(255,152,0,0.2); color: #FFB74D; }
-        .badge-approved { background: rgba(76,175,80,0.2); color: #A5D6A7; }
-        .badge-rejected { background: rgba(244,67,54,0.2); color: #EF9A9A; }
+        .admin-card { background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; overflow: hidden; }
+        .admin-card-header { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-card-body { padding: 20px; }
+        .admin-table { width: 100%; border-collapse: collapse; }
+        .admin-table th { text-align: left; padding: 12px; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; color: #999; }
+        .admin-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; }
+        .admin-table tr:hover { background: rgba(255,255,255,0.03); }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .status-pending { background: rgba(255,152,0,0.2); color: #FFB74D; }
+        .status-approved { background: rgba(76,175,80,0.2); color: #A5D6A7; }
+        .status-rejected { background: rgba(244,67,54,0.2); color: #EF9A9A; }
         .stars { color: #FFC107; letter-spacing: 2px; }
         .stars .empty { color: rgba(255,255,255,0.15); }
         .comment-text { max-width: 250px; font-size: 13px; color: #ccc; line-height: 1.5; overflow: hidden; }
         .bulk-bar { display: flex; align-items: center; gap: 10px; padding: 12px 15px; background: rgba(0,188,212,0.08); border-radius: 8px; margin-bottom: 15px; display: none; }
         .bulk-bar.show { display: flex; }
-        .no-data { text-align: center; padding: 40px; color: #666; }
+        .no-data { text-align: center; padding: 40px; color: #888; }
         .no-data i { font-size: 40px; display: block; margin-bottom: 10px; opacity: 0.3; }
         .row-check { width: 18px; height: 18px; accent-color: #00bcd4; cursor: pointer; }
         @media (max-width: 768px) { .main-content { margin-left: 0; } .stats-grid { grid-template-columns: 1fr 1fr; } }
@@ -138,7 +138,7 @@ Dim recentApproved : recentApproved = CLng("0" & GetScalar("SELECT COUNT(*) FROM
     </div>
 
     <% If msg <> "" Then %>
-    <div class="msg msg-success"><i class="fas fa-check-circle"></i> <%= msg %></div>
+    <div class="alert alert-success"><i class="fas fa-check-circle"></i> <%= msg %></div>
     <% End If %>
 
     <div class="stats-grid">
@@ -157,32 +157,32 @@ Dim recentApproved : recentApproved = CLng("0" & GetScalar("SELECT COUNT(*) FROM
                 <option value="Rejected" <%= IIf(filterStatus="Rejected","selected","") %>>已拒绝</option>
             </select>
             <input type="text" name="keyword" value="<%= keyword %>" placeholder="搜索用户名/评价内容...">
-            <button type="submit" class="btn btn-ghost"><i class="fas fa-search"></i> 筛选</button>
-            <a href="?" class="btn btn-ghost"><i class="fas fa-undo"></i> 重置</a>
+            <button type="submit" class="btn btn--secondary"><i class="fas fa-search"></i> 筛选</button>
+            <a href="?" class="btn btn--secondary"><i class="fas fa-undo"></i> 重置</a>
         </form>
     </div>
 
     <form method="post" id="bulkForm">
         <div class="bulk-bar" id="bulkBar">
             <span style="font-size:13px;color:#888;">已选 <strong id="selectedCount">0</strong> 条</span>
-            <select name="bulk_action" style="padding:8px 12px;border-radius:6px;background:#1a1a2e;border:1px solid rgba(255,255,255,0.12);color:#e0e0e0;">
+            <select name="bulk_action" style="padding:8px 12px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:#e0e0e0;">
                 <option value="">批量操作...</option>
                 <option value="approve">批量通过</option>
                 <option value="reject">批量拒绝</option>
                 <option value="pending">重置为待审核</option>
             </select>
             <button type="submit" class="btn btn-success" onclick="return confirm('确认执行批量操作？')"><i class="fas fa-check-double"></i> 执行</button>
-            <button type="button" class="btn btn-ghost" onclick="clearSelection()">取消选择</button>
+            <button type="button" class="btn btn--secondary" onclick="clearSelection()">取消选择</button>
         </div>
         <input type="hidden" name="review_ids" id="selectedIDs">
 
-        <div class="card">
-            <div class="card-header">
+        <div class="admin-card">
+            <div class="admin-card-header">
                 <span><i class="fas fa-list"></i> 评价列表</span>
-                <button type="button" class="btn btn-ghost" onclick="selectAllPending()"><i class="fas fa-check-square"></i> 全选待审</button>
+                <button type="button" class="btn btn--secondary" onclick="selectAllPending()"><i class="fas fa-check-square"></i> 全选待审</button>
             </div>
-            <div class="card-body">
-                <table>
+            <div class="admin-card-body">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th style="width:35px;"><input type="checkbox" class="row-check" id="checkAll" onclick="toggleAll(this)"></th>
@@ -197,10 +197,10 @@ Dim recentApproved : recentApproved = CLng("0" & GetScalar("SELECT COUNT(*) FROM
                             Dim rStatus : rStatus = rsReviews("Status")
                             Dim rStatusBadge
                             Select Case rStatus
-                                Case "Pending": rStatusBadge = "badge-pending"
-                                Case "Approved": rStatusBadge = "badge-approved"
-                                Case "Rejected": rStatusBadge = "badge-rejected"
-                                Case Else: rStatusBadge = "badge-pending"
+                                Case "Pending": rStatusBadge = "status-pending"
+                                Case "Approved": rStatusBadge = "status-approved"
+                                Case "Rejected": rStatusBadge = "status-rejected"
+                                Case Else: rStatusBadge = "status-pending"
                             End Select
                             Dim rRating : rRating = CInt("0" & rsReviews("Rating") & "")
                             Dim rComment : rComment = rsReviews("Comment") & ""
@@ -221,19 +221,19 @@ Dim recentApproved : recentApproved = CLng("0" & GetScalar("SELECT COUNT(*) FROM
                             <td>
                                 <div class="comment-text">
                                     <%= IIf(Len(rComment)>60,Left(rComment,60)&"...",rComment) %>
-                                    <% If rComment = "" Then %><span style="color:#666;">（无文字）</span><% End If %>
+                                    <% If rComment = "" Then %><span style="color:#888;">（无文字）</span><% End If %>
                                 </div>
                             </td>
                             <td style="font-size:13px;color:#999;"><%= rsReviews("CreatedAt") %></td>
-                            <td><span class="badge <%= rStatusBadge %>"><%= rStatus %></span></td>
+                            <td><span class="status-badge <%= rStatusBadge %>"><%= rStatus %></span></td>
                             <td>
                                 <form method="post" style="display:inline;">
                                     <input type="hidden" name="review_ids" value="<%= rsReviews("ReviewID") %>">
                                     <% If rStatus <> "Approved" Then %>
-                                    <button type="submit" name="bulk_action" value="approve" class="btn btn-success" style="padding:5px 10px;font-size:11px;"><i class="fas fa-check"></i></button>
+                                    <button type="submit" name="bulk_action" value="approve" class="btn btn-success btn--sm"><i class="fas fa-check"></i></button>
                                     <% End If %>
                                     <% If rStatus <> "Rejected" Then %>
-                                    <button type="submit" name="bulk_action" value="reject" class="btn btn-danger" style="padding:5px 10px;font-size:11px;"><i class="fas fa-times"></i></button>
+                                    <button type="submit" name="bulk_action" value="reject" class="btn btn-danger btn--sm"><i class="fas fa-times"></i></button>
                                     <% End If %>
                                 </form>
                             </td>
@@ -278,7 +278,7 @@ function clearSelection() {
 function selectAllPending() {
     document.querySelectorAll('.review-check').forEach(function(c) {
         var row = c.closest('tr');
-        var statusCell = row ? row.querySelector('.badge-pending') : null;
+        var statusCell = row ? row.querySelector('.status-pending') : null;
         c.checked = !!statusCell;
     });
     updateBulkBar();

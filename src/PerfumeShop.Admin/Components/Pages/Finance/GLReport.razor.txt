@@ -1,0 +1,47 @@
+<!-- V19财务中心 · 总账报表 -->
+@page "/admin/finance/gl-report"
+@page "/admin/finance/revenue-report"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>总账报表</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-book" style="color:#00bcd4;"></i> 总账报表</MudText>
+
+@if (_loaded)
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="3">
+            <MudTextField @bind-Value="_searchText" Placeholder="搜索科目/描述/参考号..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+        </MudItem>
+    </MudGrid>
+    <MudTable Items="@GetFiltered()" Hover="true" Dense="true" Striped="true">
+        <HeaderContent>
+            <MudTh>ID</MudTh><MudTh>日期</MudTh><MudTh>会计科目</MudTh><MudTh>借方</MudTh><MudTh>贷方</MudTh><MudTh>描述</MudTh><MudTh>参考号</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Glid</MudTd>
+            <MudTd>@context.TransactionDate?.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd>@context.AccountCode</MudTd>
+            <MudTd Style="color:#4CAF50;font-weight:600;">@context.Debit?.ToString("C2")</MudTd>
+            <MudTd Style="color:#F44336;font-weight:600;">@context.Credit?.ToString("C2")</MudTd>
+            <MudTd>@context.Description</MudTd>
+            <MudTd>@context.ReferenceNo</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded;
+    private List<Gltransaction> _items = new();
+    private string _searchText = "";
+
+    protected override async Task OnInitializedAsync() { _items = await Db.Gltransactions.AsNoTracking().OrderByDescending(g => g.TransactionDate).Take(500).ToListAsync(); _loaded = true; }
+    private List<Gltransaction> GetFiltered()
+    {
+        var q = _items.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(_searchText)) { var s = _searchText.Trim(); q = q.Where(g => (g.AccountCode != null && g.AccountCode.Contains(s)) || (g.Description != null && g.Description.Contains(s)) || (g.ReferenceNo != null && g.ReferenceNo.Contains(s))); }
+        return q.ToList();
+    }
+}

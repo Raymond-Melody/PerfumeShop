@@ -1,0 +1,23 @@
+@page "/admin/finance/invoice-detail/{RecordId:int}"
+@using PerfumeShop.Data.Models
+
+<PageTitle>发票详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">发票详情</MudText>
+@if (_item != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>记录ID:</b> @_item.RecordId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>交易号:</b> @_item.TransactionNo</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>订单ID:</b> @_item.OrderId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>金额:</b> ¥@_item.Amount?.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>方式:</b> @_item.PaymentMethod</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>状态:</b> @_item.Status</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>时间:</b> @_item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudText></MudItem>
+</MudGrid></MudCardContent></MudCard>}
+<MudButton Variant="Variant.Text" Href="/admin/finance/invoices" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public int RecordId { get; set; }
+    private PaymentRecord? _item;
+    protected override async Task OnInitializedAsync() { _item = await Db.PaymentRecords.FindAsync(RecordId); }
+}

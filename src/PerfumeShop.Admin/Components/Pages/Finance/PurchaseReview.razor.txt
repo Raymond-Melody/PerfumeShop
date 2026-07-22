@@ -1,0 +1,26 @@
+@page "/admin/finance/purchase-review"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>采购成本审核</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-search-dollar" style="color:#FF9800;"></i> 采购成本审核</MudText>
+@if (_loaded)
+{
+    <MudTable Items="@_reviews" Hover="true" Dense="true" Striped="true">
+        <HeaderContent><MudTh>ID</MudTh><MudTh>采购订单</MudTh><MudTh>审核金额</MudTh><MudTh>差异</MudTh><MudTh>状态</MudTh><MudTh>审核时间</MudTh></HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.ReviewId</MudTd><MudTd>@context.PurchaseOrderId</MudTd>
+            <MudTd>@context.ReviewAmount?.ToString("C2")</MudTd>
+            <MudTd Style="@GetDiffStyle(context)">@context.DiffAmount?.ToString("C2")</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "Approved" ? Color.Success : Color.Warning)">@context.Status</MudChip></MudTd>
+            <MudTd>@context.ReviewDate?.ToString("yyyy-MM-dd")</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded; private List<PurchaseCostReview> _reviews = new();
+    protected override async Task OnInitializedAsync() { _reviews = await Db.PurchaseCostReviews.AsNoTracking().OrderByDescending(r => r.ReviewId).Take(200).ToListAsync(); _loaded = true; }
+    private static string GetDiffStyle(PurchaseCostReview r) => $"color:{(r.DiffAmount > 0 ? "#F44336" : "#4CAF50")};";
+}

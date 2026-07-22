@@ -1,0 +1,78 @@
+﻿@page "/admin/Operation/ContentPages"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>内容页面管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-file-alt"></i> 内容页面管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>内容页面</span></div></div>
+
+@if (_loaded)
+{
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert alert-success"><i class="fas fa-check-circle"></i> @_msg</div>}
+
+<div style="margin-bottom:20px;"><button class="btn btn-primary" @onclick="ShowNewForm"><i class="fas fa-plus"></i> 新建页面</button></div>
+
+<div class="table-container"><table class="data-table"><thead><tr><th>排序</th><th>标题</th><th>Slug</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead>
+<tbody>
+@if(_pages.Any()){@foreach(var p in _pages){<tr><td>@(p.SortOrder??0)</td><td style="color:#00bcd4;font-weight:500;">@(p.Title??"-")</td><td><span class="slug-text">/@(p.Slug??"-")</span></td><td><span class="status-badge @(p.IsPublished==true?"status-published":"status-draft")">@(p.IsPublished==true?"已发布":"草稿")</span></td><td>@(p.UpdatedAt?.ToString("yyyy-MM-dd")??"-")</td><td>
+<button class="btn btn-outline btn-sm" @onclick="()=>Edit(p)"><i class="fas fa-edit"></i> 编辑</button>
+<button class="btn btn-danger btn-sm" @onclick="()=>Delete(p.PageId)" style="background:#c62828;color:#fff;"><i class="fas fa-trash"></i></button>
+</td></tr>}}else{<tr><td colspan="6" class="empty-cell">暂无内容页面</td></tr>}</tbody></table></div>
+}
+else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showForm){<div class="modal-overlay" @onclick="()=>_showForm=false"><div class="modal" @onclick:stopPropagation="true" style="max-width:900px;"><div class="modal-header"><h3>@(_editId>0?"编辑页面":"新建页面")</h3><button class="modal-close" @onclick="()=>_showForm=false">&times;</button></div>
+<form @onsubmit="HandleSave"><div class="modal-body"><div class="form-group"><label>标题 *</label><input class="form-input" @bind="_formTitle" required/></div>
+<div class="form-group"><label>URL标识 (Slug) *</label><input class="form-input" @bind="_formSlug" required/></div>
+<div class="form-row"><div class="form-group"><label>排序</label><input type="number" class="form-input" @bind="_formSort"/></div>
+<div class="form-group"><label>状态</label><select class="form-input" @bind="_formPublished"><option value="true">已发布</option><option value="false">草稿</option></select></div></div>
+<div class="form-group"><label>Meta描述</label><input class="form-input" @bind="_formMeta"/></div>
+<div class="editor-preview-row"><div class="form-group"><label>页面内容 (HTML)</label><textarea class="form-input" @bind="_formContent" rows="10"></textarea></div><div class="form-group"><label>实时预览</label><div class="content-preview">@((MarkupString)(_formContent??""))</div></div></div></div>
+<div class="modal-footer"><button type="button" class="btn btn-outline" @onclick="()=>_showForm=false">取消</button><button type="submit" class="btn btn-primary" disabled="@_saving"><i class="fas fa-save"></i> @(_saving?"保存中...":"保存")</button></div></form></div></div>}
+
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.data-table{width:100%;border-collapse:collapse;}.data-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:12px 14px;font-size:13px;text-align:left;font-weight:600;}.data-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.data-table tr:last-child td{border-bottom:none;}.data-table tr:hover td{background:rgba(255,255,255,0.03);}.empty-cell{text-align:center;color:#666;padding:40px;}
+.slug-text{font-family:Consolas,monospace;font-size:12px;color:#00bcd4;}.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}.status-published{background:rgba(76,175,80,0.2);color:#A5D6A7;}.status-draft{background:rgba(158,158,158,0.2);color:#BDBDBD;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.3s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}.btn-outline{background:rgba(255,255,255,0.05);color:#b0b0b0;border:1px solid rgba(255,255,255,0.1);}.btn-danger{background:#c62828;color:white;}.btn-sm{padding:5px 12px;font-size:11px;}.btn-primary[disabled]{opacity:0.5;cursor:not-allowed;}
+.alert{padding:15px;border-radius:8px;margin-bottom:20px;}.alert-success{background:rgba(76,175,80,0.15);color:#4CAF50;border:1px solid rgba(76,175,80,0.3);}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;}.modal{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:16px;border:1px solid rgba(255,255,255,0.1);padding:30px;width:90%;max-width:700px;max-height:90vh;overflow-y:auto;}.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}.modal-header h3{color:#fff;margin:0;font-size:18px;}.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}
+.form-group{margin-bottom:14px;}.form-group label{display:block;color:#999;font-size:13px;margin-bottom:6px;}.form-input{width:100%;padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;font-size:14px;box-sizing:border-box;}.form-input:focus{border-color:#00bcd4;outline:none;}.form-input option{background:#2d2d44;color:#e0e0e0;}textarea.form-input{min-height:120px;resize:vertical;}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.modal-footer{margin-top:20px;display:flex;justify-content:flex-end;gap:10px;}
+.editor-preview-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.content-preview{background:#1a1a2e;padding:15px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);max-height:400px;overflow-y:auto;font-size:14px;line-height:1.8;color:#e0e0e0;}.content-preview h2,.content-preview h3{color:#00bcd4;}
+</style>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded, _showForm, _saving;
+    private string? _msg;
+    private List<ContentPage> _pages = new();
+    private int _editId;
+    private string _formTitle = "", _formSlug = "", _formContent = "<p>页面内容...</p>", _formMeta = "";
+    private string _formSort = "0"; private string _formPublished = "true";
+
+    protected override async Task OnInitializedAsync(){try{_pages=await Db.ContentPages.OrderBy(p=>p.SortOrder).ThenBy(p=>p.Title).ToListAsync();if(!_pages.Any())await InitDefaultPages();_loaded=true;}catch{_loaded=true;}}
+
+    async Task InitDefaultPages(){
+        var defaults=new[]{("关于我们","about","<h2>关于我们</h2><p>欢迎来到香氛定制电商平台...</p>",1),("联系我们","contact","<h2>联系我们</h2><p>如有任何问题请与我们联系...</p>",2),("隐私政策","privacy","<h2>隐私政策</h2><p>我们重视您的隐私...</p>",3),("服务条款","terms","<h2>服务条款</h2><p>使用本平台即表示同意以下条款...</p>",4),("配送说明","shipping","<h2>配送说明</h2><p>全国顺丰包邮，预计3-5个工作日送达...</p>",5)};
+        foreach(var(title,slug,content,sort)in defaults){
+            Db.ContentPages.Add(new ContentPage{Title=title,Slug=slug,Content=content,IsPublished=true,SortOrder=sort,CreatedAt=DateTime.Now,UpdatedAt=DateTime.Now});
+        }
+        await Db.SaveChangesAsync();
+        _pages=await Db.ContentPages.OrderBy(p=>p.SortOrder).ThenBy(p=>p.Title).ToListAsync();
+        _msg="已自动创建5个默认内容页面";
+    }
+
+    void ShowNewForm(){_editId=0;_formTitle=_formSlug=_formMeta="";_formContent="<p>页面内容...</p>";_formSort="0";_formPublished="true";_showForm=true;}
+    void Edit(ContentPage p){_editId=p.PageId;_formTitle=p.Title??"";_formSlug=p.Slug??"";_formContent=p.Content??"";_formMeta=p.MetaDescription??"";_formSort=(p.SortOrder??0).ToString();_formPublished=p.IsPublished==true?"true":"false";_showForm=true;}
+
+    async Task HandleSave(){
+        _saving=true;
+        try{
+            var sort=int.TryParse(_formSort,out var so)?so:0;var pub=bool.TryParse(_formPublished,out var v)&&v;
+            if(_editId>0){await Db.ContentPages.Where(p=>p.PageId==_editId).ExecuteUpdateAsync(s=>s.SetProperty(p=>p.Title,_formTitle).SetProperty(p=>p.Slug,_formSlug).SetProperty(p=>p.Content,_formContent).SetProperty(p=>p.MetaDescription,_formMeta).SetProperty(p=>p.IsPublished,pub).SetProperty(p=>p.SortOrder,sort).SetProperty(p=>p.UpdatedAt,DateTime.Now));_msg="页面已更新";}
+            else{Db.ContentPages.Add(new ContentPage{Title=_formTitle,Slug=_formSlug,Content=_formContent,MetaDescription=_formMeta,IsPublished=pub,SortOrder=sort,CreatedAt=DateTime.Now,UpdatedAt=DateTime.Now});await Db.SaveChangesAsync();_msg="页面已创建";}
+            _showForm=false;_pages=await Db.ContentPages.OrderBy(p=>p.SortOrder).ThenBy(p=>p.Title).ToListAsync();
+        }catch(Exception ex){_msg="操作失败: "+ex.Message;}_saving=false;
+    }
+    async Task Delete(int id){await Db.ContentPages.Where(p=>p.PageId==id).ExecuteDeleteAsync();_pages=_pages.Where(p=>p.PageId!=id).ToList();_msg="页面已删除";await InvokeAsync(StateHasChanged);}
+}

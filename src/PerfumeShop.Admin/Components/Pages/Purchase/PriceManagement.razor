@@ -1,0 +1,22 @@
+@page "/admin/Purchase/PriceManagement"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>价格管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-tags" style="color:#FF9800;"></i> 价格管理</h2><div class="breadcrumb"><a href="/admin/Purchase/Dashboard" style="color:#FF9800;text-decoration:none;">采购中心</a> / <span>价格管理</span></div></div>
+@if(_loaded){
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>供应商ID</th><th>物料名</th><th>单价</th><th>生效日期</th></tr></thead><tbody>
+@foreach(var p in _items){<tr><td>#@p.PriceId</td><td>@(p.SupplierId?.ToString()??"-")</td><td>@(p.ItemName??"-")</td><td>@((p.UnitPrice??0).ToString("N2"))</td><td>@(p.EffectiveDate?.ToString("yyyy-MM-dd")??"-")</td></tr>}
+@if(!_items.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无价格记录</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(255,152,0,0.1);color:#FF9800;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+</style>
+@code{private bool _loaded;private List<SupplierPrice> _items=new();protected override async Task OnInitializedAsync(){try{_items=await Db.SupplierPrices.AsNoTracking().OrderByDescending(p=>p.PriceId).Take(100).ToListAsync();_loaded=true;}catch{_loaded=true;}}}

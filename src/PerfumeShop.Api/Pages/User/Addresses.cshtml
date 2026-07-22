@@ -1,0 +1,273 @@
+@page "/user/addresses"
+@model PerfumeShop.Api.Pages.User.AddressesModel
+@{ ViewData["Title"] = "收货地址"; }
+
+<!-- 面包屑 -->
+<div class="breadcrumb">
+    <div class="container">
+        <a href="/">首页</a><span class="separator">/</span>
+        <a href="/user">个人中心</a><span class="separator">/</span>
+        <span>收货地址</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="user-center">
+        <aside class="user-side">
+            <div class="user-card">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="/user">账户概览</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/orders">我的订单</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/favorites">我的收藏</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/points">我的积分</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/coupons">我的优惠券</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/addresses">收货地址</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/settings">账户设置</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <div class="user-main">
+            <div class="user-card">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2 class="card-title"><i class="fas fa-map-marker-alt"></i> 收货地址</h2>
+                    <button class="btn btn-primary" onclick="showAddressForm()">
+                        <i class="fas fa-plus"></i> 新增收货地址
+                    </button>
+                </div>
+
+                <div class="addresses-list" id="addressesList">
+                    @if (!Model.IsEmpty)
+                    {
+                        @foreach (var addr in Model.Addresses)
+                        {
+                            <div class="address-item @(addr.IsDefault == true ? "default" : "")" data-address-id="@addr.AddressId">
+                                <div class="address-info">
+                                    <div class="address-name">
+                                        @addr.Consignee
+                                        @if (addr.IsDefault == true)
+                                        {
+                                            <span class="badge">默认</span>
+                                        }
+                                    </div>
+                                    <div class="address-phone">@addr.Phone</div>
+                                    <div class="address-detail">@addr.Province @addr.City @addr.District @addr.Address</div>
+                                </div>
+                                <div class="address-actions">
+                                    @if (addr.IsDefault == true)
+                                    {
+                                        <button class="btn btn-sm btn-outline disabled">默认地址</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline" onclick="setDefaultAddress(@addr.AddressId)">设为默认</button>
+                                    }
+                                    <button class="btn btn-sm btn-text" onclick="editAddress(@addr.AddressId, '@addr.Consignee', '@addr.Phone', '@addr.Province', '@addr.City', '@addr.District', '@addr.Address')">编辑</button>
+                                    <button class="btn btn-sm btn-text text-danger" onclick="deleteAddress(@addr.AddressId)">删除</button>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="address-empty">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <h3>暂无收货地址</h3>
+                            <p>请添加收货地址，方便商品配送</p>
+                            <button class="btn btn-primary" onclick="showAddressForm()">立即添加</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑地址弹窗 -->
+<div class="modal" id="addressModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">新增收货地址</h3>
+            <span class="close" onclick="closeAddressForm()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="addressForm" onsubmit="return saveAddress(event);">
+                <input type="hidden" id="formAction" value="add">
+                <input type="hidden" id="formAddressId" value="">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="consignee">收货人姓名 *</label>
+                        <input type="text" id="consignee" name="consignee" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">联系电话 *</label>
+                        <input type="tel" id="phone" name="phone" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="province">所在地区 *</label>
+                    <select id="province" name="province" required onchange="updateCities()">
+                        <option value="">请选择省份</option>
+                        <option>北京市</option><option>上海市</option><option>天津市</option><option>重庆市</option>
+                        <option>河北省</option><option>山西省</option><option>辽宁省</option><option>吉林省</option>
+                        <option>黑龙江省</option><option>江苏省</option><option>浙江省</option><option>安徽省</option>
+                        <option>福建省</option><option>江西省</option><option>山东省</option><option>河南省</option>
+                        <option>湖北省</option><option>湖南省</option><option>广东省</option><option>海南省</option>
+                        <option>四川省</option><option>贵州省</option><option>云南省</option><option>陕西省</option>
+                        <option>甘肃省</option><option>青海省</option><option>台湾省</option>
+                        <option>内蒙古自治区</option><option>广西壮族自治区</option><option>西藏自治区</option>
+                        <option>宁夏回族自治区</option><option>新疆维吾尔自治区</option>
+                        <option>香港特别行政区</option><option>澳门特别行政区</option>
+                    </select>
+                    <select id="city" name="city" required onchange="updateDistricts()">
+                        <option value="">请选择城市</option>
+                    </select>
+                    <select id="district" name="district" required>
+                        <option value="">请选择区县</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="address">详细地址 *</label>
+                    <input type="text" id="address" name="address" placeholder="请输入详细地址，如街道、门牌号等" required>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isDefault" name="isDefault" value="true">
+                        设为默认地址
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">保存地址</button>
+                    <button type="button" class="btn btn-text" onclick="closeAddressForm()">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="/js/area_data.js"></script>
+<script>
+var API_BASE = '/api/user/1/addresses';
+
+function showAddressForm() {
+    document.getElementById('modalTitle').textContent = '新增收货地址';
+    document.getElementById('addressForm').reset();
+    document.getElementById('formAction').value = 'add';
+    document.getElementById('formAddressId').value = '';
+    document.getElementById('addressModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function editAddress(id, consignee, phone, province, city, district, address) {
+    document.getElementById('modalTitle').textContent = '编辑收货地址';
+    document.getElementById('formAction').value = 'edit';
+    document.getElementById('formAddressId').value = id;
+    document.getElementById('consignee').value = consignee;
+    document.getElementById('phone').value = phone;
+    document.getElementById('address').value = address;
+    // 省份需要触发联动
+    document.getElementById('province').value = province;
+    updateCities();
+    setTimeout(function(){ document.getElementById('city').value = city; updateDistricts(); }, 100);
+    setTimeout(function(){ document.getElementById('district').value = district; }, 200);
+    document.getElementById('addressModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAddressForm() {
+    document.getElementById('addressModal').classList.remove('show');
+    document.body.style.overflow = 'auto';
+}
+
+function saveAddress(e) {
+    e.preventDefault();
+    var id = document.getElementById('formAddressId').value;
+    var isEdit = document.getElementById('formAction').value === 'edit';
+    var payload = {
+        consignee: document.getElementById('consignee').value,
+        phone: document.getElementById('phone').value,
+        address: document.getElementById('address').value,
+        province: document.getElementById('province').value,
+        city: document.getElementById('city').value,
+        district: document.getElementById('district').value,
+        isDefault: document.getElementById('isDefault').checked
+    };
+    var url = isEdit ? API_BASE + '/' + id : API_BASE;
+    var method = isEdit ? 'PUT' : 'POST';
+    fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) { closeAddressForm(); location.reload(); }
+            else alert(data.message || '保存失败');
+        })
+        .catch(() => alert('网络错误'));
+    return false;
+}
+
+function deleteAddress(id) {
+    if (!confirm('确定要删除这个地址吗？')) return;
+    fetch(API_BASE + '/' + id, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) location.reload();
+            else alert(data.message || '删除失败');
+        })
+        .catch(() => alert('网络错误'));
+}
+
+function setDefaultAddress(id) {
+    fetch(API_BASE + '/' + id + '/default', { method: 'PUT' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) location.reload();
+            else alert(data.message || '设置失败');
+        })
+        .catch(() => alert('网络错误'));
+}
+
+function updateCities() {
+    var province = document.getElementById('province').value;
+    var citySelect = document.getElementById('city');
+    var districtSelect = document.getElementById('district');
+    citySelect.innerHTML = '<option value="">请选择城市</option>';
+    districtSelect.innerHTML = '<option value="">请选择区县</option>';
+    if (province && typeof addressData !== 'undefined' && addressData[province]) {
+        addressData[province].forEach(function(c) {
+            var opt = document.createElement('option');
+            opt.value = c; opt.textContent = c;
+            citySelect.appendChild(opt);
+        });
+    }
+}
+
+function updateDistricts() {
+    var city = document.getElementById('city').value;
+    var province = document.getElementById('province').value;
+    var districtSelect = document.getElementById('district');
+    districtSelect.innerHTML = '<option value="">请选择区县</option>';
+    var searchKey = city;
+    if (typeof districtData !== 'undefined') {
+        if (!districtData[searchKey] && ['北京市','上海市','天津市','重庆市','新疆维吾尔自治区','西藏自治区','宁夏回族自治区','广西壮族自治区','内蒙古自治区','香港特别行政区','澳门特别行政区','台湾省'].indexOf(province) >= 0) {
+            searchKey = province;
+        }
+        if (searchKey && districtData[searchKey]) {
+            districtData[searchKey].forEach(function(d) {
+                var opt = document.createElement('option');
+                opt.value = d; opt.textContent = d;
+                districtSelect.appendChild(opt);
+            });
+        }
+    }
+}
+
+// ESC关闭 + 点击外部关闭
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeAddressForm();
+});
+window.onclick = function(e) {
+    var modal = document.getElementById('addressModal');
+    if (e.target == modal) closeAddressForm();
+};
+</script>
+}

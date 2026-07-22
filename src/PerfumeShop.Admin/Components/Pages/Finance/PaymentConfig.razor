@@ -1,0 +1,168 @@
+@page "/admin/finance/payment-config"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>支付配置</PageTitle>
+<div class="page-header">
+    <h2 class="page-title"><i class="fas fa-credit-card" style="color:#00bcd4;"></i> 支付配置</h2>
+    <div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>支付配置</span></div>
+</div>
+
+@if (_loaded)
+{
+    @if (!_canEdit)
+    {
+    <div class="alert alert-error"><i class="fas fa-lock"></i> 权限不足：支付配置仅限财务经理（FIN_MANAGER）或超级管理员访问。</div>
+    }
+    else
+    {
+    @if (!string.IsNullOrEmpty(_msg))
+    {
+    <div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>
+    }
+
+    <div class="action-bar">
+        <button class="btn-save" @onclick="Save"><i class="fas fa-save"></i> 保存配置</button>
+    </div>
+
+    <!-- 支付渠道配置 -->
+    <div class="config-container">
+        @foreach (var ch in _channels)
+        {
+        <div class="config-card">
+            <h3 style="color:@ch.Color;border-color:@ch.Color;"><i class="@ch.Icon"></i> @ch.Name</h3>
+            <div class="switch-group">
+                <span class="switch-label">启用 @ch.Name</span>
+                <label class="toggle"><input type="checkbox" checked="@B(ch.EnableKey)" @onchange="e => SetBool(ch.EnableKey, e.Value)" /><span class="slider"></span></label>
+            </div>
+            @foreach (var f in ch.Fields)
+            {
+            <div class="form-group">
+                <label>@f.Label @(f.Key.EndsWith("FeeRate") ? "(%)" : "")</label>
+                <input type="@f.Type" value="@G(f.Key)" @onchange="e => S(f.Key, e.Value?.ToString())" placeholder="@f.Placeholder" />
+            </div>
+            }
+            @if (ch.Key == "paypal")
+            {
+            <div class="switch-group">
+                <span class="switch-label">沙箱模式 (Sandbox)</span>
+                <label class="toggle"><input type="checkbox" checked='@B("PayPalSandbox")' @onchange='e => SetBool("PayPalSandbox", e.Value)' /><span class="slider"></span></label>
+            </div>
+            }
+        </div>
+        }
+
+        <!-- 全局配置 -->
+        <div class="config-card">
+            <h3 style="color:#ffa726;border-color:#ffa726;"><i class="fas fa-globe"></i> 全局配置</h3>
+            <div class="switch-group">
+                <span class="switch-label">测试模式 (Test Mode)</span>
+                <label class="toggle"><input type="checkbox" checked='@B("PaymentTestMode")' @onchange='e => SetBool("PaymentTestMode", e.Value)' /><span class="slider"></span></label>
+            </div>
+            <div class="form-group">
+                <label>默认支付方式</label>
+                <select value='@G("DefaultPaymentMethod")' @onchange='e => S("DefaultPaymentMethod", e.Value?.ToString())'>
+                    <option value="">请选择</option>
+                    <option value="alipay">支付宝</option>
+                    <option value="wechat">微信支付</option>
+                    <option value="bank">银行转账</option>
+                    <option value="stripe">Stripe</option>
+                    <option value="unionpay">银联</option>
+                    <option value="paypal">PayPal</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    }
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}
+.action-bar{display:flex;justify-content:flex-end;margin-bottom:20px;}
+.config-container{display:grid;grid-template-columns:repeat(2,1fr);gap:25px;}
+.config-card{background:linear-gradient(135deg,#2d2d44 0%,#1e1e32 100%);border-radius:12px;padding:25px;box-shadow:0 4px 20px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);}
+.config-card h3{font-size:18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;padding-bottom:15px;border-bottom:2px solid rgba(255,255,255,0.06);}
+.form-group{margin-bottom:18px;}.form-group label{display:block;margin-bottom:8px;color:#b0b0b0;font-weight:500;font-size:14px;}
+.form-group input,.form-group select{width:100%;padding:12px 15px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus,.form-group select:focus{border-color:#00bcd4;outline:none;}
+.switch-group{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.switch-label{color:#e0e0e0;font-size:14px;font-weight:500;}
+.toggle{position:relative;display:inline-block;width:52px;height:28px;}
+.toggle input{opacity:0;width:0;height:0;}
+.slider{position:absolute;cursor:pointer;inset:0;background:#555;transition:.3s;border-radius:28px;}
+.slider:before{position:absolute;content:"";height:20px;width:20px;left:4px;bottom:4px;background:#fff;transition:.3s;border-radius:50%;}
+.toggle input:checked+.slider{background:#00bcd4;}
+.toggle input:checked+.slider:before{transform:translateX(24px);}
+.btn-save{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;}
+.btn-save:hover{opacity:0.9;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+@@media(max-width:1200px){.config-container{grid-template-columns:1fr;}}
+</style>
+
+@code {
+    private bool _loaded, _canEdit;
+    private string? _msg, _msgType;
+    private Dictionary<string, string> _cfg = new();
+
+    private record PayField(string Label, string Key, string Type = "text", string Placeholder = "");
+    private record PayChannel(string Key, string Name, string Icon, string Color, string EnableKey, PayField[] Fields);
+
+    private readonly List<PayChannel> _channels = new()
+    {
+        new("alipay","支付宝","fab fa-alipay","#1677ff","EnableAlipay", new[]{
+            new PayField("App ID","AlipayAppId"), new PayField("商户号","AlipayMerchantId"), new PayField("费率","AlipayFeeRate","number","0.6")}),
+        new("wechat","微信支付","fab fa-weixin","#07c160","EnableWechatPay", new[]{
+            new PayField("App ID","WechatAppId"), new PayField("商户号","WechatMchId"), new PayField("费率","WechatFeeRate","number","0.6")}),
+        new("bank","银行转账","fas fa-university","#ff6b6b","EnableBankTransfer", new[]{
+            new PayField("账户名","BankAccountName"), new PayField("账号","BankAccountNo"), new PayField("开户行","BankName")}),
+        new("stripe","Stripe","fab fa-stripe-s","#635bff","EnableStripe", new[]{
+            new PayField("Publishable Key","StripePublishableKey"), new PayField("Secret Key","StripeSecretKey","password"),
+            new PayField("Webhook Secret","StripeWebhookSecret","password"), new PayField("费率","StripeFeeRate","number","2.9"), new PayField("固定手续费","StripeFixedFee","number","0.30")}),
+        new("unionpay","银联","fas fa-credit-card","#c00000","EnableUnionPay", new[]{
+            new PayField("商户号","UnionPayMerchantId"), new PayField("证书路径","UnionPayCertPath"), new PayField("费率","UnionPayFeeRate","number","0.5")}),
+        new("paypal","PayPal","fab fa-paypal","#003087","EnablePayPal", new[]{
+            new PayField("Client ID","PayPalClientId"), new PayField("Secret","PayPalSecret","password"),
+            new PayField("费率","PayPalFeeRate","number","3.4"), new PayField("固定手续费","PayPalFixedFee","number","0.30")}),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            var rc = auth.User.FindFirst("RoleCode")?.Value;
+            _canEdit = rc == "FIN_MANAGER" || rc == "SUPER_ADMIN";
+            if (_canEdit) _cfg = await FinRepo.GetPaymentConfigAsync();
+            _loaded = true;
+        }
+        catch { _loaded = true; }
+    }
+
+    string G(string k) => _cfg.TryGetValue(k, out var v) ? v : "";
+    void S(string k, string? v) => _cfg[k] = v ?? "";
+    bool B(string k) => G(k) == "1";
+    void SetBool(string k, object? v) => _cfg[k] = (v is bool b && b) ? "1" : "0";
+
+    async Task Save()
+    {
+        try
+        {
+            // 确保所有键存在（未渲染的开关默认0）
+            foreach (var key in FinanceRepository.PaymentConfigKeys)
+                if (!_cfg.ContainsKey(key)) _cfg[key] = "";
+            await FinRepo.SavePaymentConfigAsync(_cfg);
+            _msg = "支付配置已保存"; _msgType = "ok";
+        }
+        catch (Exception ex) { _msg = "保存失败：" + ex.Message; _msgType = "err"; }
+    }
+}

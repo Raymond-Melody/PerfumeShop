@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>离线 - 香氛定制</title>
+    <style>
+        :root {
+            --bg: #f8f6f3;
+            --bg-end: #ffffff;
+            --fg: #333333;
+            --fg-muted: #666666;
+            --fg-subtle: #999999;
+            --brand: #8B4513;
+            --brand-hover: #6B3410;
+            --card-bg: #ffffff;
+            --card-border: #e8e0d8;
+            --status-ok: #2d8a4e;
+            --status-err: #c9372c;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1a1410;
+                --bg-end: #0d0a07;
+                --fg: #e8e0d8;
+                --fg-muted: #b0a89e;
+                --fg-subtle: #7a7268;
+                --brand: #c8884c;
+                --brand-hover: #a06830;
+                --card-bg: #241e18;
+                --card-border: #3a3228;
+                --status-ok: #4caf68;
+                --status-err: #e05248;
+            }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, var(--bg) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--fg);
+        }
+
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .offline-icon {
+            margin-bottom: 24px;
+        }
+
+        .offline-icon svg {
+            width: 80px;
+            height: 80px;
+            color: var(--brand);
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: -0.01em;
+        }
+
+        p {
+            color: var(--fg-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .btn-retry {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            background: var(--brand);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.2s ease-out;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-retry:hover {
+            background: var(--brand-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 69, 19, 0.25);
+        }
+
+        .btn-retry svg { width: 16px; height: 16px; }
+
+        .status {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--fg-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--fg-subtle);
+            flex-shrink: 0;
+        }
+
+        .status-dot.online { background: var(--status-ok); }
+        .status-dot.offline { background: var(--status-err); }
+
+        /* 最近浏览区域 */
+        .cached-pages {
+            margin-top: 32px;
+            padding: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            text-align: left;
+        }
+
+        .cached-pages h2 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--fg-muted);
+            margin-bottom: 12px;
+            letter-spacing: 0.02em;
+        }
+
+        .cached-page-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--fg);
+            font-size: 0.9rem;
+            transition: background 0.15s ease-out;
+            margin-bottom: 4px;
+        }
+
+        .cached-page-link:hover {
+            background: var(--bg);
+        }
+
+        .cached-page-link svg {
+            width: 16px;
+            height: 16px;
+            color: var(--fg-subtle);
+            flex-shrink: 0;
+        }
+
+        .no-cached {
+            color: var(--fg-subtle);
+            font-size: 0.85rem;
+            padding: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon" aria-hidden="true">
+            <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="40" cy="40" r="30"/>
+                <path d="M28 34c0-6.627 5.373-12 12-12s12 5.373 12 12"/>
+                <path d="M22 44c0-9.941 8.059-18 18-18s18 8.059 18 18"/>
+                <circle cx="40" cy="48" r="4" fill="currentColor" stroke="none"/>
+                <path d="M40 52v6"/>
+            </svg>
+        </div>
+        <h1>您已离线</h1>
+        <p>看起来您失去了网络连接。请检查您的网络设置，然后重试。</p>
+        <button class="btn-retry" onclick="location.reload()" aria-label="重新连接网络">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.5 8a5.5 5.5 0 0 1 9.3-4"/>
+                <path d="M13.5 8a5.5 5.5 0 0 1-9.3 4"/>
+                <polyline points="12 2 12.5 5.5 9 5"/>
+                <polyline points="4 14 3.5 10.5 7 11"/>
+            </svg>
+            重新连接
+        </button>
+        <div class="status" id="status" role="status" aria-live="polite">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">等待连接...</span>
+        </div>
+
+        <div class="cached-pages" id="cachedPages">
+            <h2>可离线访问的页面</h2>
+            <div id="cachedList"><div class="no-cached">正在检查缓存...</div></div>
+        </div>
+
+        <div class="offline-info" id="offlineInfo" style="margin-top:16px;font-size:0.8rem;color:var(--fg-subtle);text-align:center;">
+            <div id="lastOnline"></div>
+            <div id="offlineCartInfo" style="margin-top:6px;"></div>
+        </div>
+    </div>
+
+    <script>
+        var statusDot = document.getElementById('statusDot');
+        var statusText = document.getElementById('statusText');
+        var cachedList = document.getElementById('cachedList');
+
+        function updateStatus() {
+            if (navigator.onLine) {
+                statusDot.className = 'status-dot online';
+                statusText.textContent = '网络正常';
+            } else {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = '网络已断开';
+            }
+        }
+
+        // 监听网络状态变化
+        window.addEventListener('online', function() {
+            statusDot.className = 'status-dot online';
+            statusText.textContent = '网络已恢复，正在重新加载...';
+            setTimeout(function() { location.reload(); }, 1000);
+        });
+
+        window.addEventListener('offline', function() {
+            statusDot.className = 'status-dot offline';
+            statusText.textContent = '网络已断开';
+        });
+
+        updateStatus();
+
+        // 从 Service Worker 缓存中读取已缓存的页面
+        function loadCachedPages() {
+            if (!('caches' in window)) {
+                cachedList.innerHTML = '<div class="no-cached">此浏览器不支持离线缓存</div>';
+                return;
+            }
+
+            var pageUrls = [
+                { url: '/', title: '首页' },
+                { url: '/index.asp', title: '首页' },
+                { url: '/products.asp', title: '产品列表' },
+                { url: '/about.asp', title: '品牌故事' },
+                { url: '/contact.asp', title: '联系我们' },
+                { url: '/customize.asp', title: '定制香水' },
+                { url: '/subscribe.asp', title: '香氛订阅盒' },
+                { url: '/community.asp', title: '香氛社区' },
+                { url: '/flash_sale.asp', title: '限时秒杀' },
+                { url: '/group_buy.asp', title: '拼团惠购' },
+                { url: '/fragrance_quiz.asp', title: '香氛测试' },
+                { url: '/cart.asp', title: '购物车' }
+            ];
+
+            var found = [];
+            var checked = 0;
+
+            caches.open('perfumeshop-v18-dynamic').then(function(cache) {
+                pageUrls.forEach(function(page) {
+                    cache.match(page.url).then(function(response) {
+                        if (response && response.ok) {
+                            // 避免重复添加
+                            var exists = false;
+                            for (var i = 0; i < found.length; i++) {
+                                if (found[i].title === page.title) { exists = true; break; }
+                            }
+                            if (!exists) found.push(page);
+                        }
+                        checked++;
+                        if (checked === pageUrls.length) renderCachedPages();
+                    });
+                });
+            }).catch(function() {
+                // 同时检查静态缓存
+                caches.open('perfumeshop-v18-static').then(function(cache) {
+                    pageUrls.forEach(function(page) {
+                        cache.match(page.url).then(function(response) {
+                            if (response && response.ok) {
+                                var exists = false;
+                                for (var i = 0; i < found.length; i++) {
+                                    if (found[i].title === page.title) { exists = true; break; }
+                                }
+                                if (!exists) found.push(page);
+                            }
+                            checked++;
+                            if (checked === pageUrls.length) renderCachedPages();
+                        });
+                    });
+                });
+            });
+
+            function renderCachedPages() {
+                if (found.length === 0) {
+                    cachedList.innerHTML = '<div class="no-cached">暂无可离线访问的页面</div>';
+                    return;
+                }
+                var html = '';
+                for (var i = 0; i < found.length; i++) {
+                    html += '<a href="' + found[i].url + '" class="cached-page-link">' +
+                        '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+                        '<path d="M3 2h10v12H3z"/><path d="M6 5h4M6 8h4M6 11h2"/></svg>' +
+                        found[i].title + '</a>';
+                }
+                cachedList.innerHTML = html;
+            }
+        }
+
+        loadCachedPages();
+
+        // 显示最后在线时间
+        (function() {
+            var lastOnline = localStorage.getItem('perfumeshop_last_online');
+            var el = document.getElementById('lastOnline');
+            if (lastOnline) {
+                var d = new Date(parseInt(lastOnline));
+                el.textContent = '最后在线：' + d.toLocaleString('zh-CN');
+            } else {
+                el.textContent = '无缓存记录';
+            }
+
+            // 尝试读取离线购物车
+            if ('indexedDB' in window) {
+                var req = indexedDB.open('PerfumeShopOffline', 1);
+                req.onsuccess = function(e) {
+                    var db = e.target.result;
+                    if (db.objectStoreNames.contains('offlineCart')) {
+                        var tx = db.transaction('offlineCart', 'readonly');
+                        var store = tx.objectStore('offlineCart');
+                        var countReq = store.count();
+                        countReq.onsuccess = function() {
+                            var cartEl = document.getElementById('offlineCartInfo');
+                            if (countReq.result > 0) {
+                                cartEl.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="13" r="1.5"/><circle cx="12" cy="13" r="1.5"/><path d="M1 1h2l2.5 11h8"/></svg> 离线购物车有 ' + countReq.result + ' 件商品，联网后将自动同步';
+                            }
+                        };
+                    }
+                };
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -21,7 +21,7 @@ public class PromotionEngine : IPromotionEngine
 
     // ==================== 优惠券验证 ====================
 
-    public async Task<CouponValidateResult> ValidateCouponAsync(string code, int userId, decimal cartTotal, CancellationToken ct = default)
+    public async Task<CouponValidateResult> ValidateCouponAsync(string code, int userId, decimal cartTotal, string? cartCategory = null, CancellationToken ct = default)
     {
         var result = new CouponValidateResult();
 
@@ -72,6 +72,20 @@ public class PromotionEngine : IPromotionEngine
                 result.Message = "此优惠券仅限首单使用";
                 return result;
             }
+        }
+
+        // V18: 品类限制检查 (ApplicableCategory)
+        if (!string.IsNullOrEmpty(coupon.ApplicableCategory) && !string.IsNullOrEmpty(cartCategory))
+        {
+            if (!string.Equals(coupon.ApplicableCategory, cartCategory, StringComparison.OrdinalIgnoreCase))
+            {
+                result.Message = $"此优惠券仅限 {coupon.ApplicableCategory} 品类使用";
+                return result;
+            }
+        }
+        else if (!string.IsNullOrEmpty(coupon.ApplicableCategory) && string.IsNullOrEmpty(cartCategory))
+        {
+            // 券有品类限制但购物车未提供品类信息，跳过品类校验（兼容旧调用）
         }
 
         // 检查用户是否已使用过此券
@@ -233,11 +247,13 @@ public class PromotionEngine : IPromotionEngine
 
             _db.UserCoupons.Add(userCoupon);
 
-            // 更新库存
-            await _db.Coupons
-                .Where(c => c.CouponId == coupon.CouponId)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(c => c.UsedQty, c => c.UsedQty + 1), ct);
+            // 更新库存 — 使用跟踪实体更新（InMemory 兼容）
+            var trackedCoupon = await _db.Coupons
+                .FirstOrDefaultAsync(c => c.CouponId == coupon.CouponId, ct);
+            if (trackedCoupon != null)
+            {
+                trackedCoupon.UsedQty = trackedCoupon.UsedQty + 1;
+            }
 
             await _db.SaveChangesAsync(ct);
             return true;
@@ -288,6 +304,132 @@ public class PromotionEngine : IPromotionEngine
     {
         return await _db.UserCoupons
             .CountAsync(uc => uc.UserId == userId && uc.Status == "available", ct);
+    }
+
+    // ==================== 接口补齐: 促销资格检查 ====================
+
+    public async Task<PromotionEligibilityResult> CheckPromotionEligibilityAsync(
+        decimal cartTotal, int userId, CancellationToken ct = default)
+    {
+        var result = new PromotionEligibilityResult();
+        var thresholdSetting = await _db.SiteSettings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.SettingKey == "Promotion_Threshold", ct);
+
+        if (thresholdSetting != null && !string.IsNullOrEmpty(thresholdSetting.SettingValue))
+        {
+            var parts = thresholdSetting.SettingValue.Split('|');
+            if (parts.Length >= 3 && decimal.TryParse(parts[0], out var minAmount) && decimal.TryParse(parts[1], out var discount))
+            {
+                result.HasThreshold = true;
+                result.ThresholdName = parts[2];
+                result.ThresholdMinAmount = minAmount;
+                result.ThresholdDiscount = discount;
+                result.IsEligible = cartTotal >= minAmount;
+                result.RemainingToThreshold = cartTotal >= minAmount ? 0 : minAmount - cartTotal;
+            }
+        }
+        result.FreeShippingEligible = CheckFreeShipping(cartTotal);
+        return result;
+    }
+
+    // ==================== 接口补齐: 应用折扣 ====================
+
+    public async Task<ApplyDiscountResult> ApplyDiscountAsync(decimal cartTotal, int userId, string? couponCode, string? cartCategory = null, CancellationToken ct = default)
+    {
+        var result = new ApplyDiscountResult();
+        var promotionDiscount = await CalculateDiscountAsync(cartTotal, userId, ct);
+        decimal couponDiscount = 0;
+        if (!string.IsNullOrEmpty(couponCode))
+        {
+            var couponResult = await ValidateCouponAsync(couponCode, userId, cartTotal, cartCategory, ct);
+            if (couponResult.Valid)
+            {
+                couponDiscount = couponResult.Discount;
+                result.AppliedCouponCode = couponCode;
+                result.AppliedCouponType = couponResult.Type;
+            }
+        }
+        result.PromotionDiscount = promotionDiscount;
+        result.CouponDiscount = couponDiscount;
+        var totalDiscount = promotionDiscount + couponDiscount;
+        if (totalDiscount > cartTotal * MaxDiscountRatio)
+            totalDiscount = cartTotal * MaxDiscountRatio;
+        result.TotalDiscount = totalDiscount;
+        result.FinalAmount = Math.Max(0, cartTotal - totalDiscount);
+        result.FreeShipping = CheckFreeShipping(cartTotal);
+        return result;
+    }
+
+    // ==================== 接口补齐: 促销历史 ====================
+
+    public async Task<IEnumerable<PromotionHistoryRecord>> GetPromotionHistoryByUserAsync(int userId, CancellationToken ct = default)
+    {
+        return await _db.UserCoupons
+            .AsNoTracking()
+            .Where(uc => uc.UserId == userId)
+            .Join(_db.Coupons.AsNoTracking(), uc => uc.CouponId, c => c.CouponId,
+                (uc, c) => new PromotionHistoryRecord
+                {
+                    UserCouponId = uc.UserCouponId, CouponCode = uc.CouponCode,
+                    CouponName = c.CouponName, CouponType = c.CouponType,
+                    DiscountValue = c.DiscountValue ?? 0, Source = uc.Source,
+                    Status = uc.Status, ObtainedAt = uc.ObtainedAt,
+                    UsedAt = uc.UsedAt, UsedOrderId = uc.UsedOrderId
+                })
+            .OrderByDescending(x => x.ObtainedAt)
+            .ToListAsync(ct);
+    }
+
+    // ==================== 接口补齐: 用户券列表 ====================
+
+    public async Task<IEnumerable<UserCouponDto>> GetUserCouponsAsync(int userId, string statusFilter = "available", CancellationToken ct = default)
+    {
+        var query = _db.UserCoupons.AsNoTracking().Where(uc => uc.UserId == userId);
+        if (statusFilter != "all") query = query.Where(uc => uc.Status == statusFilter);
+        return await query
+            .Join(_db.Coupons.AsNoTracking(), uc => uc.CouponId, c => c.CouponId,
+                (uc, c) => new UserCouponDto
+                {
+                    UserCouponId = uc.UserCouponId, CouponCode = uc.CouponCode,
+                    CouponName = c.CouponName, CouponType = c.CouponType,
+                    DiscountValue = c.DiscountValue ?? 0, MinSpend = c.MinSpend,
+                    MaxDiscount = c.MaxDiscount, Description = c.Description,
+                    Terms = c.Terms, ValidFrom = c.ValidFrom, ValidTo = c.ValidTo,
+                    Status = uc.Status, ObtainedAt = uc.ObtainedAt
+                })
+            .OrderByDescending(x => x.ObtainedAt).ToListAsync(ct);
+    }
+
+    // ==================== 接口补齐: 可用券列表 ====================
+
+    public async Task<IEnumerable<UserCouponDto>> GetApplicableCouponsAsync(int userId, decimal cartTotal, CancellationToken ct = default)
+    {
+        var now = DateTime.Now;
+        return await _db.UserCoupons.AsNoTracking()
+            .Where(uc => uc.UserId == userId && uc.Status == "available")
+            .Join(_db.Coupons.AsNoTracking(), uc => uc.CouponId, c => c.CouponId, (uc, c) => new { uc, c })
+            .Where(x => x.c.MinSpend <= cartTotal && now >= x.c.ValidFrom && now <= x.c.ValidTo)
+            .OrderByDescending(x => x.c.DiscountValue)
+            .Select(x => new UserCouponDto
+            {
+                UserCouponId = x.uc.UserCouponId, CouponCode = x.uc.CouponCode,
+                CouponName = x.c.CouponName, CouponType = x.c.CouponType,
+                DiscountValue = x.c.DiscountValue ?? 0, MinSpend = x.c.MinSpend,
+                MaxDiscount = x.c.MaxDiscount, Description = x.c.Description,
+                ValidFrom = x.c.ValidFrom, ValidTo = x.c.ValidTo,
+                Status = x.uc.Status, ObtainedAt = x.uc.ObtainedAt
+            }).ToListAsync(ct);
+    }
+
+    // ==================== 接口补齐: 券统计 ====================
+
+    public async Task<CouponStatsDto> GetCouponStatsAsync(int couponId, CancellationToken ct = default)
+    {
+        var stats = new CouponStatsDto();
+        stats.TotalIssued = await _db.UserCoupons.CountAsync(uc => uc.CouponId == couponId, ct);
+        stats.TotalUsed = await _db.UserCoupons.CountAsync(uc => uc.CouponId == couponId && uc.Status == "used", ct);
+        return stats;
     }
 
     // ==================== 辅助 ====================

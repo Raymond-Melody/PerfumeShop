@@ -1,0 +1,30 @@
+@page "/admin/system/seed-data"
+@rendermode InteractiveServer
+@using PerfumeShop.Admin.Services
+@inject DataSeeder Seeder
+
+<PageTitle>种子数据注入</PageTitle>
+<div style="max-width:800px;margin:40px auto;">
+<h2 style="color:#fff;margin-bottom:20px;"><i class="fas fa-database" style="color:#00bcd4;"></i> 测试数据种子注入</h2>
+@if(_done){
+<pre style="background:#1a1a2e;color:#4CAF50;padding:20px;border-radius:8px;white-space:pre-wrap;font-size:13px;">@_log</pre>
+<a href="/admin/system/users" style="color:#00bcd4;">返回系统管理</a>
+}else if(_running){
+<div style="text-align:center;padding:40px;"><MudProgressCircular Color="Color.Primary" Indeterminate="true"/><p style="color:#888;margin-top:20px;">正在注入测试数据...</p></div>
+}else{
+<p style="color:#888;margin-bottom:20px;">此操作将向数据库注入以下测试数据：</p>
+<ul style="color:#ccc;margin-bottom:30px;">
+<li>产品成本 (UnitCost/BOMCost)</li><li>原料成本 (UnitPrice/WeightedUnitCost)</li>
+<li>香调价格 (PriceAddition)</li><li>产品成本明细 (ProductCosts)</li>
+<li>订单成本分摊 (OrderCostAllocation)</li><li>费用记录 (ExpenseRecords: 运费/推广/平台)</li>
+<li>应收应付 (AccountsPayable/Receivable)</li><li>预算计划 (BudgetPlans)</li>
+<li>资金账户 (FundAccounts)</li><li>采购数据 (FixedBrandCostAllocation/PurchaseReceipts/SupplierPrices)</li>
+</ul>
+<button @onclick="RunSeed" style="background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:14px 32px;border-radius:8px;cursor:pointer;font-size:16px;">立即注入测试数据</button>
+}
+</div>
+
+@code{
+    bool _running,_done;string _log="";
+    async Task RunSeed(){_running=true;try{_log=await Seeder.SeedAllAsync();_done=true;_running=false;}catch(Exception ex){_log="错误: "+ex.ToString();_done=true;_running=false;}}
+}

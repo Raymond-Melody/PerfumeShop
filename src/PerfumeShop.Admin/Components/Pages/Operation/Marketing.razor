@@ -1,0 +1,73 @@
+﻿@page "/admin/Operation/Marketing"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+<PageTitle>营销活动</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-bullhorn" style="color:#00bcd4;"></i> 营销活动管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>营销活动</span></div></div>
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgErr?"alert-error":"alert-success")"><i class="fas fa-info-circle"></i> @_msg</div>}
+<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#00bcd4;">@_totalCount</div><div class="stat-label">总活动</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_activeCount</div><div class="stat-label">进行中</div></div><div class="stat-card"><div class="stat-value" style="color:#f44336;">@_endedCount</div><div class="stat-label">已结束</div></div></div>
+<div style="margin-bottom:20px;"><button class="btn btn-primary" @onclick="ShowNew"><i class="fas fa-plus"></i> 新建活动</button></div>
+<table class="data-table"><thead><tr><th>ID</th><th>活动名称</th><th>类型</th><th>优惠值</th><th>时间</th><th>参与人数</th><th>销售额</th><th>状态</th><th>操作</th></tr></thead><tbody>@if(_campaigns.Any()){@foreach(var c in _campaigns){<tr><td>@c.CampaignId</td><td style="color:#00bcd4;">@(c.CampaignName??"-")</td><td><span class="type-tag">@GetTypeLabel(c.CampaignType)</span></td><td>@(c.DiscountValue.HasValue?c.DiscountValue.Value.ToString("N2"):"-")</td><td style="font-size:12px;color:#999;">@(c.StartDate?.ToString("yyyy-MM-dd")??"-") ~ @(c.EndDate?.ToString("yyyy-MM-dd")??"-")</td><td>@(c.ParticipantCount??0)</td><td style="color:#4CAF50;font-weight:600;">@((c.TotalSales??0).ToString("C2"))</td><td><span class="status-badge @(c.IsActive==true&&(c.EndDate==null||c.EndDate>=DateTime.Now)?"status-active":"status-inactive")">@(c.IsActive==true&&(c.EndDate==null||c.EndDate>=DateTime.Now)?"进行中":"已结束")</span></td><td><button class="btn btn-outline btn-sm" @onclick="()=>ShowEdit(c)"><i class="fas fa-edit"></i> 编辑</button><button class="btn btn-outline btn-sm" @onclick="()=>Toggle(c)"><i class="fas fa-power-off"></i></button><button class="btn btn-sm" style="background:#c62828;color:#fff;" @onclick="()=>Delete(c.CampaignId)"><i class="fas fa-trash"></i></button></td></tr>}}else{<tr><td colspan="9" class="empty-cell">暂无营销活动</td></tr>}</tbody></table>
+@if(_showForm){<div class="modal-overlay" @onclick="()=>_showForm=false"><div class="modal" @onclick:stopPropagation="true"><div class="modal-header"><h3>@(_editId>0?"编辑活动":"新建活动")</h3><button class="modal-close" @onclick="()=>_showForm=false">&times;</button></div>
+<form @onsubmit="HandleSave"><div class="modal-body">
+<div class="form-group"><label>活动名称 *</label><input class="form-input" @bind="_fName" required/></div>
+<div class="form-row"><div class="form-group"><label>活动类型</label><select class="form-input" @bind="_fType"><option value="discount">折扣活动</option><option value="fullreduce">满减活动</option><option value="gift">赠品活动</option><option value="newcomer">新客专享</option><option value="other">其他</option></select></div><div class="form-group"><label>状态</label><select class="form-input" @bind="_fActive"><option value="true">进行中</option><option value="false">已结束</option></select></div></div>
+<div class="form-row"><div class="form-group"><label>优惠值</label><input type="number" step="0.01" class="form-input" @bind="_fDiscount" placeholder="折扣0-1 或 满减金额"/></div><div class="form-group"><label>最低消费</label><input type="number" step="0.01" class="form-input" @bind="_fMinPurchase"/></div></div>
+<div class="form-row"><div class="form-group"><label>开始时间</label><input type="datetime-local" class="form-input" @bind="_fStart"/></div><div class="form-group"><label>结束时间</label><input type="datetime-local" class="form-input" @bind="_fEnd"/></div></div>
+<div class="form-group"><label>活动描述</label><textarea class="form-input" @bind="_fDesc" rows="3"></textarea></div>
+</div><div class="modal-footer"><button type="button" class="btn btn-outline" @onclick="()=>_showForm=false">取消</button><button type="submit" class="btn btn-primary" disabled="@_saving"><i class="fas fa-save"></i> @(_saving?"保存中...":"保存")</button></div></form></div></div>}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}.data-table{width:100%;border-collapse:collapse;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:10px;overflow:hidden;}.data-table th{background:rgba(0,0,0,0.2);color:#888;padding:12px 16px;font-size:12px;text-align:left;}.data-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.data-table tr:hover td{background:rgba(255,255,255,0.02);}.empty-cell{text-align:center;color:#666;padding:40px;}.type-tag{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;background:rgba(0,188,212,0.12);color:#80DEEA;}.status-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}.status-active{background:rgba(76,175,80,0.2);color:#4caf50;}.status-inactive{background:rgba(244,67,54,0.2);color:#ef5350;}.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.3s;text-decoration:none;margin-right:4px;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}.btn-primary[disabled]{opacity:0.5;cursor:not-allowed;}.btn-outline{background:rgba(255,255,255,0.05);color:#b0b0b0;border:1px solid rgba(255,255,255,0.1);}.btn-sm{padding:5px 10px;font-size:11px;}.alert{padding:12px 16px;border-radius:8px;margin-bottom:16px;}.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}.alert-error{background:rgba(244,67,54,0.15);color:#ef9a9a;border:1px solid rgba(244,67,54,0.3);}.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;}.modal{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:16px;border:1px solid rgba(255,255,255,0.1);padding:30px;width:90%;max-width:640px;max-height:90vh;overflow-y:auto;}.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}.modal-header h3{color:#fff;margin:0;font-size:18px;}.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.form-group{margin-bottom:14px;}.form-group label{display:block;color:#999;font-size:13px;margin-bottom:6px;}.form-input{width:100%;padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;font-size:14px;box-sizing:border-box;}.form-input:focus{border-color:#00bcd4;outline:none;}.form-input option{background:#2d2d44;color:#e0e0e0;}textarea.form-input{resize:vertical;}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.modal-footer{margin-top:20px;display:flex;justify-content:flex-end;gap:10px;}</style>
+@code{
+[Inject] private PerfumeShopContext Db{get;set;}=default!;
+private bool _loaded,_showForm,_saving,_msgErr;
+private string? _msg;
+private List<MarketingCampaign> _campaigns=new();
+private int _totalCount,_activeCount,_endedCount;
+private int _editId;
+private string _fName="",_fType="discount",_fActive="true",_fDiscount="",_fMinPurchase="",_fDesc="";
+private DateTime _fStart=DateTime.Now,_fEnd=DateTime.Now.AddDays(7);
+
+protected override async Task OnInitializedAsync(){try{await Load();_loaded=true;}catch{_loaded=true;}}
+
+async Task Load(){
+_campaigns=await Db.MarketingCampaigns.OrderByDescending(c=>c.CreatedAt).Take(200).ToListAsync();
+_totalCount=_campaigns.Count;
+var now=DateTime.Now;
+_activeCount=_campaigns.Count(c=>c.IsActive==true&&(c.EndDate==null||c.EndDate>=now));
+_endedCount=_campaigns.Count(c=>c.IsActive!=true||(c.EndDate!=null&&c.EndDate<now));
+}
+
+void ShowNew(){_editId=0;_fName="";_fType="discount";_fActive="true";_fDiscount="";_fMinPurchase="";_fDesc="";_fStart=DateTime.Now;_fEnd=DateTime.Now.AddDays(7);_showForm=true;}
+void ShowEdit(MarketingCampaign c){_editId=c.CampaignId;_fName=c.CampaignName??"";_fType=c.CampaignType??"discount";_fActive=c.IsActive==true?"true":"false";_fDiscount=c.DiscountValue?.ToString("0.##")??"";_fMinPurchase=c.MinPurchase?.ToString("0.##")??"";_fDesc=c.Description??"";_fStart=c.StartDate??DateTime.Now;_fEnd=c.EndDate??DateTime.Now.AddDays(7);_showForm=true;}
+
+async Task HandleSave(){
+_saving=true;_msg=null;
+try{
+if(string.IsNullOrWhiteSpace(_fName)){_msg="请填写活动名称";_msgErr=true;_saving=false;return;}
+var active=_fActive=="true";
+decimal? disc=decimal.TryParse(_fDiscount,out var dv)?dv:null;
+decimal? minp=decimal.TryParse(_fMinPurchase,out var mp)?mp:null;
+if(_editId>0){
+await Db.MarketingCampaigns.Where(c=>c.CampaignId==_editId).ExecuteUpdateAsync(s=>s
+.SetProperty(c=>c.CampaignName,_fName).SetProperty(c=>c.CampaignType,_fType)
+.SetProperty(c=>c.Description,_fDesc).SetProperty(c=>c.DiscountValue,disc)
+.SetProperty(c=>c.MinPurchase,minp).SetProperty(c=>c.StartDate,(DateTime?)_fStart)
+.SetProperty(c=>c.EndDate,(DateTime?)_fEnd).SetProperty(c=>c.IsActive,(bool?)active));
+_msg="活动已更新";
+}else{
+Db.MarketingCampaigns.Add(new MarketingCampaign{CampaignName=_fName,CampaignType=_fType,Description=_fDesc,DiscountValue=disc,MinPurchase=minp,StartDate=_fStart,EndDate=_fEnd,IsActive=active,ParticipantCount=0,TotalSales=0,CreatedAt=DateTime.Now});
+await Db.SaveChangesAsync();
+_msg="活动已创建";
+}
+_msgErr=false;_showForm=false;await Load();
+}catch(Exception ex){_msg="操作失败: "+ex.Message;_msgErr=true;}
+_saving=false;
+}
+
+async Task Toggle(MarketingCampaign c){var nv=!(c.IsActive==true);await Db.MarketingCampaigns.Where(x=>x.CampaignId==c.CampaignId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.IsActive,(bool?)nv));c.IsActive=nv;_activeCount=_campaigns.Count(x=>x.IsActive==true);_endedCount=_campaigns.Count(x=>x.IsActive!=true);await InvokeAsync(StateHasChanged);}
+async Task Delete(int id){await Db.MarketingCampaigns.Where(c=>c.CampaignId==id).ExecuteDeleteAsync();_campaigns=_campaigns.Where(c=>c.CampaignId!=id).ToList();_totalCount=_campaigns.Count;_activeCount=_campaigns.Count(x=>x.IsActive==true);_endedCount=_campaigns.Count(x=>x.IsActive!=true);_msg="活动已删除";_msgErr=false;await InvokeAsync(StateHasChanged);}
+
+static string GetTypeLabel(string? t)=>t switch{"discount"=>"折扣活动","fullreduce"=>"满减活动","gift"=>"赠品活动","newcomer"=>"新客专享","other"=>"其他",_=>t??"-"};
+}

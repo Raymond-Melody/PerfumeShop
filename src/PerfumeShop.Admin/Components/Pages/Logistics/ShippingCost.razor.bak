@@ -1,0 +1,85 @@
+<!-- V19物流管理 · 运费管理 -->
+@page "/admin/logistics/report"
+@page "/admin/logistics/shipping-cost"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>运费管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-calculator" style="color:#FF9800;"></i> 运费管理</MudText>
+
+@if (_loaded)
+{
+    <MudPaper Class="pa-6 mb-4" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+        <MudText Typo="Typo.h6" Class="mb-3" Style="color:#FF9800;">运费统计概览</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <div style="text-align:center;padding:16px;">
+                    <div style="font-size:12px;color:#888;">总发货订单</div>
+                    <div style="font-size:28px;font-weight:700;color:#00bcd4;">@_totalShipped</div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <div style="text-align:center;padding:16px;">
+                    <div style="font-size:12px;color:#888;">总运费收入</div>
+                    <div style="font-size:28px;font-weight:700;color:#4CAF50;">@_totalShippingFee.ToString("C2")</div>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <div style="text-align:center;padding:16px;">
+                    <div style="font-size:12px;color:#888;">平均每单运费</div>
+                    <div style="font-size:28px;font-weight:700;color:#FF9800;">@_avgShippingFee.ToString("C2")</div>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudText Typo="Typo.h6" Class="mb-3">按快递公司统计</MudText>
+    <MudTable Items="@_carrierStats" Hover="true" Dense="true" Striped="true">
+        <HeaderContent>
+            <MudTh>快递公司</MudTh><MudTh>发货数量</MudTh><MudTh>总运费</MudTh><MudTh>占比</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd Style="font-weight:600;">@context.Name</MudTd>
+            <MudTd>@context.Count</MudTd>
+            <MudTd>@context.TotalFee.ToString("C2")</MudTd>
+            <MudTd>
+                <MudProgressLinear Value="@context.Percent" Color="Color.Info" Style="width:120px;" />
+                <span style="font-size:12px;margin-left:8px;">@context.Percent.ToString("F1")%</span>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private bool _loaded;
+    private int _totalShipped;
+    private decimal _totalShippingFee, _avgShippingFee;
+    private List<(string Name, int Count, decimal TotalFee, double Percent)> _carrierStats = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var orders = await Db.Orders.AsNoTracking()
+            .Where(o => o.ShippingStatus != null && o.ShippingStatus != "Pending")
+            .ToListAsync();
+        _totalShipped = orders.Count;
+        _totalShippingFee = orders.Sum(o => o.ShippingFee ?? 0);
+        _avgShippingFee = _totalShipped > 0 ? _totalShippingFee / _totalShipped : 0;
+
+        _carrierStats = orders.Where(o => !string.IsNullOrEmpty(o.ShippingCompany))
+            .GroupBy(o => o.ShippingCompany!)
+            .Select(g => (
+                Name: g.Key,
+                Count: g.Count(),
+                TotalFee: g.Sum(o => o.ShippingFee ?? 0),
+                Percent: _totalShipped > 0 ? (double)g.Count() / _totalShipped * 100 : 0
+            )).OrderByDescending(x => x.Count).ToList();
+        _loaded = true;
+    }
+}

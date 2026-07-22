@@ -1,0 +1,68 @@
+@page "/admin/TechCenter/IngredientManagement"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>原材料管理</PageTitle>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h4">原材料管理</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreate">新建原材料</MudButton>
+</MudStack>
+
+<MudTable Items="_materials" Dense="true" Hover="true" Striped="true" Elevation="1">
+    <HeaderContent>
+        <MudTh>ID</MudTh><MudTh>品名</MudTh><MudTh>代码</MudTh><MudTh>分类</MudTh>
+        <MudTh>单位</MudTh><MudTh>库存</MudTh><MudTh>安全库存</MudTh><MudTh>单价</MudTh><MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.MaterialId</MudTd><MudTd>@context.ItemName</MudTd><MudTd>@(context.ItemCode ?? "-")</MudTd>
+        <MudTd>@(context.CategoryCode ?? "-")</MudTd><MudTd>@(context.Unit ?? "-")</MudTd>
+        <MudTd>@(context.StockQty?.ToString("F2") ?? "0")</MudTd><MudTd>@(context.SafetyStock?.ToString("F2") ?? "0")</MudTd>
+        <MudTd>¥@(context.UnitPrice?.ToString("F2") ?? "0.00")</MudTd>
+        <MudTd><MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => Edit(context))" /></MudTd>
+    </RowTemplate>
+</MudTable>
+
+<MudDialog @bind-Visible="_showEdit" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent><MudText Typo="Typo.h6">@(_editId > 0 ? "编辑" : "新建")原材料</MudText></TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="6"><MudTextField @bind-Value="_name" Label="品名" /></MudItem>
+            <MudItem xs="3"><MudTextField @bind-Value="_code" Label="代码" /></MudItem>
+            <MudItem xs="3"><MudTextField @bind-Value="_cat" Label="分类" /></MudItem>
+            <MudItem xs="3"><MudTextField @bind-Value="_unit" Label="单位" /></MudItem>
+            <MudItem xs="3"><MudNumericField @bind-Value="_stock" Label="库存" Format="F2" /></MudItem>
+            <MudItem xs="3"><MudNumericField @bind-Value="_safety" Label="安全库存" Format="F2" /></MudItem>
+            <MudItem xs="3"><MudNumericField @bind-Value="_price" Label="单价" Format="F2" /></MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showEdit = false)" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="Save" Variant="Variant.Filled" Color="Color.Primary">保存</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    private List<RawMaterialInventory> _materials = new();
+    private bool _showEdit;
+    private int _editId;
+    private string _name = "", _code = "", _cat = "", _unit = "";
+    private double _stock, _safety;
+    private decimal _price;
+
+    protected override async Task OnInitializedAsync() => _materials = await Db.RawMaterialInventories.OrderBy(m => m.ItemName).ToListAsync();
+
+    private void OpenCreate() { _editId = 0; _name = ""; _code = ""; _cat = ""; _unit = ""; _stock = 0; _safety = 0; _price = 0; _showEdit = true; }
+
+    private void Edit(RawMaterialInventory m) { _editId = m.MaterialId; _name = m.ItemName ?? ""; _code = m.ItemCode ?? ""; _cat = m.CategoryCode ?? ""; _unit = m.Unit ?? ""; _stock = m.StockQty ?? 0; _safety = m.SafetyStock ?? 0; _price = m.UnitPrice ?? 0; _showEdit = true; }
+
+    private async Task Save()
+    {
+        if (_editId > 0) { var m = await Db.RawMaterialInventories.FindAsync(_editId); if (m != null) { m.ItemName = _name; m.ItemCode = _code; m.CategoryCode = _cat; m.Unit = _unit; m.StockQty = _stock; m.SafetyStock = _safety; m.UnitPrice = _price; m.UpdatedAt = DateTime.Now; Db.RawMaterialInventories.Update(m); } }
+        else { Db.RawMaterialInventories.Add(new RawMaterialInventory { ItemName = _name, ItemCode = _code, CategoryCode = _cat, Unit = _unit, StockQty = _stock, SafetyStock = _safety, UnitPrice = _price, UpdatedAt = DateTime.Now }); }
+        await Db.SaveChangesAsync(); _showEdit = false; _materials = await Db.RawMaterialInventories.OrderBy(m => m.ItemName).ToListAsync();
+        Snackbar.Add("原材料已保存", Severity.Success);
+    }
+}

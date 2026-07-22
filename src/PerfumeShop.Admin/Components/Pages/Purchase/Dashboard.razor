@@ -1,0 +1,52 @@
+@page "/admin/Purchase/Dashboard"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject PurchaseRepository PurchaseRepo
+<PageTitle>采购概览</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-shopping-cart" style="color:#FF9800;"></i> 采购管理中心</h2><div class="breadcrumb"><span>采购概览</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_pendingOrders</div><div class="stat-label">待审批采购单</div></div><div class="stat-card"><div class="stat-value" style="color:#00bcd4;">@_supplierCount</div><div class="stat-label">供应商数</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_pendingReceiving</div><div class="stat-label">待收货数</div></div></div>
+<div class="quick-links"><h3 style="color:#e0e0e0;margin-bottom:15px;">快捷导航</h3>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+<a href="/admin/Purchase/OrderList" class="ql"><i class="fas fa-file-invoice"></i> 采购订单</a>
+<a href="/admin/Purchase/Receiving" class="ql"><i class="fas fa-clipboard-check"></i> 收货入库</a>
+<a href="/admin/Purchase/Replenishment" class="ql"><i class="fas fa-robot"></i> 智能补货</a>
+<a href="/admin/Purchase/SupplierManagement" class="ql"><i class="fas fa-truck"></i> 供应商管理</a>
+<a href="/admin/Purchase/PriceManagement" class="ql"><i class="fas fa-tags"></i> 价格管理</a>
+<a href="/admin/Purchase/FixedBrand" class="ql"><i class="fas fa-boxes"></i> 品牌定香</a>
+<a href="/admin/Purchase/CostSummary" class="ql"><i class="fas fa-calculator"></i> 成本汇总</a>
+</div></div>
+<div class="table-container" style="margin-top:20px;"><h4 style="color:#e0e0e0;padding:15px 20px 0;">近期采购单</h4><table class="orders-table"><thead><tr><th>采购单号</th><th>供应商ID</th><th>金额</th><th>状态</th><th>日期</th></tr></thead><tbody>
+@foreach(var o in _recentOrders){<tr><td>@(o.PurchaseNo??o.PurchaseId.ToString())</td><td>@(o.SupplierId?.ToString()??"-")</td><td>@((o.TotalAmount??0).ToString("N2"))</td><td><span class="status-badge status-normal">@(o.Status??"-")</span></td><td>@(o.OrderDate?.ToString("yyyy-MM-dd")??"-")</td></tr>}
+@if(!_recentOrders.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无采购单</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;}
+.ql{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:16px 20px;border-radius:8px;color:#e0e0e0;text-decoration:none;border:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:10px;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(255,152,0,0.1);color:#FF9800;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}
+</style>
+@code {
+    private bool _loaded;private int _pendingOrders,_supplierCount,_pendingReceiving;
+    private List<PurchaseOrder> _recentOrders=new();
+    protected override async Task OnInitializedAsync(){
+        try{
+            _pendingOrders=await Db.PurchaseOrders.CountAsync(o=>o.Status=="pending");
+            _supplierCount=await Db.Suppliers.CountAsync();
+            _pendingReceiving=await Db.PurchaseOrders.CountAsync(o=>o.Status=="approved");
+            _recentOrders=await Db.PurchaseOrders.AsNoTracking().OrderByDescending(o=>o.PurchaseId).Take(10).ToListAsync();
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+}

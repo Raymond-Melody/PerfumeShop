@@ -373,7 +373,7 @@ Call LogAdminAction("查看资金看板", "finance", "", "", "")
             margin-bottom: 30px;
         }
         
-        .stat-card {
+        .stats-overview .stat-card {
             background: linear-gradient(135deg, #2d2d44 0%, #1e1e32 100%);
             border-radius: 16px;
             padding: 25px;
@@ -383,7 +383,7 @@ Call LogAdminAction("查看资金看板", "finance", "", "", "")
             overflow: hidden;
         }
         
-        .stat-card::before {
+        .stats-overview .stat-card::before {
             content: '';
             position: absolute;
             top: 0;
@@ -392,12 +392,12 @@ Call LogAdminAction("查看资金看板", "finance", "", "", "")
             height: 4px;
         }
         
-        .stat-card.total::before { background: linear-gradient(90deg, #00bcd4, #00838f); }
-        .stat-card.available::before { background: linear-gradient(90deg, #11998e, #38ef7d); }
-        .stat-card.frozen::before { background: linear-gradient(90deg, #fc4a1a, #f7b733); }
-        .stat-card.pending::before { background: linear-gradient(90deg, #4facfe, #00f2fe); }
+        .stats-overview .stat-card.total::before { background: linear-gradient(90deg, #00bcd4, #00838f); }
+        .stats-overview .stat-card.available::before { background: linear-gradient(90deg, #11998e, #38ef7d); }
+        .stats-overview .stat-card.frozen::before { background: linear-gradient(90deg, #fc4a1a, #f7b733); }
+        .stats-overview .stat-card.pending::before { background: linear-gradient(90deg, #4facfe, #00f2fe); }
         
-        .stat-card.highlight-warning {
+        .stats-overview .stat-card.highlight-warning {
             border-color: #ff4757;
             animation: pulse-warning 2s infinite;
         }
@@ -428,9 +428,9 @@ Call LogAdminAction("查看资金看板", "finance", "", "", "")
             color: #888;
         }
         
-        .stat-card.available .stat-value { color: #38ef7d; }
-        .stat-card.frozen .stat-value { color: #f7b733; }
-        .stat-card.pending .stat-value { color: #00f2fe; }
+        .stats-overview .stat-card.available .stat-value { color: #38ef7d; }
+        .stats-overview .stat-card.frozen .stat-value { color: #f7b733; }
+        .stats-overview .stat-card.pending .stat-value { color: #00f2fe; }
         
         /* 区块标题 */
         .section-title {
@@ -916,7 +916,7 @@ Call LogAdminAction("查看资金看板", "finance", "", "", "")
         }
     </style>
 </head>
-<body>
+<body class="dark-theme">
     <!--#include file="includes/nav.asp"-->
     
     <div class="main-content">
@@ -970,8 +970,9 @@ Call LogAdminAction("查看资金看板", "finance", "", "", "")
                 <div class="stat-label">
                     <i class="fas fa-clock"></i> 待结算金额
                 </div>
-                <div class="stat-value">¥<%= FormatNumber(SafeNum(totalPendingSettlement), 2) %></div>
-                <div class="stat-sub">在途资金</div>
+                <% Dim pendingTotal : pendingTotal = SafeNum(pendingOrdersAmount) + SafeNum(pendingWithdrawAmount) %>
+                <div class="stat-value">¥<%= FormatNumber(SafeNum(pendingTotal), 2) %></div>
+                <div class="stat-sub">在途资金(交易+提现)</div>
             </div>
         </div>
         

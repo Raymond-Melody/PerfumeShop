@@ -1,103 +1,104 @@
-@page
+@page "/product/{id:int}"
 @model PerfumeShop.Api.Pages.ProductModel
 @{ ViewData["Title"] = Model.Product?.ProductName ?? "商品详情"; }
 
 @if (Model.Product == null)
 {
-    <div class="container py-5 text-center">
+    <div class="container text-center page-section">
         <h3>商品不存在或已下架</h3>
-        <a href="/products" class="btn btn-brand mt-3">返回商品列表</a>
+        <a href="/products" class="btn-brand mt-3">返回商品列表</a>
     </div>
 }
 else
 {
-    <section class="py-4">
+    <section class="product-detail-section">
         <div class="container">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/">首页</a></li>
-                    <li class="breadcrumb-item"><a href="/products">全部商品</a></li>
-                    <li class="breadcrumb-item active">@Model.Product.ProductName</li>
-                </ol>
-            </nav>
+            <!-- 面包屑 -->
+            <div class="breadcrumb-nav">
+                <a href="/"><i class="fas fa-home"></i> 首页</a>
+                <span class="breadcrumb-sep">/</span>
+                <a href="/products">全部商品</a>
+                <span class="breadcrumb-sep">/</span>
+                <span class="breadcrumb-current">@Model.Product.ProductName</span>
+            </div>
 
-            <div class="row g-5">
+            <div class="product-detail-grid">
                 <!-- 商品图片 -->
-                <div class="col-md-5">
-                    <div class="position-relative">
+                <div class="product-detail-image">
+                    <div class="product-image-main">
                         <img src="@(Model.Product.ImageUrl ?? "/images/default-product.svg")"
-                             class="img-fluid rounded-3 shadow" alt="@Model.Product.ProductName"
-                             style="width:100%; max-height:500px; object-fit:cover;" />
+                             alt="@Model.Product.ProductName"
+                             style="width:100%; max-height:500px; object-fit:cover; border-radius:var(--dt-radius-xl,12px);" />
                         @if (Model.Product.Engravable == true)
                         {
-                            <span class="badge bg-info position-absolute top-0 end-0 m-3 p-2">
-                                <i class="bi bi-pencil"></i> 支持刻字
-                            </span>
+                            <span class="product-badge-engravable"><i class="fas fa-pencil-alt"></i> 支持刻字</span>
                         }
                     </div>
                 </div>
 
                 <!-- 商品信息 -->
-                <div class="col-md-7">
-                    <h2>@Model.Product.ProductName</h2>
-                    <span class="badge bg-secondary me-2">@(Model.Product.Category ?? "香水")</span>
-                    <span class="badge bg-outline-secondary">@(Model.Product.ProductType == "custom" ? "定制" : "成品")</span>
+                <div class="product-detail-info">
+                    <h2 class="product-detail-name">@Model.Product.ProductName</h2>
+                    <div class="product-detail-tags">
+                        <span class="tag tag-category">@(Model.Product.Category ?? "香水")</span>
+                        <span class="tag tag-type">@(Model.Product.ProductType == "custom" ? "定制香水" : "成品香水")</span>
+                    </div>
 
-                    <div class="my-4">
-                        <span class="price" style="font-size:2rem;">¥@Model.Product.BasePrice.ToString("F2")</span>
+                    <div class="product-detail-price">
+                        <span class="price-current">¥@Model.Product.BasePrice.ToString("F2")</span>
                         @if (Model.Product.Bomcost.HasValue)
                         {
-                            <small class="text-muted ms-2">参考价 ¥@((Model.Product.BasePrice * 1.3m).ToString("F2"))</small>
+                            <span class="price-reference">参考价 ¥@((Model.Product.BasePrice * 1.3m).ToString("F2"))</span>
                         }
                     </div>
 
                     @if (!string.IsNullOrEmpty(Model.Product.Description))
                     {
-                        <p class="text-muted">@Model.Product.Description</p>
+                        <p class="product-detail-desc">@Model.Product.Description</p>
                     }
 
                     @if (Model.Product.Engravable == true)
                     {
-                        <div class="alert alert-info">
-                            <i class="bi bi-pencil"></i> 此商品支持刻字服务
+                        <div class="product-detail-notice">
+                            <i class="fas fa-pencil-alt"></i> 此商品支持刻字服务
                             @if (Model.Product.EngravingPrice.HasValue && Model.Product.EngravingPrice > 0)
                             {
-                                <span class="ms-2">(刻字费 +¥@Model.Product.EngravingPrice.Value.ToString("F2"))</span>
+                                <span>(刻字费 +¥@Model.Product.EngravingPrice.Value.ToString("F2"))</span>
                             }
                         </div>
                     }
 
-                    <!-- 加入购物车 -->
-                    <div class="d-flex gap-3 mt-4">
-                        <a href="/cart?add=@Model.Product.ProductId" class="btn btn-brand btn-lg px-5">
-                            <i class="bi bi-cart-plus"></i> 加入购物车
+                    <!-- 操作按钮 -->
+                    <div class="product-detail-actions">
+                        <a href="/cart?add=@Model.Product.ProductId" class="btn-brand btn-lg">
+                            <i class="fas fa-cart-plus"></i> 加入购物车
                         </a>
-                        <a href="/checkout?product=@Model.Product.ProductId" class="btn btn-outline-primary btn-lg px-5">
-                            立即购买
+                        <a href="/checkout?product=@Model.Product.ProductId" class="btn-outline-brand btn-lg">
+                            <i class="fas fa-bolt"></i> 立即购买
                         </a>
                     </div>
 
                     <!-- 商品信息表 -->
-                    <table class="table table-borderless mt-4">
-                        <tr><th width="100" class="text-muted">类型</th><td>@(Model.Product.ProductType == "custom" ? "定制香水" : "成品香水")</td></tr>
-                        <tr><th class="text-muted">分类</th><td>@(Model.Product.Category ?? "-")</td></tr>
+                    <div class="product-detail-specs">
+                        <div class="spec-row"><span class="spec-label">类型</span><span class="spec-value">@(Model.Product.ProductType == "custom" ? "定制香水" : "成品香水")</span></div>
+                        <div class="spec-row"><span class="spec-label">分类</span><span class="spec-value">@(Model.Product.Category ?? "-")</span></div>
                         @if (!string.IsNullOrEmpty(Model.Product.BaseIngredients))
                         {
-                            <tr><th class="text-muted">主要成分</th><td>@Model.Product.BaseIngredients</td></tr>
+                            <div class="spec-row"><span class="spec-label">主要成分</span><span class="spec-value">@Model.Product.BaseIngredients</span></div>
                         }
-                    </table>
+                    </div>
                 </div>
             </div>
 
             @* 相关秒杀活动 *@
             @if (Model.ActiveFlashSale != null)
             {
-                <div class="alert alert-danger mt-4">
-                    <h5><i class="bi bi-lightning-charge"></i> 限时秒杀进行中！</h5>
-                    <p class="mb-1">秒杀价: <strong>¥@Model.ActiveFlashSale.FlashPrice.ToString("F2")</strong>
-                       <span class="text-decoration-line-through text-muted ms-2">¥@Model.Product.BasePrice.ToString("F2")</span>
+                <div class="flash-sale-alert">
+                    <h5><i class="fas fa-bolt"></i> 限时秒杀进行中！</h5>
+                    <p>秒杀价: <strong>¥@Model.ActiveFlashSale.FlashPrice.ToString("F2")</strong>
+                       <span class="flash-sale-original">¥@Model.Product.BasePrice.ToString("F2")</span>
                     </p>
-                    <p class="mb-0 small">剩余库存: @Model.ActiveFlashSale.Stock | 限购: @Model.ActiveFlashSale.LimitPerUser 件/人</p>
+                    <p class="flash-sale-meta">剩余库存: @Model.ActiveFlashSale.Stock | 限购: @Model.ActiveFlashSale.LimitPerUser 件/人</p>
                 </div>
             }
         </div>

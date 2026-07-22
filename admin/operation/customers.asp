@@ -121,7 +121,7 @@ Call LogAdminAction("查看客户列表", "operation", "Users", "", "")
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #1a1a2e; color: #e0e0e0; }
-        .main-content { margin-left: 250px; padding: 30px; min-height: 100vh; }
+        .main-content { margin-left: 260px; padding: 30px; min-height: 100vh; }
         .page-header { margin-bottom: 25px; }
         .page-title { color: #fff; font-size: 24px; margin: 0 0 8px; }
         .breadcrumb { color: #888; font-size: 13px; }
@@ -141,7 +141,7 @@ Call LogAdminAction("查看客户列表", "operation", "Users", "", "")
         .customers-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; color: #e0e0e0; }
         .customers-table tr:hover { background: rgba(255,255,255,0.03); }
         .user-avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #00bcd4, #00838f); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
-        .vip-badge { display: inline-block; padding: 3px 8px; background: #FFD700; color: #333; border-radius: 10px; font-size: 11px; font-weight: bold; }
+        .vip-badge { display: inline-block; padding: 3px 8px; background: #FFD700; color: #1a1a2e; border-radius: 10px; font-size: 11px; font-weight: bold; }
         .tier-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
         .tier-gold { background: rgba(255,215,0,0.2); color: #FFD700; border: 1px solid rgba(255,215,0,0.3); }
         .tier-silver { background: rgba(192,192,192,0.2); color: #C0C0C0; border: 1px solid rgba(192,192,192,0.3); }
@@ -153,8 +153,6 @@ Call LogAdminAction("查看客户列表", "operation", "Users", "", "")
         .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
         .pagination a { padding: 8px 15px; background: #2d2d44; border-radius: 6px; text-decoration: none; color: #00bcd4; border: 1px solid rgba(255,255,255,0.06); }
         .pagination a.active { background: linear-gradient(135deg, #00bcd4, #00838f); color: white; }
-        .btn-edit { padding: 5px 12px; background: #00bcd4; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
-        .btn-edit:hover { background: #00838f; }
         .note-tag { display: inline-block; padding: 2px 8px; background: rgba(0,188,212,0.12); color: #80DEEA; border-radius: 8px; font-size: 11px; }
         .cell-secondary { font-size: 12px; color: #888; }
         @media (max-width: 768px) { .main-content { margin-left: 0; } .stats-cards { grid-template-columns: 1fr 1fr; } .stats-sub { grid-template-columns: 1fr; } }
@@ -271,7 +269,7 @@ Call LogAdminAction("查看客户列表", "operation", "Users", "", "")
                         <% If ordCnt > 0 Then %>
                         <span class="tier-badge <%= tierClass %>"><%= tierLabel %></span>
                         <% Else %>
-                        <span style="color:#666;font-size:12px;">新客</span>
+                        <span style="color:#b0b0b0;font-size:12px;">新客</span>
                         <% End If %>
                     </td>
                     <td class="amount-text">¥<%= FormatNumber(spent,0) %></td>
@@ -279,7 +277,7 @@ Call LogAdminAction("查看客户列表", "operation", "Users", "", "")
                     <td>
                         <% 
                         Dim prefNote : prefNote = SafeField(rsCustomers, "PreferredNote", "")
-                        If prefNote <> "" Then Response.Write "<span class='note-tag'>" & prefNote & "</span>" Else Response.Write "<span style='color:#666;'>—</span>"
+                        If prefNote <> "" Then Response.Write "<span class='note-tag'>" & prefNote & "</span>" Else Response.Write "<span style='color:#b0b0b0;'>—</span>"
                         %>
                     </td>
                     <td class="cell-secondary">
@@ -289,7 +287,7 @@ Call LogAdminAction("查看客户列表", "operation", "Users", "", "")
                     </td>
                     <td class="cell-secondary"><%= SafeFormatDateTime(rsCustomers("CreatedAt"), 2) %></td>
                     <td>
-                        <a href="customer_detail.asp?id=<%= rsCustomers("UserID") %>" class="btn-edit"><i class="fas fa-eye"></i> 详情</a>
+                        <a href="customer_detail.asp?id=<%= rsCustomers("UserID") %>" class="btn btn--primary btn-sm"><i class="fas fa-eye"></i> 详情</a>
                     </td>
                 </tr>
                 <% rsCustomers.MoveNext

@@ -1,0 +1,127 @@
+@page "/user/my-referrals"
+@model PerfumeShop.Api.Pages.User.MyReferralsModel
+@{ ViewData["Title"] = "我的推荐"; }
+
+<section class="py-4">
+    <div class="container">
+        <nav class="breadcrumb-nav mb-3" style="font-size:.85rem;color:#999;">
+            <a href="/" style="color:#8B4513;text-decoration:none;">首页</a> /
+            <a href="/user" style="color:#8B4513;text-decoration:none;">个人中心</a> /
+            <span>我的推荐</span>
+        </nav>
+
+        <h2 class="mb-4" style="color:var(--brand);"><i class="fas fa-link"></i> 我的推荐</h2>
+
+        <!-- 统计卡片 -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card text-center p-3" style="border-radius:12px;">
+                    <i class="fas fa-users display-5" style="color:var(--brand);"></i>
+                    <h4 class="mt-2 mb-0">@Model.TotalInvites</h4>
+                    <small class="text-muted">成功邀请</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center p-3" style="border-radius:12px;">
+                    <i class="fas fa-coins display-5" style="color:#f39c12;"></i>
+                    <h4 class="mt-2 mb-0">@Model.TotalRewardPoints</h4>
+                    <small class="text-muted">获得积分</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center p-3" style="border-radius:12px;">
+                    <i class="fas fa-ticket-alt display-5" style="color:#11998e;"></i>
+                    <h4 class="mt-2 mb-0">@Model.ActiveTokenCount</h4>
+                    <small class="text-muted">有效链接</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 当前推荐链接 -->
+        @if (!string.IsNullOrEmpty(Model.CurrentLink))
+        {
+            <div class="card p-4 mb-4" style="border-radius:12px;background:linear-gradient(135deg,#fce4ec,#f3e5f5);">
+                <h5 class="mb-2"><i class="fas fa-share-alt"></i> 当前推荐链接</h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="text" id="refLink" value="@Model.CurrentLink" readonly class="form-control" style="font-family:monospace;" />
+                    <button class="btn btn-brand" style="white-space:nowrap;" onclick="copyLink()">
+                        <i class="fas fa-copy"></i> 复制
+                    </button>
+                </div>
+                <small class="text-muted mt-1 d-block">分享此链接给好友，注册后双方均可获得奖励积分！</small>
+            </div>
+        }
+        else
+        {
+            <div class="card p-4 mb-4 text-center" style="border-radius:12px;">
+                <p class="text-muted mb-3">您还没有推荐链接，点击下方按钮生成</p>
+                <button class="btn btn-brand" onclick="generateLink()">
+                    <i class="fas fa-plus"></i> 生成推荐链接
+                </button>
+            </div>
+        }
+
+        <!-- 邀请记录 -->
+        @if (Model.InvitedUsers.Any())
+        {
+            <h5 class="mb-3"><i class="fas fa-user-friends"></i> 邀请记录</h5>
+            <div class="table-responsive mb-4">
+                <table class="table" style="font-size:14px;">
+                    <thead><tr><th>用户</th><th>注册时间</th></tr></thead>
+                    <tbody>
+                        @foreach (var u in Model.InvitedUsers)
+                        {
+                            <tr>
+                                <td>@(u.Username ?? $"用户{u.UserId}")</td>
+                                <td>@(u.CreatedAt?.ToString("yyyy-MM-dd") ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <!-- 链接历史 -->
+        @if (Model.Tokens.Any())
+        {
+            <h5 class="mb-3"><i class="fas fa-history"></i> 链接历史</h5>
+            <div class="table-responsive">
+                <table class="table" style="font-size:13px;">
+                    <thead><tr><th>链接</th><th>使用/上限</th><th>状态</th><th>过期时间</th></tr></thead>
+                    <tbody>
+                        @foreach (var t in Model.Tokens)
+                        {
+                            <tr>
+                                <td style="font-family:monospace;font-size:12px;">@t.Link</td>
+                                <td>@(t.UsedCount ?? 0)/@(t.MaxUses ?? 0)</td>
+                                <td>
+                                    <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;
+                                          background:@(t.IsActive == true ? "#e8f5e9" : "#f5f5f5");
+                                          color:@(t.IsActive == true ? "#2e7d32" : "#999");">
+                                        @(t.IsActive == true ? "有效" : "已失效")
+                                    </span>
+                                </td>
+                                <td>@t.ExpiresAt.ToString("yyyy-MM-dd")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</section>
+
+@section Scripts {
+<script>
+function copyLink() {
+    var el = document.getElementById('refLink');
+    el.select();
+    navigator.clipboard.writeText(el.value).then(function() { alert('已复制到剪贴板！'); });
+}
+function generateLink() {
+    fetch('/api/user/1/referrals/generate', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => { if (d.success) location.reload(); else alert(d.message || '生成失败'); });
+}
+</script>
+}

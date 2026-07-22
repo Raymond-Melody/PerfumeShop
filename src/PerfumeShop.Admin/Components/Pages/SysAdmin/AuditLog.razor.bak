@@ -1,0 +1,20 @@
+@page "/admin/system/audit-log"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>审计日志</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">审计日志</MudText>
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent><MudTh>ID</MudTh><MudTh>管理员</MudTh><MudTh>操作类型</MudTh><MudTh>目标</MudTh><MudTh>IP</MudTh><MudTh>时间</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.LogId</MudTd><MudTd>@context.AdminName</MudTd><MudTd><MudChip T="string" Size="Size.Small">@context.ActionType</MudChip></MudTd>
+        <MudTd>@context.TargetName</MudTd><MudTd>@context.Ipaddress</MudTd><MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<AdminAuditLog> _items = new();
+    protected override async Task OnInitializedAsync() { _items = await Db.AdminAuditLogs.AsNoTracking().OrderByDescending(l => l.LogId).Take(200).ToListAsync(); }
+}

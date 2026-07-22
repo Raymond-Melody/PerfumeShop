@@ -107,7 +107,7 @@ If IsNull(todayInvitees) Then todayInvitees = 0
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #1a1a2e; color: #e0e0e0; }
-        .main-content { padding: 25px; }
+        .main-content { margin-left: 260px; padding: 25px; }
         .page-header {
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 25px; padding-bottom: 15px;
@@ -132,13 +132,13 @@ If IsNull(todayInvitees) Then todayInvitees = 0
         .stat-value { font-size: 28px; font-weight: bold; color: #fff; }
         .stat-label { color: #aaa; font-size: 13px; margin-top: 5px; }
         
-        .card {
+        .admin-card {
             background: linear-gradient(135deg, #2d2d44 0%, #1e1e32 100%);
             border-radius: 12px; padding: 25px; margin-bottom: 25px;
             border: 1px solid rgba(255,255,255,0.05);
         }
-        .card h3 { color: #fff; font-size: 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-        .card h3 i { color: #00bcd4; }
+        .admin-card h3 { color: #fff; font-size: 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .admin-card h3 i { color: #00bcd4; }
         
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; color: #ccc; margin-bottom: 5px; font-size: 14px; }
@@ -149,27 +149,22 @@ If IsNull(todayInvitees) Then todayInvitees = 0
         }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
-        .btn { display: inline-block; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; text-decoration: none; }
-        .btn-primary { background: linear-gradient(135deg, #00bcd4 0%, #00838f 100%); color: #fff; }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-danger { background: #dc3545; color: #fff; }
-        .btn-danger:hover { background: #c82333; }
-        .btn-sm { padding: 5px 12px; font-size: 12px; }
+        /* Button styles provided by /css/buttons.css */
         
         .alert { padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; }
         .alert-success { background: rgba(76,175,80,0.2); color: #4caf50; border: 1px solid rgba(76,175,80,0.3); }
         .alert-error { background: rgba(244,67,54,0.2); color: #f44336; border: 1px solid rgba(244,67,54,0.3); }
         
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 10px; background: rgba(0,0,0,0.2); color: #888; font-size: 12px; text-transform: uppercase; }
-        td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        tr:hover td { background: rgba(255,255,255,0.03); }
+        .admin-table { width: 100%; border-collapse: collapse; }
+        .admin-table th { text-align: left; padding: 10px; background: rgba(0,0,0,0.2); color: #888; font-size: 12px; text-transform: uppercase; }
+        .admin-table td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .admin-table tr:hover td { background: rgba(255,255,255,0.03); }
         
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-        .badge-active { background: rgba(76,175,80,0.2); color: #4caf50; }
-        .badge-expired { background: rgba(244,67,54,0.2); color: #f44336; }
-        .badge-exhausted { background: rgba(255,152,0,0.2); color: #ff9800; }
-        .badge-inactive { background: rgba(158,158,158,0.2); color: #9e9e9e; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+        .status-active { background: rgba(76,175,80,0.2); color: #4caf50; }
+        .status-expired { background: rgba(244,67,54,0.2); color: #f44336; }
+        .status-exhausted { background: rgba(255,152,0,0.2); color: #ff9800; }
+        .status-inactive { background: rgba(158,158,158,0.2); color: #9e9e9e; }
         
         .referral-url {
             background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 4px;
@@ -243,7 +238,7 @@ If IsNull(todayInvitees) Then todayInvitees = 0
         
         <% If activeTab = "generate" Then %>
         <!-- 生成推荐码 -->
-        <div class="card">
+        <div class="admin-card">
             <h3><i class="fas fa-qrcode"></i> 生成管理员推荐码</h3>
             <p style="color:#888;margin-bottom:20px;">管理员生成的推荐码具有更高的使用次数和自定义有效期</p>
             
@@ -269,7 +264,7 @@ If IsNull(todayInvitees) Then todayInvitees = 0
                     </div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn--primary">
                     <i class="fas fa-magic"></i> 生成推荐码
                 </button>
             </form>
@@ -299,7 +294,7 @@ If IsNull(todayInvitees) Then todayInvitees = 0
                     <label style="color:#aaa;font-size:12px;display:block;margin-bottom:5px;">注册链接（点击复制）</label>
                     <div style="display:flex;gap:8px;align-items:center;">
                         <input type="text" readonly value="<%= fullRegUrl %>" id="generatedUrl" style="flex:1;padding:10px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.4);color:#00bcd4;font-family:monospace;font-size:13px;" onclick="this.select()">
-                        <button onclick="copyGenUrl()" class="btn btn-sm" style="background:#4caf50;color:#fff;padding:10px 18px;white-space:nowrap;">
+                        <button onclick="copyGenUrl()" class="btn btn--sm" style="background:#4caf50;color:#fff;padding:10px 18px;white-space:nowrap;">
                             <i class="fas fa-copy"></i> 复制链接
                         </button>
                     </div>
@@ -334,10 +329,10 @@ If IsNull(todayInvitees) Then todayInvitees = 0
         
         <% ElseIf activeTab = "list" Then %>
         <!-- 推荐码列表 -->
-        <div class="card">
+        <div class="admin-card">
             <h3><i class="fas fa-list-ul"></i> 推荐码列表</h3>
             
-            <table>
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -384,22 +379,22 @@ If IsNull(todayInvitees) Then todayInvitees = 0
                             Dim codeStatus, codeStatusClass
                             If codeActive = 0 Then
                                 codeStatus = "已失效"
-                                codeStatusClass = "badge-inactive"
+                                codeStatusClass = "status-inactive"
                             ElseIf IsNull(codeExpires) Then
                                 codeStatus = "已过期"
-                                codeStatusClass = "badge-expired"
+                                codeStatusClass = "status-expired"
                             ElseIf Not IsDate(codeExpires) Then
                                 codeStatus = "已过期"
-                                codeStatusClass = "badge-expired"
+                                codeStatusClass = "status-expired"
                             ElseIf CDate(codeExpires) < Now() Then
                                 codeStatus = "已过期"
-                                codeStatusClass = "badge-expired"
+                                codeStatusClass = "status-expired"
                             ElseIf CLng(codeUsed) >= CLng(codeMax) Then
                                 codeStatus = "已用完"
-                                codeStatusClass = "badge-exhausted"
+                                codeStatusClass = "status-exhausted"
                             Else
                                 codeStatus = "有效"
-                                codeStatusClass = "badge-active"
+                                codeStatusClass = "status-active"
                             End If
                     %>
                     <tr>
@@ -407,7 +402,7 @@ If IsNull(todayInvitees) Then todayInvitees = 0
                         <td><%= codeAdminName %></td>
                         <td><%= codeUsed %> / <%= codeMax %></td>
                         <td><%= SafeFormatDateTime(codeExpires, 2) %></td>
-                        <td><span class="badge <%= codeStatusClass %>"><%= codeStatus %></span></td>
+                        <td><span class="status-badge <%= codeStatusClass %>"><%= codeStatus %></span></td>
                         <td><%= SafeFormatDateTime(codeCreated, 2) %></td>
                         <td>
                             <% 
@@ -422,17 +417,17 @@ If IsNull(todayInvitees) Then todayInvitees = 0
                                 End If
                                 codeFullUrl = codeProtocol & Request.ServerVariables("HTTP_HOST") & "/user/register.asp?token=" & Server.URLEncode(codeOriginalToken)
                             %>
-                            <button type="button" class="btn btn-sm" onclick="copyCodeUrl(this, '<%= Server.HTMLEncode(codeFullUrl) %>')" style="background:#4caf50;color:#fff;padding:4px 10px;margin-right:4px;">
+                            <button type="button" class="btn btn--sm" onclick="copyCodeUrl(this, '<%= Server.HTMLEncode(codeFullUrl) %>')" style="background:#4caf50;color:#fff;padding:4px 10px;margin-right:4px;">
                                 <i class="fas fa-copy"></i> 复制
                             </button>
                             <form method="post" style="display:inline;" onsubmit="return confirm('确定要使此推荐码失效吗？');">
                                 <%= GetCSRFTokenField() %>
                                 <input type="hidden" name="action" value="deactivate">
                                 <input type="hidden" name="token_id" value="<%= codeId %>">
-                                <button type="submit" class="btn btn-danger btn-sm">失效</button>
+                                <button type="submit" class="btn btn--danger btn--sm">失效</button>
                             </form>
                             <% Else %>
-                            <span style="color:#666;font-size:11px;">-</span>
+                            <span style="color:#888;font-size:11px;">-</span>
                             <% End If %>
                         </td>
                     </tr>
@@ -449,10 +444,10 @@ If IsNull(todayInvitees) Then todayInvitees = 0
         
         <% ElseIf activeTab = "relations" Then %>
         <!-- 推荐关系链 -->
-        <div class="card">
+        <div class="admin-card">
             <h3><i class="fas fa-sitemap"></i> 推荐关系链</h3>
             
-            <table>
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>上级会员</th>

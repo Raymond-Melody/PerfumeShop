@@ -1,0 +1,100 @@
+﻿@page "/admin/Operation/ReferralCodes"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthState
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+@inject PerfumeShopContext Db
+@inject IConfiguration Config
+<PageTitle>推荐码管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-user-friends" style="color:#00bcd4;"></i> 推荐码管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>推荐码管理</span></div></div>
+@if(_error!=null){<div class="alert alert-error">@_error<button class="btn btn-outline btn-sm" @onclick="RetryLoad">重试</button></div>}
+else if(!_loaded){<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+else{
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgErr?"alert-error":"alert-success")"><i class="fas fa-info-circle"></i> @_msg</div>}
+<div class="tab-bar"><button class="tab @(_tab=="generate"?"active":"")" @onclick='()=>_tab="generate"'><i class="fas fa-plus-circle"></i> 生成推荐码</button><button class="tab @(_tab=="list"?"active":"")" @onclick='()=>_tab="list"'><i class="fas fa-list"></i> 推荐码列表</button><button class="tab @(_tab=="chain"?"active":"")" @onclick='()=>_tab="chain"'><i class="fas fa-sitemap"></i> 推荐关系链</button></div>
+
+@if(_tab=="generate"){<div class="panel"><h3>生成管理员推荐码</h3><p class="hint">生成后可分享给潜在客户，用于注册裂变。有效期 1-30 天，可用次数 1-1000。</p>
+<div class="form-row"><div class="form-group"><label>可用次数</label><input type="number" min="1" max="1000" class="form-input" @bind="_genMaxUses"/></div><div class="form-group"><label>有效天数</label><input type="number" min="1" max="30" class="form-input" @bind="_genDays"/></div><div class="form-group" style="align-self:flex-end;"><button class="btn btn-primary" disabled="@_generating" @onclick="GenerateCode"><i class="fas fa-magic"></i> @(_generating?"生成中...":"生成推荐码")</button></div></div>
+@if(!string.IsNullOrEmpty(_lastToken)){<div class="gen-result"><div style="margin-bottom:12px;"><span class="gen-label">最新生成的推荐码：</span><code class="gen-code">@_lastToken</code></div><div style="display:flex;flex-direction:column;gap:8px;"><label style="color:#aaa;font-size:12px;">注册链接（点击复制发送给新用户即可完成推荐注册）</label><div style="display:flex;gap:8px;align-items:center;"><input type="text" readonly value="@_shareUrl" id="generatedUrl" style="flex:1;padding:10px 14px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.4);color:#00bcd4;font-family:monospace;font-size:13px;" onclick="this.select()"/><button class="btn btn-copy" @onclick="CopyShareUrl" style="background:#4caf50;color:#fff;padding:10px 18px;white-space:nowrap;"><i class="fas fa-copy"></i> 复制链接</button></div></div></div>}</div>}
+
+@if(_tab=="list"){<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#00bcd4;">@_totalCount</div><div class="stat-label">推荐码总数</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_activeCount</div><div class="stat-label">有效推荐码</div></div><div class="stat-card"><div class="stat-value" style="color:#f44336;">@_disabledCount</div><div class="stat-label">已禁用/过期</div></div><div class="stat-card"><div class="stat-value" style="color:#FF9800;">@_totalUsed</div><div class="stat-label">总使用次数</div></div></div>
+<div class="ref-grid">@if(_items.Any()){@foreach(var t in _items){var ia=t.IsActive==true;var expired=t.ExpiresAt<DateTime.Now;<div class="ref-card"><div class="ref-card-header"><span class="ref-id">#@t.TokenId</span><span class="status-badge @(ia&&!expired?"status-active":"status-inactive")">@(ia&&!expired?"有效":expired?"已过期":"已禁用")</span></div><div class="ref-body"><div class="ref-token">@(string.IsNullOrEmpty(t.OriginalToken)?(t.TokenHash?.Length>16?t.TokenHash[..16]+"...":t.TokenHash):t.OriginalToken)</div><div class="ref-meta"><div class="ref-meta-item">推荐人ID: @t.ReferrerUserId</div><div class="ref-meta-item">类型: @(t.ReferrerType??"-")</div><div class="ref-meta-item">已用: @(t.UsedCount??0)/@(t.MaxUses??0)</div></div><div class="ref-dates"><span>过期: @t.ExpiresAt.ToString("yyyy-MM-dd")</span><span>创建: @(t.CreatedAt?.ToString("yyyy-MM-dd")??"-")</span></div></div><div class="ref-card-footer"><button class="btn btn-outline btn-sm" @onclick="()=>CopyTokenUrl(t)"><i class="fas fa-copy"></i> 复制</button><button class="btn btn-outline btn-sm" @onclick="()=>ToggleActive(t)">@(ia?"禁用":"启用")</button></div></div>}}else{<div class="empty-state"><h3>暂无推荐码</h3></div>}</div>}
+
+@if(_tab=="chain"){<div class="panel"><h3>推荐关系链</h3><p class="hint">展示会员之间的推荐关系（推荐人 → 被推荐人）及层级深度。</p>
+<table class="data-table"><thead><tr><th>关系ID</th><th>推荐人</th><th>被推荐人</th><th>层级</th><th>建立时间</th></tr></thead><tbody>@if(_relations.Any()){@foreach(var r in _relations){<tr><td>#@r.RelationId</td><td>@UserName(r.AncestorUserId)</td><td style="color:#00bcd4;">@UserName(r.DescendantUserId)</td><td><span class="depth-badge">@r.Depth 级</span></td><td style="font-size:12px;color:#999;">@(r.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td></tr>}}else{<tr><td colspan="5" class="empty-cell">暂无推荐关系数据</td></tr>}</tbody></table></div>}
+}
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}.tab-bar{display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.08);}.tab{background:none;border:none;color:#888;padding:12px 20px;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;}.tab:hover{color:#e0e0e0;}.tab.active{color:#00bcd4;border-bottom-color:#00bcd4;}.panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px;}.panel h3{color:#fff;margin:0 0 8px;font-size:18px;}.hint{color:#888;font-size:13px;margin:0 0 18px;}.form-row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;}.form-group{display:flex;flex-direction:column;gap:6px;}.form-group label{font-size:13px;color:#b0b0b0;}.form-input{padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:14px;width:160px;}.form-input:focus{border-color:#00bcd4;outline:none;}.gen-result{margin-top:20px;padding:16px;background:rgba(0,188,212,0.08);border:1px dashed rgba(0,188,212,0.4);border-radius:8px;display:flex;align-items:center;gap:12px;}.gen-label{color:#888;font-size:13px;}.gen-code{font-family:Consolas,monospace;font-size:20px;color:#00bcd4;letter-spacing:2px;font-weight:700;}.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;}.btn-primary[disabled]{opacity:0.5;cursor:not-allowed;}.btn-outline{background:rgba(255,255,255,0.05);color:#b0b0b0;border:1px solid rgba(255,255,255,0.1);}.btn-sm{padding:5px 12px;font-size:11px;}.ref-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}.ref-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05);}.ref-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}.ref-id{font-size:11px;color:#999;background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:4px;}.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:500;}.status-active{background:rgba(76,175,80,0.2);color:#4caf50;}.status-inactive{background:rgba(244,67,54,0.2);color:#ef5350;}.ref-body{flex:1;}.ref-token{font-size:15px;color:#00bcd4;margin-bottom:8px;font-family:monospace;word-break:break-all;font-weight:600;}.ref-meta{display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap;}.ref-meta-item{font-size:12px;color:#888;}.ref-dates{display:flex;justify-content:space-between;font-size:11px;color:#999;}.ref-dates span{display:flex;align-items:center;gap:4px;}.ref-card-footer{display:flex;gap:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.05);margin-top:12px;}.data-table{width:100%;border-collapse:collapse;}.data-table th{background:rgba(0,0,0,0.2);color:#888;padding:12px 14px;font-size:12px;text-align:left;}.data-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.data-table tr:hover td{background:rgba(255,255,255,0.02);}.depth-badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;background:rgba(156,39,176,0.2);color:#CE93D8;}.empty-cell{text-align:center;color:#666;padding:40px;}.empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:#666;}.alert{padding:12px 20px;border-radius:8px;margin-bottom:20px;}.alert-error{background:rgba(244,67,54,0.15);color:#ef9a9a;border:1px solid rgba(244,67,54,0.3);}.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}@@media(max-width:1200px){.ref-grid{grid-template-columns:1fr;}}@@media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr);}}</style>
+@code{
+private bool _loaded,_generating,_msgErr;
+private string? _error,_msg,_lastToken,_shareUrl;
+private string _navBaseUri{get{var b=Nav.BaseUri;return b.EndsWith("/")?b:b+"/";}}
+private string _storefrontBase{get{var s=Config["Storefront:BaseUrl"];if(!string.IsNullOrWhiteSpace(s))return s.TrimEnd('/')+"/";var b=Nav.BaseUri;var u=new Uri(b);return $"{u.Scheme}://{u.Host}/";}}
+private string _tab="generate";
+private string _genMaxUses="20",_genDays="5";
+private int _adminId;
+private List<ReferralToken> _items=new();
+private List<ReferralRelation> _relations=new();
+private Dictionary<int,string> _userNames=new();
+private int _totalCount,_activeCount,_disabledCount,_totalUsed;
+
+protected override async Task OnInitializedAsync(){
+try{
+var auth=await AuthState.GetAuthenticationStateAsync();
+var idStr=auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+int.TryParse(idStr,out _adminId);
+}catch{}
+await LoadData();
+}
+
+async Task LoadData(){
+try{
+_error=null;
+_items=await Db.ReferralTokens.OrderByDescending(t=>t.CreatedAt).ToListAsync();
+ComputeStats();
+_relations=await Db.ReferralRelations.OrderByDescending(r=>r.CreatedAt).Take(300).ToListAsync();
+var uids=_relations.Select(r=>r.AncestorUserId).Concat(_relations.Select(r=>r.DescendantUserId)).Distinct().ToList();
+_userNames=(await Db.Users.Where(u=>uids.Contains(u.UserId)).Select(u=>new{u.UserId,u.Username,u.FullName}).ToListAsync()).ToDictionary(u=>u.UserId,u=>u.FullName??u.Username??$"#{u.UserId}");
+_loaded=true;
+}catch(Exception ex){_error=ex.Message;_loaded=true;}
+}
+
+void ComputeStats(){_totalCount=_items.Count;_activeCount=_items.Count(t=>t.IsActive==true&&t.ExpiresAt>DateTime.Now);_disabledCount=_items.Count(t=>t.IsActive!=true||t.ExpiresAt<=DateTime.Now);_totalUsed=_items.Sum(t=>t.UsedCount??0);}
+
+async Task RetryLoad(){_loaded=false;_error=null;await LoadData();}
+
+async Task GenerateCode(){
+_msg=null;_generating=true;
+try{
+var maxUses=int.TryParse(_genMaxUses,out var mu)?Math.Clamp(mu,1,1000):20;
+var days=int.TryParse(_genDays,out var d)?Math.Clamp(d,1,30):5;
+var timestamp=(long)(DateTime.Now-new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc)).TotalSeconds;
+var expiry=timestamp+days*86400L;
+var nonce=Convert.ToHexString(Guid.NewGuid().ToByteArray()).ToLower()[..16];
+var secret="PF_V14_Referral_Salt_9mK4xR7vN2wL8jH3fD1sA5";
+var dataToSign=$"{_adminId}|{timestamp}|{expiry}|{maxUses}|{nonce}|{secret}";
+var signature=Sha256Hex(dataToSign);
+var token=$"{_adminId}|{timestamp}|{expiry}|{maxUses}|{nonce}|{signature}";
+var rt=new ReferralToken{TokenHash=Sha256Hex(token)[..64],OriginalToken=token,ReferrerUserId=_adminId,ReferrerType="admin",ExpiresAt=DateTime.Now.AddDays(days).Date,MaxUses=maxUses,UsedCount=0,IsActive=true,CreatedAt=DateTime.Now};
+Db.ReferralTokens.Add(rt);
+await Db.SaveChangesAsync();
+_lastToken=token;
+_shareUrl=$"{_storefrontBase}user/register.asp?token={Uri.EscapeDataString(token)}";
+_msg=$"推荐码已生成（有效 {days} 天，可用 {maxUses} 次）";_msgErr=false;
+await LoadData();
+}catch(Exception ex){_msg="生成失败: "+ex.Message;_msgErr=true;}
+_generating=false;
+}
+
+async Task ToggleActive(ReferralToken t){var nv=!(t.IsActive??true);await Db.ReferralTokens.Where(x=>x.TokenId==t.TokenId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.IsActive,nv));t.IsActive=nv;await InvokeAsync(StateHasChanged);_msg=$"推荐码 #{t.TokenId} 已{(nv?"启用":"禁用")}";_msgErr=false;ComputeStats();}
+
+async Task CopyShareUrl(){if(!string.IsNullOrEmpty(_shareUrl)){await Js.InvokeVoidAsync("navigator.clipboard.writeText",_shareUrl);_msg="链接已复制到剪贴板";_msgErr=false;}}
+
+async Task CopyTokenUrl(ReferralToken t){var tok=!string.IsNullOrEmpty(t.OriginalToken)?t.OriginalToken:t.TokenHash??"";var url=$"{_storefrontBase}user/register.asp?token={Uri.EscapeDataString(tok)}";await Js.InvokeVoidAsync("navigator.clipboard.writeText",url);_msg="推荐链接已复制到剪贴板";_msgErr=false;}
+
+string UserName(int uid)=>_userNames.TryGetValue(uid,out var n)?n:$"#{uid}";
+
+static string Sha256Hex(string s){using var sha=System.Security.Cryptography.SHA256.Create();return Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s))).ToLower();}
+}

@@ -1,0 +1,78 @@
+@page "/admin/prodcenter/sync-orders"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>订单级生产追踪</PageTitle>
+
+<div class="ph"><h2 class="pt"><i class="fas fa-sync" style="color:#E91E63;"></i> 订单级生产追踪</h2><form class="sf" @onsubmit="Search"><input type="text" @bind="_keyword" placeholder="搜索订单号/收货人/产品..." style="width:180px;" /><input type="date" @bind="_dateFrom" style="width:120px;" /><input type="date" @bind="_dateTo" style="width:120px;" /><button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>@if(!string.IsNullOrEmpty(_keyword)||!_dateFrom.HasValue||!_dateTo.HasValue){<button type="button" class="btn btn--neutral btn-sm" @onclick="ClearSearch">清除</button>}</form></div>
+
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="@(_msgErr?"alert-err":"alert-ok")">@_msg</div>}
+
+<div class="sg"><div class="sc"><span class="n" style="color:#2196F3;">@_statTotal</span><span class="l">活跃订单</span></div><div class="sc"><span class="n" style="color:#4CAF50;">@_statWithPO</span><span class="l">已关联工单</span></div><div class="sc"><span class="n" style="color:#FF9800;">@_statNoPO</span><span class="l">待排产</span><span class="s">未关联工单</span></div><div class="sc"><span class="n" style="color:#4CAF50;">@_statCompleted</span><span class="l">已完成</span></div></div>
+
+<div class="card"><div class="cb"><table class="dt"><thead><tr><th>订单号</th><th>收货人</th><th>金额</th><th>订单状态</th><th>生产状态</th><th>生产进度</th><th>下单时间</th><th>操作</th></tr></thead><tbody>
+@foreach(var o in _items){<tr><td><strong>@o.OrderNo</strong></td><td>@(o.ShippingName??"-")</td><td>¥@o.TotalAmount.ToString("N2")</td><td><span class="sb @GetOrderSCls(o.Status)">@GetOrderSLbl(o.Status)</span></td><td>@if(o.LatestPOStatus==null){<span class="sb sb-default">未排产</span>}else{<span class="sb @GetSCls(o.LatestPOStatus)">@GetSLbl(o.LatestPOStatus)</span>}</td><td><div class="pbar"><div class="pbar-f" style="width:@(o.ProgressPct)%;"></div></div><span style="font-size:11px;margin-left:6px;">@(o.ProgressPct)%</span></td><td style="color:#888;">@(o.CreatedAt?.ToString("yyyy-MM-dd"))</td><td><a href="/admin/prodcenter/order-production-detail/@o.OrderId" class="btn btn-primary btn-sm">追踪</a></td></tr>}
+@if(!_items.Any()){<tr><td colspan="8" class="tac tm" style="padding:40px;">暂无匹配的订单数据</td></tr>}
+</tbody></table></div></div>
+
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@code{
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+bool _loaded,_msgErr;string? _msg,_keyword;DateTime? _dateFrom,_dateTo;
+int _statTotal,_statWithPO,_statNoPO,_statCompleted;
+List<OrderTracking> _items=new();
+
+protected override async Task OnInitializedAsync(){await LoadData();}
+
+async Task LoadData(){
+    try{
+        var q=Db.Orders.Where(o=>o.Status=="Paid"||o.Status=="Processing"||o.Status=="Shipped"||o.Status=="Completed");
+        if(!string.IsNullOrEmpty(_keyword))q=q.Where(o=>o.OrderNo!.Contains(_keyword)||(o.ShippingName!=null&&o.ShippingName.Contains(_keyword)));
+        if(_dateFrom.HasValue)q=q.Where(o=>o.CreatedAt>=_dateFrom.Value);
+        if(_dateTo.HasValue)q=q.Where(o=>o.CreatedAt<=_dateTo.Value.AddDays(1));
+
+        _statTotal=await Db.Orders.CountAsync(o=>o.Status=="Paid"||o.Status=="Processing"||o.Status=="Shipped");
+        _statWithPO=await(from o in Db.Orders join po in Db.ProductionOrders on o.OrderId equals po.OrderId where(o.Status=="Paid"||o.Status=="Processing"||o.Status=="Shipped") select o.OrderId).Distinct().CountAsync();
+        _statNoPO=await Db.Orders.CountAsync(o=>(o.Status=="Paid"||o.Status=="Processing")&&!Db.ProductionOrders.Any(po=>po.OrderId==o.OrderId));
+        _statCompleted=await(from o in Db.Orders join po in Db.ProductionOrders on o.OrderId equals po.OrderId where(o.Status=="Paid"||o.Status=="Processing"||o.Status=="Shipped")&&po.Status=="Completed" select o.OrderId).Distinct().CountAsync();
+
+        var raw=await q.OrderByDescending(o=>o.CreatedAt).Take(50).Select(o=>new{o.OrderId,o.OrderNo,o.ShippingName,o.TotalAmount,o.Status,o.CreatedAt}).ToListAsync();
+        _items=new();
+        foreach(var r in raw){
+            var po=await Db.ProductionOrders.Where(p=>p.OrderId==r.OrderId).OrderByDescending(p=>p.UpdatedAt).FirstOrDefaultAsync();
+            var progress=0;
+            var status=po?.Status;
+            if(!string.IsNullOrEmpty(status)){
+                progress=status switch{"Pending"=>20,"InProgress"=>40,"Completed"=>60,"QC_Passed"=>75,"WarehouseIn"=>90,"ShippedOut"=>100,_=>0};
+            }
+            _items.Add(new OrderTracking{OrderId=r.OrderId,OrderNo=r.OrderNo,ShippingName=r.ShippingName,TotalAmount=r.TotalAmount,Status=r.Status,CreatedAt=r.CreatedAt,LatestPOStatus=status,ProgressPct=progress});
+        }
+    }catch(Exception ex){_msg="加载失败: "+ex.Message;_msgErr=true;}
+    _loaded=true;
+}
+
+async Task Search(){await LoadData();await InvokeAsync(StateHasChanged);}
+async Task ClearSearch(){_keyword="";_dateFrom=null;_dateTo=null;await LoadData();await InvokeAsync(StateHasChanged);}
+
+string GetOrderSCls(string? s)=>s switch{"Paid"=>"sb-paid","Processing"=>"sb-progress","Shipped"=>"sb-shipped","Completed"=>"sb-completed",_=>"sb-default"};
+string GetOrderSLbl(string? s)=>s switch{"Paid"=>"已付款","Processing"=>"处理中","Shipped"=>"已发货","Completed"=>"已完成",_=>s??"-"};
+string GetSCls(string? s)=>s switch{"Pending"=>"sb-progress","InProgress"=>"sb-progress","Completed"=>"sb-paid","QC_Passed"=>"sb-qc","QC_Fail"=>"sb-fail","WarehouseIn"=>"sb-warehouse","ShippedOut"=>"sb-shipped",_=>"sb-default"};
+string GetSLbl(string? s)=>s switch{"Pending"=>"待生产","InProgress"=>"生产中","Completed"=>"待质检","QC_Passed"=>"已质检","QC_Fail"=>"未通过","WarehouseIn"=>"已入库","ShippedOut"=>"已发货",_=>s??"-"};
+class OrderTracking{public int OrderId{get;set;}public string OrderNo{get;set;}="";public string? ShippingName{get;set;}public decimal TotalAmount{get;set;}public string? Status{get;set;}public DateTime? CreatedAt{get;set;}public string? LatestPOStatus{get;set;}public int ProgressPct{get;set;}}
+}
+
+<style>
+.ph{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}
+.sf{display:flex;gap:8px;flex-wrap:wrap;}.sf input{padding:7px 10px;background:#2d2d44;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:13px;}.sf input:focus{outline:none;border-color:#E91E63;}.sf input[type="date"]{color-scheme:dark;}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,0.06);}.sc .n{font-size:28px;font-weight:bold;}.sc .l{font-size:12px;color:#888;margin-top:5px;}.sc .s{font-size:10px;color:#666;margin-top:3px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.06);}.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(233,30,99,0.1);color:#f48fb1;padding:12px 15px;text-align:left;font-weight:600;font-size:13px;}.dt td{padding:12px 15px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e0e0e0;font-size:13px;}.dt tr:hover td{background:rgba(255,255,255,0.03);}
+.sb{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;}.sb-paid{background:rgba(33,150,243,0.15);color:#64b5f6;}.sb-progress{background:rgba(255,152,0,0.15);color:#ffb74d;}.sb-completed{background:rgba(76,175,80,0.15);color:#81c784;}.sb-qc{background:rgba(156,39,176,0.15);color:#ce93d8;}.sb-fail{background:rgba(244,67,54,0.15);color:#e57373;}.sb-warehouse{background:rgba(0,188,212,0.15);color:#80deea;}.sb-shipped{background:rgba(156,39,176,0.15);color:#ce93d8;}.sb-default{background:rgba(158,158,158,0.15);color:#9e9e9e;}
+.pbar{display:inline-flex;width:60px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;vertical-align:middle;}.pbar-f{height:100%;background:#2196F3;border-radius:3px;transition:width 0.3s;}
+.alert-ok{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}.alert-err{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:#fff;}.btn-primary{background:#2196F3;}.btn--neutral{background:#555;}.btn-sm{padding:6px 12px;font-size:12px;}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+</style>

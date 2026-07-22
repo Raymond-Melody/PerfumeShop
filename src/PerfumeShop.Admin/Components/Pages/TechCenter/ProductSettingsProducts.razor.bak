@@ -1,0 +1,60 @@
+@page "/admin/TechCenter/ProductSettingsProducts"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>产品SKU管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">产品SKU管理</MudText>
+
+<MudTextField @bind-Value="_search" Placeholder="搜索产品..." Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" Class="mb-3" Style="max-width:400px" />
+
+<MudTable Items="_filteredProducts" Dense="true" Hover="true" Striped="true" Elevation="1">
+    <HeaderContent>
+        <MudTh>ID</MudTh><MudTh>名称</MudTh><MudTh>分类</MudTh><MudTh>类型</MudTh>
+        <MudTh>基准价</MudTh><MudTh>BOM</MudTh><MudTh>状态</MudTh><MudTh>瓶型配置</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.ProductId</MudTd>
+        <MudTd>@context.ProductName</MudTd>
+        <MudTd>@(context.Category ?? "-")</MudTd>
+        <MudTd>@(context.ProductType ?? "-")</MudTd>
+        <MudTd>¥@context.BasePrice.ToString("F2")</MudTd>
+        <MudTd>¥@(context.Bomcost?.ToString("F2") ?? "-")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.IsActive == true ? Color.Success : Color.Default)">@(context.IsActive == true ? "在售" : "下架")</MudChip></MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.SettingsSuggest" Size="Size.Small" Color="Color.Info"
+                           OnClick="@(() => ViewBottles(context))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+<MudDialog @bind-Visible="_showBottles" Options="new DialogOptions { MaxWidth = MaxWidth.Medium }">
+    <TitleContent><MudText Typo="Typo.h6">瓶型配置 - @_selectedProduct?.ProductName</MudText></TitleContent>
+    <DialogContent>
+        <MudTable Items="_bottleStyles" Dense="true">
+            <HeaderContent><MudTh>瓶型ID</MudTh><MudTh>自定义价格</MudTh></HeaderContent>
+            <RowTemplate><MudTd>@context.BottleId</MudTd><MudTd>¥@(context.CustomPrice?.ToString("F2") ?? "标准价")</MudTd></RowTemplate>
+        </MudTable>
+    </DialogContent>
+    <DialogActions><MudButton OnClick="@(() => _showBottles = false)" Variant="Variant.Text">关闭</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<Product> _products = new();
+    private string _search = "";
+    private bool _showBottles;
+    private Product? _selectedProduct;
+    private List<ProductBottleStyle> _bottleStyles = new();
+
+    private List<Product> _filteredProducts => string.IsNullOrWhiteSpace(_search) ? _products : _products.Where(p => p.ProductName.Contains(_search.Trim())).ToList();
+
+    protected override async Task OnInitializedAsync() => _products = await Db.Products.OrderBy(p => p.ProductName).ToListAsync();
+
+    private async Task ViewBottles(Product p)
+    {
+        _selectedProduct = p;
+        _bottleStyles = await Db.ProductBottleStyles.Where(b => b.ProductId == p.ProductId).ToListAsync();
+        _showBottles = true;
+    }
+}

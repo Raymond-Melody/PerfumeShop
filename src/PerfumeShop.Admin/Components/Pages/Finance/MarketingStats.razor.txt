@@ -1,0 +1,48 @@
+<!-- V19财务中心 · 营销费用统计 -->
+@page "/admin/finance/marketing-stats"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>营销费用统计</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-bullhorn" style="color:#FF9800;"></i> 营销费用统计</MudText>
+
+@if (_loaded)
+{
+    <MudGrid>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">营销总费用</div><div style="font-size:28px;font-weight:700;color:#FF9800;">@_marketingExpense.ToString("C2")</div></MudPaper></MudItem>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">总营收</div><div style="font-size:28px;font-weight:700;color:#4CAF50;">@_totalRevenue.ToString("C2")</div></MudPaper></MudItem>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">ROI</div><div style="font-size:28px;font-weight:700;color:@(_roi >= 100 ? "#4CAF50" : "#F44336")">@_roi.ToString("F1")%</div></MudPaper></MudItem>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">费比</div><div style="font-size:28px;font-weight:700;color:#00bcd4;">@_costRatio.ToString("F1")%</div></MudPaper></MudItem>
+    </MudGrid>
+    <MudText Typo="Typo.h6" Class="mt-6 mb-3">营销费用明细</MudText>
+    <MudTable Items="@_campaigns" Hover="true" Dense="true" Striped="true">
+        <HeaderContent><MudTh>活动名称</MudTh><MudTh>预算</MudTh><MudTh>实际花费</MudTh><MudTh>状态</MudTh><MudTh>开始</MudTh><MudTh>结束</MudTh></HeaderContent>
+        <RowTemplate>
+            <MudTd Style="font-weight:600;">@context.CampaignName</MudTd>
+            <MudTd>@context.Budget?.ToString("C2")</MudTd>
+            <MudTd Style="color:#F44336;">@context.ActualSpend?.ToString("C2")</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.IsActive == true ? Color.Success : Color.Default)">@(context.IsActive == true ? "进行中" : "已结束")</MudChip></MudTd>
+            <MudTd>@context.StartDate?.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd>@context.EndDate?.ToString("yyyy-MM-dd")</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded;
+    private decimal _marketingExpense, _totalRevenue, _roi, _costRatio;
+    private List<MarketingCampaign> _campaigns = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _campaigns = await Db.MarketingCampaigns.AsNoTracking().ToListAsync();
+        _marketingExpense = _campaigns.Sum(c => c.ActualSpend ?? 0);
+        var payments = await Db.PaymentRecords.AsNoTracking().Where(p => p.Status == "Completed").ToListAsync();
+        _totalRevenue = payments.Sum(p => p.Amount ?? 0);
+        _roi = _marketingExpense > 0 ? (_totalRevenue / _marketingExpense) * 100 : 0;
+        _costRatio = _totalRevenue > 0 ? (_marketingExpense / _totalRevenue) * 100 : 0;
+        _loaded = true;
+    }
+}

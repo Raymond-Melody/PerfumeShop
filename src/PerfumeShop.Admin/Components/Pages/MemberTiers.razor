@@ -1,0 +1,254 @@
+@page "/admin/member-tiers"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>会员等级管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">会员等级管理</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+           OnClick="@(() => OpenCreateDialog())" Class="mb-3">新增等级</MudButton>
+
+<MudTable Items="@_tiers" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>排序</MudTh>
+        <MudTh>等级名称</MudTh>
+        <MudTh>编码</MudTh>
+        <MudTh>折扣率</MudTh>
+        <MudTh>消费门槛</MudTh>
+        <MudTh>权益</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.SortOrder</MudTd>
+        <MudTd>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@GetTierIcon(context)" Color="@GetTierBadgeColor(context)" Size="Size.Small" />
+                <MudText>@context.TierName</MudText>
+            </MudStack>
+        </MudTd>
+        <MudTd><code>@context.TierCode</code></MudTd>
+        <MudTd>@((context.DiscountRate * 100).ToString("F0"))% (@(((1 - context.DiscountRate) * 100).ToString("F0"))% OFF)</MudTd>
+        <MudTd>
+            ¥@context.MinSpent.ToString("F0")
+            @if (context.MaxSpent.HasValue) { <span> ~ ¥@context.MaxSpent.Value.ToString("F0")</span> }
+            else { <span> 以上</span> }
+        </MudTd>
+        <MudTd>
+            <MudStack Row="true" Spacing="1">
+                @if (context.FreeShipping) { <MudChip T="string" Size="Size.Small" Color="Color.Info">免运费</MudChip> }
+                @if (context.PriorityShipping) { <MudChip T="string" Size="Size.Small" Color="Color.Primary">优先发货</MudChip> }
+                @if (context.BirthdayGift) { <MudChip T="string" Size="Size.Small" Color="Color.Secondary">生日礼</MudChip> }
+                @if (context.DedicatedSupport) { <MudChip T="string" Size="Size.Small" Color="Color.Warning">专属客服</MudChip> }
+            </MudStack>
+        </MudTd>
+        <MudTd>
+            <MudSwitch @bind-Value="context.IsActive" Color="Color.Success" Label="@(context.IsActive ? "启用" : "停用")"
+                       OnClick="@(() => ToggleActive(context))" />
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Info"
+                           OnClick="@(() => OpenEditDialog(context))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@* 编辑/新增对话框 *@
+<MudDialog @bind-Visible="_showDialog" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_isEditing ? "编辑等级" : "新增等级")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.TierCode" Label="等级编码" Required="true"
+                              Disabled="_isEditing" HelperText="如 bronze, silver, gold, platinum" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.TierName" Label="等级名称" Required="true"
+                              HelperText="如 青铜会员, 白银会员" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.TierNameEn" Label="英文名称" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_editItem.SortOrder" Label="排序" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_discountPercent" Label="折扣力度(%)" Min="0" Max="99"
+                                 HelperText="如 5 表示 95折(5% OFF), 0 表示原价" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.IconClass" Label="图标(Icon Class)"
+                              HelperText="如 fa-solid fa-crown" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.BadgeBg" Label="徽章颜色"
+                              HelperText="如 #FFD700" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.Color" Label="主题色" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_editItem.MinSpent" Label="最低消费额(元)" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_editItem.MaxSpent" Label="最高消费额(元, 空=无上限)" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">权益设置</MudText>
+                <MudStack Row="true" Spacing="2">
+                    <MudSwitch @bind-Value="_editItem.FreeShipping" Color="Color.Info" Label="免运费" />
+                    <MudSwitch @bind-Value="_editItem.PriorityShipping" Color="Color.Primary" Label="优先发货" />
+                    <MudSwitch @bind-Value="_editItem.BirthdayGift" Color="Color.Secondary" Label="生日礼" />
+                    <MudSwitch @bind-Value="_editItem.DedicatedSupport" Color="Color.Warning" Label="专属客服" />
+                </MudStack>
+            </MudItem>
+            <MudItem xs="12">
+                <MudSwitch @bind-Value="_editItem.IsActive" Color="Color.Success" Label="启用" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showDialog = false" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="SaveTier" Variant="Variant.Filled" Color="Color.Primary">
+            @(_isEditing ? "保存" : "创建")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<MemberTier> _tiers = new();
+    private bool _showDialog;
+    private bool _isEditing;
+    private MemberTier _editItem = new();
+    private double _discountPercent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTiers();
+    }
+
+    private async Task LoadTiers()
+    {
+        _tiers = await Db.MemberTiers.OrderBy(t => t.SortOrder).ToListAsync();
+    }
+
+    private void OpenCreateDialog()
+    {
+        _isEditing = false;
+        _editItem = new MemberTier
+        {
+            TierCode = "",
+            TierName = "",
+            DiscountRate = 0.95m,
+            MinSpent = 0,
+            SortOrder = _tiers.Count + 1,
+            IsActive = true,
+            CreatedAt = DateTime.Now
+        };
+        _discountPercent = 5;
+        _showDialog = true;
+    }
+
+    private void OpenEditDialog(MemberTier tier)
+    {
+        _isEditing = true;
+        _editItem = new MemberTier
+        {
+            TierId = tier.TierId,
+            TierCode = tier.TierCode,
+            TierName = tier.TierName,
+            TierNameEn = tier.TierNameEn,
+            DiscountRate = tier.DiscountRate,
+            MinSpent = tier.MinSpent,
+            MaxSpent = tier.MaxSpent,
+            FreeShipping = tier.FreeShipping,
+            PriorityShipping = tier.PriorityShipping,
+            BirthdayGift = tier.BirthdayGift,
+            DedicatedSupport = tier.DedicatedSupport,
+            IconClass = tier.IconClass,
+            Color = tier.Color,
+            BadgeBg = tier.BadgeBg,
+            SortOrder = tier.SortOrder,
+            IsActive = tier.IsActive
+        };
+        _discountPercent = (double)((1 - tier.DiscountRate) * 100);
+        _showDialog = true;
+    }
+
+    private async Task SaveTier()
+    {
+        _editItem.DiscountRate = 1m - (decimal)(_discountPercent / 100.0);
+        _editItem.UpdatedAt = DateTime.Now;
+
+        if (_isEditing)
+        {
+            var existing = await Db.MemberTiers.FindAsync(_editItem.TierId);
+            if (existing != null)
+            {
+                var who="管理员";var tc=existing.TierCode;
+                void Log(string fn,string ov,string nv){if(ov!=nv)Db.TierConfigLogs.Add(new TierConfigLog{TierCode=tc,FieldName=fn,OldValue=ov,NewValue=nv,ChangedBy=who,ChangedAt=DateTime.Now});}
+                Log("等级名称",existing.TierName??"",_editItem.TierName??"");Log("英文名称",existing.TierNameEn??"",_editItem.TierNameEn??"");Log("折扣率",existing.DiscountRate.ToString("F3"),_editItem.DiscountRate.ToString("F3"));Log("消费门槛",existing.MinSpent.ToString(),_editItem.MinSpent.ToString());Log("消费上限",(existing.MaxSpent?.ToString()??"无上限"),(_editItem.MaxSpent?.ToString()??"无上限"));Log("免运费",(existing.FreeShipping?"是":"否"),(_editItem.FreeShipping?"是":"否"));Log("优先发货",(existing.PriorityShipping?"是":"否"),(_editItem.PriorityShipping?"是":"否"));Log("生日礼",(existing.BirthdayGift?"是":"否"),(_editItem.BirthdayGift?"是":"否"));Log("专属客服",(existing.DedicatedSupport?"是":"否"),(_editItem.DedicatedSupport?"是":"否"));Log("图标",existing.IconClass??"",_editItem.IconClass??"");Log("主题色",existing.Color??"",_editItem.Color??"");Log("排序",existing.SortOrder.ToString(),_editItem.SortOrder.ToString());Log("启用状态",(existing.IsActive?"是":"否"),(_editItem.IsActive?"是":"否"));
+                existing.TierName = _editItem.TierName;
+                existing.TierNameEn = _editItem.TierNameEn;
+                existing.DiscountRate = _editItem.DiscountRate;
+                existing.MinSpent = _editItem.MinSpent;
+                existing.MaxSpent = _editItem.MaxSpent;
+                existing.FreeShipping = _editItem.FreeShipping;
+                existing.PriorityShipping = _editItem.PriorityShipping;
+                existing.BirthdayGift = _editItem.BirthdayGift;
+                existing.DedicatedSupport = _editItem.DedicatedSupport;
+                existing.IconClass = _editItem.IconClass;
+                existing.Color = _editItem.Color;
+                existing.BadgeBg = _editItem.BadgeBg;
+                existing.SortOrder = _editItem.SortOrder;
+                existing.IsActive = _editItem.IsActive;
+                existing.UpdatedAt = DateTime.Now;
+            }
+            Snackbar.Add($"等级 \"{_editItem.TierName}\" 已更新", Severity.Success);
+        }
+        else
+        {
+            _editItem.CreatedAt = DateTime.Now;
+            Db.MemberTiers.Add(_editItem);
+            Snackbar.Add($"等级 \"{_editItem.TierName}\" 已创建", Severity.Success);
+        }
+
+        await Db.SaveChangesAsync();
+        _showDialog = false;
+        await LoadTiers();
+    }
+
+    private async Task ToggleActive(MemberTier tier)
+    {
+        await Db.MemberTiers.Where(t => t.TierId == tier.TierId)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsActive, tier.IsActive).SetProperty(t => t.UpdatedAt, DateTime.Now));
+        Snackbar.Add($"等级 \"{tier.TierName}\" 已{(tier.IsActive ? "启用" : "停用")}", Severity.Success);
+    }
+
+    private string GetTierIcon(MemberTier t) => !string.IsNullOrEmpty(t.IconClass)
+        ? t.IconClass.Replace("fas ", "").Replace("fa-solid ", "").Replace("fa-", "") switch
+        {
+            "crown" => Icons.Material.Filled.Star,
+            "diamond" => Icons.Material.Filled.Diamond,
+            "star" => Icons.Material.Filled.Stars,
+            "shield" => Icons.Material.Filled.Shield,
+            "award" => Icons.Material.Filled.EmojiEvents,
+            _ => Icons.Material.Filled.CardMembership
+        }
+        : Icons.Material.Filled.CardMembership;
+
+    private Color GetTierBadgeColor(MemberTier t) => t.TierCode?.ToLower() switch
+    {
+        "platinum" => Color.Secondary,
+        "gold" => Color.Warning,
+        "silver" => Color.Info,
+        "bronze" => Color.Tertiary,
+        _ => Color.Default
+    };
+}

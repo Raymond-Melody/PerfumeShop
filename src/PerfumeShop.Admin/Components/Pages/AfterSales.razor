@@ -1,0 +1,194 @@
+@page "/admin/after-sales"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>售后管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">售后服务管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudTextField @bind-Value="_searchText" Placeholder="搜索订单号/用户ID..." Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_typeFilter" Placeholder="类型筛选" Clearable="true">
+            <MudSelectItem Value="@("refund")">退款</MudSelectItem>
+            <MudSelectItem Value="@("return")">退货</MudSelectItem>
+            <MudSelectItem Value="@("exchange")">换货</MudSelectItem>
+            <MudSelectItem Value="@("complaint")">投诉</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_statusFilter" Placeholder="状态筛选" Clearable="true">
+            <MudSelectItem Value="@("pending")">待处理</MudSelectItem>
+            <MudSelectItem Value="@("processing")">处理中</MudSelectItem>
+            <MudSelectItem Value="@("approved")">已通过</MudSelectItem>
+            <MudSelectItem Value="@("rejected")">已拒绝</MudSelectItem>
+            <MudSelectItem Value="@("completed")">已完成</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<AfterSale>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>订单号</MudTh>
+        <MudTh>用户ID</MudTh>
+        <MudTh>类型</MudTh>
+        <MudTh>原因</MudTh>
+        <MudTh>退款金额</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>创建时间</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.AfterSalesId</MudTd>
+        <MudTd>@context.OrderId</MudTd>
+        <MudTd>@context.UserId</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetTypeColor(context.RequestType)">
+                @FormatType(context.RequestType)
+            </MudChip>
+        </MudTd>
+        <MudTd><MudText Typo="Typo.body2" Style="max-width:200px">@(context.Reason ?? "-")</MudText></MudTd>
+        <MudTd>@(context.RefundAmount.HasValue ? $"¥{context.RefundAmount:F2}" : "-")</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                @FormatStatus(context.Status)
+            </MudChip>
+        </MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                           OnClick="@(() => ViewDetail(context))" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@* 处理对话框 *@
+<MudDialog @bind-Visible="_showDetail" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">售后处理 #@_selectedItem?.AfterSalesId</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedItem != null)
+        {
+            <MudGrid>
+                <MudItem xs="6"><MudText><b>售后ID:</b> @_selectedItem.AfterSalesId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>订单ID:</b> @_selectedItem.OrderId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>用户ID:</b> @_selectedItem.UserId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>类型:</b> @FormatType(_selectedItem.RequestType)</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>退款金额:</b> @(_selectedItem.RefundAmount.HasValue ? $"¥{_selectedItem.RefundAmount:F2}" : "-")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>当前状态:</b> <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_selectedItem.Status)">@FormatStatus(_selectedItem.Status)</MudChip></MudText></MudItem>
+                <MudItem xs="12"><MudText><b>申请原因:</b> @(_selectedItem.Reason ?? "-")</MudText></MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_adminNotes" Label="管理员备注" Lines="3" Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showDetail = false" Variant="Variant.Text">关闭</MudButton>
+        @if (_selectedItem?.Status == "pending")
+        {
+            <MudButton OnClick="@(() => Process("approved"))" Variant="Variant.Filled" Color="Color.Success">通过</MudButton>
+            <MudButton OnClick="@(() => Process("rejected"))" Variant="Variant.Filled" Color="Color.Error">拒绝</MudButton>
+        }
+        @if (_selectedItem?.Status == "processing")
+        {
+            <MudButton OnClick="@(() => Process("completed"))" Variant="Variant.Filled" Color="Color.Success">完成</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudTable<AfterSale>? _table;
+    private string _searchText = "";
+    private string? _typeFilter;
+    private string? _statusFilter = "pending";
+    private bool _showDetail;
+    private AfterSale? _selectedItem;
+    private string _adminNotes = "";
+
+    private async Task<TableData<AfterSale>> ServerReload(TableState state)
+    {
+        var query = Db.AfterSales.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var s = _searchText.Trim();
+            query = query.Where(a => a.OrderId.ToString().Contains(s) || a.UserId.ToString().Contains(s));
+        }
+        if (!string.IsNullOrWhiteSpace(_typeFilter))
+            query = query.Where(a => a.RequestType == _typeFilter);
+        if (!string.IsNullOrWhiteSpace(_statusFilter))
+            query = query.Where(a => a.Status == _statusFilter);
+
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(a => a.CreatedAt)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<AfterSale> { TotalItems = total, Items = items };
+    }
+
+    private void ViewDetail(AfterSale item) { _selectedItem = item; _adminNotes = item.AdminNotes ?? ""; _showDetail = true; }
+
+    private async Task Process(string newStatus)
+    {
+        if (_selectedItem == null) return;
+        await Db.AfterSales.Where(a => a.AfterSalesId == _selectedItem.AfterSalesId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.Status, newStatus)
+                .SetProperty(a => a.AdminNotes, _adminNotes)
+                .SetProperty(a => a.ProcessedAt, DateTime.Now));
+        _selectedItem.Status = newStatus;
+        _selectedItem.AdminNotes = _adminNotes;
+        _selectedItem.ProcessedAt = DateTime.Now;
+        Snackbar.Add($"售后 #{_selectedItem.AfterSalesId} 已{FormatStatus(newStatus)}", Severity.Success);
+        _showDetail = false;
+        await _table!.ReloadServerData();
+    }
+
+    private static string FormatType(string type) => type switch
+    {
+        "refund" => "退款",
+        "return" => "退货",
+        "exchange" => "换货",
+        "complaint" => "投诉",
+        _ => type
+    };
+
+    private static Color GetTypeColor(string type) => type switch
+    {
+        "refund" => Color.Warning,
+        "return" => Color.Info,
+        "exchange" => Color.Primary,
+        "complaint" => Color.Error,
+        _ => Color.Default
+    };
+
+    private static Color GetStatusColor(string? status) => status switch
+    {
+        "pending" => Color.Warning,
+        "processing" => Color.Info,
+        "approved" => Color.Primary,
+        "rejected" => Color.Error,
+        "completed" => Color.Success,
+        _ => Color.Default
+    };
+
+    private static string FormatStatus(string? status) => status switch
+    {
+        "pending" => "待处理",
+        "processing" => "处理中",
+        "approved" => "已通过",
+        "rejected" => "已拒绝",
+        "completed" => "已完成",
+        _ => status ?? "-"
+    };
+}

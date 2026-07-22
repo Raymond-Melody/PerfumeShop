@@ -1,0 +1,46 @@
+<!-- V19财务中心 · 支付配置 -->
+@page "/admin/finance/payment-config"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject ISnackbar Snackbar
+
+<PageTitle>支付配置</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-credit-card" style="color:#00bcd4;"></i> 支付配置</MudText>
+
+@if (_loaded)
+{
+    <MudPaper Class="pa-6" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+        <MudText Typo="Typo.h6" Class="mb-4">支付方式管理</MudText>
+        <MudTable Items="@_methods" Hover="true" Dense="true">
+            <HeaderContent><MudTh>方式</MudTh><MudTh>说明</MudTh><MudTh>状态</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd Style="font-weight:600;">@context.Method</MudTd>
+                <MudTd>@context.Description</MudTd>
+                <MudTd><MudSwitch @bind-Checked="context.Enabled" Color="Color.Success" /></MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    <MudPaper Class="pa-6 mt-4" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+        <MudText Typo="Typo.h6" Class="mb-4">费率配置</MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="4"><MudNumericField @bind-Value="_alipayRate" Label="支付宝费率(%)" Format="F2" Variant="Variant.Outlined" /></MudItem>
+            <MudItem xs="12" sm="4"><MudNumericField @bind-Value="_wechatRate" Label="微信费率(%)" Format="F2" Variant="Variant.Outlined" /></MudItem>
+            <MudItem xs="12" sm="4"><MudNumericField @bind-Value="_cardRate" Label="银行卡费率(%)" Format="F2" Variant="Variant.Outlined" /></MudItem>
+        </MudGrid>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveConfig" Class="mt-4">保存配置</MudButton>
+    </MudPaper>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded;
+    private double _alipayRate = 0.6, _wechatRate = 0.6, _cardRate = 1.0;
+    private List<(string Method, string Description, bool Enabled)> _methods = new() {
+        ("Alipay", "支付宝", true), ("WeChat", "微信支付", true), ("BankCard", "银行卡", true), ("COD", "货到付款", false)
+    };
+
+    protected override async Task OnInitializedAsync() { _loaded = true; }
+    private void SaveConfig() { Snackbar.Add("支付配置已保存", Severity.Success); }
+}

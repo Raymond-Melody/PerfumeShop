@@ -133,34 +133,34 @@ End If
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI',Arial,sans-serif; }
-        .main-content { margin-left: 250px; padding: 30px; min-height: 100vh; }
+        .main-content { margin-left: 260px; padding: 30px; min-height: 100vh; }
         .page-header { margin-bottom: 25px; }
         .page-title { color: #fff; font-size: 24px; margin: 0 0 8px; }
         .breadcrumb { color: #888; font-size: 13px; }
         .breadcrumb a { color: #00bcd4; text-decoration: none; }
-        .msg { padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; }
-        .msg-success { background: rgba(76,175,80,0.15); color: #4CAF50; border: 1px solid rgba(76,175,80,0.3); }
-        .card { background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; overflow: hidden; }
-        .card-header { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
-        .card-body { padding: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 12px; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; color: #999; }
-        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; }
-        tr:hover { background: rgba(255,255,255,0.03); }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-        .badge-published { background: rgba(76,175,80,0.2); color: #A5D6A7; }
-        .badge-draft { background: rgba(158,158,158,0.2); color: #BDBDBD; }
+        .alert { padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; }
+        .alert-success { background: rgba(76,175,80,0.15); color: #4CAF50; border: 1px solid rgba(76,175,80,0.3); }
+        .admin-card { background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px; overflow: hidden; }
+        .admin-card-header { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .admin-card-body { padding: 20px; }
+        .admin-table { width: 100%; border-collapse: collapse; }
+        .admin-table th { text-align: left; padding: 12px; background: rgba(0,188,212,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; color: #999; }
+        .admin-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 14px; }
+        .admin-table tr:hover { background: rgba(255,255,255,0.03); }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .status-published { background: rgba(76,175,80,0.2); color: #A5D6A7; }
+        .status-draft { background: rgba(158,158,158,0.2); color: #BDBDBD; }
         .slug-text { font-family: 'Consolas',monospace; font-size: 12px; color: #00bcd4; }
         .editor-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media (max-width: 1024px) { .editor-row { grid-template-columns: 1fr; } }
         @media (max-width: 768px) { .main-content { margin-left: 0; } }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; color: #999; font-size: 13px; margin-bottom: 5px; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; background: #1a1a2e; color: #e0e0e0; font-size: 14px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: #1a1a2e; color: #e0e0e0; font-size: 14px; }
         .form-group input:focus, .form-group textarea:focus { border-color: #00bcd4; outline: none; }
         .form-group textarea { min-height: 300px; font-family: 'Consolas',monospace; font-size: 13px; line-height: 1.6; resize: vertical; }
         .form-actions { display: flex; gap: 10px; justify-content: flex-end; }
-        .empty { text-align: center; padding: 40px; color: #666; }
+        .empty { text-align: center; padding: 40px; color: #888; }
         .content-preview { background: #1a1a2e; padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); max-height: 350px; overflow-y: auto; font-size: 14px; line-height: 1.8; }
         .content-preview h2, .content-preview h3 { color: #00bcd4; }
     </style>
@@ -174,7 +174,7 @@ End If
     </div>
 
     <% If msg <> "" Then %>
-    <div class="msg msg-<%= msgType %>"><i class="fas fa-info-circle"></i> <%= msg %></div>
+    <div class="alert alert-<%= msgType %>"><i class="fas fa-info-circle"></i> <%= msg %></div>
     <% End If %>
 
     <% If editMode Then
@@ -182,9 +182,9 @@ End If
        If Not editPage Is Nothing Then %>
     <% If Not editPage.EOF Then %>
     <!-- 编辑面板 -->
-    <div class="card">
-        <div class="card-header"><i class="fas fa-edit"></i> 编辑页面</div>
-        <div class="card-body">
+    <div class="admin-card">
+        <div class="admin-card-header"><i class="fas fa-edit"></i> 编辑页面</div>
+        <div class="admin-card-body">
             <form method="post">
                 <input type="hidden" name="action" value="save">
                 <input type="hidden" name="pageID" value="<%= editPage("PageID") %>">
@@ -228,7 +228,7 @@ End If
                     <textarea name="content"><%= editPage("Content") %></textarea>
                 </div>
                 <div class="form-actions">
-                    <a href="content_pages.asp" class="btn btn-ghost">取消</a>
+                    <a href="content_pages.asp" class="btn btn--secondary">取消</a>
                     <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> 保存页面</button>
                 </div>
             </form>
@@ -247,9 +247,9 @@ End If
     <% If editMode = False Or editID = 0 Then
     ' Show new page form if ?edit=new
     If Request.QueryString("edit") = "new" Then %>
-    <div class="card">
-        <div class="card-header"><i class="fas fa-plus-circle"></i> 新建页面</div>
-        <div class="card-body">
+    <div class="admin-card">
+        <div class="admin-card-header"><i class="fas fa-plus-circle"></i> 新建页面</div>
+        <div class="admin-card-body">
             <form method="post">
                 <input type="hidden" name="action" value="save">
                 <input type="hidden" name="pageID" value="0">
@@ -267,7 +267,7 @@ End If
                 </div>
                 <div class="form-group"><label>页面内容 (HTML)</label><textarea name="content"><p>在此输入页面内容...</p></textarea></div>
                 <div class="form-actions">
-                    <a href="content_pages.asp" class="btn btn-ghost">取消</a>
+                    <a href="content_pages.asp" class="btn btn--secondary">取消</a>
                     <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> 创建页面</button>
                 </div>
             </form>
@@ -276,10 +276,10 @@ End If
     <% End If %>
 
     <!-- 页面列表 -->
-    <div class="card">
-        <div class="card-header"><i class="fas fa-list"></i> 页面列表 (<%= pagesCountLabel %>)</div>
-        <div class="card-body">
-            <table>
+    <div class="admin-card">
+        <div class="admin-card-header"><i class="fas fa-list"></i> 页面列表 (<%= pagesCountLabel %>)</div>
+        <div class="admin-card-body">
+            <table class="admin-table">
                 <thead><tr><th>排序</th><th>标题</th><th>Slug</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead>
                 <tbody>
                     <% If Not rsPages Is Nothing Then
@@ -291,17 +291,17 @@ End If
                         <td><strong><%= rsPages("Title") %></strong></td>
                         <td><span class="slug-text">/<%= rsPages("Slug") %></span></td>
                         <td>
-                            <span class="badge <%= IIf(CBool(rsPages("IsPublished") And 1),"badge-published","badge-draft") %>">
+                            <span class="status-badge <%= IIf(CBool(rsPages("IsPublished") And 1),"status-published","status-draft") %>">
                                 <%= IIf(CBool(rsPages("IsPublished") And 1),"已发布","草稿") %>
                             </span>
                         </td>
                         <td style="font-size:13px;color:#999;"><%= rsPages("UpdatedAt") %></td>
                         <td>
-                            <a href="?edit=<%= rsPages("PageID") %>" class="btn btn-primary" style="padding:5px 10px;font-size:11px;"><i class="fas fa-edit"></i> 编辑</a>
+                            <a href="?edit=<%= rsPages("PageID") %>" class="btn btn-primary btn--sm"><i class="fas fa-edit"></i> 编辑</a>
                             <form method="post" style="display:inline;" onsubmit="return confirm('确认删除该页面？')">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="pageID" value="<%= rsPages("PageID") %>">
-                                <button type="submit" class="btn btn-danger" style="padding:5px 10px;font-size:11px;"><i class="fas fa-trash"></i></button>
+                                <button type="submit" class="btn btn-danger btn--sm"><i class="fas fa-trash"></i></button>
                             </form>
                         </td>
                     </tr>

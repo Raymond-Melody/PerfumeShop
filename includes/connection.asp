@@ -159,8 +159,8 @@ Function ExecuteQuery(sql)
     
     ' 直接使用conn和SQL字符串，避免可能的参数绑定问题
     rs.CursorLocation = 3  ' adUseClient - 支持 MoveLast/RecordCount
-    rs.CursorType = 1  ' adOpenKeyset
-    rs.LockType = 1    ' adLockOptimistic
+    rs.CursorType = 3  ' adOpenStatic - 兼容SQLOLEDB/MSOLEDBSQL，避免keyset游标失败
+    rs.LockType = 1    ' adLockReadOnly
     rs.Open sql, conn  ' 简化调用方式
     
     If Err.Number <> 0 Then

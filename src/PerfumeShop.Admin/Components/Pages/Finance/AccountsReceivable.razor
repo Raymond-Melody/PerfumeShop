@@ -1,0 +1,19 @@
+﻿@page "/admin/finance/accounts-receivable"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>应收账款</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-hand-holding-usd" style="color:#00bcd4;"></i> 应收账款</h2><div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>应收账款</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_totalCount</div><div class="stat-label">应收总数</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#4CAF50;">¥@_totalAmount.ToString("N0")</div><div class="stat-label">未收金额</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#2196F3;">¥@_receivedAmount.ToString("N0")</div><div class="stat-label">已收金额</div></div></div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>客户</th><th>金额</th><th>已收</th><th>余额</th><th>到期日</th><th>状态</th></tr></thead><tbody>
+@foreach(var a in _items){<tr class="@(a.DueDate<DateTime.Today&&a.Status!="Received"?"warning-row":"")"><td>#@a.ReceivableId</td><td>@(a.CustomerName??"-")</td><td>¥@((a.Amount??0).ToString("N2"))</td><td>¥@((a.ReceivedAmount??0).ToString("N2"))</td><td>¥@(((a.Amount??0)-(a.ReceivedAmount??0)).ToString("N2"))</td><td>@(a.DueDate?.ToString("yyyy-MM-dd")??"-")</td><td>@(a.Status??"-")</td></tr>}
+@if(!_items.Any()){<tr><td colspan="7" style="text-align:center;color:#666;padding:40px;">暂无应收记录</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.orders-table{width:100%;border-collapse:collapse;}.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;}.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;}.warning-row{background:rgba(244,67,54,0.1)!important;}</style>
+@code{private bool _loaded;private int _totalCount;private decimal _totalAmount,_receivedAmount;private List<PerfumeShop.Data.Models.AccountsReceivable> _items=new();
+protected override async Task OnInitializedAsync(){try{_items=await Db.AccountsReceivables.AsNoTracking().OrderByDescending(a=>a.ReceivableId).Take(50).ToListAsync();_totalCount=_items.Count;_totalAmount=_items.Where(a=>a.Status!="Received").Sum(a=>(a.Amount??0)-(a.ReceivedAmount??0));_receivedAmount=_items.Where(a=>a.Status=="Received").Sum(a=>a.ReceivedAmount??0);_loaded=true;}catch{_loaded=true;}}}

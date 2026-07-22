@@ -1,0 +1,47 @@
+<!-- V19财务中心 · 收入明细 -->
+@page "/admin/finance/revenue"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>收入明细</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-hand-holding-usd" style="color:#4CAF50;"></i> 收入明细</MudText>
+
+@if (_loaded)
+{
+    <MudGrid>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">总收款</div><div style="font-size:28px;font-weight:700;color:#4CAF50;">@_totalPayment.ToString("C2")</div><div style="font-size:11px;color:#666;">@_paymentCount 笔</div></MudPaper></MudItem>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">总退款</div><div style="font-size:28px;font-weight:700;color:#F44336;">@_totalRefund.ToString("C2")</div><div style="font-size:11px;color:#666;">@_refundCount 笔</div></MudPaper></MudItem>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">净收入</div><div style="font-size:28px;font-weight:700;color:#00bcd4;">@(_totalPayment - _totalRefund).ToString("C2")</div></MudPaper></MudItem>
+        <MudItem xs="12" sm="3"><MudPaper Class="pa-4 text-center" Elevation="0" Style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;"><div style="font-size:12px;color:#888;">平均单笔</div><div style="font-size:28px;font-weight:700;color:#FF9800;">@_avgPayment.ToString("C2")</div></MudPaper></MudItem>
+    </MudGrid>
+    <MudText Typo="Typo.h6" Class="mt-6 mb-3">收款记录</MudText>
+    <MudTable Items="@_payments.Take(20)" Hover="true" Dense="true" Striped="true">
+        <HeaderContent><MudTh>订单号</MudTh><MudTh>金额</MudTh><MudTh>支付方式</MudTh><MudTh>状态</MudTh><MudTh>支付时间</MudTh></HeaderContent>
+        <RowTemplate>
+            <MudTd Style="font-weight:600;color:#00bcd4;">@context.OrderId</MudTd>
+            <MudTd Style="color:#4CAF50;font-weight:600;">@context.Amount?.ToString("C2")</MudTd>
+            <MudTd>@context.Method</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "Completed" ? Color.Success : Color.Warning)">@context.Status</MudChip></MudTd>
+            <MudTd>@context.PaidAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded;
+    private decimal _totalPayment, _totalRefund, _avgPayment;
+    private int _paymentCount, _refundCount;
+    private List<PaymentRecord> _payments = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _payments = await Db.PaymentRecords.AsNoTracking().OrderByDescending(p => p.PaidAt).Take(200).ToListAsync();
+        var refunds = await Db.RefundRecords.AsNoTracking().Where(r => r.Status == "approved").ToListAsync();
+        _totalPayment = _payments.Where(p => p.Status == "Completed").Sum(p => p.Amount ?? 0); _paymentCount = _payments.Count(p => p.Status == "Completed");
+        _totalRefund = refunds.Sum(r => r.Amount ?? 0); _refundCount = refunds.Count;
+        _avgPayment = _paymentCount > 0 ? _totalPayment / _paymentCount : 0;
+        _loaded = true;
+    }
+}

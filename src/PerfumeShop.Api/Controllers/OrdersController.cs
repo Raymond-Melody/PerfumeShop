@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PerfumeShop.Core.Interfaces;
 using PerfumeShop.Data.Interfaces;
+using PerfumeShop.Data.Models;
 
 namespace PerfumeShop.Api.Controllers;
 
 /// <summary>
-/// 订单操作 API
+/// 订单操作 API — V19 M3-A 扩展
+/// 对齐 V18 user/orders.asp, user/order_detail.asp
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -15,24 +18,41 @@ public class OrdersController : ControllerBase
     private readonly IPaymentHandler _payment;
     private readonly IPromotionEngine _promo;
     private readonly ICostEngine _cost;
+    private readonly PerfumeShopContext _db;
 
     public OrdersController(
         IOrderRepository orderRepo,
         IPaymentHandler payment,
         IPromotionEngine promo,
-        ICostEngine cost)
+        ICostEngine cost,
+        PerfumeShopContext db)
     {
         _orderRepo = orderRepo;
         _payment = payment;
         _promo = promo;
         _cost = cost;
+        _db = db;
     }
 
-    /// <summary>获取用户订单列表</summary>
+    /// <summary>获取用户订单列表（分页+状态筛选）— 对齐 V18 user/orders.asp</summary>
     [HttpGet("user/{userId:int}")]
-    public async Task<IActionResult> GetUserOrders(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetUserOrders(
+        int userId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? status = null)
     {
-        var (items, total) = await _orderRepo.GetPagedByUserIdAsync(userId, page, pageSize);
+        IQueryable<Order> query = _db.Orders.Where(o => o.UserId == userId && o.Status != "Deleted");
+
+        if (!string.IsNullOrEmpty(status))
+            query = query.Where(o => o.Status == status);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
 
         return Ok(new
         {
@@ -44,6 +64,8 @@ public class OrdersController : ControllerBase
                 o.TotalAmount,
                 o.ShippingStatus,
                 o.PaymentMethod,
+                o.ShippingName,
+                o.Notes,
                 o.CreatedAt
             }),
             total,
@@ -52,7 +74,109 @@ public class OrdersController : ControllerBase
         });
     }
 
-    /// <summary>获取订单详情</summary>
+    /// <summary>获取用户订单详情 — 对齐 V18 user/order_detail.asp</summary>
+    [HttpGet("user/{userId:int}/detail/{orderId:int}")]
+    public async Task<IActionResult> GetUserOrderDetail(int userId, int orderId)
+    {
+        var order = await _db.Orders
+            .FirstOrDefaultAsync(o => o.OrderId == orderId && o.UserId == userId);
+
+        if (order == null)
+            return NotFound(new { message = "订单不存在" });
+
+        // 获取订单商品明细
+        var details = await _db.OrderDetails
+            .Where(d => d.OrderId == orderId)
+            .ToListAsync();
+
+        // 获取香调配比 (仅定制产品)
+        var noteSelections = await _db.OrderDetailNoteSelections
+            .Where(s => details.Select(d => d.DetailId).Contains(s.DetailId))
+            .Join(_db.FragranceNotes,
+                s => s.NoteId,
+                n => n.NoteId,
+                (s, n) => new { s.DetailId, s.NoteType, NoteName = n.NoteName, s.Percentage })
+            .ToListAsync();
+
+        // 获取成分信息
+        var ingredients = await _db.OrderIngredients
+            .Where(i => i.OrderId == orderId)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            order.OrderId,
+            order.OrderNo,
+            order.Status,
+            order.TotalAmount,
+            order.CostAmount,
+            order.ProfitAmount,
+            order.ShippingFee,
+            order.ShippingStatus,
+            order.ShippingCompany,
+            order.TrackingNumber,
+            order.PaymentMethod,
+            order.ShippingName,
+            order.ShippingAddress,
+            order.ShippingCity,
+            order.ShippingPhone,
+            order.Notes,
+            order.CouponCode,
+            order.CouponDiscount,
+            order.PointsRedeemed,
+            order.PointsDiscount,
+            order.CreatedAt,
+            order.UpdatedAt,
+            order.ShippedAt,
+            order.DeliveredAt,
+            details = details.Select(d => new
+            {
+                d.DetailId,
+                d.ProductId,
+                d.ProductName,
+                d.Quantity,
+                d.UnitPrice,
+                d.Subtotal,
+                d.VolumeName,
+                d.VolumeMl,
+                d.BottleName,
+                d.CustomLabel,
+                d.TopNoteName,
+                d.MiddleNoteName,
+                d.BaseNoteName,
+                noteSelections = noteSelections
+                    .Where(ns => ns.DetailId == d.DetailId)
+                    .Select(ns => new { ns.NoteType, ns.NoteName, ns.Percentage }),
+                ingredients = ingredients
+                    .Where(i => i.DetailId == d.DetailId)
+                    .Select(i => new { i.IngredientName })
+            })
+        });
+    }
+
+    /// <summary>删除订单（仅已完成/已取消可删）— 对齐 V18 delete_order.asp</summary>
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteOrder(int id, [FromQuery] int userId)
+    {
+        var order = await _orderRepo.GetByIdAsync(id);
+        if (order == null)
+            return NotFound(new { message = "订单不存在" });
+
+        if (order.UserId != userId)
+            return Forbid();
+
+        if (order.Status != "Completed" && order.Status != "Cancelled" && order.Status != "Refunded")
+            return BadRequest(new { message = "只有已完成、已取消或已退款的订单可以删除" });
+
+        // 软删除
+        order.Status = "Deleted";
+        _orderRepo.Update(order);
+        await _orderRepo.SaveChangesAsync();
+
+        return Ok(new { message = "订单已删除" });
+    }
+
+    /// <summary>获取订单详情（管理员用）</summary>
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetOrder(int id)
     {
@@ -90,7 +214,7 @@ public class OrdersController : ControllerBase
             return BadRequest(new { message = "无效的订单请求" });
 
         var orderNo = $"ORD{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(1000, 9999)}";
-        var order = new Data.Models.Order
+        var order = new Order
         {
             OrderNo = orderNo,
             UserId = request.UserId,

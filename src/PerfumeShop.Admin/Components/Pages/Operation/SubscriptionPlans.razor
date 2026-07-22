@@ -1,0 +1,81 @@
+﻿@page "/admin/Operation/SubscriptionPlans"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>订阅计划管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-box-open" style="color:#00c853;"></i> 订阅计划管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>订阅管理</span></div></div>
+
+@if (_loaded)
+{
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert alert-success"><i class="fas fa-check-circle"></i> @_msg</div>}
+<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#00c853;">@_total</div><div class="stat-label">全部计划</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_active</div><div class="stat-label">生效中</div></div><div class="stat-card"><div class="stat-value" style="color:#00bcd4;">@_subs</div><div class="stat-label">总订阅数</div></div><div class="stat-card"><div class="stat-value" style="color:#FF9800;">@_activeSubs</div><div class="stat-label">活跃订阅</div></div></div>
+<div class="tier-wheel-panel" style="margin-bottom:20px;"><div class="wheel" style="background:@WheelGradient();"><div class="wheel-center"><div class="wheel-total">@_total</div><div class="wheel-label">计划总数</div></div></div><div class="wheel-legend"><div class="legend-item"><span class="legend-dot" style="background:#4CAF50;"></span><span class="legend-name">生效中</span><span class="legend-count">@_active 个 (@(_total>0?(int)((double)_active/_total*100):0)%)</span></div><div class="legend-item"><span class="legend-dot" style="background:#9e9e9e;"></span><span class="legend-name">已禁用</span><span class="legend-count">@(_total-_active) 个</span></div></div></div>
+<button class="btn btn-primary" style="margin-bottom:20px;" @onclick="ShowForm"><i class="fas fa-plus"></i> 创建订阅计划</button>
+
+@if(_showForm){<div class="panel"><h3><i class="fas fa-@(_editId>0?"edit":"plus-circle")"></i> @(_editId>0?"编辑":"创建")订阅计划</h3>
+<form @onsubmit="HandleSave"><div class="form-row"><div class="form-group"><label>计划名称 *</label><input class="form-input" @bind="_fName" required/></div>
+<div class="form-group"><label>周期 *</label><select class="form-input" @bind="_fPeriod"><option value="monthly">月度</option><option value="quarterly">季度</option><option value="yearly">年度</option></select></div>
+<div class="form-group"><label>每期价格 *</label><input class="form-input" type="number" step="0.01" @bind="_fPrice" required/></div>
+<div class="form-group"><label>小样数量</label><input class="form-input" type="number" @bind="_fSample"/></div></div>
+<div class="form-row"><div class="form-group"><label>正装数量</label><input class="form-input" type="number" @bind="_fFull"/></div>
+<div class="form-group"><label>取消费用</label><input class="form-input" type="number" step="0.01" @bind="_fCancelFee"/></div>
+<div class="form-group"><label>排序</label><input class="form-input" type="number" @bind="_fSort"/></div>
+<div class="form-group"><label>&nbsp;</label><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#b0b0b0;"><input type="checkbox" @bind="_fFreeShip"/> 包邮</label></div></div>
+<div class="form-row"><div class="form-group" style="grid-column:1/-1;"><label>计划描述</label><textarea class="form-input" @bind="_fDesc" rows="2"></textarea></div></div>
+<div style="display:flex;gap:8px;margin-top:12px;"><button type="submit" class="btn btn-primary" disabled="@_saving"><i class="fas fa-save"></i> @(_saving?"保存中...":(_editId>0?"更新":"创建"))</button><button type="button" class="btn btn-outline" @onclick="()=>_showForm=false">取消</button></div></form></div>}
+
+<div class="panel"><h3><i class="fas fa-list"></i> 订阅计划列表</h3>
+<table class="data-table"><thead><tr><th>ID</th><th>计划名称</th><th>周期</th><th>价格</th><th>小样/正装</th><th>包邮</th><th>取消费</th><th>状态</th><th>操作</th></tr></thead>
+<tbody>@if(_plans.Any()){@foreach(var p in _plans){<tr><td>@p.PlanId</td><td style="color:#00bcd4;font-weight:500;">@p.PlanName</td><td><span class="badge badge-@(p.Period??"")">@GetPeriod(p.Period)</span></td><td style="color:#00c853;font-weight:700;">@p.Price.ToString("C2")</td><td>@p.SampleCount+@p.FullSizeCount</td><td>@(p.FreeShipping?"✅":"❌")</td><td>@p.CancellationFee.ToString("C2")</td>
+<td><span class="badge @(p.IsActive?"badge-active":"badge-inactive")">@(p.IsActive?"启用":"禁用")</span></td><td>
+<button class="btn btn-sm" style="background:#00c853;color:#fff;" @onclick="()=>Edit(p)"><i class="fas fa-edit"></i></button>
+<button class="btn btn-sm btn-outline" @onclick="()=>Toggle(p)"><i class="fas fa-power-off"></i></button>
+<button class="btn btn-sm" style="background:#c62828;color:#fff;" @onclick="()=>Delete(p.PlanId)"><i class="fas fa-trash"></i></button></td></tr>}}else{<tr><td colspan="9" class="empty-cell">暂无订阅计划</td></tr>}</tbody></table></div>
+
+<div class="panel"><h3><i class="fas fa-users"></i> 活跃订阅用户</h3>
+<table class="data-table"><thead><tr><th>ID</th><th>用户</th><th>计划</th><th>开始日期</th><th>结束日期</th><th>自动续费</th></tr></thead>
+<tbody>@if(_activeUsers.Any()){@foreach(var s in _activeUsers){<tr><td>@s.SubscriptionId</td><td>@GetUser(s.UserId)</td><td>@GetPlanName(s.PlanId)</td><td>@s.StartDate.ToString("yyyy-MM-dd")</td><td>@(s.EndDate?.ToString("yyyy-MM-dd")??"进行中")</td><td><span class="badge @(s.AutoRenew?"badge-active":"badge-inactive")">@(s.AutoRenew?"是":"否")</span></td></tr>}}else{<tr><td colspan="6" class="empty-cell">暂无活跃订阅</td></tr>}</tbody></table></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px;}.panel h3{color:#fff;margin:0 0 16px;font-size:18px;display:flex;align-items:center;gap:8px;}.panel h3 i{color:#00c853;}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px;}.form-group{display:flex;flex-direction:column;gap:4px;}.form-group label{font-size:12px;color:#888;}.form-input{padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;font-size:13px;}.form-input:focus{border-color:#00c853;outline:none;}textarea.form-input{min-height:60px;resize:vertical;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#00c853,#009624);color:#fff;}.btn-primary[disabled]{opacity:0.5;}.btn-outline{background:transparent;border:1px solid #555;color:#ccc;}.btn-sm{padding:4px 12px;font-size:11px;}
+.data-table{width:100%;border-collapse:collapse;}.data-table th{text-align:left;padding:10px 12px;background:rgba(0,0,0,0.2);color:#888;font-size:11px;text-transform:uppercase;}.data-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:#ccc;}.data-table tr:hover td{background:rgba(255,255,255,0.02);}.empty-cell{text-align:center;color:#666;padding:40px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;}.badge-active{background:rgba(76,175,80,0.2);color:#4CAF50;}.badge-inactive{background:rgba(158,158,158,0.2);color:#9e9e9e;}.badge-monthly{background:rgba(33,150,243,0.2);color:#64B5F6;}.badge-quarterly{background:rgba(156,39,176,0.2);color:#CE93D8;}.badge-yearly{background:rgba(255,152,0,0.2);color:#FFB74D;}
+.alert{padding:12px 16px;border-radius:8px;margin-bottom:16px;}.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.tier-wheel-panel{display:flex;align-items:center;gap:30px;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:20px 24px;border:1px solid rgba(255,255,255,0.05);}.wheel{width:120px;height:120px;border-radius:50%;position:relative;flex-shrink:0;}.wheel-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:76px;height:76px;background:#1a1a2e;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}.wheel-total{font-size:24px;font-weight:700;color:#fff;}.wheel-label{font-size:11px;color:#888;}.wheel-legend{display:flex;flex-direction:column;gap:8px;}.legend-item{display:flex;align-items:center;gap:8px;}.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}.legend-name{font-size:13px;color:#e0e0e0;min-width:80px;}.legend-count{font-size:12px;color:#888;}
+</style>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded, _showForm, _saving; private string? _msg;
+    private List<SubscriptionPlan> _plans=new(); private List<UserSubscription> _activeUsers=new();
+    private Dictionary<int,string> _un=new(),_pn2=new(); private int _total,_active,_subs,_activeSubs,_editId;
+    private string _fName="",_fPeriod="monthly",_fPrice="",_fSample="3",_fFull="1",_fCancelFee="0",_fSort="0",_fDesc="";private bool _fFreeShip=true;
+
+    protected override async Task OnInitializedAsync(){try{await Load();_loaded=true;}catch{_loaded=true;}}
+    async Task Load(){
+        _plans=await Db.SubscriptionPlans.OrderBy(p=>p.SortOrder).ThenBy(p=>p.PlanId).ToListAsync();_total=_plans.Count;_active=_plans.Count(p=>p.IsActive);
+        _subs=await Db.UserSubscriptions.CountAsync();_activeSubs=await Db.UserSubscriptions.CountAsync(s=>s.Status=="active"||s.Status=="0");
+        _activeUsers=await Db.UserSubscriptions.Where(s=>s.Status=="active"||s.Status=="0").OrderBy(s=>s.StartDate).Take(50).ToListAsync();
+        var uids=_activeUsers.Select(s=>s.UserId).Distinct().ToList();
+        _un=(await Db.Users.Where(u=>uids.Contains(u.UserId)).ToListAsync()).ToDictionary(u=>u.UserId,u=>u.Username??"");
+        _pn2=_plans.ToDictionary(p=>p.PlanId,p=>p.PlanName??"");
+    }
+    void ShowForm(){_editId=0;_fName="";_fPeriod="monthly";_fPrice="";_fSample="3";_fFull="1";_fCancelFee="0";_fSort="0";_fDesc="";_fFreeShip=true;_showForm=true;}
+    string WheelGradient(){if(_total==0)return"conic-gradient(#3a3a4a 0turn 1turn)";var ap=$"{(double)_active/_total*100:0.##}%";var ip=$"{(double)(_total-_active)/_total*100:0.##}%";return$"conic-gradient(#4CAF50 0 {ap},#9e9e9e 0 {ip})";}
+    void Edit(SubscriptionPlan p){_editId=p.PlanId;_fName=p.PlanName??"";_fPeriod=p.Period??"monthly";_fPrice=p.Price.ToString("F2");_fSample=p.SampleCount.ToString();_fFull=p.FullSizeCount.ToString();_fCancelFee=p.CancellationFee.ToString("F2");_fSort=p.SortOrder.ToString();_fDesc=p.Description??"";_fFreeShip=p.FreeShipping;_showForm=true;}
+    async Task HandleSave(){
+        _saving=true;try{var pr=decimal.TryParse(_fPrice,out var pv)?pv:0;var sample=int.TryParse(_fSample,out var sv)?sv:3;var full=int.TryParse(_fFull,out var fv)?fv:1;var cancel=decimal.TryParse(_fCancelFee,out var cv)?cv:0;var sort=int.TryParse(_fSort,out var so)?so:0;
+        if(string.IsNullOrWhiteSpace(_fName)||pr<=0){_msg="请填写计划名称和价格";return;}
+        if(_editId>0){await Db.SubscriptionPlans.Where(p=>p.PlanId==_editId).ExecuteUpdateAsync(s=>s.SetProperty(p=>p.PlanName,_fName).SetProperty(p=>p.Period,_fPeriod).SetProperty(p=>p.Price,pr).SetProperty(p=>p.SampleCount,sample).SetProperty(p=>p.FullSizeCount,full).SetProperty(p=>p.FreeShipping,_fFreeShip).SetProperty(p=>p.CancellationFee,cancel).SetProperty(p=>p.Description,_fDesc).SetProperty(p=>p.SortOrder,sort));_msg="更新成功";}
+        else{Db.SubscriptionPlans.Add(new SubscriptionPlan{PlanName=_fName,Period=_fPeriod,Price=pr,SampleCount=sample,FullSizeCount=full,FreeShipping=_fFreeShip,CancellationFee=cancel,Description=_fDesc,SortOrder=sort,IsActive=true,CreatedAt=DateTime.Now});await Db.SaveChangesAsync();_msg="创建成功";}
+        _showForm=false;await Load();}catch(Exception ex){_msg="操作失败: "+ex.Message;}_saving=false;}
+    async Task Toggle(SubscriptionPlan p){p.IsActive=!p.IsActive;await Db.SubscriptionPlans.Where(x=>x.PlanId==p.PlanId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.IsActive,p.IsActive));await InvokeAsync(StateHasChanged);}
+    async Task Delete(int id){await Db.SubscriptionPlans.Where(p=>p.PlanId==id).ExecuteDeleteAsync();_plans=_plans.Where(p=>p.PlanId!=id).ToList();_total--;_msg="已删除";;await InvokeAsync(StateHasChanged);}
+    string GetUser(int uid)=>_un.TryGetValue(uid,out var n)?n:$"#{uid}";
+    string GetPlanName(int pid)=>_pn2.TryGetValue(pid,out var n)?n:$"#{pid}";
+    static string GetPeriod(string? p)=>p?.ToLower() switch{"monthly"=>"月度","quarterly"=>"季度","yearly"=>"年度",_=>p??"-"};
+}

@@ -1,0 +1,32 @@
+@page "/admin/finance/reconciliations"
+@page "/admin/finance/payment-reconciliation"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>对账中心</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4"><i class="fas fa-balance-scale" style="color:#00bcd4;"></i> 对账中心</MudText>
+@if (_loaded)
+{
+    <MudGrid Class="mb-4"><MudItem xs="12" sm="3"><MudSelect @bind-Value="_statusFilter" Placeholder="状态筛选" Clearable="true">
+        <MudSelectItem Value="@("Pending")">待对账</MudSelectItem><MudSelectItem Value="@("Matched")">已匹配</MudSelectItem><MudSelectItem Value="@("Unmatched")">差异</MudSelectItem>
+    </MudSelect></MudItem></MudGrid>
+    <MudTable Items="@GetFiltered()" Hover="true" Dense="true" Striped="true">
+        <HeaderContent><MudTh>ID</MudTh><MudTh>类型</MudTh><MudTh>金额</MudTh><MudTh>差异</MudTh><MudTh>状态</MudTh><MudTh>创建时间</MudTh><MudTh>解决时间</MudTh></HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.LogId</MudTd><MudTd>@context.Type</MudTd>
+            <MudTd Style="font-weight:600;">@context.Amount?.ToString("C2")</MudTd>
+            <MudTd Style="@GetDiffStyle(context)">@context.DiffAmount?.ToString("C2")</MudTd>
+            <MudTd><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip></MudTd>
+            <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd")</MudTd><MudTd>@context.ResolvedAt?.ToString("yyyy-MM-dd")</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private bool _loaded; private List<ReconciliationLog> _items = new(); private string? _statusFilter;
+    protected override async Task OnInitializedAsync() { _items = await Db.ReconciliationLogs.AsNoTracking().OrderByDescending(r => r.LogId).Take(200).ToListAsync(); _loaded = true; }
+    private List<ReconciliationLog> GetFiltered() { var q = _items.AsEnumerable(); if (!string.IsNullOrWhiteSpace(_statusFilter)) q = q.Where(r => r.Status == _statusFilter); return q.ToList(); }
+    private static Color GetStatusColor(string? s) => s switch { "Matched" => Color.Success, "Unmatched" => Color.Error, "Pending" => Color.Warning, _ => Color.Default };
+    private static string GetDiffStyle(ReconciliationLog r) => $"color:{(r.DiffAmount > 0 ? "#F44336" : "#4CAF50")};";
+}

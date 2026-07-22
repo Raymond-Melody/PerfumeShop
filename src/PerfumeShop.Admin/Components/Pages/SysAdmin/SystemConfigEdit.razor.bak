@@ -1,0 +1,21 @@
+@page "/admin/system/config-edit"
+@using PerfumeShop.Data.Models
+
+<PageTitle>编辑系统配置</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">编辑系统配置</MudText>
+<MudGrid><MudItem xs="12" md="8"><MudForm>
+    <MudTextField @bind-Value="_s.SettingName" Label="配置名" />
+    <MudTextField @bind-Value="_s.SettingKey" Label="键" />
+    <MudTextField @bind-Value="_s.SettingValue" Label="值" Lines="3" />
+    <MudTextField @bind-Value="_s.Description" Label="描述" Lines="2" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="Save">保存</MudButton>
+    <MudButton Variant="Variant.Text" Href="/admin/system/config" Class="mt-4 ml-2">返回</MudButton>
+</MudForm></MudItem></MudGrid>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private SiteSetting _s = new();
+    private async Task Save() { _s.UpdatedAt = DateTime.Now; Db.SiteSettings.Update(_s); await Db.SaveChangesAsync(); Snackbar.Add("保存成功", Severity.Success); Nav.NavigateTo("/admin/system/config"); }
+}

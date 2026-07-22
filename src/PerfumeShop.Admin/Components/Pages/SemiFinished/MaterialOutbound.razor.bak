@@ -1,0 +1,79 @@
+@page "/admin/semifinished/material-outbound"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using MaterialOutboundModel = PerfumeShop.Data.Models.MaterialOutbound
+@using MaterialOutboundDetailModel = PerfumeShop.Data.Models.MaterialOutboundDetail
+
+<PageTitle>原料出库管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">原料出库管理</MudText>
+
+@* 筛选栏 *@
+<MudGrid Class="mb-3">
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_statusFilter" Placeholder="状态筛选" Clearable="true">
+            <MudSelectItem Value="@("Pending")">待审批</MudSelectItem>
+            <MudSelectItem Value="@("Approved")">已审批</MudSelectItem>
+            <MudSelectItem Value="@("Completed")">已出库</MudSelectItem>
+            <MudSelectItem Value="@("Cancelled")">已取消</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_typeFilter" Placeholder="出库类型" Clearable="true">
+            <MudSelectItem Value="@("Production")">生产领料</MudSelectItem>
+            <MudSelectItem Value="@("Transfer")">车间调拨</MudSelectItem>
+            <MudSelectItem Value="@("Return")">退料</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+@* 出库记录表 *@
+<MudTable ServerData="@(new Func<TableState, Task<TableData<MaterialOutboundModel>>>(ServerReload))"
+          Hover="true" Dense="true" Striped="true" RowsPerPage="15">
+    <HeaderContent>
+        <MudTh>出库单号</MudTh><MudTh>类型</MudTh><MudTh>申请人</MudTh><MudTh>审批人</MudTh>
+        <MudTh>出库日期</MudTh><MudTh>状态</MudTh><MudTh>备注</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><code>@(context.OutboundNo ?? "-")</code></MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@(context.OutboundType == "Production" ? Color.Primary : context.OutboundType == "Transfer" ? Color.Info : Color.Default)">
+                @(context.OutboundType ?? "-")
+            </MudChip>
+        </MudTd>
+        <MudTd>@(context.RequestedBy ?? "-")</MudTd>
+        <MudTd>@(context.ApprovedBy ?? "-")</MudTd>
+        <MudTd>@context.OutboundDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status ?? "")">@(context.Status ?? "-")</MudChip>
+        </MudTd>
+        <MudTd>@(context.Notes ?? "-")</MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+
+    private string _statusFilter = "";
+    private string _typeFilter = "";
+
+    private async Task<TableData<MaterialOutboundModel>> ServerReload(TableState state)
+    {
+        var q = Db.MaterialOutbounds.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(_statusFilter)) q = q.Where(m => m.Status == _statusFilter);
+        if (!string.IsNullOrWhiteSpace(_typeFilter)) q = q.Where(m => m.OutboundType == _typeFilter);
+        var total = await q.CountAsync();
+        var items = await q.OrderByDescending(m => m.CreatedAt)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<MaterialOutboundModel> { TotalItems = total, Items = items };
+    }
+
+    private Color GetStatusColor(string s) => s switch
+    {
+        "Pending" => Color.Warning,
+        "Approved" => Color.Info,
+        "Completed" => Color.Success,
+        "Cancelled" => Color.Error,
+        _ => Color.Default
+    };
+}

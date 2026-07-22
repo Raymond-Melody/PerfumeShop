@@ -1,0 +1,166 @@
+@page "/admin/TechCenter"
+@page "/admin/TechCenter/Index"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>技术中心</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">技术中心</MudText>
+
+@* 统计卡片 *@
+<MudGrid Class="mb-6">
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudAvatar Color="Color.Primary" Size="Size.Large"><MudIcon Icon="@Icons.Material.Filled.Science" /></MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.h5">@_activeRecipes</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">活跃配方</MudText>
+                    </div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudAvatar Color="Color.Secondary" Size="Size.Large"><MudIcon Icon="@Icons.Material.Filled.Spa" /></MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.h5">@_publishedAccords</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">已发布Accord</MudText>
+                    </div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudAvatar Color="Color.Tertiary" Size="Size.Large"><MudIcon Icon="@Icons.Material.Filled.Inventory" /></MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.h5">@_publishedProducts</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">已发布产品</MudText>
+                    </div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2">
+            <MudCardContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudAvatar Color="Color.Info" Size="Size.Large"><MudIcon Icon="@Icons.Material.Filled.History" /></MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.h5">@_publishLogs</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">发布日志</MudText>
+                    </div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@* 功能入口 *@
+<MudText Typo="Typo.h5" Class="mb-3">功能模块</MudText>
+<MudGrid>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="cursor-pointer" @onclick='() => NavTo("FormulaManagement")'>
+            <MudCardContent>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudAvatar Color="Color.Primary"><MudIcon Icon="@Icons.Material.Filled.Science" /></MudAvatar>
+                    <div><MudText Typo="Typo.h6">配方库管理</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">管理配方CRUD、版本历史与成分配比</MudText></div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="cursor-pointer" @onclick='() => NavTo("NoteManagement")'>
+            <MudCardContent>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudAvatar Color="Color.Secondary"><MudIcon Icon="@Icons.Material.Filled.Spa" /></MudAvatar>
+                    <div><MudText Typo="Typo.h6">香调库管理</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">管理香调CRUD、香调分类与库存</MudText></div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="cursor-pointer" @onclick='() => NavTo("RecipePublish")'>
+            <MudCardContent>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudAvatar Color="Color.Tertiary"><MudIcon Icon="@Icons.Material.Filled.Publish" /></MudAvatar>
+                    <div><MudText Typo="Typo.h6">Accord配方</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">Accord配方发布、成分配比与版本管理</MudText></div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="cursor-pointer" @onclick='() => NavTo("IngredientAggregation")'>
+            <MudCardContent>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudAvatar Color="Color.Info"><MudIcon Icon="@Icons.Material.Filled.Analytics" /></MudAvatar>
+                    <div><MudText Typo="Typo.h6">成分聚合</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">按香调/品牌/成本维度聚合分析</MudText></div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="cursor-pointer" @onclick='() => NavTo("ProductSettings")'>
+            <MudCardContent>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudAvatar Color="Color.Warning"><MudIcon Icon="@Icons.Material.Filled.Settings" /></MudAvatar>
+                    <div><MudText Typo="Typo.h6">产品配置</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">SKU、规格、定价与瓶型配置</MudText></div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="cursor-pointer" @onclick='() => NavTo("PublishLogs")'>
+            <MudCardContent>
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    <MudAvatar Color="Color.Error"><MudIcon Icon="@Icons.Material.Filled.History" /></MudAvatar>
+                    <div><MudText Typo="Typo.h6">发布日志</MudText><MudText Typo="Typo.body2" Color="Color.Secondary">版本变更、发布记录与回滚操作</MudText></div>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@* 最近发布日志 *@
+<MudText Typo="Typo.h5" Class="mt-6 mb-3">最近发布记录</MudText>
+<MudTable Items="_recentLogs" Dense="true" Hover="true" Striped="true" Elevation="1">
+    <HeaderContent>
+        <MudTh>发布时间</MudTh>
+        <MudTh>类型</MudTh>
+        <MudTh>操作人</MudTh>
+        <MudTh>IP</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.PublishedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small">@context.PublishType</MudChip></MudTd>
+        <MudTd>@context.PublishedBy</MudTd>
+        <MudTd>@context.Ipaddress</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private int _activeRecipes, _publishedAccords, _publishedProducts, _publishLogs;
+    private List<RecipePublishLog> _recentLogs = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _activeRecipes = await Db.Recipes.CountAsync(r => r.IsActive == true);
+        _publishedAccords = await Db.RecipeAccords.CountAsync(a => a.Status == "Published");
+        _publishedProducts = await Db.RecipeProducts.CountAsync(p => p.Status == "Published");
+        _publishLogs = await Db.RecipePublishLogs.CountAsync();
+        _recentLogs = await Db.RecipePublishLogs.AsNoTracking()
+            .OrderByDescending(l => l.PublishedAt).Take(10).ToListAsync();
+    }
+
+    private void NavTo(string page) => Nav.NavigateTo($"/admin/TechCenter/{page}");
+}

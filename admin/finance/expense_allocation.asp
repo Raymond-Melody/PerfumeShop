@@ -15,6 +15,13 @@ conn.Execute "SELECT CenterID FROM ExpenseRecords WHERE 1=0"
 If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE ExpenseRecords ADD CenterID INT NULL"
 conn.Execute "SELECT TOP 1 1 FROM CostCenters"
 If Err.Number <> 0 Then Err.Clear : conn.Execute "CREATE TABLE CostCenters (CenterID INT IDENTITY(1,1) PRIMARY KEY, CenterCode NVARCHAR(50) NOT NULL UNIQUE, CenterName NVARCHAR(200) NOT NULL, CenterType NVARCHAR(50) DEFAULT 'Department', IsActive BIT DEFAULT 1)"
+' V20：确保 Products 有 Weight/Volume 列（运费按规则计算所需）
+If Err.Number <> 0 Then Err.Clear
+conn.Execute "SELECT Weight FROM Products WHERE 1=0"
+If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE Products ADD Weight DECIMAL(9,3) NULL"
+If Err.Number <> 0 Then Err.Clear
+conn.Execute "SELECT Volume FROM Products WHERE 1=0"
+If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE Products ADD Volume DECIMAL(12,3) NULL"
 On Error GoTo 0
 
 ' ========== 权限检查 ==========
@@ -53,10 +60,11 @@ Function GetConfigWithDefault(key, defaultValue)
 End Function
 
 ' ========== 处理表单提交 ==========
-Dim action, msg, errMsg
+Dim action, msg, errMsg, activeTab
 action = Request.Form("action")
 msg = ""
 errMsg = ""
+activeTab = ""
 
 If action = "save_config" AND canEdit Then
     If Not ValidateCSRFToken() Then
@@ -80,6 +88,7 @@ If action = "save_config" AND canEdit Then
         
         Call LogAdminAction("配置费用分摊规则", "finance", "SiteSettings", "", "费用分摊规则配置更新")
         msg = "配置保存成功"
+        activeTab = Request.Form("configScope")
     End If
 End If
 
@@ -88,20 +97,16 @@ If action = "allocate_shipping" AND canEdit Then
     If Not ValidateCSRFToken() Then
         errMsg = "安全验证失败"
     Else
-        Dim orderId, startDate, endDate, shippingAmount, shippingMethod
+        Dim orderId, startDate, endDate, shippingMethod
         orderId = Request.Form("orderId")
         startDate = Request.Form("startDate")
         endDate = Request.Form("endDate")
-        shippingAmount = CDbl("0" & Request.Form("shippingAmount"))
         shippingMethod = Request.Form("shippingMethod")
         
-        If shippingAmount <= 0 Then
-            errMsg = "运费金额必须大于0"
-        Else
-            ' 执行运费分摊逻辑
-            Call AllocateShipping(orderId, startDate, endDate, shippingAmount, shippingMethod)
-            msg = "运费分摊完成"
-        End If
+        ' 按运费规则自动计算并分摊
+        Call AllocateShipping(orderId, startDate, endDate, shippingMethod)
+        msg = "运费分摊完成"
+        activeTab = "shipping"
     End If
 End If
 
@@ -116,6 +121,7 @@ If action = "allocate_platform_fee" AND canEdit Then
         
         Call AllocatePlatformFee(pfStartDate, pfEndDate)
         msg = "平台费用分摊完成"
+        activeTab = "platform"
     End If
 End If
 
@@ -137,6 +143,7 @@ If action = "allocate_promotion" AND canEdit Then
         Else
             Call AllocatePromotion(promoStartDate, promoEndDate, promoTotalAmount, promoGMV)
             msg = "推广费分摊完成"
+            activeTab = "promotion"
         End If
     End If
 End If
@@ -158,6 +165,7 @@ If action = "adjust_expense" AND canEdit Then
                      "WHERE ExpenseID = " & CLng(expenseId)
             If ExecuteNonQuery(adjSQL) Then
                 msg = "分摊金额调整成功"
+                activeTab = "results"
             Else
                 errMsg = "调整失败"
             End If
@@ -165,22 +173,26 @@ If action = "adjust_expense" AND canEdit Then
     End If
 End If
 
-' ========== 运费分摊子程序 ==========
-Sub AllocateShipping(orderId, startDate, endDate, shippingAmount, method)
-    Dim whereClause, rsOrders, sql, orderIDVal, shippingFee
-    Dim rsItems, totalWeight, totalVolume, itemWeight, itemVolume, quantity
-    Dim rsProducts, productId, weight, volume, allocAmount
+' ========== 运费分摊子程序（V20 重做：按运费规则自动计算）==========
+Sub AllocateShipping(orderId, startDate, endDate, method)
+    Dim whereClause, rsOrders, sql, orderIDVal, orderCreatedAt
+    Dim rsItems, totalWeight, totalVolume, totalQty, itemWeight, itemVolume, quantity
+    Dim productId, weight, volume, allocAmount
     Dim firstWeight, firstPrice, continueWeight, continuePrice, volumeFactor
-    Dim remainingAmount, totalQty, i
+    Dim defaultWeight, defaultVolume
+    Dim chargeableWeight, orderFreight, skuCount, i, remainingAmount
     
-    ' 获取配置
+    ' 获取运费规则配置
     firstWeight = CDbl("0" & GetConfigWithDefault("ShippingFirstWeight", "1"))
     firstPrice = CDbl("0" & GetConfigWithDefault("ShippingFirstPrice", "10"))
     continueWeight = CDbl("0" & GetConfigWithDefault("ShippingContinueWeight", "1"))
     continuePrice = CDbl("0" & GetConfigWithDefault("ShippingContinuePrice", "5"))
     volumeFactor = CDbl("0" & GetConfigWithDefault("ShippingVolumeFactor", "5000"))
+    ' 商品缺失重量/体积时的默认值
+    defaultWeight = CDbl("0" & GetConfigWithDefault("ShippingDefaultUnitWeight", "0.5"))
+    defaultVolume = CDbl("0" & GetConfigWithDefault("ShippingDefaultUnitVolume", "750"))
     
-    ' 构建查询条件
+    ' 构建查询条件（修正日期区间：含结束当天）
     whereClause = "Status = 'Paid'"
     If orderId <> "" Then
         whereClause = whereClause & " AND OrderID = " & CLng(orderId)
@@ -189,104 +201,137 @@ Sub AllocateShipping(orderId, startDate, endDate, shippingAmount, method)
         whereClause = whereClause & " AND CreatedAt >= '" & startDate & "'"
     End If
     If endDate <> "" Then
-        whereClause = whereClause & " AND CreatedAt <= '" & endDate & "'"
+        whereClause = whereClause & " AND CreatedAt < DATEADD(day, 1, '" & endDate & "')"
     End If
     
-    ' 查询符合条件的订单
-    sql = "SELECT OrderID, ShippingFee FROM Orders WHERE " & whereClause
+    ' 查询符合条件的订单（加选 CreatedAt 用于账期）
+    sql = "SELECT OrderID, CreatedAt FROM Orders WHERE " & whereClause
     Set rsOrders = ExecuteQuery(sql)
     
     If Not rsOrders Is Nothing Then
         Do While Not rsOrders.EOF
             orderIDVal = rsOrders("OrderID").Value
-            shippingFee = CDbl("0" & rsOrders("ShippingFee").Value)
+            orderCreatedAt = rsOrders("CreatedAt").Value
             
-            ' 如果订单有运费，按SKU分摊
-            If shippingFee > 0 Then
-                ' 获取订单内所有SKU的重量/体积信息
-                sql = "SELECT od.ProductID, od.Quantity, p.Weight, p.Volume " & _
-                      "FROM (OrderDetails AS od INNER JOIN Products AS p ON od.ProductID = p.ProductID) " & _
-                      "WHERE od.OrderID = " & orderIDVal
-                Set rsItems = ExecuteQuery(sql)
-                
+            ' 获取订单所有SKU的重量/体积/数量信息
+            sql = "SELECT od.ProductID, od.Quantity, p.Weight, p.Volume, p.ProductName " & _
+                  "FROM (OrderDetails AS od INNER JOIN Products AS p ON od.ProductID = p.ProductID) " & _
+                  "WHERE od.OrderID = " & orderIDVal
+            Set rsItems = ExecuteQuery(sql)
+            
+            If Not rsItems Is Nothing Then
                 totalWeight = 0
                 totalVolume = 0
                 totalQty = 0
                 
-                If Not rsItems Is Nothing Then
+                ' 第一遍：汇总计费重量和统计信息
+                chargeableWeight = 0
+                Do While Not rsItems.EOF
+                    quantity = rsItems("Quantity").Value
+                    If IsNull(quantity) Then quantity = 1
+                    weight = rsItems("Weight").Value
+                    If IsNull(weight) Or CDbl(weight) <= 0 Then weight = defaultWeight
+                    volume = rsItems("Volume").Value
+                    If IsNull(volume) Or CDbl(volume) <= 0 Then volume = defaultVolume
+                    
+                    ' 计费重量 = max(实际重量, 体积重/系数)
+                    itemWeight = CDbl(weight) * quantity
+                    itemVolume = (CDbl(volume) * quantity) / volumeFactor
+                    If itemWeight > itemVolume Then
+                        chargeableWeight = chargeableWeight + itemWeight
+                    Else
+                        chargeableWeight = chargeableWeight + itemVolume
+                    End If
+                    totalWeight = totalWeight + CDbl(weight) * quantity
+                    totalVolume = totalVolume + CDbl(volume) * quantity
+                    totalQty = totalQty + quantity
+                    rsItems.MoveNext
+                Loop
+                
+                ' 按运费规则计算订单运费
+                If chargeableWeight > 0 Then
+                    If chargeableWeight <= firstWeight Then
+                        orderFreight = firstPrice
+                    Else
+                        Dim extraWeight
+                        extraWeight = chargeableWeight - firstWeight
+                        ' Ceil(extraWeight / continueWeight)
+                        Dim extraUnits
+                        extraUnits = Int(extraWeight / continueWeight)
+                        If extraWeight <> extraUnits * continueWeight And continueWeight > 0 Then
+                            extraUnits = extraUnits + 1
+                        End If
+                        orderFreight = firstPrice + extraUnits * continuePrice
+                    End If
+                Else
+                    orderFreight = 0
+                End If
+                
+                ' 幂等：先清除该订单旧的运费分摊记录
+                If orderFreight > 0 Then
+                    ExecuteNonQuery "DELETE FROM ExpenseRecords WHERE OrderID = " & orderIDVal & " AND ExpenseType = 'Shipping'"
+                End If
+                
+                ' 第二遍：将订单运费分摊到各SKU
+                If orderFreight > 0 Then
+                    rsItems.MoveFirst
+                    skuCount = rsItems.RecordCount  ' 使用客户端游标的实际行数
+                    remainingAmount = orderFreight
+                    i = 0
+                    
                     Do While Not rsItems.EOF
                         quantity = rsItems("Quantity").Value
                         If IsNull(quantity) Then quantity = 1
                         weight = rsItems("Weight").Value
-                        If IsNull(weight) Then weight = 0
+                        If IsNull(weight) Or CDbl(weight) <= 0 Then weight = defaultWeight
                         volume = rsItems("Volume").Value
-                        If IsNull(volume) Then volume = 0
+                        If IsNull(volume) Or CDbl(volume) <= 0 Then volume = defaultVolume
+                        productId = rsItems("ProductID").Value
                         
-                        totalWeight = totalWeight + (weight * quantity)
-                        totalVolume = totalVolume + (volume * quantity)
-                        totalQty = totalQty + quantity
+                        ' 按选定方法计算分摊比例
+                        If method = "weight" AND totalWeight > 0 Then
+                            allocAmount = orderFreight * (CDbl(weight) * quantity) / totalWeight
+                        ElseIf method = "volume" AND totalVolume > 0 Then
+                            allocAmount = orderFreight * (CDbl(volume) * quantity) / totalVolume
+                        Else
+                            ' 回退为按数量/平均分摊（缺失数据时保证有结果）
+                            allocAmount = orderFreight / totalQty
+                        End If
+                        
+                        ' 尾差：最后一行承担剩余金额
+                        i = i + 1
+                        If i = skuCount Then
+                            allocAmount = remainingAmount
+                        Else
+                            allocAmount = Round(allocAmount, 2)
+                            remainingAmount = remainingAmount - allocAmount
+                        End If
+                        
+                        ' 写入分摊记录，账期取订单创建月份
+                        If allocAmount > 0 Then
+                            Dim shipPeriod
+                            shipPeriod = ""
+                            If Not IsNull(orderCreatedAt) And orderCreatedAt <> "" Then
+                                shipPeriod = Year(orderCreatedAt) & "-" & Right("0" & Month(orderCreatedAt), 2)
+                            Else
+                                shipPeriod = Year(Now) & "-" & Right("0" & Month(Now), 2)
+                            End If
+                            
+                            Dim shipSQL
+                            shipSQL = "INSERT INTO ExpenseRecords (OrderID, ProductID, ExpenseType, ExpenseName, Amount, " & _
+                                      "AllocationMethod, AllocationRatio, Period, CreatedAt) VALUES (" & _
+                                      orderIDVal & ", " & productId & ", 'Shipping', '运费分摊', " & allocAmount & ", '" & _
+                                      SafeSQL(method) & "', " & Round(allocAmount / orderFreight, 4) & ", '" & _
+                                      shipPeriod & "', GETDATE())"
+                            ExecuteNonQuery shipSQL
+                        End If
+                        
                         rsItems.MoveNext
                     Loop
-                    rsItems.Close
-                    Set rsItems = Nothing
                 End If
                 
-                ' 按选定方法分摊运费
-                If totalWeight > 0 OR totalVolume > 0 Then
-                    ' 重新遍历进行分摊
-                    Set rsItems = ExecuteQuery("SELECT od.ProductID, od.Quantity, p.Weight, p.Volume, p.ProductName " & _
-                          "FROM (OrderDetails AS od INNER JOIN Products AS p ON od.ProductID = p.ProductID) " & _
-                          "WHERE od.OrderID = " & orderIDVal)
-                    
-                    If Not rsItems Is Nothing Then
-                        remainingAmount = shippingFee
-                        i = 0
-                        Do While Not rsItems.EOF
-                            quantity = rsItems("Quantity").Value
-                            If IsNull(quantity) Then quantity = 1
-                            weight = rsItems("Weight").Value
-                            If IsNull(weight) Then weight = 0
-                            volume = rsItems("Volume").Value
-                            If IsNull(volume) Then volume = 0
-                            productId = rsItems("ProductID").Value
-                            
-                            ' 计算分摊比例
-                            If method = "weight" AND totalWeight > 0 Then
-                                allocAmount = shippingFee * (weight * quantity) / totalWeight
-                            ElseIf method = "volume" AND totalVolume > 0 Then
-                                allocAmount = shippingFee * (volume * quantity) / totalVolume
-                            ElseIf method = "equal" AND totalQty > 0 Then
-                                allocAmount = shippingFee / totalQty
-                            Else
-                                allocAmount = 0
-                            End If
-                            
-                            ' 最后一个SKU承担剩余金额（避免精度问题）
-                            i = i + 1
-                            If i = totalQty Then
-                                allocAmount = remainingAmount
-                            Else
-                                allocAmount = Round(allocAmount, 2)
-                                remainingAmount = remainingAmount - allocAmount
-                            End If
-                            
-                            ' 写入分摊记录
-                            If allocAmount > 0 Then
-                                Dim shipSQL
-                                shipSQL = "INSERT INTO ExpenseRecords (OrderID, ProductID, ExpenseType, ExpenseName, Amount, " & _
-                                          "AllocationMethod, AllocationRatio, Period, CreatedAt) VALUES (" & _
-                                          orderIDVal & ", " & productId & ", 'Shipping', '运费分摊', " & allocAmount & ", '" & _
-                                          SafeSQL(method) & "', " & Round(allocAmount / shippingFee, 4) & ", '" & _
-                                          Year(Now) & "-" & Right("0" & Month(Now), 2) & "', GETDATE())"
-                                ExecuteNonQuery shipSQL
-                            End If
-                            
-                            rsItems.MoveNext
-                        Loop
-                        rsItems.Close
-                        Set rsItems = Nothing
-                    End If
-                End If
+                rsItems.Close
+                Set rsItems = Nothing
             End If
             
             rsOrders.MoveNext
@@ -296,11 +341,11 @@ Sub AllocateShipping(orderId, startDate, endDate, shippingAmount, method)
     End If
 End Sub
 
-' ========== 平台费用分摊子程序 ==========
+' ========== 平台费用分摊子程序（V20 修复：数字编码匹配 + 幂等 + 账期）==========
 Sub AllocatePlatformFee(startDate, endDate)
-    Dim whereClause, rsOrders, sql, orderIDVal, totalAmount, paymentMethod
+    Dim whereClause, rsOrders, sql, orderIDVal, totalAmount, paymentMethod, orderCreatedAt
     Dim rsItems, platformFeeRate, fixedFee, feeAmount, allocAmount
-    Dim totalOrderAmount, i, remainingFee
+    Dim i, remainingFee, skuCount
     
     ' 获取各支付方式费率
     Dim feeAlipay, feeWechat, feeStripe, feePayPal, feeUnionPay, feeFixed
@@ -311,17 +356,17 @@ Sub AllocatePlatformFee(startDate, endDate)
     feeUnionPay = CDbl("0" & GetConfigWithDefault("PlatformFeeUnionPay", "0.6")) / 100
     feeFixed = CDbl("0" & GetConfigWithDefault("PlatformFixedFee", "0"))
     
-    ' 构建查询条件
+    ' 构建查询条件（修正日期区间：含结束当天）
     whereClause = "Status = 'Paid'"
     If startDate <> "" Then
         whereClause = whereClause & " AND CreatedAt >= '" & startDate & "'"
     End If
     If endDate <> "" Then
-        whereClause = whereClause & " AND CreatedAt <= '" & endDate & "'"
+        whereClause = whereClause & " AND CreatedAt < DATEADD(day, 1, '" & endDate & "')"
     End If
     
-    ' 查询符合条件的订单
-    sql = "SELECT OrderID, TotalAmount, PaymentMethod FROM Orders WHERE " & whereClause
+    ' 查询符合条件的订单（加选 CreatedAt 用于账期）
+    sql = "SELECT OrderID, TotalAmount, PaymentMethod, CreatedAt FROM Orders WHERE " & whereClause
     Set rsOrders = ExecuteQuery(sql)
     
     If Not rsOrders Is Nothing Then
@@ -329,75 +374,97 @@ Sub AllocatePlatformFee(startDate, endDate)
             orderIDVal = rsOrders("OrderID").Value
             totalAmount = CDbl("0" & rsOrders("TotalAmount").Value)
             paymentMethod = rsOrders("PaymentMethod").Value
+            orderCreatedAt = rsOrders("CreatedAt").Value
             If IsNull(paymentMethod) Then paymentMethod = ""
             
-            ' 根据支付方式确定费率
+            ' V20: 按数字支付编码匹配费率（优先），回退英文子串匹配（旧数据兼容）
             platformFeeRate = 0
-            If InStr(paymentMethod, "alipay") > 0 Then
-                platformFeeRate = feeAlipay
-            ElseIf InStr(paymentMethod, "wechat") > 0 Then
-                platformFeeRate = feeWechat
-            ElseIf InStr(paymentMethod, "stripe") > 0 Then
-                platformFeeRate = feeStripe
-            ElseIf InStr(paymentMethod, "paypal") > 0 Then
-                platformFeeRate = feePayPal
-            ElseIf InStr(paymentMethod, "union") > 0 Then
-                platformFeeRate = feeUnionPay
-            End If
+            Dim pmTrimmed
+            pmTrimmed = Trim(CStr(paymentMethod))
+            Select Case pmTrimmed
+                Case "1": platformFeeRate = feeWechat      ' 微信支付
+                Case "2": platformFeeRate = feeAlipay      ' 支付宝
+                Case "3": platformFeeRate = feePayPal      ' PayPal
+                Case "4": platformFeeRate = 0              ' 货到付款（默认无平台扣点）
+                Case Else
+                    ' 旧数据兼容：英文子串匹配
+                    If InStr(LCase(pmTrimmed), "alipay") > 0 Then
+                        platformFeeRate = feeAlipay
+                    ElseIf InStr(LCase(pmTrimmed), "wechat") > 0 Then
+                        platformFeeRate = feeWechat
+                    ElseIf InStr(LCase(pmTrimmed), "stripe") > 0 Then
+                        platformFeeRate = feeStripe
+                    ElseIf InStr(LCase(pmTrimmed), "paypal") > 0 Then
+                        platformFeeRate = feePayPal
+                    ElseIf InStr(LCase(pmTrimmed), "union") > 0 Then
+                        platformFeeRate = feeUnionPay
+                    End If
+            End Select
             
             ' 计算平台费用
             feeAmount = totalAmount * platformFeeRate + feeFixed
             
+            ' 幂等：先清除该订单旧的平台费分摊记录
             If feeAmount > 0 Then
-                ' 获取订单SKU数量用于分摊
-                Dim skuCount
-                skuCount = GetScalar("SELECT COUNT(*) FROM OrderDetails WHERE OrderID = " & orderIDVal)
+                ExecuteNonQuery "DELETE FROM ExpenseRecords WHERE OrderID = " & orderIDVal & " AND ExpenseType = 'PlatformFee'"
+            End If
+            
+            If feeAmount > 0 Then
+                ' 获取订单明细并按金额比例分摊
+                sql = "SELECT od.ProductID, od.Subtotal, p.ProductName " & _
+                      "FROM (OrderDetails AS od INNER JOIN Products AS p ON od.ProductID = p.ProductID) " & _
+                      "WHERE od.OrderID = " & orderIDVal
+                Set rsItems = ExecuteQuery(sql)
                 
-                If skuCount > 0 Then
-                    ' 获取订单明细并按金额比例分摊
-                    sql = "SELECT od.ProductID, od.Subtotal, p.ProductName " & _
-                          "FROM (OrderDetails AS od INNER JOIN Products AS p ON od.ProductID = p.ProductID) " & _
-                          "WHERE od.OrderID = " & orderIDVal
-                    Set rsItems = ExecuteQuery(sql)
-                    
-                    If Not rsItems Is Nothing Then
-                        remainingFee = feeAmount
-                        i = 0
-                        Do While Not rsItems.EOF
-                            Dim subtotal, productId2
-                            subtotal = CDbl("0" & rsItems("Subtotal").Value)
-                            productId2 = rsItems("ProductID").Value
-                            
-                            If totalAmount > 0 Then
-                                allocAmount = feeAmount * subtotal / totalAmount
+                If Not rsItems Is Nothing Then
+                    skuCount = rsItems.RecordCount  ' 使用实际 INNER JOIN 后的行数，避免商品缺失时少分摊
+                    remainingFee = feeAmount
+                    i = 0
+                    Do While Not rsItems.EOF
+                        Dim subtotal, productId2
+                        subtotal = CDbl("0" & rsItems("Subtotal").Value)
+                        productId2 = rsItems("ProductID").Value
+                        
+                        If totalAmount > 0 Then
+                            allocAmount = feeAmount * subtotal / totalAmount
+                        ElseIf skuCount > 0 Then
+                            allocAmount = feeAmount / skuCount
+                        Else
+                            allocAmount = 0
+                        End If
+                        
+                        ' 尾差：最后一行承担剩余金额
+                        i = i + 1
+                        If i = skuCount Then
+                            allocAmount = remainingFee
+                        Else
+                            allocAmount = Round(allocAmount, 2)
+                            remainingFee = remainingFee - allocAmount
+                        End If
+                        
+                        If allocAmount > 0 Then
+                            ' 账期取订单创建月份
+                            Dim pfPeriod
+                            pfPeriod = ""
+                            If Not IsNull(orderCreatedAt) And orderCreatedAt <> "" Then
+                                pfPeriod = Year(orderCreatedAt) & "-" & Right("0" & Month(orderCreatedAt), 2)
                             Else
-                                allocAmount = feeAmount / skuCount
+                                pfPeriod = Year(Now) & "-" & Right("0" & Month(Now), 2)
                             End If
                             
-                            ' 最后一个承担剩余金额
-                            i = i + 1
-                            If i = skuCount Then
-                                allocAmount = remainingFee
-                            Else
-                                allocAmount = Round(allocAmount, 2)
-                                remainingFee = remainingFee - allocAmount
-                            End If
-                            
-                            If allocAmount > 0 Then
-                                Dim pfSQL
-                                pfSQL = "INSERT INTO ExpenseRecords (OrderID, ProductID, ExpenseType, ExpenseName, Amount, " & _
-                                          "AllocationMethod, AllocationRatio, Period, CreatedAt) VALUES (" & _
-                                          orderIDVal & ", " & productId2 & ", 'PlatformFee', '平台扣点', " & allocAmount & ", " & _
-                                          "'PaymentMethod', " & Round(platformFeeRate, 4) & ", '" & _
-                                          Year(Now) & "-" & Right("0" & Month(Now), 2) & "', GETDATE())"
-                                ExecuteNonQuery pfSQL
-                            End If
-                            
-                            rsItems.MoveNext
-                        Loop
-                        rsItems.Close
-                        Set rsItems = Nothing
-                    End If
+                            Dim pfSQL
+                            pfSQL = "INSERT INTO ExpenseRecords (OrderID, ProductID, ExpenseType, ExpenseName, Amount, " & _
+                                      "AllocationMethod, AllocationRatio, Period, CreatedAt) VALUES (" & _
+                                      orderIDVal & ", " & productId2 & ", 'PlatformFee', '平台扣点', " & allocAmount & ", " & _
+                                      "'PaymentMethod', " & Round(platformFeeRate, 4) & ", '" & _
+                                      pfPeriod & "', GETDATE())"
+                            ExecuteNonQuery pfSQL
+                        End If
+                        
+                        rsItems.MoveNext
+                    Loop
+                    rsItems.Close
+                    Set rsItems = Nothing
                 End If
             End If
             
@@ -408,27 +475,26 @@ Sub AllocatePlatformFee(startDate, endDate)
     End If
 End Sub
 
-' ========== 推广费分摊子程序 ==========
+' ========== 推广费分摊子程序（V20 修复：幂等 + 账期 + 尾差）==========
 Sub AllocatePromotion(startDate, endDate, totalPromoAmount, gmvAmount)
-    Dim whereClause, rsOrders, sql, orderIDVal, orderAmount
+    Dim whereClause, rsOrders, sql, orderIDVal, orderAmount, orderCreatedAt
     Dim rsItems, allocRatio, allocAmount, i, remainingAmount
     
-    ' 构建查询条件
+    ' 构建查询条件（修正日期区间：含结束当天）
     whereClause = "Status = 'Paid'"
     If startDate <> "" Then
         whereClause = whereClause & " AND CreatedAt >= '" & startDate & "'"
     End If
     If endDate <> "" Then
-        whereClause = whereClause & " AND CreatedAt <= '" & endDate & "'"
+        whereClause = whereClause & " AND CreatedAt < DATEADD(day, 1, '" & endDate & "')"
     End If
     
-    ' 查询符合条件的订单
-    sql = "SELECT OrderID, TotalAmount FROM Orders WHERE " & whereClause
+    ' 查询符合条件的订单（加选 CreatedAt 用于账期）
+    sql = "SELECT OrderID, TotalAmount, CreatedAt FROM Orders WHERE " & whereClause
     Set rsOrders = ExecuteQuery(sql)
     
     If Not rsOrders Is Nothing Then
         remainingAmount = totalPromoAmount
-        i = 0
         
         ' 先统计订单总数
         Dim orderCount
@@ -439,9 +505,11 @@ Sub AllocatePromotion(startDate, endDate, totalPromoAmount, gmvAmount)
         Loop
         rsOrders.MoveFirst
         
+        i = 0
         Do While Not rsOrders.EOF
             orderIDVal = rsOrders("OrderID").Value
             orderAmount = CDbl("0" & rsOrders("TotalAmount").Value)
+            orderCreatedAt = rsOrders("CreatedAt").Value
             
             ' 计算该订单应分摊的推广费
             ' 公式：单笔承担推广费 = (总消耗 / 有效成交额) x 订单金额
@@ -460,56 +528,69 @@ Sub AllocatePromotion(startDate, endDate, totalPromoAmount, gmvAmount)
                 remainingAmount = remainingAmount - allocAmount
             End If
             
+            ' 幂等：先清除该订单旧的推广费分摊记录
+            If allocAmount > 0 Then
+                ExecuteNonQuery "DELETE FROM ExpenseRecords WHERE OrderID = " & orderIDVal & " AND ExpenseType = 'Promotion'"
+            End If
+            
             ' 获取订单SKU并按金额比例分摊到SKU
             If allocAmount > 0 Then
-                Dim skuCount2
-                skuCount2 = GetScalar("SELECT COUNT(*) FROM OrderDetails WHERE OrderID = " & orderIDVal)
+                ' 账期取订单创建月份
+                Dim promoPeriod
+                promoPeriod = ""
+                If Not IsNull(orderCreatedAt) And orderCreatedAt <> "" Then
+                    promoPeriod = Year(orderCreatedAt) & "-" & Right("0" & Month(orderCreatedAt), 2)
+                Else
+                    promoPeriod = Year(Now) & "-" & Right("0" & Month(Now), 2)
+                End If
                 
-                If skuCount2 > 0 Then
-                    sql = "SELECT od.ProductID, od.Subtotal, p.ProductName " & _
-                          "FROM (OrderDetails AS od INNER JOIN Products AS p ON od.ProductID = p.ProductID) " & _
-                          "WHERE od.OrderID = " & orderIDVal
-                    Dim rsSKU
-                    Set rsSKU = ExecuteQuery(sql)
-                    
-                    If Not rsSKU Is Nothing Then
-                        Dim j, remainingSKUAmount
-                        remainingSKUAmount = allocAmount
-                        j = 0
-                        Do While Not rsSKU.EOF
-                            Dim skuSubtotal, skuProductId, skuAlloc
-                            skuSubtotal = CDbl("0" & rsSKU("Subtotal").Value)
-                            skuProductId = rsSKU("ProductID").Value
-                            
-                            If orderAmount > 0 Then
-                                skuAlloc = allocAmount * skuSubtotal / orderAmount
-                            Else
-                                skuAlloc = allocAmount / skuCount2
-                            End If
-                            
-                            j = j + 1
-                            If j = skuCount2 Then
-                                skuAlloc = remainingSKUAmount
-                            Else
-                                skuAlloc = Round(skuAlloc, 2)
-                                remainingSKUAmount = remainingSKUAmount - skuAlloc
-                            End If
-                            
-                            If skuAlloc > 0 Then
-                                Dim promoSQL
-                                promoSQL = "INSERT INTO ExpenseRecords (OrderID, ProductID, ExpenseType, ExpenseName, Amount, " & _
-                                          "AllocationMethod, AllocationRatio, SourceOrderID, Period, CreatedAt) VALUES (" & _
-                                          orderIDVal & ", " & skuProductId & ", 'Promotion', '推广费分摊', " & skuAlloc & ", " & _
-                                          "'GMVRatio', " & Round(skuSubtotal / gmvAmount, 6) & ", 0, '" & _
-                                          Year(Now) & "-" & Right("0" & Month(Now), 2) & "', GETDATE())"
-                                ExecuteNonQuery promoSQL
-                            End If
-                            
-                            rsSKU.MoveNext
-                        Loop
-                        rsSKU.Close
-                        Set rsSKU = Nothing
-                    End If
+                sql = "SELECT od.ProductID, od.Subtotal, p.ProductName " & _
+                      "FROM (OrderDetails AS od INNER JOIN Products AS p ON od.ProductID = p.ProductID) " & _
+                      "WHERE od.OrderID = " & orderIDVal
+                Dim rsSKU
+                Set rsSKU = ExecuteQuery(sql)
+                
+                If Not rsSKU Is Nothing Then
+                    Dim skuActualCount, j, remainingSKUAmount
+                    skuActualCount = rsSKU.RecordCount  ' 使用实际行数，避免商品缺失时少分摊
+                    remainingSKUAmount = allocAmount
+                    j = 0
+                    Do While Not rsSKU.EOF
+                        Dim skuSubtotal, skuProductId, skuAlloc
+                        skuSubtotal = CDbl("0" & rsSKU("Subtotal").Value)
+                        skuProductId = rsSKU("ProductID").Value
+                        
+                        If orderAmount > 0 Then
+                            skuAlloc = allocAmount * skuSubtotal / orderAmount
+                        ElseIf skuActualCount > 0 Then
+                            skuAlloc = allocAmount / skuActualCount
+                        Else
+                            skuAlloc = 0
+                        End If
+                        
+                        ' 尾差：最后一行承担剩余金额
+                        j = j + 1
+                        If j = skuActualCount Then
+                            skuAlloc = remainingSKUAmount
+                        Else
+                            skuAlloc = Round(skuAlloc, 2)
+                            remainingSKUAmount = remainingSKUAmount - skuAlloc
+                        End If
+                        
+                        If skuAlloc > 0 Then
+                            Dim promoSQL
+                            promoSQL = "INSERT INTO ExpenseRecords (OrderID, ProductID, ExpenseType, ExpenseName, Amount, " & _
+                                      "AllocationMethod, AllocationRatio, SourceOrderID, Period, CreatedAt) VALUES (" & _
+                                      orderIDVal & ", " & skuProductId & ", 'Promotion', '推广费分摊', " & skuAlloc & ", " & _
+                                      "'GMVRatio', " & Round(skuSubtotal / gmvAmount, 6) & ", 0, '" & _
+                                      promoPeriod & "', GETDATE())"
+                            ExecuteNonQuery promoSQL
+                        End If
+                        
+                        rsSKU.MoveNext
+                    Loop
+                    rsSKU.Close
+                    Set rsSKU = Nothing
                 End If
             End If
             
@@ -1007,28 +1088,37 @@ Call LogAdminAction("访问费用分摊引擎", "finance", "", "", "")
         <% End If %>
         
         <!-- Tab 导航 -->
+        <%
+        Dim tabShippingClass, tabPlatformClass, tabPromoClass, tabResultsClass
+        If activeTab = "" Then activeTab = "shipping"
+        If activeTab = "shipping" Then tabShippingClass = " active" Else tabShippingClass = ""
+        If activeTab = "platform" Then tabPlatformClass = " active" Else tabPlatformClass = ""
+        If activeTab = "promotion" Then tabPromoClass = " active" Else tabPromoClass = ""
+        If activeTab = "results" Then tabResultsClass = " active" Else tabResultsClass = ""
+        %>
         <div class="tab-nav">
-            <button class="tab-btn active" onclick="switchTab('shipping')">
+            <button class="tab-btn<%= tabShippingClass %>" onclick="switchTab('shipping', event)">
                 <i class="fas fa-truck"></i> 运费分摊
             </button>
-            <button class="tab-btn" onclick="switchTab('platform')">
+            <button class="tab-btn<%= tabPlatformClass %>" onclick="switchTab('platform', event)">
                 <i class="fas fa-percentage"></i> 平台扣点
             </button>
-            <button class="tab-btn" onclick="switchTab('promotion')">
+            <button class="tab-btn<%= tabPromoClass %>" onclick="switchTab('promotion', event)">
                 <i class="fas fa-bullhorn"></i> 推广费分摊
             </button>
-            <button class="tab-btn" onclick="switchTab('results')">
+            <button class="tab-btn<%= tabResultsClass %>" onclick="switchTab('results', event)">
                 <i class="fas fa-list-alt"></i> 分摊结果
             </button>
         </div>
         
         <!-- Tab 1: 运费分摊 -->
-        <div id="tab-shipping" class="tab-content active">
+        <div id="tab-shipping" class="tab-content<%= tabShippingClass %>">
             <div class="config-section">
                 <h3><i class="fas fa-cog"></i> 运费分摊规则配置</h3>
                 <form method="post" action="expense_allocation.asp" <%= IIf(canEdit, "", "class='readonly-mask'") %>>
                     <%= GetCSRFTokenField() %>
                     <input type="hidden" name="action" value="save_config">
+                    <input type="hidden" name="configScope" value="shipping">
                     
                     <div class="form-grid">
                         <div class="form-group">
@@ -1094,10 +1184,6 @@ Call LogAdminAction("访问费用分摊引擎", "finance", "", "", "")
                                 <label>结束日期</label>
                                 <input type="date" name="endDate">
                             </div>
-                            <div class="form-group">
-                                <label>运费金额</label>
-                                <input type="number" name="shippingAmount" step="0.01" min="0" placeholder="输入总运费金额">
-                            </div>
                         </div>
                         
                         <% If canEdit Then %>
@@ -1113,12 +1199,13 @@ Call LogAdminAction("访问费用分摊引擎", "finance", "", "", "")
         </div>
         
         <!-- Tab 2: 平台扣点 -->
-        <div id="tab-platform" class="tab-content">
+        <div id="tab-platform" class="tab-content<%= tabPlatformClass %>">
             <div class="config-section">
                 <h3><i class="fas fa-cog"></i> 平台费率配置</h3>
                 <form method="post" action="expense_allocation.asp" <%= IIf(canEdit, "", "class='readonly-mask'") %>>
                     <%= GetCSRFTokenField() %>
                     <input type="hidden" name="action" value="save_config">
+                    <input type="hidden" name="configScope" value="platform">
                     
                     <div class="fee-config-grid">
                         <div class="fee-config-item">
@@ -1195,7 +1282,7 @@ Call LogAdminAction("访问费用分摊引擎", "finance", "", "", "")
         </div>
         
         <!-- Tab 3: 推广费分摊 -->
-        <div id="tab-promotion" class="tab-content">
+        <div id="tab-promotion" class="tab-content<%= tabPromoClass %>">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title"><i class="fas fa-bullhorn"></i> 推广费归因分摊</h3>
@@ -1242,7 +1329,7 @@ Call LogAdminAction("访问费用分摊引擎", "finance", "", "", "")
         </div>
         
         <!-- Tab 4: 分摊结果 -->
-        <div id="tab-results" class="tab-content">
+        <div id="tab-results" class="tab-content<%= tabResultsClass %>">
             <!-- 统计汇总 -->
             <div class="stats-grid">
                 <div class="stat-card">
@@ -1426,7 +1513,7 @@ Call LogAdminAction("访问费用分摊引擎", "finance", "", "", "")
     
     <script>
         // Tab 切换
-        function switchTab(tabName) {
+        function switchTab(tabName, evt) {
             // 隐藏所有 Tab 内容
             document.querySelectorAll('.tab-content').forEach(function(el) {
                 el.classList.remove('active');
@@ -1441,7 +1528,9 @@ Call LogAdminAction("访问费用分摊引擎", "finance", "", "", "")
             document.getElementById('tab-' + tabName).classList.add('active');
             
             // 激活当前按钮
-            event.target.closest('.tab-btn').classList.add('active');
+            if (evt && evt.target) {
+                evt.target.closest('.tab-btn').classList.add('active');
+            }
             
             // 更新 URL hash
             window.location.hash = tabName;

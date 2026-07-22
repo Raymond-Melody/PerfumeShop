@@ -1,0 +1,51 @@
+@page "/admin/system/image-management"
+@rendermode InteractiveServer
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+
+<PageTitle>图片管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-images" style="color:#E91E63;"></i> 图片管理</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>图片管理</span></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_totalFiles</div><div class="stat-label">图片文件</div></div><div class="stat-card"><div class="stat-value">@_totalSize</div><div class="stat-label">总大小(MB)</div></div></div>
+<div class="image-grid">
+@foreach(var f in _files){
+<div class="image-card" style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:10px;padding:15px;border:1px solid rgba(255,255,255,0.05);text-align:center;">
+<div style="color:#e0e0e0;font-size:13px;word-break:break-all;">@f.Name</div>
+<div style="color:#888;font-size:11px;">@f.Size · @f.Date</div>
+</div>
+}
+@if(!_files.Any()){<div style="text-align:center;color:#666;padding:40px;grid-column:1/-1;">暂无图片文件</div>}
+</div>
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.image-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+</style>
+
+@code {
+    private string _msg="",_msgType="";
+    private int _totalFiles;private string _totalSize="0";
+    private List<(string Name,string Size,string Date)> _files=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            var imagesPath=Path.Combine(Directory.GetCurrentDirectory(),"wwwroot","uploads");
+            if(!Directory.Exists(imagesPath))imagesPath=Path.Combine(Directory.GetCurrentDirectory(),"..","..","..","..","..","images");
+            if(Directory.Exists(imagesPath)){
+                var allFiles=Directory.GetFiles(imagesPath,"*.*",SearchOption.AllDirectories).Where(f=>f.EndsWith(".jpg")||f.EndsWith(".png")||f.EndsWith(".svg")||f.EndsWith(".gif")||f.EndsWith(".webp")).Take(100);
+                long total=0;
+                foreach(var f in allFiles){var fi=new FileInfo(f);total+=fi.Length;_files.Add((Path.GetFileName(f),$"{fi.Length/1024.0:F1} KB",fi.LastWriteTime.ToString("yyyy-MM-dd")));}
+                _totalFiles=_files.Count;_totalSize=(total/1024.0/1024.0).ToString("F1");
+            }
+        }catch{}
+    }
+}

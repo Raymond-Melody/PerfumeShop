@@ -1,0 +1,80 @@
+@page "/admin/TechCenter/BottleManagement"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+
+<PageTitle>瓶型管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-prescription-bottle" style="color:#00bcd4;"></i> 瓶型管理</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>瓶型管理</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_total</div><div class="stat-label">瓶型总数</div></div><div class="stat-card" style="border-left:3px solid #4CAF50;"><div class="stat-value" style="color:#4CAF50;">@_active</div><div class="stat-label">已启用</div></div><div class="stat-card" style="border-left:3px solid #f44336;"><div class="stat-value" style="color:#f44336;">@(_total-_active)</div><div class="stat-label">已禁用</div></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="filter-bar"><input class="filter-input" @bind="_search" placeholder="搜索瓶型..." /><button class="btn-search" @onclick="DoSearch"><i class="fas fa-search"></i> 搜索</button>@if(!string.IsNullOrEmpty(_search)){<button class="btn-clear" @onclick="ClearSearch"><i class="fas fa-times"></i> 清除</button>}<button class="btn-add" @onclick="OpenAddModal" style="margin-left:auto;">+ 新建瓶型</button></div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>瓶型名称</th><th>容量</th><th>类型</th><th>附加费</th><th>图片</th><th>状态</th><th>操作</th></tr></thead><tbody>
+@foreach(var b in _items){<tr><td>#@b.BottleId</td><td>@b.BottleName</td><td>@(b.CapacityMl?.ToString()+"ml"??"-")</td><td>@(b.BottleType??"-")</td><td style="color:#FF9800;">@(b.PriceAddition.HasValue?"¥"+b.PriceAddition.Value.ToString("F2"):"-")</td><td>@if(!string.IsNullOrEmpty(b.ImageUrl)){<img src="@b.ImageUrl" style="width:40px;height:40px;object-fit:contain;border-radius:4px;" alt="" onerror="this.style.display='none'" />}else{<span style="color:#666;">-</span>}</td><td><span class="status-badge @(b.IsActive==true?"status-normal":"status-warning")">@(b.IsActive==true?"启用":"禁用")</span></td><td><button class="btn-edit" @onclick='()=>OpenEditModal(b)'>编辑</button></td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_showModal){
+<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>@(_editing?"编辑瓶型":"新建瓶型")</h3><button class="modal-close" @onclick="CloseModal">X</button></div><div class="modal-body">
+<div class="form-group"><label>名称</label><input @bind="_edit.BottleName" /></div>
+<div class="form-group"><label>容量(ml)</label><input type="number" @bind="_edit.CapacityMl" /></div>
+<div class="form-group"><label>类型</label><input @bind="_edit.BottleType" /></div>
+<div class="form-group"><label>附加费用 (¥)</label><input type="number" @bind="_edit.PriceAddition" step="0.01" min="0" /></div>
+<div class="form-group"><label>图片URL</label><input @bind="_edit.ImageUrl" placeholder="https://..." /></div>
+@if(!string.IsNullOrEmpty(_edit.ImageUrl)){<div style="text-align:center;margin-bottom:10px;"><img src="@_edit.ImageUrl" style="max-width:200px;max-height:150px;border-radius:8px;" alt="预览" onerror="this.style.display='none'" /></div>}
+</div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveItem">保存</button></div></div></div>
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;}
+.btn-add{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;}
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+.filter-input{flex:1;min-width:200px;padding:10px 14px;background:#1a1a2e;border:2px solid #3a3a4a;border-radius:8px;color:#e0e0e0;font-size:14px;}
+.filter-input:focus{border-color:#00bcd4;outline:none;}
+.btn-search{background:rgba(0,188,212,0.15);color:#00bcd4;border:1px solid rgba(0,188,212,0.3);padding:8px 16px;border-radius:6px;cursor:pointer;}
+.btn-clear{background:rgba(158,158,158,0.15);color:#9e9e9e;border:1px solid rgba(158,158,158,0.3);padding:8px 16px;border-radius:6px;cursor:pointer;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}
+.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
+.btn-edit{background:rgba(0,188,212,0.15);color:#00bcd4;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;}.alert-error{background:rgba(244,67,54,0.15);color:#e57373;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:500px;border:1px solid rgba(255,255,255,0.06);}
+.modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;}
+.modal-body{padding:25px;max-height:55vh;overflow-y:auto;}
+.modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.form-group input{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus{border-color:#00bcd4;outline:none;}
+.btn-save{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+</style>
+
+@code {
+    private bool _loaded,_editing,_showModal;private int _total,_active;private string _msg="",_msgType="",_search="";
+    private List<BottleStyle> _items=new();private BottleStyle _edit=new();
+    protected override async Task OnInitializedAsync(){await LoadItems();}
+    async Task LoadItems(){
+        try{_items=await Db.BottleStyles.AsNoTracking().OrderByDescending(b=>b.BottleId).ToListAsync();_total=_items.Count;_active=_items.Count(b=>b.IsActive==true);_loaded=true;}catch{_loaded=true;}
+    }
+    async Task DoSearch(){if(!string.IsNullOrWhiteSpace(_search)){_items=await Db.BottleStyles.AsNoTracking().Where(b=>b.BottleName.Contains(_search)).OrderByDescending(b=>b.BottleId).ToListAsync();}else await LoadItems();}
+    void ClearSearch(){_search="";StateHasChanged();}
+    void OpenAddModal(){_editing=false;_edit=new(){IsActive=true};_showModal=true;}
+    void OpenEditModal(BottleStyle b){_editing=true;_edit=new(){BottleId=b.BottleId,BottleName=b.BottleName,CapacityMl=b.CapacityMl,BottleType=b.BottleType,ImageUrl=b.ImageUrl,PriceAddition=b.PriceAddition,IsActive=b.IsActive};_showModal=true;}
+    void CloseModal(){_showModal=false;}
+    async Task SaveItem(){
+        if(string.IsNullOrWhiteSpace(_edit.BottleName)){_msg="名称不能为空";_msgType="err";return;}
+        try{if(!_editing)Db.BottleStyles.Add(_edit);else{_edit.UpdatedAt=DateTime.Now;Db.BottleStyles.Update(_edit);}await Db.SaveChangesAsync();_msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+}

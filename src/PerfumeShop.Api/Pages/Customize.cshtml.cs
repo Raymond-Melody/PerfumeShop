@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using PerfumeShop.Data.Models;
 
 namespace PerfumeShop.Api.Pages;
 
+[OutputCache(PolicyName = "StaticContent")]
 public class CustomizeModel : PageModel
 {
     private readonly PerfumeShopContext _db;

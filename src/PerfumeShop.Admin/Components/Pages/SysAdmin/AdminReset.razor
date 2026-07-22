@@ -1,0 +1,49 @@
+@page "/admin/system/admin-reset"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject SystemRepository SysRepo
+
+<PageTitle>密码重置</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-key" style="color:#E91E63;"></i> 管理员密码重置</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>密码重置</span></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div style="max-width:500px;">
+<div class="form-group"><label>选择管理员</label><select @bind="_selectedUserId" style="width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:14px;"><option value="">-- 选择 --</option>@foreach(var u in _users){<option value="@u.AdminId">@u.Username (@(u.FullName??"-"))</option>}</select></div>
+<div class="form-group"><label>新密码</label><input type="password" @bind="_newPassword" style="width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:14px;box-sizing:border-box;" /></div>
+<button class="btn-save" @onclick="ResetPassword" style="width:100%;">重置密码</button>
+</div>
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.form-group{margin-bottom:15px;}
+.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.btn-save{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+</style>
+
+@code {
+    private string _msg="",_msgType="",_newPassword="";
+    private int _selectedUserId;
+    private List<AdminUser> _users=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{_users=await Db.AdminUsers.AsNoTracking().ToListAsync();}catch{}
+    }
+    async Task ResetPassword(){
+        if(_selectedUserId==0){_msg="请选择管理员";_msgType="err";return;}
+        if(string.IsNullOrWhiteSpace(_newPassword)||_newPassword.Length<6){_msg="密码至少6位";_msgType="err";return;}
+        try{
+            var user=await SysRepo.GetAdminUserAsync(_selectedUserId);
+            if(user==null){_msg="管理员不存在";_msgType="err";return;}
+            user.PasswordHash=Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(_newPassword)));
+            await SysRepo.SaveAdminUserAsync(user);
+            _msg=$"用户 {user.Username} 密码已重置";_msgType="ok";_newPassword="";
+        }catch(Exception ex){_msg="重置失败: "+ex.Message;_msgType="err";}
+    }
+}

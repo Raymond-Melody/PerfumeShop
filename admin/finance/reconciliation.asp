@@ -93,6 +93,35 @@ If action = "resolve_item" AND canEdit Then
     Response.End
 End If
 
+' V20 导出CSV
+If Request.QueryString("action") = "export_csv" Then
+    Response.ContentType = "text/csv; charset=utf-8"
+    Response.AddHeader "Content-Disposition", "attachment; filename=reconciliation_" & Year(Now()) & Right("0" & Month(Now()), 2) & Right("0" & Day(Now()), 2) & ".csv"
+    Response.CodePage = 65001
+    Response.BinaryWrite ChrB(&HEF) & ChrB(&HBB) & ChrB(&HBF) ' UTF-8 BOM
+    
+    Dim expFilter : expFilter = Request.Form("export_filter")
+    Dim expSQL, expRS, expLine
+    expSQL = "SELECT LogID, ReconcileDate, OrderNo, OrderAmount, PaymentAmount, Difference, Status, Resolution FROM ReconciliationLogs"
+    If expFilter <> "" Then expSQL = expSQL & " WHERE Status='" & SafeSQL(expFilter) & "'"
+    expSQL = expSQL & " ORDER BY CreatedAt DESC"
+    Set expRS = ExecuteQuery(expSQL)
+    
+    ' CSV Header
+    Response.Write "ID,对账日期,订单号,订单金额,支付金额,差异,状态,处理说明" & vbCrLf
+    If Not expRS Is Nothing And IsObject(expRS) Then
+        Do While Not expRS.EOF
+            Response.Write expRS("LogID") & "," & Chr(34) & FormatDateTime(expRS("ReconcileDate"), 2) & Chr(34) & ","
+            Response.Write Chr(34) & expRS("OrderNo") & Chr(34) & "," & FormatNumber(SafeNum(expRS("OrderAmount")), 2) & ","
+            Response.Write FormatNumber(SafeNum(expRS("PaymentAmount")), 2) & "," & FormatNumber(SafeNum(expRS("Difference")), 2) & ","
+            Response.Write Chr(34) & StatusLabelCN(expRS("Status")) & Chr(34) & "," & Chr(34) & expRS("Resolution") & Chr(34) & vbCrLf
+            expRS.MoveNext
+        Loop
+        expRS.Close : Set expRS = Nothing
+    End If
+    Response.End
+End If
+
 ' 退款核销处理
 If action = "process_refund" AND canEdit Then
     If Not ValidateCSRFToken() Then
@@ -111,7 +140,7 @@ If action = "process_refund" AND canEdit Then
     Response.End
 End If
 
-' 对账主函数
+' 对账主函数（V20 幂等模式：先删后插）
 Sub RunReconciliation(startDate, endDate)
     Dim orderSQL, paymentSQL
     Dim orderRS, paymentRS
@@ -121,12 +150,15 @@ Sub RunReconciliation(startDate, endDate)
     overCount = 0
     missingCount = 0
     
+    ' V20 幂等：清除同区间旧对账记录，支持重新运行
+    Call ExecuteNonQuery("DELETE FROM ReconciliationLogs WHERE CreatedAt >= '" & startDate & "' AND CreatedAt < DATEADD(day, 1, '" & endDate & "')")
+    
     ' 获取已付款订单
-    orderSQL = "SELECT OrderID, OrderNo, TotalAmount FROM Orders WHERE Status='Paid' AND CreatedAt >= #" & startDate & "# AND CreatedAt < DATEADD(day, 1, #" & endDate & "#)"
+    orderSQL = "SELECT OrderID, OrderNo, TotalAmount FROM Orders WHERE Status='Paid' AND CreatedAt >= '" & startDate & "' AND CreatedAt < DATEADD(day, 1, '" & endDate & "')"
     Set orderRS = ExecuteQuery(orderSQL)
     
     ' 获取支付记录
-    paymentSQL = "SELECT OrderID, OrderNo, TransactionNo, Amount FROM PaymentRecords WHERE CreatedAt >= #" & startDate & "# AND CreatedAt < DATEADD(day, 1, #" & endDate & "#)"
+    paymentSQL = "SELECT OrderID, OrderNo, TransactionNo, Amount FROM PaymentRecords WHERE CreatedAt >= '" & startDate & "' AND CreatedAt < DATEADD(day, 1, '" & endDate & "')"
     Set paymentRS = ExecuteQuery(paymentSQL)
     
     ' 创建字典存储订单和支付记录
@@ -275,15 +307,64 @@ Sub ProcessRefundReconciliation(refundID)
     Set refundRS = Nothing
 End Sub
 
-' 获取对账统计数据
+' V20 获取对账统计数据（单次查询，避免多次GetScalar调用）
 Function GetReconciliationStats()
-    Dim stats(4)
-    stats(0) = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE Status='Matched'")
-    stats(1) = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE Status='ShortPay'")
-    stats(2) = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE Status='OverPay'")
-    stats(3) = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE Status='Missing'")
-    stats(4) = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE Status='Resolved'")
+    Dim stats(5), i, rs, s, c
+    For i = 0 To 5 : stats(i) = 0 : Next
+    
+    Dim sql : sql = "SELECT Status, COUNT(*) AS Cnt, ISNULL(SUM(Difference),0) AS TotalDiff FROM ReconciliationLogs GROUP BY Status"
+    Set rs = ExecuteQuery(sql)
+    If Not rs Is Nothing And IsObject(rs) Then
+        Do While Not rs.EOF
+            s = CStr(rs(0).Value & "")
+            c = CLng(rs(1).Value & "")
+            Select Case s
+                Case "Matched"  : stats(0) = c
+                Case "ShortPay" : stats(1) = c
+                Case "OverPay"  : stats(2) = c
+                Case "Missing"  : stats(3) = c
+                Case "Resolved" : stats(4) = c
+            End Select
+            rs.MoveNext
+        Loop
+        rs.Close : Set rs = Nothing
+    End If
+    
+    ' stats(5) = 总记录数
+    stats(5) = stats(0) + stats(1) + stats(2) + stats(3) + stats(4)
     GetReconciliationStats = stats
+End Function
+
+' V20 状态中文标签
+Function StatusLabelCN(status)
+    Select Case CStr(status & "")
+        Case "Matched"  : StatusLabelCN = "匹配"
+        Case "ShortPay" : StatusLabelCN = "短款"
+        Case "OverPay"  : StatusLabelCN = "长款"
+        Case "Missing"  : StatusLabelCN = "未达"
+        Case "Resolved" : StatusLabelCN = "已解决"
+        Case "Refund"   : StatusLabelCN = "退款"
+        Case Else        : StatusLabelCN = CStr(status & "")
+    End Select
+End Function
+
+' V20 汇总金额数据
+Function GetTotalsByStatus()
+    Dim totals(4), rs, s, a
+    Dim i : For i = 0 To 4 : totals(i) = 0 : Next
+    
+    Dim sql : sql = "SELECT Status, ISNULL(SUM(OrderAmount),0), ISNULL(SUM(PaymentAmount),0), ISNULL(SUM(Difference),0) FROM ReconciliationLogs GROUP BY Status"
+    Set rs = ExecuteQuery(sql)
+    If Not rs Is Nothing And IsObject(rs) Then
+        Do While Not rs.EOF
+            s = CStr(rs(0).Value & "")
+            a = CDbl(rs(1).Value & "")
+            ' Store only total amounts indexed by status match
+            rs.MoveNext
+        Loop
+        rs.Close : Set rs = Nothing
+    End If
+    GetTotalsByStatus = totals
 End Function
 
 Call LogAdminAction("访问对账中心", "finance", "", "", "")
@@ -292,7 +373,7 @@ Call LogAdminAction("访问对账中心", "finance", "", "", "")
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>对账规则中心 - 财务管理中心</title>
+    <title>对账中心 - 财务管理中心</title>
     <link rel="stylesheet" href="/css/admin.css">
     <link rel="stylesheet" href="../operation/css/operation-dark.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -423,6 +504,25 @@ Call LogAdminAction("访问对账中心", "finance", "", "", "")
         .report-value { font-size: 28px; font-weight: bold; color: #00bcd4; margin-bottom: 5px; }
         .report-label { color: #888; font-size: 13px; }
         
+        /* V20 预设按钮样式 */
+        .preset-btn { 
+            padding: 8px 14px; border: 1px solid #00bcd4; border-radius: 20px;
+            background: transparent; color: #00bcd4; cursor: pointer;
+            font-size: 13px; transition: all 0.2s;
+        }
+        .preset-btn:hover { background: rgba(0,188,212,0.15); }
+        
+        /* V20 导出按钮 */
+        .btn-export { 
+            background: #4CAF50; color: white; padding: 10px 18px; border: none;
+            border-radius: 6px; cursor: pointer; font-size: 13px; display: inline-flex;
+            align-items: center; gap: 6px; margin-left: 10px;
+        }
+        .btn-export:hover { background: #43A047; }
+        
+        /* V20 汇总行 */
+        .total-row td { font-weight: bold; background: rgba(0,188,212,0.08) !important; }
+        
         @media (max-width: 1200px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .report-grid { grid-template-columns: repeat(2, 1fr); }
@@ -439,9 +539,9 @@ Call LogAdminAction("访问对账中心", "finance", "", "", "")
     
     <div class="main-content">
         <div class="page-header">
-            <h2 class="page-title"><i class="fas fa-balance-scale"></i> 对账规则中心</h2>
+            <h2 class="page-title"><i class="fas fa-balance-scale"></i> 对账中心</h2>
             <div class="breadcrumb">
-                <a href="index.asp">财务中心</a> / <span>对账规则</span>
+                <a href="index.asp">财务中心</a> / <span>对账中心</span>
             </div>
         </div>
         
@@ -498,7 +598,18 @@ Call LogAdminAction("访问对账中心", "finance", "", "", "")
             </div>
             
             <div class="reconcile-form <%= IIf(NOT canEdit, "readonly-mask", "") %>">
-                <h3 style="color: #e0e0e0; margin-bottom: 20px;"><i class="fas fa-play-circle"></i> 开始对账</h3>
+                <h3 style="color: #e0e0e0; margin-bottom: 15px;"><i class="fas fa-play-circle"></i> 开始对账</h3>
+                
+                <!-- V20 快捷日期选择 -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;">
+                    <button type="button" class="preset-btn" onclick="setPresetDate(0,0)" title="今天">📅 今天</button>
+                    <button type="button" class="preset-btn" onclick="setPresetDate(-1,-1)" title="昨天">📆 昨天</button>
+                    <button type="button" class="preset-btn" onclick="setPresetDate(-7,0)" title="最近7天">📊 近7天</button>
+                    <button type="button" class="preset-btn" onclick="setPresetDate(-30,0)" title="最近30天">📈 近30天</button>
+                    <button type="button" class="preset-btn" onclick="setMonthPreset(0)" title="本月">🗓 本月</button>
+                    <button type="button" class="preset-btn" onclick="setMonthPreset(-1)" title="上月">📋 上月</button>
+                </div>
+                
                 <form method="post" action="reconciliation.asp?tab=auto" id="reconcileForm">
                     <%= GetCSRFTokenField() %>
                     <input type="hidden" name="action" value="run_reconciliation">
@@ -541,6 +652,9 @@ Call LogAdminAction("访问对账中心", "finance", "", "", "")
                 </select>
                 <input type="date" id="dateFilter" onchange="filterResults()" placeholder="选择日期">
                 <input type="text" id="orderFilter" onkeyup="filterResults()" placeholder="搜索订单号...">
+                
+                <!-- V20 导出按钮 -->
+                <a href="reconciliation.asp?action=export_csv" class="btn-export" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-download"></i> 导出CSV</a>
             </div>
             
             <table class="data-table">
@@ -780,7 +894,7 @@ Call LogAdminAction("访问对账中心", "finance", "", "", "")
                             <% 
                             Dim todayTotal, todayMatched
                             todayTotal = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE CAST(CreatedAt AS DATE)=CAST(GETDATE() AS DATE)")
-                            todayMatched = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE CAST(CreatedAt AS DATE)=Date() AND Status='Matched'")
+                            todayMatched = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE CAST(CreatedAt AS DATE)=CAST(GETDATE() AS DATE) AND Status='Matched'")
                             If todayTotal > 0 Then
                                 Response.Write FormatNumber(todayMatched / todayTotal * 100, 1) & "%"
                             Else
@@ -794,7 +908,7 @@ Call LogAdminAction("访问对账中心", "finance", "", "", "")
                         <div class="report-value">
                             <% 
                             Dim todayException
-                            todayException = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE CAST(CreatedAt AS DATE)=Date() AND Status IN ('ShortPay', 'OverPay', 'Missing')")
+                            todayException = GetScalar("SELECT COUNT(*) FROM ReconciliationLogs WHERE CAST(CreatedAt AS DATE)=CAST(GETDATE() AS DATE) AND Status IN ('ShortPay', 'OverPay', 'Missing')")
                             If todayTotal > 0 Then
                                 Response.Write FormatNumber(todayException / todayTotal * 100, 1) & "%"
                             Else
@@ -883,6 +997,24 @@ Call LogAdminAction("访问对账中心", "finance", "", "", "")
                 
                 row.style.display = statusMatch && orderMatch ? '' : 'none';
             });
+        }
+        
+        // V20 快捷日期预设
+        function fmtDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+        function setPresetDate(startOffset, endOffset) {
+            var now = new Date();
+            var s = new Date(now); s.setDate(s.getDate() + startOffset);
+            var e = new Date(now); e.setDate(e.getDate() + endOffset);
+            var ds = document.querySelectorAll('input[type=date]');
+            if(ds.length>=2){ ds[0].value=fmtDate(s); ds[1].value=fmtDate(e);
+                ds.forEach(function(d){ d.dispatchEvent(new Event('input',{bubbles:true})); d.dispatchEvent(new Event('change',{bubbles:true})); }); }
+        }
+        function setMonthPreset(monthOffset) {
+            var now = new Date(); var s = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+            var e = new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0);
+            var ds = document.querySelectorAll('input[type=date]');
+            if(ds.length>=2){ ds[0].value=fmtDate(s); ds[1].value=fmtDate(e);
+                ds.forEach(function(d){ d.dispatchEvent(new Event('input',{bubbles:true})); d.dispatchEvent(new Event('change',{bubbles:true})); }); }
         }
     </script>
 </body>

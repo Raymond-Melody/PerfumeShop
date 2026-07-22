@@ -1,0 +1,123 @@
+﻿  姝ｅ湪纭畾瑕佽繕鍘熺殑椤圭洰鈥?
+  宸茶繕鍘?F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\PerfumeShop.Api.csproj (鐢ㄦ椂 523 姣)銆?
+  宸茶繕鍘?F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\PerfumeShop.IntegrationTests.csproj (鐢ㄦ椂 555 姣)銆?
+  3 涓」鐩?鍏?5 涓?鏄渶鏂扮殑锛屾棤娉曡繕鍘熴€?
+  PerfumeShop.Shared -> F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Shared\bin\Debug\net8.0\PerfumeShop.Shared.dll
+  PerfumeShop.Core -> F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Core\bin\Debug\net8.0\PerfumeShop.Core.dll
+  PerfumeShop.Data -> F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Data\bin\Debug\net8.0\PerfumeShop.Data.dll
+F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\Pages\User\Coupons.cshtml(87,67): warning CS8604: 鈥渟tring CouponsModel.GetTypeColor(string type)鈥濅腑鐨勫舰鍙傗€渢ype鈥濆彲鑳戒紶鍏?null 寮曠敤瀹炲弬銆?[F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\PerfumeShop.Api.csproj]
+F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\Controllers\UserExtendedController.cs(229,38): warning CS1998: 姝ゅ紓姝ユ柟娉曠己灏?"await" 杩愮畻绗︼紝灏嗕互鍚屾鏂瑰紡杩愯銆傝鑰冭檻浣跨敤 "await" 杩愮畻绗︾瓑寰呴潪闃绘鐨?API 璋冪敤锛屾垨鑰呬娇鐢?"await Task.Run(...)" 鍦ㄥ悗鍙扮嚎绋嬩笂鎵ц鍗犵敤澶ч噺 CPU 鐨勫伐浣溿€?[F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\PerfumeShop.Api.csproj]
+  PerfumeShop.Api -> F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\bin\Debug\net8.0\PerfumeShop.Api.dll
+  PerfumeShop.IntegrationTests -> F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll
+F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+VSTest 鐗堟湰 17.11.1 (x64)
+
+姝ｅ湪鍚姩娴嬭瘯鎵ц锛岃绋嶅€?..
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+dotnet : [xUnit.net 00:00:01.65]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Favorites_Remove_Success [FAI
+L]
+所在位置 行:1 字符: 58
++ ... ionTests" ; dotnet test --filter "FullyQualifiedName~UserBenefitsTest ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([xUnit.net 00:0..._Success [FAIL]:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[xUnit.net 00:00:01.67]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Favorites_AddAndGet_Success [FAIL]
+[xUnit.net 00:00:01.70]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_Redeem_InsufficientPoints [FAIL
+]
+[xUnit.net 00:00:01.74]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Coupons_GetList_ReturnsAvailable [FAIL
+]
+[xUnit.net 00:00:01.76]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Coupons_Validate_ValidCode [FAIL]
+[xUnit.net 00:00:01.77]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_Delete_Success [FAIL]
+[xUnit.net 00:00:01.77]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_SetDefault_Success [FAIL]
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Favorites_Remove_Success [1 s]
+  閿欒娑堟伅:
+   Microsoft.CSharp.RuntimeBinder.RuntimeBinderException : 'object' does not contain a definition for 'success'
+  鍫嗘爤璺熻釜:
+     at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Favorites_Remove_Success() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 149
+--- End of stack trace from previous location ---
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Favorites_AddAndGet_Success [27 ms]
+  閿欒娑堟伅:
+   Microsoft.CSharp.RuntimeBinder.RuntimeBinderException : 'object' does not contain a definition for 'success'
+  鍫嗘爤璺熻釜:
+     at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Favorites_AddAndGet_Success() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 132
+--- End of stack trace from previous location ---
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_Redeem_InsufficientPoints [21 ms]
+  閿欒娑堟伅:
+   Microsoft.CSharp.RuntimeBinder.RuntimeBinderException : 'object' does not contain a definition for 'success'
+  鍫嗘爤璺熻釜:
+     at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_Redeem_InsufficientPoints() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 188
+--- End of stack trace from previous location ---
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Coupons_GetList_ReturnsAvailable [41 ms]
+  閿欒娑堟伅:
+   Microsoft.CSharp.RuntimeBinder.RuntimeBinderException : 'object' does not contain a definition for 'success'
+  鍫嗘爤璺熻釜:
+     at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Coupons_GetList_ReturnsAvailable() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 200
+--- End of stack trace from previous location ---
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Coupons_Validate_ValidCode [19 ms]
+  閿欒娑堟伅:
+   Microsoft.CSharp.RuntimeBinder.RuntimeBinderException : 'object' does not contain a definition for 'success'
+  鍫嗘爤璺熻釜:
+     at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Coupons_Validate_ValidCode() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 210
+--- End of stack trace from previous location ---
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_Delete_Success [7 ms]
+  閿欒娑堟伅:
+   System.InvalidOperationException : Unable to track an instance of type 'UserAddress' because it does not have a primary key. Only entity types with a primary key may be tracked.
+  鍫嗘爤璺熻釜:
+     at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.GetOrCreateEntry(Object entity, IEntityType entityType)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.EntryWithoutDetectChanges(TEntity entity)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.Add(TEntity entity)
+   at PerfumeShop.Api.Controllers.UserExtendedController.AddAddress(Int32 userId, AddressRequest req) in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\Controllers\UserExtendedController.cs:line 39
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_Delete_Success() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 241
+--- End of stack trace from previous location ---
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_SetDefault_Success [2 ms]
+  閿欒娑堟伅:
+   System.InvalidOperationException : Unable to track an instance of type 'UserAddress' because it does not have a primary key. Only entity types with a primary key may be tracked.
+  鍫嗘爤璺熻釜:
+     at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.GetOrCreateEntry(Object entity, IEntityType entityType)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.EntryWithoutDetectChanges(TEntity entity)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.Add(TEntity entity)
+   at PerfumeShop.Api.Controllers.UserExtendedController.AddAddress(Int32 userId, AddressRequest req) in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\Controllers\UserExtendedController.cs:line 39
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_SetDefault_Success() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 263
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:01.80]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_Redeem_Success [FAIL]
+[xUnit.net 00:00:01.81]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_AddAndGet_Success [FAIL]
+[xUnit.net 00:00:01.81]     PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_GetBalance_Returns500 [FAIL]
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_Redeem_Success [23 ms]
+  閿欒娑堟伅:
+   Microsoft.CSharp.RuntimeBinder.RuntimeBinderException : 'object' does not contain a definition for 'success'
+  鍫嗘爤璺熻釜:
+     at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_Redeem_Success() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 172
+--- End of stack trace from previous location ---
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_AddAndGet_Success [2 ms]
+  閿欒娑堟伅:
+   System.InvalidOperationException : Unable to track an instance of type 'UserAddress' because it does not have a primary key. Only entity types with a primary key may be tracked.
+  鍫嗘爤璺熻釜:
+     at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.GetOrCreateEntry(Object entity, IEntityType entityType)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.EntryWithoutDetectChanges(TEntity entity)
+   at Microsoft.EntityFrameworkCore.Internal.InternalDbSet`1.Add(TEntity entity)
+   at PerfumeShop.Api.Controllers.UserExtendedController.AddAddress(Int32 userId, AddressRequest req) in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿src\PerfumeShop.Api\Controllers\UserExtendedController.cs:line 39
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Address_AddAndGet_Success() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 219
+--- End of stack trace from previous location ---
+  澶辫触 PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_GetBalance_Returns500 [3 ms]
+  閿欒娑堟伅:
+   Microsoft.CSharp.RuntimeBinder.RuntimeBinderException : 'object' does not contain a definition for 'success'
+  鍫嗘爤璺熻釜:
+     at CallSite.Target(Closure, CallSite, Object)
+   at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)
+   at PerfumeShop.IntegrationTests.Pages.UserBenefitsTests.Points_GetBalance_Returns500() in F:\缃戠珯鍒朵綔\缃戠珯\缃戠珯浜孿tests\PerfumeShop.IntegrationTests\Pages\UserBenefitsTests.cs:line 161
+--- End of stack trace from previous location ---
+
+澶辫触!  - 澶辫触:    10锛岄€氳繃:     3锛屽凡璺宠繃:     0锛屾€昏:    13锛屾寔缁椂闂? 159 ms - PerfumeShop.IntegrationTests.dll (net8.0)

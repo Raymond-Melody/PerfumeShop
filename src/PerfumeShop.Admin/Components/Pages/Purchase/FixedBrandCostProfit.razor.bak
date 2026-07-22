@@ -1,0 +1,74 @@
+@page "/admin/Purchase/FixedBrandCostProfit"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>品牌定香成本利润分析</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">品牌定香成本利润分析</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1">总成本</MudText>
+                <MudText Typo="Typo.h5">¥@_totalCost.ToString("N2")</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Color="Color.Success">总利润</MudText>
+                <MudText Typo="Typo.h5">¥@_totalProfit.ToString("N2")</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle1" Color="Color.Info">平均利润率</MudText>
+                <MudText Typo="Typo.h5">@_avgProfitRate.ToString("N1")%</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<MudTable Items="@_allocations" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>产品</MudTh>
+        <MudTh>采购单号</MudTh>
+        <MudTh>单位成本</MudTh>
+        <MudTh>数量</MudTh>
+        <MudTh>总成本</MudTh>
+        <MudTh>售价</MudTh>
+        <MudTh>利润</MudTh>
+        <MudTh>利润率</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@(context.ProductName ?? "-")</MudTd>
+        <MudTd>@(context.PurchaseNo ?? "-")</MudTd>
+        <MudTd>¥@(context.CostPerUnit?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>@context.Quantity</MudTd>
+        <MudTd>¥@(context.TotalCost?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>¥@(context.SalePrice?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>¥@(context.ProfitAmount?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>@((context.ProfitRate * 100)?.ToString("N1") ?? "0.0")%</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private List<FixedBrandCostAllocation> _allocations = new();
+    private decimal _totalCost;
+    private decimal _totalProfit;
+    private decimal _avgProfitRate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _allocations = await Repo.GetFixedBrandCostAllocationsAsync();
+        _totalCost = _allocations.Sum(a => a.TotalCost ?? 0);
+        _totalProfit = _allocations.Sum(a => a.ProfitAmount ?? 0);
+        _avgProfitRate = _allocations.Count > 0 ? (decimal)_allocations.Average(a => (double?)(a.ProfitRate * 100) ?? 0) : 0;
+    }
+}

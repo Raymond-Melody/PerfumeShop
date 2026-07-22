@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace PerfumeShop.Data.Models;
 
@@ -19,6 +20,7 @@ public partial class PointTransaction
 
     public string? Reason { get; set; }
 
+    [Key]
     public int TransactionId { get; set; }
 
     public string? TransactionType { get; set; }

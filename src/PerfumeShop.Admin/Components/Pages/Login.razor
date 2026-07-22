@@ -1,0 +1,445 @@
+@page "/login"
+@using global::System.Collections.Concurrent
+@using global::System.Security.Cryptography
+@using global::System.Text
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.EntityFrameworkCore
+@using global::System.Security.Claims
+@using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@inject PerfumeShopContext Db
+@inject IHttpContextAccessor HttpAccessor
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@layout PerfumeShop.Admin.Components.Layout.LoginLayout
+
+@* V19 登录页 — 使用 HTML form POST 设置认证 Cookie（Blazor SignalR 无法设置 HTTP Cookie）
+   V19.1: 完整继承 V18 密码兼容(全角/半角/V1-V3自动升级) + 记住我 + 忘记密码 + 速率限制 *@
+
+<PageTitle>管理后台登录</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex align-center" Style="min-height:100vh;">
+    <MudItem xs="12">
+        <MudPaper Elevation="8" Class="pa-8" Style="border-radius:12px;">
+            <div class="text-center mb-6">
+                <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h5" Class="mt-2">PerfumeShop 管理后台</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">V19 · 请登录以继续</MudText>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+            }
+            @if (!string.IsNullOrEmpty(_info))
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">@_info</MudAlert>
+            }
+
+            <form method="post" action="/login" @formname="loginForm">
+                <AntiforgeryToken />
+                <MudTextField T="string" name="username" Label="用户名" Variant="Variant.Outlined"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
+                              Required="true" RequiredError="请输入用户名" Class="mb-3" Value="@_username" />
+
+                <MudTextField T="string" name="password" Label="密码" InputType="InputType.Password"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
+                              Required="true" RequiredError="请输入密码" Class="mb-3" />
+
+                <div class="d-flex justify-space-between align-center mb-4" style="font-size:14px;">
+                    <MudCheckBox T="bool" name="remember_me" Label="记住我 (30天)" Checked="@_rememberMe" Size="Size.Small" Color="Color.Primary" />
+                    <MudLink Href="/forgot-password" Typo="Typo.caption" Color="Color.Primary">忘记密码？</MudLink>
+                </div>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           ButtonType="ButtonType.Submit" Size="Size.Large" Class="mb-3">
+                    登 录
+                </MudButton>
+            </form>
+
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                管理员账号: Ray88
+            </MudText>
+        </MudPaper>
+    </MudItem>
+</MudContainer>
+
+@code {
+    private string _username = "";
+    private string? _error;
+    private string? _info;
+    private bool _rememberMe;
+
+    // V18 PASSWORD_PEPPER from config.asp
+    private const string PasswordPepper = "P3rfum3Sh0p_S@lt_2026!";
+
+    // 速率限制：登录尝试 (对应 V18 RateLimitCheck("login"))
+    private static readonly ConcurrentDictionary<string, LoginBucket> _loginBuckets = new();
+    private const int LoginMaxAttempts = 10;      // 每窗口最多10次尝试
+    private const int LoginWindowSeconds = 60;    // 60秒窗口
+    private const int LockoutAfterFailures = 5;   // 5次失败后锁定
+    private static readonly ConcurrentDictionary<string, int> _failCounts = new();
+
+    [SupplyParameterFromForm] private string? username { get; set; }
+    [SupplyParameterFromForm] private string? password { get; set; }
+    [SupplyParameterFromForm] private bool remember_me { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 已登录检查 — 如果已认证则直接跳转到首页
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        // 处理登录 POST
+        if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+        {
+            _username = username;
+            _rememberMe = remember_me;
+
+            await ProcessLogin();
+        }
+    }
+
+    private async Task ProcessLogin()
+    {
+        var clientIp = GetClientIp();
+        var loginKey = $"login:{clientIp}";
+
+        // === V18 兼容: IP级别速率限制（令牌桶） ===
+        if (!CheckLoginRateLimit(loginKey))
+        {
+            _error = "登录尝试过于频繁，请等待 60 秒后再试。";
+            return;
+        }
+
+        // === V18 兼容: 失败次数锁定 ===
+        int failCount = _failCounts.GetOrAdd(loginKey, 0);
+        if (failCount >= LockoutAfterFailures)
+        {
+            // 检查是否已过锁定窗口
+            var bucket = _loginBuckets.GetOrAdd(loginKey, _ => new LoginBucket());
+            if ((DateTime.UtcNow - bucket.FirstFailure).TotalSeconds < LoginWindowSeconds)
+            {
+                _error = "账户已临时锁定，请等待后再试。";
+                return;
+            }
+            // 窗口过期，重置
+            _failCounts.TryRemove(loginKey, out _);
+            _loginBuckets.TryRemove(loginKey, out _);
+            failCount = 0;
+        }
+
+        // === AdminUsers 表存在性检查 (对应 V18 tableExists 检查) ===
+        try
+        {
+            var tableCheck = await Db.AdminUsers.CountAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"数据库连接异常: {ex.Message}";
+            return;
+        }
+
+        // === 查询管理员账户 ===
+        var admin = await Db.AdminUsers
+            .FirstOrDefaultAsync(a => a.Username == username && a.IsActive == true);
+
+        if (admin == null || string.IsNullOrEmpty(admin.PasswordHash))
+        {
+            RecordLoginFailure(loginKey);
+            _error = "用户名或密码错误";
+            return;
+        }
+
+        // === V18 完整兼容: 密码验证（全角/半角双向 + V1/V2/V3 + 自动升级）===
+        var verifyResult = VerifyPasswordWithUpgrade(password!, admin.PasswordHash);
+
+        if (!verifyResult.Success)
+        {
+            RecordLoginFailure(loginKey);
+            _error = "用户名或密码错误";
+            return;
+        }
+
+        // === 登录成功 ===
+        // 重置失败计数
+        _failCounts.TryRemove(loginKey, out _);
+        _loginBuckets.TryRemove(loginKey, out _);
+
+        // 自动升级密码哈希 (V1/V2 → V3)
+        if (verifyResult.UpgradedHash != null)
+        {
+            try
+            {
+                admin.PasswordHash = verifyResult.UpgradedHash;
+                await Db.SaveChangesAsync();
+                _info = "密码已自动升级为最新加密版本。";
+            }
+            catch
+            {
+                // 升级失败不阻断登录
+            }
+        }
+
+        // 更新最后登录时间
+        try
+        {
+            admin.LastLogin = DateTime.Now;
+            await Db.SaveChangesAsync();
+        }
+        catch { /* 非关键 */ }
+
+        // 角色查询
+        var roleName = "管理员";
+        var roleCode = "";
+        if (admin.RoleId.HasValue && admin.RoleId > 0)
+        {
+            var role = await Db.AdminRoles.FirstOrDefaultAsync(r => r.RoleId == admin.RoleId);
+            if (role != null) { roleName = role.RoleName ?? "管理员"; roleCode = role.RoleCode ?? ""; }
+        }
+
+        // 构建 Claims
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, admin.AdminId.ToString()),
+            new(ClaimTypes.Name, admin.Username ?? ""),
+            new(ClaimTypes.Role, roleName),
+        };
+        if (!string.IsNullOrEmpty(roleCode))
+            claims.Add(new("RoleCode", roleCode));
+        if (!string.IsNullOrEmpty(admin.FullName))
+            claims.Add(new("FullName", admin.FullName));
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        // 签发认证 Cookie
+        var httpContext = HttpAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            // 记住我: 30天 vs 8小时
+            var expiry = _rememberMe
+                ? DateTimeOffset.UtcNow.AddDays(30)
+                : DateTimeOffset.UtcNow.AddHours(8);
+
+            await httpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = _rememberMe,
+                    ExpiresUtc = expiry,
+                    AllowRefresh = true,
+                });
+        }
+
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+
+    // ===== 速率限制方法 =====
+    private bool CheckLoginRateLimit(string loginKey)
+    {
+        var bucket = _loginBuckets.GetOrAdd(loginKey, _ => new LoginBucket());
+
+        lock (bucket)
+        {
+            var now = DateTime.UtcNow;
+            if ((now - bucket.WindowStart).TotalSeconds > LoginWindowSeconds)
+            {
+                bucket.WindowStart = now;
+                bucket.Count = 0;
+            }
+            if (bucket.Count >= LoginMaxAttempts)
+                return false;
+            bucket.Count++;
+            return true;
+        }
+    }
+
+    private void RecordLoginFailure(string loginKey)
+    {
+        _failCounts.AddOrUpdate(loginKey, 1, (k, v) => v + 1);
+        var bucket = _loginBuckets.GetOrAdd(loginKey, _ => new LoginBucket { FirstFailure = DateTime.UtcNow });
+        bucket.FirstFailure = DateTime.UtcNow;
+    }
+
+    private string GetClientIp()
+    {
+        var httpContext = HttpAccessor.HttpContext;
+        if (httpContext == null) return "unknown";
+
+        // 优先从 X-Forwarded-For 获取真实 IP
+        var forwarded = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwarded))
+            return forwarded.Split(',')[0].Trim();
+
+        return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    }
+
+    private class LoginBucket
+    {
+        public DateTime WindowStart { get; set; } = DateTime.UtcNow;
+        public int Count { get; set; }
+        public DateTime FirstFailure { get; set; } = DateTime.MinValue;
+    }
+
+    // ===== V17.2 全角/半角密码标准化 (从 V18 password_utils.asp 移植) =====
+
+    /// <summary>全角ASCII标点 → 半角 (对应 V18 NormalizePasswordInput)</summary>
+    private static string NormalizePasswordInput(string pwd)
+    {
+        if (string.IsNullOrEmpty(pwd)) return "";
+        var result = new StringBuilder();
+        foreach (char c in pwd)
+        {
+            int code = c;
+            // 全角 ASCII 标点 U+FF01~U+FF5E → 半角 U+0021~U+007E
+            if (code >= 0xFF01 && code <= 0xFF5E)
+                result.Append((char)(code - 0xFEE0));
+            // 全角空格 U+3000 → 半角空格 U+0020
+            else if (code == 0x3000)
+                result.Append((char)0x20);
+            else
+                result.Append(c);
+        }
+        return result.ToString();
+    }
+
+    /// <summary>半角标点 → 全角（仅标点符号, 对应 V18 ExpandToFullwidth）</summary>
+    private static string ExpandToFullwidth(string pwd)
+    {
+        if (string.IsNullOrEmpty(pwd)) return "";
+        var result = new StringBuilder();
+        foreach (char c in pwd)
+        {
+            int code = c;
+            // 半角 ASCII 标点 → 全角 (0x21-0x2F, 0x3A-0x40, 0x5B-0x60, 0x7B-0x7E)
+            if ((code >= 0x21 && code <= 0x2F) ||
+                (code >= 0x3A && code <= 0x40) ||
+                (code >= 0x5B && code <= 0x60) ||
+                (code >= 0x7B && code <= 0x7E))
+                result.Append((char)(code + 0xFEE0));
+            else if (code == 0x20)
+                result.Append((char)0x3000);
+            else
+                result.Append(c);
+        }
+        return result.ToString();
+    }
+
+    // ===== V18 完整密码验证 (全角/半角双向 + V1/V2/V3 + 自动升级) =====
+
+    private static VerifyResult VerifyPasswordWithUpgrade(string password, string storedHash)
+    {
+        var normalized = NormalizePasswordInput(password);
+        var expanded = ExpandToFullwidth(password);
+
+        if (storedHash.StartsWith("V3$"))
+            return VerifyV3Multi(password, normalized, expanded, storedHash);
+        if (storedHash.StartsWith("V2_"))
+            return VerifyV2Multi(password, normalized, expanded, storedHash);
+        return VerifyV1Multi(password, normalized, expanded, storedHash);
+    }
+
+    private static VerifyResult VerifyV3Multi(string orig, string norm, string exp, string storedHash)
+    {
+        if (VerifyV3(orig, storedHash)) return VerifyResult.Ok();
+        if (norm != orig && VerifyV3(norm, storedHash)) return VerifyResult.OkUpgrade(HashPasswordV3(norm));
+        if (exp != orig && exp != norm && VerifyV3(exp, storedHash)) return VerifyResult.OkUpgrade(HashPasswordV3(norm.Length > 0 ? norm : exp));
+        return VerifyResult.Fail();
+    }
+
+    private static VerifyResult VerifyV2Multi(string orig, string norm, string exp, string storedHash)
+    {
+        if (HashV2(orig) == storedHash) return VerifyResult.OkUpgrade(HashPasswordV3(orig));
+        if (norm != orig && HashV2(norm) == storedHash) return VerifyResult.OkUpgrade(HashPasswordV3(norm));
+        if (exp != orig && exp != norm && HashV2(exp) == storedHash) return VerifyResult.OkUpgrade(HashPasswordV3(norm.Length > 0 ? norm : exp));
+        return VerifyResult.Fail();
+    }
+
+    private static VerifyResult VerifyV1Multi(string orig, string norm, string exp, string storedHash)
+    {
+        if (HashV1(orig) == storedHash) return VerifyResult.OkUpgrade(HashPasswordV3(orig));
+        if (norm != orig && HashV1(norm) == storedHash) return VerifyResult.OkUpgrade(HashPasswordV3(norm));
+        if (exp != orig && exp != norm && HashV1(exp) == storedHash) return VerifyResult.OkUpgrade(HashPasswordV3(norm.Length > 0 ? norm : exp));
+        return VerifyResult.Fail();
+    }
+
+    private record VerifyResult(bool IsSuccess, string? UpgradedHash = null)
+    {
+        public bool Success => IsSuccess;
+        public static VerifyResult Ok() => new(true);
+        public static VerifyResult OkUpgrade(string hash) => new(true, hash);
+        public static VerifyResult Fail() => new(false);
+    }
+
+    private static string HashPasswordV3(string password)
+    {
+        var salt = GenerateSaltV3(32);
+        var hash = HashV3FromSalt(password, salt);
+        return $"V3${salt}${hash}";
+    }
+
+    private static string GenerateSaltV3(int length)
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        var random = Random.Shared;
+        return new string(Enumerable.Range(0, length).Select(_ => chars[random.Next(chars.Length)]).ToArray());
+    }
+
+    private static bool VerifyPassword(string password, string storedHash)
+    {
+        if (storedHash.StartsWith("V3$")) return VerifyV3(password, storedHash);
+        if (storedHash.StartsWith("V2_")) return HashV2(password) == storedHash;
+        return HashV1(password) == storedHash;
+    }
+
+    private static bool VerifyV3(string password, string storedHash)
+    {
+        var parts = storedHash.Split('$');
+        if (parts.Length < 3) return false;
+        return string.Equals(HashV3FromSalt(password, parts[1]), parts[2], StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string HashV3FromSalt(string password, string salt)
+    {
+        using var sha = SHA256.Create();
+        var combined = Encoding.ASCII.GetBytes(salt + password + PasswordPepper);
+        var hashBytes = sha.ComputeHash(combined);
+        var hashHex = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+        for (int i = 0; i < 999; i++)
+        {
+            var strInput = hashHex + salt;
+            hashBytes = sha.ComputeHash(Encoding.ASCII.GetBytes(strInput));
+            hashHex = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+        }
+        return hashHex;
+    }
+
+    private static string HashV2(string password)
+    {
+        var salted = password + PasswordPepper;
+        for (int i = 0; i < 10; i++) salted = InternalHash(salted);
+        return "V2_" + salted;
+    }
+
+    private static string InternalHash(string input)
+    {
+        var sb = new StringBuilder(); int prev = 0;
+        foreach (char c in input) { int cc = (int)c; prev = (prev + cc) % 256; sb.Append(((cc * 7 + prev) % 256).ToString("x2")); }
+        return sb.ToString();
+    }
+
+    private static string HashV1(string password)
+    {
+        var sb = new StringBuilder();
+        foreach (char c in password) sb.Append(((int)c).ToString("x2"));
+        return sb.ToString();
+    }
+}

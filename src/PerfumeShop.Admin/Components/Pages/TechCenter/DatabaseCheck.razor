@@ -1,0 +1,113 @@
+@page "/admin/TechCenter/DatabaseCheck"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "TECH_MANAGER,SUPER_ADMIN")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+
+<PageTitle>数据库诊断</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-database" style="color:#00bcd4;"></i> 数据库诊断工具</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>数据库诊断</span></div></div>
+
+<div class="info-card"><i class="fas fa-info-circle"></i> <strong>说明：</strong>此工具用于诊断技术中心模块依赖的数据库表和关键配置。如果表已存在将显示绿色，不存在将显示红色。</div>
+
+@if(_loaded){
+@foreach(var item in _checks){
+<div class="check-card @(item.Exists?"check-ok":"check-fail")">
+    <div class="check-header"><i class="fas @(item.Exists?"fa-check-circle":"fa-times-circle")"></i> @item.Name</div>
+    <div class="check-body">@item.Message</div>
+    @if(item.Detail!=null && item.Detail.Any()){<table class="detail-table"><thead><tr><th>字段</th><th>值</th></tr></thead><tbody>@foreach(var d in item.Detail){<tr><td>@d.Key</td><td>@d.Value</td></tr>}</tbody></table>}
+</div>
+}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<div class="btn-row">
+    <a href="/admin/TechCenter" class="btn-home"><i class="fas fa-home"></i> 返回技术中心</a>
+    <a href="/admin/TechCenter/FormulaManagement" class="btn-home" style="background:rgba(0,188,212,0.15);color:#00bcd4;border:1px solid rgba(0,188,212,0.3);"><i class="fas fa-vial"></i> 配方管理</a>
+</div>
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.info-card{background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.3);padding:12px 15px;border-radius:8px;margin-bottom:20px;font-size:13px;color:#ccc;}
+.check-card{margin-bottom:12px;border-radius:8px;padding:16px 20px;border-left:4px solid;}
+.check-ok{border-left-color:#4CAF50;background:rgba(76,175,80,0.05);}
+.check-fail{border-left-color:#f44336;background:rgba(244,67,54,0.05);}
+.check-header{font-size:16px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.check-ok .check-header{color:#81c784;}
+.check-fail .check-header{color:#e57373;}
+.check-body{font-size:13px;color:#888;}
+.detail-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;background:rgba(0,0,0,0.2);border-radius:6px;}
+.detail-table th{text-align:left;padding:6px 12px;color:#888;}.detail-table td{padding:6px 12px;color:#ccc;}
+.btn-row{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;}
+.btn-home{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;text-decoration:none;border-radius:6px;font-size:14px;}
+</style>
+
+@code {
+    private bool _loaded;
+    private List<CheckItem> _checks=new();
+    class CheckItem{public string Name="",Message="";public bool Exists;public List<KeyValuePair<string,string>>? Detail;}
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            // 1. Recipes table
+            bool recExists=false;
+            try{var c=await Db.Recipes.CountAsync();recExists=true;_checks.Add(new CheckItem{Name="Recipes（配方主表）",Exists=true,Message=$"已存在，当前记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="Recipes（配方主表）",Exists=false,Message="表不存在或无法访问"});}
+
+            // 2. RecipeNotes
+            try{if(recExists){var c=await Db.RecipeNotes.CountAsync();_checks.Add(new CheckItem{Name="RecipeNotes（配方-香调关联）",Exists=true,Message=$"已存在，记录数：{c}"});}}
+            catch{_checks.Add(new CheckItem{Name="RecipeNotes（配方-香调关联）",Exists=false,Message="表不存在"});}
+
+            // 3. RecipeIngredients
+            try{if(recExists){var c=await Db.RecipeIngredients.CountAsync();_checks.Add(new CheckItem{Name="RecipeIngredients（配方成分）",Exists=true,Message=$"已存在，记录数：{c}"});}}
+            catch{_checks.Add(new CheckItem{Name="RecipeIngredients（配方成分）",Exists=false,Message="表不存在"});}
+
+            // 4. RecipeAccords
+            try{var c=await Db.RecipeAccords.CountAsync();_checks.Add(new CheckItem{Name="RecipeAccords（香调发布的配方）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="RecipeAccords",Exists=false,Message="表不存在"});}
+
+            // 5. RecipeProducts
+            try{var c=await Db.RecipeProducts.CountAsync();_checks.Add(new CheckItem{Name="RecipeProducts（产品配方发布）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="RecipeProducts",Exists=false,Message="表不存在"});}
+
+            // 6. RecipePublishLog
+            try{var c=await Db.RecipePublishLogs.CountAsync();_checks.Add(new CheckItem{Name="RecipePublishLog（发布审计日志）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="RecipePublishLog",Exists=false,Message="表不存在"});}
+
+            // 7. FragranceNotes
+            try{var c=await Db.FragranceNotes.CountAsync();_checks.Add(new CheckItem{Name="FragranceNotes（香调）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="FragranceNotes",Exists=false,Message="表不存在"});}
+
+            // 8. BaseNotes
+            try{var c=await Db.BaseNotes.CountAsync();_checks.Add(new CheckItem{Name="BaseNotes（基香）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="BaseNotes",Exists=false,Message="表不存在"});}
+
+            // 9. BottleStyles
+            try{var c=await Db.BottleStyles.CountAsync();_checks.Add(new CheckItem{Name="BottleStyles（瓶型）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="BottleStyles",Exists=false,Message="表不存在"});}
+
+            // 10. ProductTypeConfig
+            try{var c=await Db.ProductTypeConfigs.CountAsync();_checks.Add(new CheckItem{Name="ProductTypeConfig（产品类型）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="ProductTypeConfig",Exists=false,Message="表不存在"});}
+
+            // 11. SiteSettings - ratio params
+            try{
+                var settings=await Db.SiteSettings.AsNoTracking().Where(s=>s.SettingKey!=null&&s.SettingKey.Contains("Percent")).ToListAsync();
+                var detail=settings.Select(s=>new KeyValuePair<string,string>(s.SettingKey??"-",s.SettingValue??"-")).ToList();
+                _checks.Add(new CheckItem{Name="SiteSettings（香调配比参数）",Exists=settings.Any(),Message=settings.Any()?$"已配置 {settings.Count} 个参数": "未配置配比参数",Detail=detail});
+            }catch{_checks.Add(new CheckItem{Name="SiteSettings",Exists=false,Message="表不存在"});}
+
+            // 12. Products
+            try{var c=await Db.Products.CountAsync();_checks.Add(new CheckItem{Name="Products（产品）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="Products",Exists=false,Message="表不存在"});}
+
+            // 13. RawMaterialInventories
+            try{var c=await Db.RawMaterialInventories.CountAsync();_checks.Add(new CheckItem{Name="RawMaterialInventory（原料库存）",Exists=true,Message=$"已存在，记录数：{c}"});}
+            catch{_checks.Add(new CheckItem{Name="RawMaterialInventory",Exists=false,Message="表不存在"});}
+
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+}

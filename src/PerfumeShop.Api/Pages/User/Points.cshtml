@@ -1,0 +1,232 @@
+@page "/user/points"
+@model PerfumeShop.Api.Pages.User.PointsModel
+@{ ViewData["Title"] = "积分中心"; }
+
+@section Styles {
+<style>
+.redeem-card { transition: box-shadow 0.2s; }
+.redeem-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: #ff8f00; }
+.ledger-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0; }
+.stats-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-bottom:24px; }
+.stat-card { background:#fff; border-radius:12px; padding:20px; display:flex; align-items:center; gap:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.stat-icon { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.stat-value { font-size:24px; font-weight:bold; display:block; }
+.stat-label { font-size:13px; color:#888; }
+@@media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+</style>
+}
+
+<!-- 面包屑 -->
+<div class="breadcrumb">
+    <div class="container">
+        <a href="/">首页</a><span class="separator">/</span>
+        <a href="/user">个人中心</a><span class="separator">/</span>
+        <span>积分中心</span>
+    </div>
+</div>
+
+<div class="container">
+    <div class="user-center">
+        <aside class="user-side">
+            <div class="user-card">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="/user">账户概览</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/orders">我的订单</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/favorites">我的收藏</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/points">我的积分</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/coupons">我的优惠券</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/addresses">收货地址</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/settings">账户设置</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <div class="user-main">
+            <div class="welcome-section">
+                <h1><i class="fas fa-coins" style="color:#ff8f00;"></i> 积分中心</h1>
+                <p>管理您的积分，兑换好礼或抵扣订单 · 会员等级: <strong>@Model.MemberTier</strong></p>
+            </div>
+
+            <!-- 积分概览 -->
+            <div class="stats-grid">
+                <div class="stat-card" style="border-top:3px solid #ff8f00;">
+                    <div class="stat-icon" style="background:#fff3e0;color:#ff8f00;"><i class="fas fa-coins"></i></div>
+                    <div class="stat-info"><span class="stat-value">@Model.AvailablePoints</span><span class="stat-label">可用积分</span></div>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #4CAF50;">
+                    <div class="stat-icon" style="background:#e8f5e9;color:#4CAF50;"><i class="fas fa-plus-circle"></i></div>
+                    <div class="stat-info"><span class="stat-value">@Model.TotalEarned</span><span class="stat-label">累计获得</span></div>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #F44336;">
+                    <div class="stat-icon" style="background:#ffebee;color:#F44336;"><i class="fas fa-minus-circle"></i></div>
+                    <div class="stat-info"><span class="stat-value">@Model.TotalRedeemed</span><span class="stat-label">已使用</span></div>
+                </div>
+                <div class="stat-card" style="border-top:3px solid #FF9800;">
+                    <div class="stat-icon" style="background:#fff3e0;color:#FF9800;"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info"><span class="stat-value">@Model.ExpiringSoon</span><span class="stat-label">30天内到期</span></div>
+                </div>
+            </div>
+
+            <!-- 如何获得积分 -->
+            <div style="background:#fafafa;border-radius:12px;padding:20px;margin-bottom:24px;">
+                <h3 style="margin:0 0 12px;"><i class="fas fa-lightbulb" style="color:#ff8f00;"></i> 如何获得积分</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
+                    <div style="background:#fff;padding:12px 16px;border-radius:8px;border:1px solid #eee;">
+                        <strong>🛒 消费购物</strong>
+                        <div style="color:#666;font-size:13px;">每消费1元获得积分</div>
+                    </div>
+                    <div style="background:#fff;padding:12px 16px;border-radius:8px;border:1px solid #eee;">
+                        <strong>📝 签到打卡</strong>
+                        <div style="color:#666;font-size:13px;">每日签到获得积分</div>
+                    </div>
+                    <div style="background:#fff;padding:12px 16px;border-radius:8px;border:1px solid #eee;">
+                        <strong>⭐ 发表评价</strong>
+                        <div style="color:#666;font-size:13px;">评价获得积分，带图额外奖励</div>
+                    </div>
+                    <div style="background:#fff;padding:12px 16px;border-radius:8px;border:1px solid #eee;">
+                        <strong>📤 分享推广</strong>
+                        <div style="color:#666;font-size:13px;">分享产品/邀请好友获得积分</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 积分账本 -->
+            <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:24px;">
+                <h3 style="margin:0 0 16px;">积分明细</h3>
+                @if (Model.LedgerItems.Any())
+                {
+                    <div class="ledger-list">
+                        @foreach (var item in Model.LedgerItems)
+                        {
+                            var isEarn = item.PointType == "earn";
+                            var pointStr = isEarn ? $"+{item.Points}" : $"-{Math.Abs(item.Points)}";
+                            var icon = isEarn ? "plus-circle" : (item.PointType == "redeem" ? "minus-circle" : "clock");
+                            var color = isEarn ? "#4CAF50" : "#F44336";
+                            var bgColor = isEarn ? "#e8f5e9" : "#ffebee";
+                            <div class="ledger-item">
+                                <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:@bgColor;color:@color;">
+                                    <i class="fas fa-@icon"></i>
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-weight:500;color:#333;">@PointsModel.GetSourceName(item.Source)</div>
+                                    @if (!string.IsNullOrEmpty(item.Description))
+                                    {
+                                        <div style="font-size:12px;color:#999;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@item.Description</div>
+                                    }
+                                    <div style="font-size:11px;color:#bbb;">@item.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                                </div>
+                                <div style="font-weight:bold;font-size:16px;color:@color;white-space:nowrap;">@pointStr</div>
+                            </div>
+                        }
+                    </div>
+
+                    @if (Model.TotalPages > 1)
+                    {
+                        <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+                            @for (var pg = 1; pg <= Model.TotalPages; pg++)
+                            {
+                                if (pg == Model.CurrentPage)
+                                {
+                                    <span style="padding:6px 14px;background:#ff8f00;color:#fff;border-radius:6px;font-weight:bold;">@pg</span>
+                                }
+                                else
+                                {
+                                    <a href="?page=@pg" style="padding:6px 14px;background:#f0f0f0;color:#666;border-radius:6px;text-decoration:none;">@pg</a>
+                                }
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div style="text-align:center;padding:40px;color:#999;">
+                        <i class="fas fa-coins" style="font-size:48px;display:block;margin-bottom:12px;color:#ddd;"></i>
+                        <p>暂无积分记录</p>
+                        <a href="/products" style="color:#ff8f00;">去购物获取积分 →</a>
+                    </div>
+                }
+            </div>
+
+            <!-- 积分兑换商城 -->
+            <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+                <h3 style="margin:0 0 16px;"><i class="fas fa-gift" style="color:#ff8f00;"></i> 积分兑换好礼</h3>
+                @if (Model.RedemptionItems.Any())
+                {
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));gap:16px;">
+                        @foreach (var r in Model.RedemptionItems)
+                        {
+                            var typeLabel = r.ItemType switch { "coupon" => "优惠券", "sample" => "小样", "bottle" => "瓶身", "discount" => "折扣", _ => r.ItemType };
+                            var typeColor = r.ItemType switch { "coupon" => "#2196F3", "sample" => "#9C27B0", "bottle" => "#795548", "discount" => "#F44336", _ => "#607D8B" };
+                            var canRedeem = Model.AvailablePoints >= r.PointsCost;
+                            <div class="redeem-card" style="border:1px solid #eee;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;">
+                                <div style="background:linear-gradient(135deg, #fff8e1, #ffe0b2);padding:20px;text-align:center;">
+                                    @if (!string.IsNullOrEmpty(r.ImageUrl))
+                                    {
+                                        <img src="@r.ImageUrl" alt="@r.ItemName" style="max-width:100%;height:80px;object-fit:contain;">
+                                    }
+                                    else
+                                    {
+                                        var faIcon = r.ItemType switch { "coupon" => "ticket-alt", "sample" => "vial", "bottle" => "wine-bottle", _ => "gift" };
+                                        <i class="fas fa-@faIcon" style="font-size:48px;color:@typeColor;"></i>
+                                    }
+                                </div>
+                                <div style="padding:16px;flex:1;display:flex;flex-direction:column;">
+                                    <span style="display:inline-block;background:@typeColor;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;align-self:flex-start;margin-bottom:8px;">@typeLabel</span>
+                                    <h4 style="margin:0 0 8px;font-size:15px;">@r.ItemName</h4>
+                                    @if (!string.IsNullOrEmpty(r.Description))
+                                    {
+                                        <p style="font-size:12px;color:#888;margin:0 0 12px;flex:1;">@r.Description</p>
+                                    }
+                                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                                        <div>
+                                            <span style="font-size:20px;font-weight:bold;color:#ff8f00;">@r.PointsCost</span>
+                                            <span style="font-size:13px;color:#999;">积分</span>
+                                            @if (r.RedemptionValue > 0)
+                                            {
+                                                <span style="font-size:12px;color:#999;">≈¥@((int)r.RedemptionValue)</span>
+                                            }
+                                        </div>
+                                        <button onclick="redeemItem(@r.RedemptionId, @r.PointsCost, '@r.ItemName')"
+                                                @(canRedeem ? "" : "disabled")
+                                                style="padding:8px 16px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;@(canRedeem ? "background:linear-gradient(135deg, #ff8f00, #f57c00);color:#fff;" : "background:#e0e0e0;color:#bbb;cursor:not-allowed;")">
+                                            @(canRedeem ? "立即兑换" : "积分不足")
+                                        </button>
+                                    </div>
+                                    <div style="font-size:11px;color:#bbb;margin-top:8px;">剩余库存: @r.Stock</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div style="text-align:center;padding:40px;color:#999;">
+                        <i class="fas fa-box-open" style="font-size:48px;display:block;margin-bottom:12px;color:#ddd;"></i>
+                        <p>暂无可兑换商品</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function redeemItem(redemptionId, pointsCost, itemName) {
+    if (!confirm('确认使用 ' + pointsCost + ' 积分兑换【' + itemName + '】吗？')) return;
+    fetch('/api/points/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 1, redemptionId: redemptionId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) location.reload();
+    })
+    .catch(() => alert('网络错误'));
+}
+</script>
+}

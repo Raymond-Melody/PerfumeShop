@@ -1,0 +1,151 @@
+@page "/user/subscription"
+@model PerfumeShop.Api.Pages.User.SubscriptionModel
+@{ ViewData["Title"] = "我的订阅"; }
+
+<section class="py-4">
+    <div class="container">
+        <nav class="breadcrumb-nav mb-3" style="font-size:.85rem;color:#999;">
+            <a href="/" style="color:#8B4513;text-decoration:none;">首页</a> /
+            <a href="/user" style="color:#8B4513;text-decoration:none;">个人中心</a> /
+            <span>我的订阅</span>
+        </nav>
+
+        <div class="row g-4">
+            <!-- 侧边栏 -->
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="/user" class="list-group-item list-group-item-action">账户概览</a>
+                    <a href="/user/orders" class="list-group-item list-group-item-action">我的订单</a>
+                    <a href="/user/favorites" class="list-group-item list-group-item-action">我的收藏</a>
+                    <a href="/user/reviews" class="list-group-item list-group-item-action">我的评价</a>
+                    <a href="/user/subscription" class="list-group-item list-group-item-action active">我的订阅</a>
+                    <a href="/user/addresses" class="list-group-item list-group-item-action">收货地址</a>
+                    <a href="/user/referrals" class="list-group-item list-group-item-action">我的推荐</a>
+                    <a href="/user/data-export" class="list-group-item list-group-item-action">数据导出</a>
+                    <a href="/user/account-delete" class="list-group-item list-group-item-action text-danger">账户注销</a>
+                </div>
+            </div>
+
+            <!-- 主内容 -->
+            <div class="col-md-9">
+                <h2 class="mb-4" style="color:var(--brand);"><i class="fas fa-box-open"></i> 我的订阅</h2>
+
+                @if (!Model.HasActive && !Model.HistorySubscriptions.Any())
+                {
+                    <!-- 未订阅状态 -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-box-open" style="font-size:4rem;color:#ddd;display:block;margin-bottom:15px;"></i>
+                        <p style="color:#999;margin-bottom:20px;">你还没有订阅哦～</p>
+                        <a href="/subscribe" class="btn-brand" style="display:inline-flex;align-items:center;gap:6px;">探索订阅计划</a>
+                    </div>
+                }
+                else
+                {
+                    <!-- 活跃订阅 -->
+                    @foreach (var sub in Model.ActiveSubscriptions)
+                    {
+                        var subDeliveries = Model.Deliveries.Where(d => d.SubscriptionId == sub.SubscriptionId).ToList();
+                        <div class="card mb-4 p-4" style="border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+                            <div class="d-flex justify-content-between align-items-center pb-3 mb-3" style="border-bottom:1px solid #f0f0f0;">
+                                <div>
+                                    <h4 class="mb-1" style="display:flex;align-items:center;gap:8px;">@sub.PlanName</h4>
+                                    <span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:500;@sub.StatusBadge">@sub.StatusLabel</span>
+                                </div>
+                                <div style="font-size:1.6rem;font-weight:700;color:#11998e;">¥@sub.Price<span style="font-size:.8rem;color:#999;font-weight:400;">/期</span></div>
+                            </div>
+
+                            <!-- 订阅详情 -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-4"><small style="font-size:11px;color:#999;display:block;">周期</small><span>@sub.PeriodLabel</span></div>
+                                <div class="col-4"><small style="font-size:11px;color:#999;display:block;">每期内容</small><span>@sub.SampleCount 款小样 + @sub.FullSizeCount 款正装</span></div>
+                                <div class="col-4"><small style="font-size:11px;color:#999;display:block;">开始日期</small><span>@sub.StartDate.ToString("yyyy-MM-dd")</span></div>
+                                <div class="col-4"><small style="font-size:11px;color:#999;display:block;">配送</small><span>@(sub.FreeShipping ? "包邮" : "运费另计")</span></div>
+                                <div class="col-4"><small style="font-size:11px;color:#999;display:block;">自动续费</small><span>@(sub.AutoRenew ? "✓ 开启" : "✗ 关闭")</span></div>
+                            </div>
+
+                            <!-- 配送历史 -->
+                            @if (subDeliveries.Any())
+                            {
+                                <h6 class="mt-3 mb-2" style="color:#555;"><i class="fas fa-history"></i> 配送记录</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm" style="font-size:13px;">
+                                        <thead><tr><th>日期</th><th>状态</th><th>物流</th></tr></thead>
+                                        <tbody>
+                                            @foreach (var d in subDeliveries)
+                                            {
+                                                <tr>
+                                                    <td>@d.DeliveryDate.ToString("yyyy-MM-dd")</td>
+                                                    <td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;@d.StatusBadge">@d.StatusLabel</span></td>
+                                                    <td>@(!string.IsNullOrEmpty(d.TrackingNo) ? d.TrackingNo : "—")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+
+                            <!-- 操作按钮 -->
+                            <div class="d-flex gap-2 mt-3 pt-3" style="border-top:1px solid #f0f0f0;flex-wrap:wrap;">
+                                @if (sub.Status == "Active")
+                                {
+                                    <button class="btn btn-sm" style="padding:6px 16px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;"
+                                            onclick="subAction(@sub.SubscriptionId,'pause')">
+                                        <i class="fas fa-pause-circle"></i> 暂停订阅
+                                    </button>
+                                    <button class="btn btn-sm" style="padding:6px 16px;border:1px solid #fce4ec;color:#c62828;background:#fff;border-radius:6px;cursor:pointer;"
+                                            onclick="if(confirm('确认取消订阅？'))subAction(@sub.SubscriptionId,'cancel')">
+                                        <i class="fas fa-times-circle"></i> 取消订阅
+                                    </button>
+                                }
+                                else if (sub.Status == "Paused")
+                                {
+                                    <button class="btn btn-sm btn-brand" style="padding:6px 16px;border-radius:6px;cursor:pointer;"
+                                            onclick="subAction(@sub.SubscriptionId,'resume')">
+                                        <i class="fas fa-play-circle"></i> 恢复订阅
+                                    </button>
+                                    <button class="btn btn-sm" style="padding:6px 16px;border:1px solid #ddd;background:#fff;border-radius:6px;cursor:pointer;"
+                                            onclick="if(confirm('确认取消订阅？'))subAction(@sub.SubscriptionId,'cancel')">
+                                        <i class="fas fa-times-circle"></i> 取消订阅
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- 历史订阅 -->
+                    @if (Model.HistorySubscriptions.Any())
+                    {
+                        <h5 class="mt-4 mb-3" style="color:#555;"><i class="fas fa-history"></i> 历史订阅</h5>
+                        <div class="table-responsive">
+                            <table class="table" style="font-size:13px;">
+                                <thead><tr><th>计划</th><th>周期</th><th>开始</th><th>结束</th><th>状态</th></tr></thead>
+                                <tbody>
+                                    @foreach (var h in Model.HistorySubscriptions)
+                                    {
+                                        <tr>
+                                            <td>@h.PlanName</td>
+                                            <td>@h.PeriodLabel</td>
+                                            <td>@h.StartDate.ToString("yyyy-MM-dd")</td>
+                                            <td>@(h.EndDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                                            <td><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;@h.StatusBadge">@h.StatusLabel</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+<script>
+function subAction(subId, action) {
+    fetch('/api/user/1/subscription/' + subId + '/' + action, { method: 'POST', headers: {'Content-Type':'application/json'} })
+        .then(r => r.json())
+        .then(d => { if (d.success) location.reload(); else alert(d.message || '操作失败'); });
+}
+</script>
+}

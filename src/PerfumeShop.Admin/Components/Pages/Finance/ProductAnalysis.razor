@@ -1,0 +1,11 @@
+@page "/admin/finance/product-analysis"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>单品分析</PageTitle>
+<div class="ph"><h2><i class="fas fa-box-open" style="color:#00bcd4;"></i> 单品分析</h2><div class="br"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>单品分析</span></div></div>
+@if(_l){
+<div class="tc"><table class="ot"><thead><tr><th>#</th><th>产品名称</th><th>分类</th><th>单位成本</th><th>状态</th></tr></thead><tbody>@{int i=1;}@foreach(var p in _items){<tr><td>@(i++)</td><td>@p.ProductName</td><td>@(p.Category??"-")</td><td>@((p.UnitCost??0).ToString("N2"))</td><td><span class="sb @(p.IsActive==true?"sn":"sw")">@(p.IsActive==true?"在售":"下架")</span></td></tr>}@if(!_items.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">暂无产品</td></tr>}</tbody></table></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.sb{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}.sn{background:rgba(76,175,80,0.2);color:#81c784;}.sw{background:rgba(244,67,54,0.2);color:#e57373;}</style>
+@code{bool _l;List<Product> _items=new();protected override async Task OnInitializedAsync(){try{_items=await Db.Products.AsNoTracking().OrderByDescending(p=>p.UnitCost).Take(30).ToListAsync();_l=true;}catch{_l=true;}}}

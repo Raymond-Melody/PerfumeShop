@@ -1,0 +1,47 @@
+@page "/admin/semifinished/accord-detail/{Id:int}"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using AccordModel = PerfumeShop.Data.Models.AccordProduction
+@using AccordDetailModel = PerfumeShop.Data.Models.AccordProductionDetail
+
+<PageTitle>调配详情</PageTitle>
+@if (_record == null) { <MudProgressLinear Indeterminate="true" /> }
+else
+{
+    <MudText Typo="Typo.h4" Class="mb-4">调配记录 #@_record.ProductionId</MudText>
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" md="6"><MudPaper Class="pa-4" Elevation="2">
+            <MudSimpleTable Dense="true"><tbody>
+                <tr><td><b>批次号</b></td><td>@(_record.BatchNo ?? "-")</td></tr>
+                <tr><td><b>香料</b></td><td>@(_record.NoteName ?? "-")</td></tr>
+                <tr><td><b>计划量</b></td><td>@(_record.PlannedQty ?? 0)</td></tr>
+                <tr><td><b>实际量</b></td><td>@(_record.ActualQty ?? 0)</td></tr>
+                <tr><td><b>状态</b></td><td><MudChip T="string" Color="@(_record.Status == "Completed" ? Color.Success : Color.Info)">@( _record.Status ?? "-")</MudChip></td></tr>
+                <tr><td><b>工作中心</b></td><td>@(_record.WorkCenter ?? "-")</td></tr>
+                <tr><td><b>创建</b></td><td>@_record.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td></tr>
+            </tbody></MudSimpleTable>
+        </MudPaper></MudItem>
+    </MudGrid>
+    <MudText Typo="Typo.h6" Class="mb-2">原料明细</MudText>
+    <MudTable Items="@_details" Hover="true" Dense="true" RowsPerPage="10">
+        <HeaderContent><MudTh>原料</MudTh><MudTh>计划量</MudTh><MudTh>实际量</MudTh><MudTh>单位成本</MudTh><MudTh>总成本</MudTh></HeaderContent>
+        <RowTemplate>
+            <MudTd>@(context.MaterialName ?? "-")</MudTd><MudTd>@(context.PlannedQty ?? 0)</MudTd>
+            <MudTd>@(context.ActualQty ?? 0)</MudTd><MudTd>¥@((context.UnitCost ?? 0).ToString("F2"))</MudTd>
+            <MudTd>¥@((context.TotalCost ?? 0).ToString("F2"))</MudTd>
+        </RowTemplate>
+    </MudTable>
+    <MudButton Variant="Variant.Outlined" Class="mt-4" Href="/admin/semifinished/accord-production">返回列表</MudButton>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private AccordModel? _record;
+    private List<AccordDetailModel> _details = new();
+    protected override async Task OnParametersSetAsync()
+    {
+        _record = await Db.AccordProductions.AsNoTracking().FirstOrDefaultAsync(a => a.ProductionId == Id);
+        if (_record != null) _details = await Db.AccordProductionDetails.AsNoTracking().Where(d => d.ProductionId == Id).ToListAsync();
+    }
+}

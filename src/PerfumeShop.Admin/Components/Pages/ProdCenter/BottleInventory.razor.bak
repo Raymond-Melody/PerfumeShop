@@ -1,0 +1,29 @@
+@page "/admin/prodcenter/bottle-inventory"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using BottleModel = PerfumeShop.Data.Models.BottleInventory
+
+<PageTitle>瓶子库存</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">瓶子库存</MudText>
+
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>ID</MudTh><MudTh>名称</MudTh><MudTh>库存数量</MudTh>
+        <MudTh>安全库存</MudTh><MudTh>单位成本</MudTh><MudTh>状态</MudTh><MudTh>更新时间</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.BottleId</MudTd>
+        <MudTd>@(context.BottleName ?? "-")</MudTd>
+        <MudTd>@(context.StockQty ?? 0)</MudTd>
+        <MudTd>@(context.SafetyStock ?? 0)</MudTd>
+        <MudTd>¥@((context.UnitCost ?? 0).ToString("F2"))</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@((context.StockQty ?? 0) < (context.SafetyStock ?? 0) ? Color.Error : Color.Success)">@((context.StockQty ?? 0) < (context.SafetyStock ?? 0) ? "低库存" : "正常")</MudChip></MudTd>
+        <MudTd>@context.UpdatedAt?.ToString("yyyy-MM-dd")</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<BottleModel> _items = new();
+    protected override async Task OnInitializedAsync() => _items = await Db.BottleInventories.AsNoTracking().OrderBy(b => b.BottleId).ToListAsync();
+}

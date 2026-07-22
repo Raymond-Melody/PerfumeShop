@@ -1,0 +1,183 @@
+@page "/admin/reviews"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>评价管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">客户评价管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudTextField @bind-Value="_searchText" Placeholder="搜索评价内容/产品ID..." Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_ratingFilter" Placeholder="评分筛选" Clearable="true">
+            <MudSelectItem Value="@("5")">⭐⭐⭐⭐⭐ 5星</MudSelectItem>
+            <MudSelectItem Value="@("4")">⭐⭐⭐⭐ 4星</MudSelectItem>
+            <MudSelectItem Value="@("3")">⭐⭐⭐ 3星</MudSelectItem>
+            <MudSelectItem Value="@("2")">⭐⭐ 2星</MudSelectItem>
+            <MudSelectItem Value="@("1")">⭐ 1星</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_statusFilter" Placeholder="状态筛选" Clearable="true">
+            <MudSelectItem Value="@("approved")">已通过</MudSelectItem>
+            <MudSelectItem Value="@("pending")">待审核</MudSelectItem>
+            <MudSelectItem Value="@("rejected")">已拒绝</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<ProductReview>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>产品ID</MudTh>
+        <MudTh>用户ID</MudTh>
+        <MudTh>评分</MudTh>
+        <MudTh>评价内容</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>时间</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.ReviewId</MudTd>
+        <MudTd>@context.ProductId</MudTd>
+        <MudTd>@context.UserId</MudTd>
+        <MudTd>@RenderStars(context.Rating ?? 5)</MudTd>
+        <MudTd>
+            <MudText Style="max-width:300px;word-break:break-all;" Typo="Typo.body2">
+                @(context.Comment?.Length > 100 ? context.Comment[..100] + "..." : context.Comment ?? "-")
+            </MudText>
+        </MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">
+                @FormatStatus(context.Status)
+            </MudChip>
+        </MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                           OnClick="@(() => Approve(context))" Disabled="@(context.Status == "approved")" />
+            <MudIconButton Icon="@Icons.Material.Filled.Cancel" Size="Size.Small" Color="Color.Error"
+                           OnClick="@(() => Reject(context))" Disabled="@(context.Status == "rejected")" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@* 详情对话框 *@
+<MudDialog @bind-Visible="_showDetail" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">评价详情 #@_selectedReview?.ReviewId</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_selectedReview != null)
+        {
+            <MudGrid>
+                <MudItem xs="6"><MudText><b>评价ID:</b> @_selectedReview.ReviewId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>产品ID:</b> @_selectedReview.ProductId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>用户ID:</b> @_selectedReview.UserId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>订单ID:</b> @_selectedReview.OrderId</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>评分:</b> @RenderStars(_selectedReview.Rating ?? 5)</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>状态:</b> <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_selectedReview.Status)">@FormatStatus(_selectedReview.Status)</MudChip></MudText></MudItem>
+                <MudItem xs="12">
+                    <MudText><b>评价内容:</b></MudText>
+                    <MudPaper Class="pa-3 mt-2" Elevation="0" Style="background:var(--mud-palette-background-grey);">
+                        <MudText>@(_selectedReview.Comment ?? "无内容")</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="6"><MudText><b>创建时间:</b> @_selectedReview.CreatedAt?.ToString("yyyy-MM-dd HH:mm:ss")</MudText></MudItem>
+                <MudItem xs="6"><MudText><b>更新时间:</b> @_selectedReview.UpdatedAt?.ToString("yyyy-MM-dd HH:mm:ss")</MudText></MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showDetail = false" Variant="Variant.Text">关闭</MudButton>
+        @if (_selectedReview?.Status != "approved")
+        {
+            <MudButton OnClick="@(() => { Approve(_selectedReview!); _showDetail = false; })"
+                       Variant="Variant.Filled" Color="Color.Success">通过审核</MudButton>
+        }
+        @if (_selectedReview?.Status != "rejected")
+        {
+            <MudButton OnClick="@(() => { Reject(_selectedReview!); _showDetail = false; })"
+                       Variant="Variant.Filled" Color="Color.Error">拒绝</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private MudTable<ProductReview>? _table;
+    private string _searchText = "";
+    private string? _ratingFilter;
+    private string? _statusFilter = "pending";
+    private bool _showDetail;
+    private ProductReview? _selectedReview;
+
+    private async Task<TableData<ProductReview>> ServerReload(TableState state)
+    {
+        var query = Db.ProductReviews.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var s = _searchText.Trim();
+            query = query.Where(r => r.Comment != null && r.Comment.Contains(s) || r.ProductId.ToString().Contains(s));
+        }
+        if (!string.IsNullOrWhiteSpace(_ratingFilter) && int.TryParse(_ratingFilter, out var rating))
+            query = query.Where(r => r.Rating == rating);
+        if (!string.IsNullOrWhiteSpace(_statusFilter))
+            query = query.Where(r => r.Status == _statusFilter);
+
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(r => r.CreatedAt)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<ProductReview> { TotalItems = total, Items = items };
+    }
+
+    private void ViewDetail(ProductReview review) { _selectedReview = review; _showDetail = true; }
+
+    private async Task Approve(ProductReview review)
+    {
+        await Db.ProductReviews.Where(r => r.ReviewId == review.ReviewId)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, "approved").SetProperty(r => r.UpdatedAt, DateTime.Now));
+        review.Status = "approved";
+        Snackbar.Add($"评价 #{review.ReviewId} 已通过", Severity.Success);
+        await _table!.ReloadServerData();
+    }
+
+    private async Task Reject(ProductReview review)
+    {
+        await Db.ProductReviews.Where(r => r.ReviewId == review.ReviewId)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, "rejected").SetProperty(r => r.UpdatedAt, DateTime.Now));
+        review.Status = "rejected";
+        Snackbar.Add($"评价 #{review.ReviewId} 已拒绝", Severity.Warning);
+        await _table!.ReloadServerData();
+    }
+
+    private static MarkupString RenderStars(int rating)
+    {
+        var stars = string.Concat(Enumerable.Repeat("⭐", rating));
+        return new MarkupString(stars);
+    }
+
+    private static Color GetStatusColor(string? status) => status switch
+    {
+        "approved" => Color.Success,
+        "pending" => Color.Warning,
+        "rejected" => Color.Error,
+        _ => Color.Default
+    };
+
+    private static string FormatStatus(string? status) => status switch
+    {
+        "approved" => "已通过",
+        "pending" => "待审核",
+        "rejected" => "已拒绝",
+        _ => status ?? "-"
+    };
+}

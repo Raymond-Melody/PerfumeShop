@@ -1,0 +1,26 @@
+@page "/admin/system/roles"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>角色管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">角色管理</MudText>
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/admin/system/role-edit/0" StartIcon="@Icons.Material.Filled.Add" Class="mb-4">新增角色</MudButton>
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>ID</MudTh><MudTh>角色名</MudTh><MudTh>代码</MudTh><MudTh>描述</MudTh><MudTh>创建时间</MudTh><MudTh>操作</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.RoleId</MudTd><MudTd>@context.RoleName</MudTd><MudTd>@context.RoleCode</MudTd><MudTd>@context.Description</MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Info" Href="@($"/admin/system/role-edit/{context.RoleId}")" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => Delete(context))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    private List<AdminRole> _items = new();
+    protected override async Task OnInitializedAsync() { _items = await Db.AdminRoles.AsNoTracking().ToListAsync(); }
+    private async Task Delete(AdminRole r) { Db.AdminRoles.Remove(r); await Db.SaveChangesAsync(); _items.Remove(r); Snackbar.Add("已删除", Severity.Success); }
+}

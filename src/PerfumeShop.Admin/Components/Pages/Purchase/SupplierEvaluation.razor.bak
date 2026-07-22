@@ -1,0 +1,56 @@
+@page "/admin/Purchase/SupplierEvaluation"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>供应商评估</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">供应商评估</MudText>
+
+<MudTable Items="@_evaluations" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>供应商ID</MudTh>
+        <MudTh>评估人</MudTh>
+        <MudTh>评估日期</MudTh>
+        <MudTh>质量分</MudTh>
+        <MudTh>交期分</MudTh>
+        <MudTh>价格分</MudTh>
+        <MudTh>服务分</MudTh>
+        <MudTh>总分</MudTh>
+        <MudTh>评级</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.SupplierId</MudTd>
+        <MudTd>@(context.EvaluatedBy ?? "-")</MudTd>
+        <MudTd>@context.EvaluationDate?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd>@(context.QualityScore?.ToString() ?? "-")</MudTd>
+        <MudTd>@(context.DeliveryScore?.ToString() ?? "-")</MudTd>
+        <MudTd>@(context.PriceScore?.ToString() ?? "-")</MudTd>
+        <MudTd>@(context.ServiceScore?.ToString() ?? "-")</MudTd>
+        <MudTd><b>@(context.OverallScore?.ToString() ?? "-")</b></MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@GetRatingColor(context.Rating)">@context.Rating</MudChip></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private List<PerfumeShop.Data.Models.SupplierEvaluation> _evaluations = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var suppliers = await Repo.GetSuppliersAsync();
+        foreach (var s in suppliers)
+        {
+            var evals = await Repo.GetSupplierEvaluationsAsync(s.SupplierId);
+            _evaluations.AddRange(evals);
+        }
+    }
+
+    private Color GetRatingColor(string? rating) => rating?.ToUpper() switch
+    {
+        "A" or "优秀" => Color.Success,
+        "B" or "良好" => Color.Info,
+        "C" or "一般" => Color.Warning,
+        _ => Color.Default
+    };
+}

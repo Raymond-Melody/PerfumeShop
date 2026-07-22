@@ -1,0 +1,241 @@
+@page "/admin/finance/expense-allocation"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Services
+@inject PerfumeShopContext Db
+@inject ExpenseAllocationService AllocSvc
+
+<PageTitle>费用分摊</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-calculator" style="color:#00bcd4;"></i> 费用分摊引擎</h2><div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>费用分摊</span></div></div>
+@if(_loaded){
+<div class="tab-nav">
+<a class="tab-link @(_tab=="shipping"?"active":"")" @onclick='()=>SwitchTab("shipping")' @onclick:preventDefault><i class="fas fa-shipping-fast"></i> 运费分摊</a>
+<a class="tab-link @(_tab=="platform"?"active":"")" @onclick='()=>SwitchTab("platform")' @onclick:preventDefault><i class="fas fa-credit-card"></i> 平台扣点</a>
+<a class="tab-link @(_tab=="promotion"?"active":"")" @onclick='()=>SwitchTab("promotion")' @onclick:preventDefault><i class="fas fa-bullhorn"></i> 推广费分摊</a>
+<a class="tab-link @(_tab=="results"?"active":"")" @onclick='()=>SwitchTab("results")' @onclick:preventDefault><i class="fas fa-list-check"></i> 分摊结果</a>
+</div>
+
+<!-- 统计卡片：对齐V18四卡口径 -->
+<div class="stats-row" style="grid-template-columns:repeat(4,1fr);">
+<div class="stat-card"><div class="stat-value shipping">¥@_shippingTotal.ToString("N0")</div><div class="stat-label"><i class="fas fa-truck"></i> 运费总计</div></div>
+<div class="stat-card"><div class="stat-value platform">¥@_platformTotal.ToString("N0")</div><div class="stat-label"><i class="fas fa-percentage"></i> 平台费总计</div></div>
+<div class="stat-card"><div class="stat-value promotion">¥@_promoTotal.ToString("N0")</div><div class="stat-label"><i class="fas fa-bullhorn"></i> 推广费总计</div></div>
+<div class="stat-card"><div class="stat-value total">¥@_grandTotal.ToString("N0")</div><div class="stat-label"><i class="fas fa-calculator"></i> 费用合计</div></div>
+</div>
+
+@if(!string.IsNullOrEmpty(_error)){<div class="alert alert-error"><i class="fas fa-exclamation-triangle"></i> @_error</div>}
+@if(!string.IsNullOrEmpty(_msg2)){<div class="alert alert-success"><i class="fas fa-check-circle"></i> @_msg2</div>}
+@if(_busy){<div class="alert" style="background:rgba(0,188,212,0.1);border:1px solid #00bcd4;color:#00bcd4;"><i class="fas fa-spinner fa-spin"></i> 正在执行分摊，请稍候...</div>}
+
+@* ============ Tab 1: 运费分摊 ============ *@
+@if(_tab=="shipping"){
+<div class="kpi-card config-card" style="margin-bottom:20px;">
+<h4><i class="fas fa-cog"></i> 运费分摊规则配置</h4>
+<div class="form-row">
+<div class="form-group"><label>分摊方式</label><select @bind="_shipMethod" class="inp"><option value="weight">按重量分摊</option><option value="volume">按体积分摊</option><option value="equal">平均分摊</option></select></div>
+<div class="form-group"><label>首重 (kg)</label><input type="number" step="0.1" @bind="_cfgFirstWeight" class="inp" /></div>
+<div class="form-group"><label>首重价格 (元)</label><input type="number" step="0.01" @bind="_cfgFirstPrice" class="inp" /></div>
+<div class="form-group"><label>续重 (kg)</label><input type="number" step="0.1" @bind="_cfgContinueWeight" class="inp" /></div>
+<div class="form-group"><label>续重价格 (元)</label><input type="number" step="0.01" @bind="_cfgContinuePrice" class="inp" /></div>
+<div class="form-group"><label>体积重系数</label><input type="number" step="100" @bind="_cfgVolumeFactor" class="inp" /><div class="help-text">体积重 = 长x宽x高 / 系数</div></div>
+</div>
+<div style="text-align:right;margin-top:10px;"><button class="btn-save" @onclick="SaveShippingConfig" disabled="@_busy"><i class="fas fa-save"></i> 保存配置</button></div>
+</div>
+<div class="kpi-card" style="margin-bottom:20px;">
+<h4><i class="fas fa-truck-loading"></i> 执行运费分摊</h4>
+<div class="form-row">
+<div class="form-group"><label>订单号（可选）</label><input type="number" @bind="_shipOrderId" placeholder="留空则按时间范围" class="inp" /></div>
+<div class="form-group"><label>开始日期</label><input type="date" @bind="_shipStart" class="inp" /></div>
+<div class="form-group"><label>结束日期</label><input type="date" @bind="_shipEnd" class="inp" /></div>
+<div class="form-group btn-cell"><button class="btn-exec" @onclick="RunShipping" disabled="@_busy"><i class="fas fa-play"></i> 开始分摊</button></div>
+</div>
+<div class="hint"><i class="fas fa-info-circle"></i> 系统按"首重/续重/体积重"规则自动计算每笔订单运费，再按所选方式分摊到SKU；商品缺重量/体积时按数量平均回退。重复执行不会翻倍。</div>
+</div>
+}
+
+@* ============ Tab 2: 平台扣点 ============ *@
+@if(_tab=="platform"){
+<div class="kpi-card config-card" style="margin-bottom:20px;">
+<h4><i class="fas fa-cog"></i> 平台费率配置</h4>
+<div class="form-row">
+<div class="form-group"><label><i class="fab fa-weixin" style="color:#07c160;"></i> 微信费率 (%)</label><input type="number" step="0.01" @bind="_cfgFeeWechat" class="inp" /></div>
+<div class="form-group"><label><i class="fab fa-alipay" style="color:#1677ff;"></i> 支付宝费率 (%)</label><input type="number" step="0.01" @bind="_cfgFeeAlipay" class="inp" /></div>
+<div class="form-group"><label><i class="fab fa-paypal" style="color:#003087;"></i> PayPal费率 (%)</label><input type="number" step="0.01" @bind="_cfgFeePayPal" class="inp" /></div>
+<div class="form-group"><label><i class="fab fa-stripe" style="color:#635bff;"></i> Stripe费率 (%)</label><input type="number" step="0.01" @bind="_cfgFeeStripe" class="inp" /></div>
+<div class="form-group"><label><i class="fas fa-credit-card" style="color:#c00;"></i> 银联费率 (%)</label><input type="number" step="0.01" @bind="_cfgFeeUnion" class="inp" /></div>
+<div class="form-group"><label><i class="fas fa-dollar-sign"></i> 固定技术费 (元)</label><input type="number" step="0.01" @bind="_cfgFeeFixed" class="inp" /></div>
+</div>
+<div style="text-align:right;margin-top:10px;"><button class="btn-save" @onclick="SavePlatformConfig" disabled="@_busy"><i class="fas fa-save"></i> 保存配置</button></div>
+</div>
+<div class="kpi-card" style="margin-bottom:20px;">
+<h4><i class="fas fa-calculator"></i> 执行平台费用分摊</h4>
+<div class="form-row">
+<div class="form-group"><label>开始日期</label><input type="date" @bind="_pfStart" class="inp" /></div>
+<div class="form-group"><label>结束日期</label><input type="date" @bind="_pfEnd" class="inp" /></div>
+<div class="form-group btn-cell"><button class="btn-exec" @onclick="RunPlatformFee" disabled="@_busy"><i class="fas fa-play"></i> 开始计算</button></div>
+</div>
+<div class="hint"><i class="fas fa-info-circle"></i> 按订单支付方式匹配费率（1=微信 2=支付宝 3=PayPal 4=货到付款不计费）：单笔费用 = 实付金额 x 费率 + 固定技术费，按SKU金额比例分摊。</div>
+</div>
+}
+
+@* ============ Tab 3: 推广费分摊 ============ *@
+@if(_tab=="promotion"){
+<div class="kpi-card" style="margin-bottom:20px;">
+<h4><i class="fas fa-bullhorn"></i> 推广费归因分摊</h4>
+<div class="form-row">
+<div class="form-group"><label>推广时间段 - 开始</label><input type="date" @bind="_promoStart" class="inp" /></div>
+<div class="form-group"><label>推广时间段 - 结束</label><input type="date" @bind="_promoEnd" class="inp" /></div>
+<div class="form-group"><label>推广总费用 (元)</label><input type="number" step="0.01" @bind="_promoTotal2" placeholder="输入推广总消耗" class="inp" /></div>
+<div class="form-group"><label>有效成交额 GMV (元)</label><input type="number" step="0.01" @bind="_promoGmv" placeholder="输入该时段总成交额" class="inp" /></div>
+<div class="form-group btn-cell"><button class="btn-exec" @onclick="RunPromotion" disabled="@_busy"><i class="fas fa-play"></i> 开始分摊</button></div>
+</div>
+<div class="hint"><i class="fas fa-info-circle"></i> 分摊公式：单笔承担推广费 = (总消耗 / 有效成交额) x 订单金额，订单内再按各SKU销售额占比二级分摊。</div>
+</div>
+}
+
+@* ============ Tab 4: 分摊结果 ============ *@
+@if(_tab=="results"){
+<div style="margin-bottom:20px;display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;">
+<div class="form-group" style="min-width:180px;"><label style="font-size:13px;color:#888;">费用类型</label>
+<select @bind="_filterType" class="inp">
+<option value="">全部</option>
+<option value="Shipping">运费</option>
+<option value="PlatformFee">平台费</option>
+<option value="Promotion">推广费</option>
+</select></div>
+<div class="form-group" style="min-width:180px;"><label style="font-size:13px;color:#888;">月份</label>
+<select @bind="_filterPeriod" class="inp">
+<option value="">全部</option>
+@foreach(var p in _periods){<option value="@p">@p</option>}
+</select></div>
+<div class="form-group btn-cell"><button class="btn-save" @onclick="ApplyFilters"><i class="fas fa-filter"></i> 筛选</button></div>
+</div>
+}
+
+<!-- 费用明细表 -->
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>订单ID</th><th>商品ID</th><th>费用类型</th><th>名称</th><th>金额</th><th>期间</th><th>分摊方式</th><th>时间</th></tr></thead><tbody>
+@foreach(var e in _expenses){<tr><td>#@e.ExpenseId</td><td>@(e.OrderId?.ToString()??"-")</td><td>@(e.ProductId?.ToString()??"-")</td><td style="color:@GetTypeColor(e.ExpenseType)">@(e.ExpenseType??"-")</td><td>@(e.ExpenseName??"-")</td><td>¥@((e.Amount??0).ToString("N2"))</td><td>@(e.Period??"-")</td><td>@(e.AllocationMethod??"-")</td><td>@(e.CreatedAt?.ToString("yyyy-MM-dd")??"-")</td></tr>}
+@if(!_expenses.Any()){<tr><td colspan="9" style="text-align:center;color:#666;padding:40px;">暂无费用记录</td></tr>}
+</tbody></table></div>
+} else {<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-value.shipping{color:#4CAF50;}.stat-value.platform{color:#2196F3;}.stat-value.promotion{color:#ffa726;}.stat-value.total{color:#9c27b0;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.alert{padding:12px 16px;border-radius:8px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}.alert-success{background:rgba(76,175,80,0.15);border:1px solid #4CAF50;color:#81C784;}.alert-error{background:rgba(244,67,54,0.15);border:1px solid #f44336;color:#f44336;}
+.tab-nav{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:25px;}.tab-link{padding:15px 30px;color:#888;text-decoration:none;font-size:15px;border-bottom:3px solid transparent;transition:all 0.3s;display:flex;align-items:center;gap:8px;cursor:pointer;}.tab-link:hover{color:#e0e0e0;}.tab-link.active{color:#00bcd4;border-bottom-color:#00bcd4;}
+.kpi-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);}.kpi-card h4{color:#e0e0e0;margin:0 0 15px;display:flex;align-items:center;gap:8px;}
+.config-card{background:linear-gradient(135deg,rgba(102,126,234,0.1),rgba(118,75,162,0.1));border:1px solid #00bcd4;}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;align-items:end;}
+.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.inp{padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;width:100%;box-sizing:border-box;}
+.help-text{font-size:11px;color:#888;margin-top:4px;}
+.btn-cell{display:flex;align-items:flex-end;}
+.btn-exec{background:linear-gradient(135deg,#4CAF50,#2e7d32);color:#fff;border:none;padding:11px 24px;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;}.btn-exec:disabled{opacity:0.5;cursor:not-allowed;}
+.hint{margin-top:15px;padding:12px 15px;background:rgba(255,167,38,0.1);border:1px solid #ffa726;border-radius:8px;color:#ffa726;font-size:13px;display:flex;align-items:center;gap:8px;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:auto;border:1px solid rgba(255,255,255,0.05);}.orders-table{width:100%;border-collapse:collapse;min-width:700px;}.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;white-space:nowrap;}.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;}
+</style>
+
+@code{
+private bool _loaded, _busy; private string _tab="shipping", _error="", _msg2="";
+private decimal _shippingTotal, _platformTotal, _promoTotal, _grandTotal;
+private List<ExpenseRecord> _expenses = new();
+private List<string> _periods = new();
+private string _filterType="", _filterPeriod="";
+
+// 运费Tab状态
+private string _shipMethod="weight";
+private decimal _cfgFirstWeight=1, _cfgFirstPrice=10, _cfgContinueWeight=1, _cfgContinuePrice=5, _cfgVolumeFactor=5000;
+private int? _shipOrderId; private DateTime? _shipStart, _shipEnd;
+
+// 平台Tab状态（百分比显示值）
+private decimal _cfgFeeWechat=0.6m, _cfgFeeAlipay=0.6m, _cfgFeePayPal=4.4m, _cfgFeeStripe=2.9m, _cfgFeeUnion=0.6m, _cfgFeeFixed=0m;
+private DateTime? _pfStart, _pfEnd;
+
+// 推广Tab状态
+private DateTime? _promoStart, _promoEnd; private decimal _promoTotal2, _promoGmv;
+
+protected override async Task OnInitializedAsync(){
+try{
+await LoadConfigsAsync();
+await RefreshAllAsync();
+_loaded=true;
+}catch{_error="数据加载失败，请刷新页面重试";_loaded=true;}}
+
+private async Task LoadConfigsAsync(){
+var sc=await AllocSvc.GetShippingConfigAsync();
+_cfgFirstWeight=sc.FirstWeight;_cfgFirstPrice=sc.FirstPrice;_cfgContinueWeight=sc.ContinueWeight;_cfgContinuePrice=sc.ContinuePrice;_cfgVolumeFactor=sc.VolumeFactor;
+var pc=await AllocSvc.GetPlatformFeeConfigAsync();
+_cfgFeeWechat=pc.Wechat*100;_cfgFeeAlipay=pc.Alipay*100;_cfgFeePayPal=pc.PayPal*100;_cfgFeeStripe=pc.Stripe*100;_cfgFeeUnion=pc.UnionPay*100;_cfgFeeFixed=pc.FixedFee;
+}
+
+private async Task RefreshAllAsync(){
+_shippingTotal=await Db.ExpenseRecords.Where(e=>e.ExpenseType=="Shipping").SumAsync(e=>(decimal?)(e.Amount??0))??0;
+_platformTotal=await Db.ExpenseRecords.Where(e=>e.ExpenseType=="PlatformFee").SumAsync(e=>(decimal?)(e.Amount??0))??0;
+_promoTotal=await Db.ExpenseRecords.Where(e=>e.ExpenseType=="Promotion").SumAsync(e=>(decimal?)(e.Amount??0))??0;
+_grandTotal=_shippingTotal+_platformTotal+_promoTotal;
+await LoadExpensesAsync(_filterType,_filterPeriod);
+_periods=await Db.ExpenseRecords.AsNoTracking().Where(e=>e.Period!=null).Select(e=>e.Period!).Distinct().OrderByDescending(p=>p).ToListAsync();
+}
+
+private async Task LoadExpensesAsync(string? type,string? period){
+var q=Db.ExpenseRecords.AsNoTracking().AsQueryable();
+if(!string.IsNullOrEmpty(type)) q=q.Where(e=>e.ExpenseType==type);
+if(!string.IsNullOrEmpty(period)) q=q.Where(e=>e.Period==period);
+_expenses=await q.OrderByDescending(e=>e.ExpenseId).Take(200).ToListAsync();
+}
+
+async Task SwitchTab(string t){_tab=t;_msg2="";_error="";}
+async Task ApplyFilters(){await LoadExpensesAsync(_filterType,_filterPeriod);}
+
+async Task SaveShippingConfig(){
+try{
+await AllocSvc.SaveConfigAsync(new(){
+["ShippingAllocationMethod"]=_shipMethod,
+["ShippingFirstWeight"]=_cfgFirstWeight.ToString(),
+["ShippingFirstPrice"]=_cfgFirstPrice.ToString(),
+["ShippingContinueWeight"]=_cfgContinueWeight.ToString(),
+["ShippingContinuePrice"]=_cfgContinuePrice.ToString(),
+["ShippingVolumeFactor"]=_cfgVolumeFactor.ToString()});
+_msg2="运费规则配置保存成功";_error="";
+}catch{_error="配置保存失败，请稍后重试";}}
+
+async Task SavePlatformConfig(){
+try{
+await AllocSvc.SaveConfigAsync(new(){
+["PlatformFeeWechat"]=_cfgFeeWechat.ToString(),
+["PlatformFeeAlipay"]=_cfgFeeAlipay.ToString(),
+["PlatformFeePayPal"]=_cfgFeePayPal.ToString(),
+["PlatformFeeStripe"]=_cfgFeeStripe.ToString(),
+["PlatformFeeUnionPay"]=_cfgFeeUnion.ToString(),
+["PlatformFixedFee"]=_cfgFeeFixed.ToString()});
+_msg2="平台费率配置保存成功";_error="";
+}catch{_error="配置保存失败，请稍后重试";}}
+
+async Task RunShipping(){
+_busy=true;_msg2="";_error="";StateHasChanged();
+try{
+var r=await AllocSvc.AllocateShippingAsync(_shipOrderId,_shipStart,_shipEnd,_shipMethod);
+if(r.Success){_msg2=r.Message;await RefreshAllAsync();}else _error=r.Message;
+}catch{_error="运费分摊执行失败，请稍后重试";}
+finally{_busy=false;}}
+
+async Task RunPlatformFee(){
+_busy=true;_msg2="";_error="";StateHasChanged();
+try{
+var r=await AllocSvc.AllocatePlatformFeeAsync(_pfStart,_pfEnd);
+if(r.Success){_msg2=r.Message;await RefreshAllAsync();}else _error=r.Message;
+}catch{_error="平台费用分摊执行失败，请稍后重试";}
+finally{_busy=false;}}
+
+async Task RunPromotion(){
+_busy=true;_msg2="";_error="";StateHasChanged();
+try{
+var r=await AllocSvc.AllocatePromotionAsync(_promoStart,_promoEnd,_promoTotal2,_promoGmv);
+if(r.Success){_msg2=r.Message;await RefreshAllAsync();}else _error=r.Message;
+}catch{_error="推广费分摊执行失败，请稍后重试";}
+finally{_busy=false;}}
+
+private string GetTypeColor(string? t)=>t switch{"Shipping"=>"#4CAF50","PlatformFee"=>"#2196F3","Promotion"=>"#ffa726",_=>"#e0e0e0"};
+}

@@ -1,0 +1,21 @@
+@page "/admin/finance/reconciliation-create"
+
+<PageTitle>新建对账</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">新建对账</MudText>
+<MudCard><MudCardContent>
+    <MudDatePicker @bind-Value="_date" Label="对账日期" />
+    <MudSelect @bind-Value="_scope" Label="对账范围" Class="mt-4">
+        <MudSelectItem Value="@("daily")">日对账</MudSelectItem><MudSelectItem Value="@("weekly")">周对账</MudSelectItem><MudSelectItem Value="@("monthly")">月对账</MudSelectItem>
+    </MudSelect>
+</MudCardContent>
+<MudCardActions>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Create">开始对账</MudButton>
+    <MudButton Variant="Variant.Text" Href="/admin/finance/reconciliations">返回</MudButton>
+</MudCardActions></MudCard>
+
+@code {
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private DateTime? _date = DateTime.Today; private string _scope = "daily";
+    private async Task Create() { await Task.Delay(500); Snackbar.Add("对账完成", Severity.Success); Nav.NavigateTo("/admin/finance/reconciliations"); }
+}

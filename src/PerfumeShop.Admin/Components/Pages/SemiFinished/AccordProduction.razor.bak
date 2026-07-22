@@ -1,0 +1,42 @@
+@page "/admin/semifinished/accord-production"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using AccordModel = PerfumeShop.Data.Models.AccordProduction
+
+<PageTitle>调配记录</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">调配记录</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="3"><MudSelect @bind-Value="_statusFilter" Placeholder="状态" Clearable="true">
+        <MudSelectItem Value="@("Pending")">待开始</MudSelectItem><MudSelectItem Value="@("InProgress")">生产中</MudSelectItem>
+        <MudSelectItem Value="@("Completed")">已完成</MudSelectItem></MudSelect></MudItem>
+    <MudItem xs="12" sm="2"><MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/admin/semifinished/new-blend" StartIcon="@Icons.Material.Filled.Add">新增调配</MudButton></MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<AccordModel>>>(ServerReload))" Hover="true" Dense="true" Striped="true" RowsPerPage="15">
+    <HeaderContent>
+        <MudTh>批次号</MudTh><MudTh>香料</MudTh><MudTh>计划量</MudTh><MudTh>实际量</MudTh>
+        <MudTh>状态</MudTh><MudTh>创建时间</MudTh><MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@(context.BatchNo ?? "-")</MudTd><MudTd>@(context.NoteName ?? "-")</MudTd>
+        <MudTd>@(context.PlannedQty ?? 0)</MudTd><MudTd>@(context.ActualQty ?? 0)</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "Completed" ? Color.Success : context.Status == "InProgress" ? Color.Info : Color.Warning)">@(context.Status ?? "-")</MudChip></MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd><MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/admin/semifinished/accord-detail/{context.ProductionId}")" /></MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private string _statusFilter = "";
+    private async Task<TableData<AccordModel>> ServerReload(TableState state)
+    {
+        var q = Db.AccordProductions.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(_statusFilter)) q = q.Where(a => a.Status == _statusFilter);
+        var total = await q.CountAsync();
+        var items = await q.OrderByDescending(a => a.CreatedAt).Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<AccordModel> { TotalItems = total, Items = items };
+    }
+}

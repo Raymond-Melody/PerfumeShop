@@ -22,4 +22,14 @@ public partial class ProductReview
     public DateTime? UpdatedAt { get; set; }
 
     public int UserId { get; set; }
+
+    public string? Title { get; set; }
+
+    public bool IsVerifiedPurchase { get; set; }
+
+    public string? AIFeelingSummary { get; set; }
+
+    public int LikeCount { get; set; }
+
+    public ICollection<ReviewImage> Images { get; set; } = new List<ReviewImage>();
 }

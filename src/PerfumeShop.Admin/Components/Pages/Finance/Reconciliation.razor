@@ -1,0 +1,259 @@
+﻿@page "/admin/finance/reconciliation"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Nav
+
+<PageTitle>对账中心</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-balance-scale" style="color:#00bcd4;"></i> 对账中心</h2><div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>对账中心</span></div></div>
+@if(_loaded){
+<div class="stats-row">
+<div class="stat-card matched"><div class="stat-value" style="color:#4CAF50;">@_matchedCount</div><div class="stat-label">匹配成功</div></div>
+<div class="stat-card short"><div class="stat-value" style="color:#F44336;">@_shortCount</div><div class="stat-label">短款异常</div></div>
+<div class="stat-card over"><div class="stat-value" style="color:#F44336;">@_overCount</div><div class="stat-label">长款异常</div></div>
+<div class="stat-card missing"><div class="stat-value" style="color:#FF9800;">@_missingCount</div><div class="stat-label">未达账项</div></div>
+<div class="stat-card supplier"><div class="stat-value" style="color:#00bcd4;">¥@_supplierPayable.ToString("N0")</div><div class="stat-label">供应商待付</div></div>
+</div>
+<div class="tab-nav">
+<a class="tab-link @(_tab=="auto"?"active":"")" @onclick='()=>Switch("auto")' @onclick:preventDefault>自动对账</a>
+<a class="tab-link @(_tab=="results"?"active":"")" @onclick='()=>Switch("results")' @onclick:preventDefault>对账结果</a>
+<a class="tab-link @(_tab=="manual"?"active":"")" @onclick='()=>Switch("manual")' @onclick:preventDefault>手动处理</a>
+<a class="tab-link @(_tab=="refund"?"active":"")" @onclick='()=>Switch("refund")' @onclick:preventDefault>退款核销</a>
+<a class="tab-link @(_tab=="report"?"active":"")" @onclick='()=>Switch("report")' @onclick:preventDefault>对账报告</a>
+</div>
+@if(_tab=="auto"){
+<div class="recon-card" style="margin-bottom:20px;"><h4 style="color:#e0e0e0;margin-bottom:15px;"><i class="fas fa-play-circle"></i> 开始对账</h4>
+<!-- V20 日期预设 -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+<button type="button" class="preset-btn" @onclick="()=>PresetDate(0,0)">📅 今天</button>
+<button type="button" class="preset-btn" @onclick="()=>PresetDate(-1,-1)">📆 昨天</button>
+<button type="button" class="preset-btn" @onclick="()=>PresetDate(-7,0)">📊 近7天</button>
+<button type="button" class="preset-btn" @onclick="()=>PresetDate(-30,0)">📈 近30天</button>
+<button type="button" class="preset-btn" @onclick="()=>PresetMonth(0)">🗓 本月</button>
+<button type="button" class="preset-btn" @onclick="()=>PresetMonth(-1)">📋 上月</button>
+</div>
+<div style="display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;">
+<div class="form-group" style="flex:1;min-width:150px;"><label>开始日期</label><input type="date" @bind="_reconStart" style="padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;width:100%;box-sizing:border-box;" /></div>
+<div class="form-group" style="flex:1;min-width:150px;"><label>结束日期</label><input type="date" @bind="_reconEnd" style="padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;width:100%;box-sizing:border-box;" /></div>
+<div class="form-group" style="display:flex;align-items:flex-end;"><button class="btn-save" @onclick="RunReconciliation">开始对账</button></div>
+</div>
+@if(!string.IsNullOrEmpty(_reconMsg)){<div style="margin-top:10px;color:#81C784;">@_reconMsg</div>}
+@if(!string.IsNullOrEmpty(_reconError)){<div style="margin-top:10px;color:#F44336;">@_reconError</div>}
+</div>
+}
+@if(_tab=="results"){
+<div class="filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;background:#2d2d44;padding:12px 16px;border-radius:8px;margin-bottom:20px;">
+<select @bind="_filterStatus" style="padding:8px;background:#1a1a2e;color:#e0e0e0;border:1px solid rgba(255,255,255,0.15);border-radius:6px;">
+<option value="">全部状态</option>
+<option value="Matched">匹配成功</option>
+<option value="ShortPay">短款异常</option>
+<option value="OverPay">长款异常</option>
+<option value="Missing">未达账项</option>
+<option value="Resolved">已解决</option>
+<option value="Refund">退款</option>
+</select>
+<input type="date" @bind="_filterDate" style="padding:8px;background:#1a1a2e;color:#e0e0e0;border:1px solid rgba(255,255,255,0.15);border-radius:6px;" />
+<input type="text" @bind="_filterOrderNo" placeholder="搜索订单号..." style="padding:8px;background:#1a1a2e;color:#e0e0e0;border:1px solid rgba(255,255,255,0.15);border-radius:6px;flex:1;min-width:150px;" />
+<button class="btn-save" @onclick="LoadFilteredResults" style="padding:8px 16px;">筛选</button>
+<button class="btn-save" @onclick="ExportCsv" style="padding:8px 16px;background:#4CAF50;">导出CSV</button>
+</div>
+}
+@if(_tab=="manual"){
+<div class="filter-bar" style="display:flex;gap:10px;flex-wrap:wrap;background:#2d2d44;padding:12px 16px;border-radius:8px;margin-bottom:20px;">
+<select @bind="_manualFilter" style="padding:8px;background:#1a1a2e;color:#e0e0e0;border:1px solid rgba(255,255,255,0.15);border-radius:6px;">
+<option value="">全部异常</option>
+<option value="ShortPay">仅短款</option>
+<option value="OverPay">仅长款</option>
+<option value="Missing">仅未达</option>
+</select>
+<button class="btn-save" @onclick="LoadManual" style="padding:8px 16px;">刷新</button>
+</div>
+}
+@if(_tab=="results"||_tab=="manual"){
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>订单号</th><th>订单金额</th><th>支付金额</th><th>差异</th><th>状态</th><th>对账日期</th><th>处理说明</th>@if(_tab=="manual"&&_resolveTargets){<th>操作</th>}</tr></thead><tbody>
+@foreach(var r in _displayLogs){
+<tr><td>#@r.LogId</td><td>@(r.OrderNo??"-")</td><td>¥@((r.OrderAmount??0).ToString("N2"))</td><td>¥@((r.PaymentAmount??0).ToString("N2"))</td><td style="color:@DiffColor(r.Difference)">¥@((r.Difference??0).ToString("N2"))</td><td><span class="status-badge @GetReconClass(r.Status)">@StatusLabel(r.Status)</span></td><td>@(r.ReconcileDate?.ToString("yyyy-MM-dd")??"-")</td><td>@(r.Resolution??"-")</td>
+@if(_tab=="manual"&&_resolveTargets){<td><div style="display:flex;gap:6px;"><input type="text" @bind="_resolutionText" placeholder="处理说明..." style="padding:6px 10px;background:#1a1a2e;color:#e0e0e0;border:1px solid #3a3a4a;border-radius:4px;width:140px;" /><button class="btn-save" @onclick='()=>ResolveItem(r.LogId)' style="padding:6px 12px;font-size:12px;">解决</button></div></td>}</tr>
+}
+@if(!_displayLogs.Any()){<tr><td colspan="@(_tab=="manual"&&_resolveTargets?9:8)" style="text-align:center;color:#666;padding:40px;">暂无对账记录</td></tr>}
+</tbody></table></div>
+}
+@if(_tab=="refund"){
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>退款单号</th><th>订单号</th><th>退款金额</th><th>退款原因</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>
+@foreach(var r in _refunds){<tr><td>#@r.RefundId</td><td>@(r.RefundNo??"-")</td><td>@(r.OrderNo??"-")</td><td style="color:#F44336;">-¥@r.RefundAmount.ToString("N2")</td><td>@(Truncate(r.RefundReason,30))</td><td><span class="status-badge @(r.Status=="Approved"?"s-pending":"s-matched")">@(r.Status=="Approved"?"待核销":(r.Status=="Completed"?"已核销":r.Status??"-"))</span></td><td>@FormatDate(r.CreatedAt)</td><td>@if(r.Status=="Approved"){<button class="btn-save" @onclick='()=>ProcessRefund(r.RefundId)' style="padding:6px 12px;font-size:12px;">核销</button>}else if(r.Status=="Completed"){<small style="color:#888;">@FormatDate(r.CompletedAt)</small>}</td></tr>}
+@if(!_refunds.Any()){<tr><td colspan="8" style="text-align:center;color:#666;padding:40px;">暂无退款记录</td></tr>}
+</tbody></table></div>
+}
+@if(_tab=="report"){
+<div class="kpi-card" style="margin-bottom:20px;"><h4 style="color:#e0e0e0;margin-bottom:15px;"><i class="fas fa-calendar-day"></i> 日报视图（@DateTime.Today.ToString("yyyy-MM-dd")）</h4>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+<div style="text-align:center;padding:15px;background:#1a1a2e;border-radius:8px;"><div style="font-size:24px;font-weight:bold;color:#00bcd4;">@_todayCount</div><div style="color:#888;font-size:12px;">今日对账笔数</div></div>
+<div style="text-align:center;padding:15px;background:#1a1a2e;border-radius:8px;"><div style="font-size:24px;font-weight:bold;color:#00bcd4;">@(_todayCount>0?$"{_todayMatched*100/_todayCount:F1}%":"0%")</div><div style="color:#888;font-size:12px;">匹配率</div></div>
+<div style="text-align:center;padding:15px;background:#1a1a2e;border-radius:8px;"><div style="font-size:24px;font-weight:bold;color:#00bcd4;">@(_todayCount>0?$"{_todayException*100/_todayCount:F1}%":"0%")</div><div style="color:#888;font-size:12px;">异常率</div></div>
+<div style="text-align:center;padding:15px;background:#1a1a2e;border-radius:8px;"><div style="font-size:24px;font-weight:bold;color:#00bcd4;">@_pendingException</div><div style="color:#888;font-size:12px;">待处理异常</div></div>
+</div></div>
+<div class="kpi-card"><h4 style="color:#e0e0e0;margin-bottom:15px;"><i class="fas fa-calendar-week"></i> 周报视图（最近7天）</h4>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+<div style="text-align:center;padding:15px;background:#1a1a2e;border-radius:8px;"><div style="font-size:24px;font-weight:bold;color:#00bcd4;">@_weekCount</div><div style="color:#888;font-size:12px;">本周对账笔数</div></div>
+<div style="text-align:center;padding:15px;background:#1a1a2e;border-radius:8px;"><div style="font-size:24px;font-weight:bold;color:#00bcd4;">¥@_weekAmount.ToString("N2")</div><div style="color:#888;font-size:12px;">对账金额</div></div>
+<div style="text-align:center;padding:15px;background:#1a1a2e;border-radius:8px;"><div style="font-size:24px;font-weight:bold;color:#00bcd4;">¥@_weekDiffAmount.ToString("N2")</div><div style="color:#888;font-size:12px;">差异金额</div></div>
+<div style="text-align:center;padding:15px;background:#1a1a2e;border-radius:8px;"><div style="font-size:24px;font-weight:bold;color:#00bcd4;">@_weekResolved</div><div style="color:#888;font-size:12px;">已解决异常</div></div>
+</div></div>
+}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+/* ===== 统一财务中心UI ===== */
+/* 页面头 */
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}
+/* 统计卡片（对齐Index kpi-card标准） */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:25px 20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+.stat-value{font-size:28px;font-weight:bold;color:#fff;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.stat-card.matched{border-left:4px solid #4CAF50!important;}.stat-card.short{border-left:4px solid #F44336!important;}.stat-card.over{border-left:4px solid #F44336!important;}.stat-card.missing{border-left:4px solid #FF9800!important;}.stat-card.supplier{border-left:4px solid #00bcd4!important;}
+/* 卡片式表单 */
+.recon-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:30px;border:1px solid rgba(255,255,255,0.05);max-width:640px;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+/* Tab导航 */
+.tab-nav{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:25px;}.tab-link{padding:15px 30px;color:#888;text-decoration:none;font-size:15px;border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:8px;}.tab-link:hover{color:#e0e0e0;background:#2d2d44;}.tab-link.active{color:#00bcd4;border-bottom-color:#00bcd4;}
+/* 表格 */
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);box-shadow:0 4px 20px rgba(0,0,0,0.3);}.orders-table{width:100%;border-collapse:collapse;}.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;}.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;}
+/* 按钮 */
+.btn-save{background:#00bcd4;color:#fff;border:none;border-radius:6px;padding:10px 20px;cursor:pointer;font-size:14px;}.btn-save:hover{opacity:0.85;}
+/* 预设按钮 */
+.preset-btn{padding:8px 14px;border:1px solid #00bcd4;border-radius:20px;background:transparent;color:#00bcd4;cursor:pointer;font-size:13px;transition:all 0.2s;}.preset-btn:hover{background:rgba(0,188,212,0.15);}
+/* 状态标记 */
+.status-badge{padding:4px 12px;border-radius:12px;font-size:12px;}.s-matched{background:rgba(76,175,80,0.2);color:#81c784;}.s-short{background:rgba(244,67,54,0.2);color:#e57373;}.s-over{background:rgba(244,67,54,0.2);color:#e57373;}.s-missing{background:rgba(255,152,0,0.15);color:#FFB74D;}.s-resolved{background:rgba(158,158,158,0.15);color:#BDBDBD;}.s-refund{background:rgba(26,35,126,0.2);color:#7986CB;}.s-pending{background:rgba(255,152,0,0.15);color:#FFB74D;}
+/* 筛选栏 */
+.filter-bar{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:8px;border:1px solid rgba(255,255,255,0.05);}
+/* KPI报告卡片 */
+.kpi-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:25px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+/* 响应式 */
+@@media(max-width:1200px){.stats-row{grid-template-columns:repeat(3,1fr);}}
+@@media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr);}}
+</style>
+
+@code{
+private bool _loaded; private string _tab="auto";
+private string? _reconMsg, _reconError;
+private DateTime? _reconStart, _reconEnd;
+private List<ReconciliationLog> _displayLogs=new();
+private List<RefundRecord> _refunds=new();
+private int _matchedCount,_shortCount,_overCount,_missingCount;
+private decimal _supplierPayable;
+private string? _filterStatus,_filterOrderNo; private DateTime? _filterDate;
+private string _manualFilter=""; private string _resolutionText="";
+private bool _resolveTargets=>_manualFilter==""||_manualFilter=="ShortPay"||_manualFilter=="OverPay"||_manualFilter=="Missing";
+private int _todayCount,_todayMatched,_todayException,_pendingException;
+private int _weekCount,_weekResolved; private decimal _weekAmount,_weekDiffAmount;
+
+protected override async Task OnInitializedAsync(){try{
+await LoadDisplayLogs(null);
+await RefreshStats();
+_refunds=await Db.RefundRecords.AsNoTracking().OrderByDescending(r=>r.RefundId).Take(50).ToListAsync();
+_loaded=true;}catch{_loaded=true;}}
+
+async Task Switch(string t){_tab=t; _resolutionText="";
+if(t=="results")await LoadDisplayLogs(null);
+else if(t=="manual")await LoadManual();
+else if(t=="report")await LoadReport();
+
+if(t!="refund"&&t!="report")await LoadDisplayLogs(t=="manual"?_manualFilter:null);
+}
+
+async Task LoadDisplayLogs(string? manualFilter){
+IQueryable<ReconciliationLog> q=Db.ReconciliationLogs.AsNoTracking();
+if(manualFilter!=null){
+var filters=new[]{manualFilter};
+if(manualFilter=="")filters=new[]{"ShortPay","OverPay","Missing"};
+else if(manualFilter=="ShortPay"||manualFilter=="OverPay"||manualFilter=="Missing")filters=new[]{manualFilter};
+q=q.Where(r=>filters.Contains(r.Status));
+}else if(!string.IsNullOrEmpty(_filterStatus))q=q.Where(r=>r.Status==_filterStatus);
+if(_filterDate.HasValue)q=q.Where(r=>r.ReconcileDate.HasValue&&r.ReconcileDate.Value.Date==_filterDate.Value.Date);
+if(!string.IsNullOrEmpty(_filterOrderNo))q=q.Where(r=>(r.OrderNo??"").Contains(_filterOrderNo));
+q=q.OrderByDescending(r=>r.LogId).Take(100);
+_displayLogs=await q.ToListAsync();
+}
+
+async Task LoadFilteredResults(){await LoadDisplayLogs(null);}
+async Task LoadManual(){await LoadDisplayLogs(_manualFilter);}
+
+async Task RefreshStats(){
+_matchedCount=await Db.ReconciliationLogs.CountAsync(r=>r.Status=="Matched");
+_shortCount=await Db.ReconciliationLogs.CountAsync(r=>r.Status=="ShortPay");
+_overCount=await Db.ReconciliationLogs.CountAsync(r=>r.Status=="OverPay");
+_missingCount=await Db.ReconciliationLogs.CountAsync(r=>r.Status=="Missing");
+try{_supplierPayable=await Db.Database.SqlQuery<decimal>($"SELECT ISNULL(SUM(Amount-PaidAmount),0) FROM AccountsPayable WHERE Status IN ('Pending','Partial')").FirstOrDefaultAsync();}catch{_supplierPayable=0;}
+}
+
+// V20 日期预设
+void PresetDate(int sOffset,int eOffset){var n=DateTime.Today;_reconStart=n.AddDays(sOffset);_reconEnd=n.AddDays(eOffset);}
+void PresetMonth(int mOffset){var n=DateTime.Today;_reconStart=new DateTime(n.Year,n.Month,1).AddMonths(mOffset);_reconEnd=new DateTime(n.Year,n.Month,1).AddMonths(mOffset+1).AddDays(-1);}
+
+// V20 导出CSV
+void ExportCsv(){Nav.NavigateTo("/api/admin/reconciliation/export",true);}
+
+async Task LoadReport(){
+var today=DateTime.Today;var weekAgo=today.AddDays(-7);
+_todayCount=await Db.ReconciliationLogs.CountAsync(r=>r.CreatedAt.HasValue&&r.CreatedAt.Value>=today&&r.CreatedAt.Value<today.AddDays(1));
+_todayMatched=await Db.ReconciliationLogs.CountAsync(r=>r.CreatedAt.HasValue&&r.CreatedAt.Value>=today&&r.CreatedAt.Value<today.AddDays(1)&&r.Status=="Matched");
+_todayException=await Db.ReconciliationLogs.CountAsync(r=>r.CreatedAt.HasValue&&r.CreatedAt.Value>=today&&r.CreatedAt.Value<today.AddDays(1)&&r.Status!=null&&(new[]{"ShortPay","OverPay","Missing"}).Contains(r.Status));
+_pendingException=await Db.ReconciliationLogs.CountAsync(r=>r.Status!=null&&(new[]{"ShortPay","OverPay","Missing"}).Contains(r.Status));
+_weekCount=await Db.ReconciliationLogs.CountAsync(r=>r.CreatedAt>=weekAgo);
+_weekAmount=(await Db.ReconciliationLogs.Where(r=>r.CreatedAt>=weekAgo).SumAsync(r=>r.OrderAmount??0));
+_weekDiffAmount=(await Db.ReconciliationLogs.Where(r=>r.CreatedAt>=weekAgo&&r.Status!=null&&(new[]{"ShortPay","OverPay"}).Contains(r.Status)).SumAsync(r=>r.Difference??0));
+_weekResolved=await Db.ReconciliationLogs.CountAsync(r=>r.CreatedAt>=weekAgo&&r.Status=="Resolved");
+}
+
+async Task RunReconciliation(){
+if(_reconStart==null||_reconEnd==null){_reconError="请选择对账日期范围";_reconMsg="";return;}
+_reconMsg="";_reconError="";
+try{
+var sd=_reconStart.Value.Date;var ed=_reconEnd.Value.Date.AddDays(1);
+// V20 幂等：清除同区间旧对账记录，支持重复运行
+await Db.ReconciliationLogs.Where(r=>r.CreatedAt>=sd&&r.CreatedAt<ed).ExecuteDeleteAsync();
+var orders=await Db.Orders.AsNoTracking().Where(o=>o.CreatedAt>=sd&&o.CreatedAt<ed&&o.Status=="Paid").ToListAsync();
+var payments=await Db.PaymentRecords.AsNoTracking().Where(p=>p.CreatedAt>=sd&&p.CreatedAt<ed&&p.Status=="Completed").ToListAsync();
+var payByOrder=payments.Where(p=>p.OrderId.HasValue).GroupBy(p=>p.OrderId!.Value).ToDictionary(g=>g.Key,g=>g.Sum(p=>p.Amount??0));
+int matched=0,shortC=0,overC=0,missingC=0; var matchedIds=new HashSet<int>();
+foreach(var o in orders){
+var found=payByOrder.TryGetValue(o.OrderId,out var pa);
+decimal oa=o.TotalAmount;
+if(found){decimal df=pa-oa;string st;if(Math.Abs(df)<0.01m){st="Matched";matched++;}else if(df<0){st="ShortPay";shortC++;}else{st="OverPay";overC++;}
+Db.ReconciliationLogs.Add(new ReconciliationLog{OrderId=o.OrderId,OrderNo=o.OrderNo,OrderAmount=oa,PaymentAmount=pa,Difference=df,Status=st,ReconcileDate=DateTime.Today,CreatedAt=DateTime.Now});matchedIds.Add(o.OrderId);}
+else{Db.ReconciliationLogs.Add(new ReconciliationLog{OrderId=o.OrderId,OrderNo=o.OrderNo,OrderAmount=oa,PaymentAmount=0,Difference=-oa,Status="Missing",Resolution="未找到支付记录",ReconcileDate=DateTime.Today,CreatedAt=DateTime.Now});missingC++;}
+}
+foreach(var p in payments.Where(p=>p.OrderId.HasValue&&!matchedIds.Contains(p.OrderId.Value)))
+{Db.ReconciliationLogs.Add(new ReconciliationLog{OrderId=p.OrderId,OrderNo=p.OrderNo,OrderAmount=0,PaymentAmount=p.Amount??0,Difference=p.Amount??0,Status="Missing",Resolution="未找到对应订单",ReconcileDate=DateTime.Today,CreatedAt=DateTime.Now});missingC++;}
+await Db.SaveChangesAsync();
+_reconMsg=$"对账完成: 共{orders.Count}笔订单, 匹配{matched}笔, 短款{shortC}笔, 长款{overC}笔, 未达{missingC}笔";
+_tab="results";
+await RefreshStats();await LoadDisplayLogs(null);
+}catch(Exception ex){_reconError="对账执行失败，请检查数据后重试";System.Diagnostics.Debug.WriteLine($"Reconciliation: {ex}");}
+}
+
+async Task ResolveItem(int logId){
+if(string.IsNullOrWhiteSpace(_resolutionText))return;
+var log=await Db.ReconciliationLogs.FindAsync(logId);
+if(log!=null){log.Status="Resolved";log.Resolution=_resolutionText;log.ResolvedAt=DateTime.Now;await Db.SaveChangesAsync();_resolutionText="";await LoadDisplayLogs(_manualFilter);await RefreshStats();}
+}
+
+async Task ProcessRefund(int refundId){
+var refund=await Db.RefundRecords.FindAsync(refundId);
+if(refund!=null&&refund.OrderId!=0){
+Db.PaymentRecords.Add(new PaymentRecord{OrderId=refund.OrderId,OrderNo=refund.OrderNo,TransactionNo="REFUND_"+refundId,PaymentMethod="Refund",TransactionType="Refund",Amount=-refund.RefundAmount,Status="Completed",Category="Refund",Remark="退款核销",CreatedAt=DateTime.Now});
+refund.Status="Completed";refund.CompletedAt=DateTime.Now;
+await Db.SaveChangesAsync();
+_refunds=await Db.RefundRecords.AsNoTracking().OrderByDescending(r=>r.RefundId).Take(50).ToListAsync();
+}
+}
+
+string GetReconClass(string? s)=>s switch{"Matched"=>"s-matched","Resolved"=>"s-resolved","ShortPay"=>"s-short","OverPay"=>"s-over","Missing"=>"s-missing","Refund"=>"s-refund",_=>"s-pending"};
+string StatusLabel(string? s)=>s switch{"Matched"=>"匹配","ShortPay"=>"短款","OverPay"=>"长款","Missing"=>"未达","Resolved"=>"已解决","Refund"=>"退款",_=>s??"-"};
+string DiffColor(decimal? d)=>d==null||d==0m?"#ccc":(d<0?"#F44336":"#4CAF50");
+string FormatDate(DateTime? dt)=>dt?.ToString("yyyy-MM-dd")??"-";
+string Truncate(string? s,int max)=>string.IsNullOrEmpty(s)?"-":(s.Length<=max?s:s.Substring(0,max)+"...");
+}

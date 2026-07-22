@@ -1,0 +1,23 @@
+@page "/admin/Purchase/Replenishment"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>智能补货</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-robot" style="color:#FF9800;"></i> 智能补货</h2><div class="breadcrumb"><a href="/admin/Purchase/Dashboard" style="color:#FF9800;text-decoration:none;">采购中心</a> / <span>智能补货</span></div></div>
+@if(_loaded){
+<div class="table-container"><table class="orders-table"><thead><tr><th>物料名称</th><th>当前库存</th><th>安全库存</th><th>补货建议</th></tr></thead><tbody>
+@foreach(var b in _bottles){var need=((b.SafetyStock??0)-(b.StockQty??0));if(need<=0)continue;<tr><td>@b.BottleName (瓶)</td><td>@(b.StockQty?.ToString()??"0")</td><td>@(b.SafetyStock?.ToString()??"0")</td><td style="color:#F44336;">+@need</td></tr>}
+@foreach(var p in _packaging){var need=((p.SafetyStock??0)-(p.StockQty??0));if(need<=0)continue;<tr><td>@(p.ItemName??"包装")</td><td>@(p.StockQty?.ToString()??"0")</td><td>@(p.SafetyStock?.ToString()??"0")</td><td style="color:#F44336;">+@need</td></tr>}
+</tbody></table></div>
+@if(!_bottles.Any(b=>((b.SafetyStock??0)-(b.StockQty??0))>0)&&!_packaging.Any(p=>((p.SafetyStock??0)-(p.StockQty??0))>0)){<div style="text-align:center;color:#666;padding:40px;">库存充足，无需补货</div>}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(255,152,0,0.1);color:#FF9800;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+</style>
+@code{private bool _loaded;private List<BottleStyle> _bottles=new();private List<PackagingInventory> _packaging=new();protected override async Task OnInitializedAsync(){try{_bottles=await Db.BottleStyles.AsNoTracking().ToListAsync();_packaging=await Db.PackagingInventories.AsNoTracking().ToListAsync();_loaded=true;}catch{_loaded=true;}}}

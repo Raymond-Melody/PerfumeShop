@@ -232,4 +232,12 @@
   --dt-shadow-glow-danger: 0 4px 15px rgba(244,67,54,0.3);
   --dt-shadow-glow-warning: 0 4px 15px rgba(255,193,7,0.3);
   --dt-shadow-glow-info: 0 4px 15px rgba(33,150,243,0.3);
+
+  /* ---- 扩展语义色 (V19) ---- */
+  --dt-color-bg-card: #1e1e32;
+  --dt-color-success-light: #66bb6a;
+  --dt-color-danger-light: #ef5350;
+  --dt-color-orange: #ff9800;
+  --dt-color-gold: #ffd700;
+  --dt-color-teal: #1abc9c;
 }

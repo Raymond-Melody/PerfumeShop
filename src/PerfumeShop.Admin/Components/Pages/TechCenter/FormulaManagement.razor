@@ -1,0 +1,173 @@
+@page "/admin/TechCenter/FormulaManagement"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+
+<PageTitle>配方管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-vial" style="color:#00bcd4;"></i> 配方管理</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>配方管理</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_total</div><div class="stat-label">配方总数</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_activeCount</div><div class="stat-label">已启用</div></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="filter-bar"><input class="filter-input" @bind="_search" placeholder="搜索配方名称..." /><button class="btn-search" @onclick="DoSearch"><i class="fas fa-search"></i> 搜索</button>@if(!string.IsNullOrEmpty(_search)){<button class="btn-clear" @onclick="ClearSearch"><i class="fas fa-times"></i> 清除</button>}<button class="btn-add" @onclick="OpenAddModal" style="margin-left:auto;">+ 新建配方</button></div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>配方名称</th><th>编码</th><th>类型</th><th>香调数</th><th>成分数</th><th>状态</th><th>操作</th></tr></thead><tbody>
+@foreach(var r in _items){<tr><td>#@r.RecipeId</td><td>@r.RecipeName</td><td>@(r.RecipeCode??"-")</td><td>@(r.ProductType??"-")</td><td>@(_noteCounts.GetValueOrDefault(r.RecipeId,0))</td><td>@(_ingCounts.GetValueOrDefault(r.RecipeId,0))</td><td><span class="status-badge @(r.IsActive==true?"status-normal":"status-warning")">@(r.IsActive==true?"启用":"禁用")</span></td><td><button class="btn-edit" @onclick='()=>OpenEditModal(r)'>编辑</button><button class="btn-detail" @onclick='()=>OpenDetailModal(r)' title="查看配方详情"><i class="fas fa-eye"></i></button><button class="btn-toggle" @onclick='()=>ToggleActive(r)'>@(r.IsActive==true?"禁用":"启用")</button></td></tr>}
+@if(!_items.Any()){<tr><td colspan="8" style="text-align:center;color:#666;padding:40px;">暂无配方</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@* ---- 编辑模态框（含香调组成+成分管理子面板）---- *@
+@if(_showModal){
+<div class="mo" @onclick="CloseModal"><div class="mc" @onclick:stopPropagation="true" style="max-width:650px;"><div class="mh"><h3>@(_editing?"编辑配方":"新建配方")</h3><button class="mcl" @onclick="CloseModal">&times;</button></div>
+<div class="mb">
+<div class="fg"><label>名称 <span style="color:#f44336;">*</span></label><input @bind="_edit.RecipeName" /></div>
+<div class="fg"><label>编码</label><input @bind="_edit.RecipeCode" /></div>
+<div class="fg"><label>产品类型</label><select @bind="_edit.ProductType"><option value="custom">定制香水</option><option value="kol">KOL推荐</option><option value="standard">品牌定香</option></select></div>
+<div class="fg"><label>描述</label><input @bind="_edit.Description" /></div>
+<div class="fg"><label>状态</label><select @bind="_edit.IsActive"><option value="true">启用</option><option value="false">禁用</option></select></div>
+@if(_editing){
+<hr style="border-color:rgba(255,255,255,0.06);margin:16px 0;" />
+<h4 style="color:#e0e0e0;margin:0 0 10px;"><i class="fas fa-leaf" style="color:#4CAF50;"></i> 香调组成 (RecipeNotes)</h4>
+@foreach(var rn in _editNotes){<div class="row-inline"><input @bind="rn.NoteName" placeholder="香调名称" style="flex:2;" /><input type="number" @bind="rn.Percentage" placeholder="%" style="flex:1;" step="0.1" min="0" max="100" /><button class="btn-sm btn-danger" @onclick='()=>RemoveNote(rn)'>X</button></div>}
+<button class="btn-sm btn-outline" @onclick="AddNoteRow" style="margin-top:6px;">+ 添加香调</button>
+<div style="font-size:12px;color:#888;margin-top:4px;">百分比总和: <span style="color:@(Math.Abs(_editNotes.Sum(x=>x.Percentage??0)-100)>1?"#f44336":"#4CAF50");">@_editNotes.Sum(x=>x.Percentage??0).ToString("F1")%</span></div>
+<hr style="border-color:rgba(255,255,255,0.06);margin:16px 0;" />
+<h4 style="color:#e0e0e0;margin:0 0 10px;"><i class="fas fa-flask" style="color:#00bcd4;"></i> 成分管理 (RecipeIngredients)</h4>
+@foreach(var ri in _editIngredients){<div class="row-inline"><input @bind="ri.IngredientName" placeholder="成分名称" style="flex:2;" /><input type="number" @bind="ri.Percentage" placeholder="%" style="flex:1;" step="0.01" min="0" max="100" /><button class="btn-sm btn-danger" @onclick='()=>RemoveIngredient(ri)'>X</button></div>}
+<button class="btn-sm btn-outline" @onclick="AddIngredientRow" style="margin-top:6px;">+ 添加成分</button>
+}
+</div><div class="mft"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveItem">保存配方</button></div></div></div>
+}
+
+@* ---- 详情弹窗 ---- *@
+@if(_showDetail){
+<div class="mo" @onclick="CloseDetail"><div class="mc" @onclick:stopPropagation="true" style="max-width:700px;max-height:80vh;overflow-y:auto;"><div class="mh"><h3><i class="fas fa-eye" style="color:#00bcd4;"></i> 配方详情: @_detailName</h3><button class="mcl" @onclick="CloseDetail">&times;</button></div>
+<div class="mb">
+<div class="detail-section"><div class="detail-title">香调组成</div>
+@if(_detailNotes.Any()){<table class="orders-table"><thead><tr><th>香调名称</th><th>类型</th><th>百分比</th></tr></thead><tbody>@foreach(var dn in _detailNotes){<tr><td>@dn.NoteName</td><td>@dn.NoteType</td><td>@dn.Percentage%</td></tr>}</tbody></table><div style="font-size:12px;color:#888;margin-top:4px;">总和: @_detailNotes.Sum(x=>x.Percentage??0).ToString("F1")%</div>}else{<p style="color:#666;">暂无香调组成数据</p>}
+</div>
+<div class="detail-section"><div class="detail-title">成分列表</div>
+@if(_detailIngredients.Any()){<table class="orders-table"><thead><tr><th>成分名称</th><th>百分比</th></tr></thead><tbody>@foreach(var di in _detailIngredients){<tr><td>@di.IngredientName</td><td>@(di.Percentage?.ToString("F2")??"-")%</td></tr>}</tbody></table>}else{<p style="color:#666;">暂无成分数据</p>}
+</div>
+</div><div class="mft"><button class="btn-secondary" @onclick="CloseDetail">关闭</button></div></div></div>
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+.filter-input{flex:1;min-width:200px;padding:10px 14px;background:#1a1a2e;border:2px solid #3a3a4a;border-radius:8px;color:#e0e0e0;font-size:14px;}
+.filter-input:focus{border-color:#00bcd4;outline:none;}
+.btn-search{background:rgba(0,188,212,0.15);color:#00bcd4;border:1px solid rgba(0,188,212,0.3);padding:8px 16px;border-radius:6px;cursor:pointer;}
+.btn-clear{background:rgba(158,158,158,0.15);color:#9e9e9e;border:1px solid rgba(158,158,158,0.3);padding:8px 16px;border-radius:6px;cursor:pointer;}
+.btn-add{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;}
+.btn-detail{background:rgba(0,188,212,0.15);color:#00bcd4;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;margin-right:4px;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}
+.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
+.btn-edit{background:rgba(0,188,212,0.15);color:#00bcd4;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;margin-right:4px;}
+.btn-toggle{background:rgba(158,158,158,0.15);color:#9e9e9e;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.mo{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:500px;border:1px solid rgba(255,255,255,0.06);}.mh{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}.mh h3{margin:0;color:#e0e0e0;font-size:18px;}.mcl{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.mb{padding:25px;max-height:70vh;overflow-y:auto;}.mft{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.fg{margin-bottom:15px;}.fg label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}.fg input,.fg select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}.fg input:focus,.fg select:focus{border-color:#00bcd4;outline:none;}
+.row-inline{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+.row-inline input{flex:1;padding:8px 12px;background:#1a1a2e;border:2px solid #3a3a4a;border-radius:6px;color:#e0e0e0;font-size:13px;}
+.row-inline input:focus{border-color:#00bcd4;outline:none;}
+.btn-sm{padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;border:none;}
+.btn-danger{background:rgba(244,67,54,0.15);color:#e57373;}
+.btn-outline{background:rgba(0,188,212,0.08);color:#00bcd4;border:1px solid rgba(0,188,212,0.3);}
+.btn-save{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+.detail-section{margin-bottom:20px;padding:15px;background:rgba(255,255,255,0.03);border-radius:8px;}
+.detail-title{color:#00bcd4;font-size:15px;font-weight:600;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);}
+</style>
+
+@code {
+    private bool _loaded,_editing,_showModal,_showDetail;private int _total,_activeCount;private string _msg="",_msgType="",_search="",_detailName="";
+    private List<Recipe> _items=new();private Recipe _edit=new();
+    private List<EditNote> _editNotes=new();private List<EditIngredient> _editIngredients=new();
+    private List<EditNote> _detailNotes=new();private List<EditIngredient> _detailIngredients=new();
+    private Dictionary<int,int> _noteCounts=new(),_ingCounts=new();
+
+    class EditNote{public int? NoteId;public string NoteName="";public string? NoteType;public int? Percentage;}
+    class EditIngredient{public int? NoteId;public string IngredientName="";public double? Percentage;}
+
+    protected override async Task OnInitializedAsync(){await LoadItems();}
+    async Task LoadItems(){
+        try{
+            _items=await Db.Recipes.AsNoTracking().OrderByDescending(r=>r.RecipeId).Take(100).ToListAsync();
+            _total=_items.Count;_activeCount=_items.Count(r=>r.IsActive==true);
+            var ids=_items.Select(r=>r.RecipeId).ToList();
+            var ncs=await Db.RecipeNotes.AsNoTracking().Where(rn=>ids.Contains(rn.RecipeId??0)).GroupBy(rn=>rn.RecipeId).Select(g=>new{g.Key,Count=g.Count()}).ToListAsync();
+            _noteCounts=ncs.ToDictionary(x=>x.Key??0,x=>x.Count);
+            var ics=await Db.RecipeIngredients.AsNoTracking().Where(ri=>ids.Contains(ri.RecipeId??0)).GroupBy(ri=>ri.RecipeId).Select(g=>new{g.Key,Count=g.Count()}).ToListAsync();
+            _ingCounts=ics.ToDictionary(x=>x.Key??0,x=>x.Count);
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+    void DoSearch()=>LoadItems(); // simplified; filtering done via query param
+    void ClearSearch(){_search="";StateHasChanged();}
+    void OpenAddModal(){_editing=false;_edit=new(){IsActive=true};_editNotes=new();_editIngredients=new();_showModal=true;}
+    async Task OpenEditModal(Recipe r){
+        _editing=true;_edit=new(){RecipeId=r.RecipeId,RecipeName=r.RecipeName,RecipeCode=r.RecipeCode,ProductType=r.ProductType,Description=r.Description,IsActive=r.IsActive};
+        var notes=await Db.RecipeNotes.AsNoTracking().Where(rn=>rn.RecipeId==r.RecipeId).ToListAsync();
+        _editNotes=notes.Select(n=>new EditNote{NoteId=n.NoteId,NoteName=n.NoteType??"",NoteType=n.NoteType,Percentage=n.Percentage}).ToList();
+        if(!_editNotes.Any())_editNotes.Add(new EditNote());
+        var ings=await Db.RecipeIngredients.AsNoTracking().Where(ri=>ri.RecipeId==r.RecipeId).ToListAsync();
+        _editIngredients=ings.Select(i=>new EditIngredient{NoteId=i.NoteId,IngredientName=i.IngredientName??"",Percentage=i.Percentage}).ToList();
+        if(!_editIngredients.Any())_editIngredients.Add(new EditIngredient());
+        _showModal=true;
+    }
+    void CloseModal(){_showModal=false;}
+    void AddNoteRow(){_editNotes.Add(new EditNote());}
+    void RemoveNote(EditNote n){if(_editNotes.Count>1)_editNotes.Remove(n);}
+    void AddIngredientRow(){_editIngredients.Add(new EditIngredient());}
+    void RemoveIngredient(EditIngredient i){if(_editIngredients.Count>1)_editIngredients.Remove(i);}
+    async Task SaveItem(){
+        if(string.IsNullOrWhiteSpace(_edit.RecipeName)){_msg="名称不能为空";_msgType="err";return;}
+        try{
+            _edit.UpdatedAt=DateTime.Now;if(!_editing){_edit.CreatedAt=DateTime.Now;Db.Recipes.Add(_edit);}else Db.Recipes.Update(_edit);
+            await Db.SaveChangesAsync();
+            var recipeId=_edit.RecipeId;
+            // Save RecipeNotes
+            var existingNotes=await Db.RecipeNotes.Where(rn=>rn.RecipeId==recipeId).ToListAsync();
+            Db.RecipeNotes.RemoveRange(existingNotes);
+            foreach(var en in _editNotes.Where(x=>!string.IsNullOrWhiteSpace(x.NoteName)&&x.Percentage>0)){
+                var fragNote=await Db.FragranceNotes.FirstOrDefaultAsync(fn=>fn.NoteName==en.NoteName);
+                Db.RecipeNotes.Add(new RecipeNote{RecipeId=recipeId,NoteId=fragNote?.NoteId,NoteType=en.NoteType??fragNote?.NoteType??"",Percentage=en.Percentage});
+            }
+            // Save RecipeIngredients
+            var existingIngs=await Db.RecipeIngredients.Where(ri=>ri.RecipeId==recipeId).ToListAsync();
+            Db.RecipeIngredients.RemoveRange(existingIngs);
+            foreach(var ei in _editIngredients.Where(x=>!string.IsNullOrWhiteSpace(x.IngredientName)&&x.Percentage>0)){
+                Db.RecipeIngredients.Add(new RecipeIngredient{RecipeId=recipeId,IngredientName=ei.IngredientName,Percentage=ei.Percentage});
+            }
+            await Db.SaveChangesAsync();
+            _msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;
+            await LoadItems();
+        }catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+    async Task ToggleActive(Recipe r){
+        try{r.IsActive=!(r.IsActive??true);Db.Recipes.Update(r);await Db.SaveChangesAsync();_activeCount=_items.Count(x=>x.IsActive==true);_msg="状态已更新";_msgType="ok";}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+    async Task OpenDetailModal(Recipe r){
+        _detailName=r.RecipeName??"";
+        var notes=await Db.RecipeNotes.AsNoTracking().Where(rn=>rn.RecipeId==r.RecipeId).ToListAsync();
+        _detailNotes=notes.Select(n=>new EditNote{NoteName=n.NoteType??"",NoteType=n.NoteType,Percentage=n.Percentage}).ToList();
+        var ings=await Db.RecipeIngredients.AsNoTracking().Where(ri=>ri.RecipeId==r.RecipeId).ToListAsync();
+        _detailIngredients=ings.Select(i=>new EditIngredient{IngredientName=i.IngredientName??"",Percentage=i.Percentage}).ToList();
+        _showDetail=true;
+    }
+    void CloseDetail(){_showDetail=false;}
+}

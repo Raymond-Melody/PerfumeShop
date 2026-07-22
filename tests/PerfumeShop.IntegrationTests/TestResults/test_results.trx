@@ -1,0 +1,270 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="226b28da-f2ea-487f-b077-098da6595a0e" name="raymo@屋企 2026-07-10 12:56:16" runUser="屋企\raymo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-07-10T12:56:16.0265899+08:00" queuing="2026-07-10T12:56:16.0265904+08:00" start="2026-07-10T12:56:12.7615242+08:00" finish="2026-07-10T12:56:17.3971385+08:00" />
+  <TestSettings name="default" id="296a5d0f-0874-46fd-a6ab-554bc7061fdd">
+    <Deployment runDeploymentRoot="raymo_屋企_2026-07-10_12_56_16" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="998d8769-c8b0-4a57-8829-33f241ef26ae" testId="b73a28d8-bb39-0176-b67e-5565b2f30a8d" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.UpdateStatus_EmptyStatus_ReturnsBadRequest" computerName="屋企" duration="00:00:00.0024426" startTime="2026-07-10T12:56:17.1207408+08:00" endTime="2026-07-10T12:56:17.1207412+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="998d8769-c8b0-4a57-8829-33f241ef26ae" />
+    <UnitTestResult executionId="50f38f65-fbe8-4b8d-a636-17bfe4634b37" testId="c9f39c90-e44f-12f5-b9bd-6b902caa8a7f" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetAccordProductions_ReturnsPaginated" computerName="屋企" duration="00:00:00.0109580" startTime="2026-07-10T12:56:15.9331441+08:00" endTime="2026-07-10T12:56:15.9331444+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="50f38f65-fbe8-4b8d-a636-17bfe4634b37" />
+    <UnitTestResult executionId="49904342-709d-48db-825d-5fd8b795c998" testId="90501c10-d581-cc01-2ca9-035cb9914561" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.TransferSemiFinished_CreatesRecord" computerName="屋企" duration="00:00:00.0158579" startTime="2026-07-10T12:56:15.9491446+08:00" endTime="2026-07-10T12:56:15.9491451+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="49904342-709d-48db-825d-5fd8b795c998" />
+    <UnitTestResult executionId="6bce9f04-7384-4ecf-ae88-543a347ba700" testId="9c79d4c6-530d-61f1-cbc9-91df94fdc77a" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetInventoryAlerts_ReturnsLowStock" computerName="屋企" duration="00:00:00.0207253" startTime="2026-07-10T12:56:16.1073067+08:00" endTime="2026-07-10T12:56:16.1073072+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6bce9f04-7384-4ecf-ae88-543a347ba700" />
+    <UnitTestResult executionId="fb75c03b-5cd6-4f05-9164-a8fe46b3aa45" testId="69fbcee4-72b6-0be6-16a6-7ddf327ed41d" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.BatchCancel_PendingOrders_Cancels" computerName="屋企" duration="00:00:00.0130455" startTime="2026-07-10T12:56:17.1339355+08:00" endTime="2026-07-10T12:56:17.1339357+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="fb75c03b-5cd6-4f05-9164-a8fe46b3aa45" />
+    <UnitTestResult executionId="2451c4c1-3dec-42f7-8f52-023bc4b349aa" testId="718e56c3-a666-4790-3ed7-86dcf88b3fca" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.FulfillTransfer_CompletesTransfer" computerName="屋企" duration="00:00:00.0404044" startTime="2026-07-10T12:56:15.9220354+08:00" endTime="2026-07-10T12:56:15.9220361+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2451c4c1-3dec-42f7-8f52-023bc4b349aa" />
+    <UnitTestResult executionId="e46f799c-fce7-45f0-a8cd-5f24f56f5024" testId="22436385-6571-e5ac-0e4f-78782cc35c76" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.UpdateStatus_ValidRequest_ReturnsOk" computerName="屋企" duration="00:00:00.0232510" startTime="2026-07-10T12:56:17.2403820+08:00" endTime="2026-07-10T12:56:17.2403824+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e46f799c-fce7-45f0-a8cd-5f24f56f5024" />
+    <UnitTestResult executionId="da4ccc64-fa58-422c-b838-fe18ae690972" testId="0a655fa6-db89-838f-7496-c58d6a322452" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetReport_ReturnsGroupedData" computerName="屋企" duration="00:00:00.0208932" startTime="2026-07-10T12:56:17.2774383+08:00" endTime="2026-07-10T12:56:17.2774389+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="da4ccc64-fa58-422c-b838-fe18ae690972" />
+    <UnitTestResult executionId="acd69599-9c3c-4792-958a-3c6daa874b2f" testId="fbbb1a87-3217-aead-439d-2066fdf18ecb" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.SyncOrders_NewPaidOrders_CreatesProductionOrders" computerName="屋企" duration="00:00:00.0104011" startTime="2026-07-10T12:56:17.1523017+08:00" endTime="2026-07-10T12:56:17.1523024+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="acd69599-9c3c-4792-958a-3c6daa874b2f" />
+    <UnitTestResult executionId="2b94be4c-0ac4-4aab-8e2b-28029b561cd1" testId="63164f69-3fc0-ddeb-5cb9-9f4b570ed4c8" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.FixStatus_ChineseToEnglish_MigratesStatus" computerName="屋企" duration="00:00:01.6069980" startTime="2026-07-10T12:56:15.8266057+08:00" endTime="2026-07-10T12:56:15.8266061+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2b94be4c-0ac4-4aab-8e2b-28029b561cd1" />
+    <UnitTestResult executionId="422b641d-ed54-4b07-bac2-daaf8007c5b0" testId="22bc54ec-6c0f-5555-72da-c128532fcf6b" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetReportData_ReturnsDateRange" computerName="屋企" duration="00:00:00.0141089" startTime="2026-07-10T12:56:15.8814329+08:00" endTime="2026-07-10T12:56:15.8814342+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="422b641d-ed54-4b07-bac2-daaf8007c5b0" />
+    <UnitTestResult executionId="16351215-27c9-4332-91aa-4bdb6fb3724c" testId="c6bb48b7-add0-caa8-ed82-ecc450786af1" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.UpdateBlendStatus_ChangesState" computerName="屋企" duration="00:00:01.5752945" startTime="2026-07-10T12:56:15.8006889+08:00" endTime="2026-07-10T12:56:15.8007934+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="16351215-27c9-4332-91aa-4bdb6fb3724c" />
+    <UnitTestResult executionId="a86004a2-c37a-4979-ae66-41cd573b90f8" testId="a0031162-b14c-e3e0-e909-afd1af68fa81" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.SyncOrders_Concurrent100Orders_Idempotent" computerName="屋企" duration="00:00:01.2292126" startTime="2026-07-10T12:56:17.0560570+08:00" endTime="2026-07-10T12:56:17.0560574+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a86004a2-c37a-4979-ae66-41cd573b90f8" />
+    <UnitTestResult executionId="62b469b0-711b-4b50-9038-3c5e381b637d" testId="283c58d5-491f-b4d5-778a-0222f52bbb51" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetRawMaterialInventory_ReturnsAll" computerName="屋企" duration="00:00:00.0847170" startTime="2026-07-10T12:56:16.0340845+08:00" endTime="2026-07-10T12:56:16.0340855+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="62b469b0-711b-4b50-9038-3c5e381b637d" />
+    <UnitTestResult executionId="73da4df9-b781-4b62-a71c-cf74bf47a602" testId="2f5fad96-4b68-2d3e-a0e0-bb4e8d2ce987" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrder_NonExisting_ReturnsNotFound" computerName="屋企" duration="00:00:00.0094799" startTime="2026-07-10T12:56:17.1181220+08:00" endTime="2026-07-10T12:56:17.1181232+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73da4df9-b781-4b62-a71c-cf74bf47a602" />
+    <UnitTestResult executionId="c1987935-c68b-4748-b9d4-2bf73e01f802" testId="7066d9a1-ebe6-53b6-97f7-5b7cc9f00629" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrders_FilterByStatus_ReturnsOnlyPending" computerName="屋企" duration="00:00:00.0420040" startTime="2026-07-10T12:56:17.1945341+08:00" endTime="2026-07-10T12:56:17.1945347+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c1987935-c68b-4748-b9d4-2bf73e01f802" />
+    <UnitTestResult executionId="e4291a83-dc94-494c-bfdd-3c3201aedad3" testId="48f268d4-9905-70da-a4f6-da94613601df" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrders_SearchByWorkOrderNo" computerName="屋企" duration="00:00:00.0158758" startTime="2026-07-10T12:56:17.2563735+08:00" endTime="2026-07-10T12:56:17.2563743+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e4291a83-dc94-494c-bfdd-3c3201aedad3" />
+    <UnitTestResult executionId="6fe52a12-47a2-4ea7-9118-5538e963dfe2" testId="77d6229d-8b51-d29a-0385-a305c39f587c" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrders_ReturnsPaginatedList" computerName="屋企" duration="00:00:00.0154824" startTime="2026-07-10T12:56:17.2931391+08:00" endTime="2026-07-10T12:56:17.2931397+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6fe52a12-47a2-4ea7-9118-5538e963dfe2" />
+    <UnitTestResult executionId="d2259860-d35e-49e2-a01d-995df5ee8f2c" testId="fb7b72cc-5d8f-2dbf-ca25-68d0dbbd0bb1" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.UpdateBlendStatus_Completed_SetsCompletedAt" computerName="屋企" duration="00:00:00.0037488" startTime="2026-07-10T12:56:16.0864166+08:00" endTime="2026-07-10T12:56:16.0864169+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d2259860-d35e-49e2-a01d-995df5ee8f2c" />
+    <UnitTestResult executionId="8ef03d2e-c456-4387-8d81-85570a57e643" testId="03e682b6-0a31-1534-2931-5634dd5d3244" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.SyncOrders_AlreadySynced_ReturnsZero" computerName="屋企" duration="00:00:00.0069692" startTime="2026-07-10T12:56:17.2169582+08:00" endTime="2026-07-10T12:56:17.2169585+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8ef03d2e-c456-4387-8d81-85570a57e643" />
+    <UnitTestResult executionId="41f3b644-54bc-4e18-8c0b-f6991de4e01c" testId="5d0bc1ed-4c46-8bbc-278d-87c19860cb45" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetWorkshopTransfers_ReturnsPaginated" computerName="屋企" duration="00:00:00.0162168" startTime="2026-07-10T12:56:16.0505528+08:00" endTime="2026-07-10T12:56:16.0505535+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="41f3b644-54bc-4e18-8c0b-f6991de4e01c" />
+    <UnitTestResult executionId="105329de-c769-48cd-8653-c719e7efd6db" testId="520dc1f1-86bc-46d7-6440-b18b5b3708fe" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetAccordProductions_FilterByStatus" computerName="屋企" duration="00:00:00.0583466" startTime="2026-07-10T12:56:15.8581038+08:00" endTime="2026-07-10T12:56:15.8581052+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="105329de-c769-48cd-8653-c719e7efd6db" />
+    <UnitTestResult executionId="cc2c75fd-dde4-400b-a966-f447a0d06001" testId="6f20f317-cd95-f3df-3680-2d47721855f3" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.BatchShip_ValidOrders_UpdatesStatus" computerName="屋企" duration="00:00:00.0075315" startTime="2026-07-10T12:56:17.1416423+08:00" endTime="2026-07-10T12:56:17.1416428+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cc2c75fd-dde4-400b-a966-f447a0d06001" />
+    <UnitTestResult executionId="9a416e9f-c6a6-4b5b-b121-56ea6118e887" testId="f1bc0027-027f-59a0-e483-e89d89fd001d" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.CreateBlendRecord_InsertsAndReturns" computerName="屋企" duration="00:00:00.0061843" startTime="2026-07-10T12:56:16.1809471+08:00" endTime="2026-07-10T12:56:16.1809472+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9a416e9f-c6a6-4b5b-b121-56ea6118e887" />
+    <UnitTestResult executionId="a92aac9c-71bd-469b-ae7b-958bd9022b92" testId="4033c7ff-eb88-c52d-b835-85c3f55e6b37" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetBaseNotes_ReturnsAll" computerName="屋企" duration="00:00:00.0521905" startTime="2026-07-10T12:56:16.1806926+08:00" endTime="2026-07-10T12:56:16.1806932+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a92aac9c-71bd-469b-ae7b-958bd9022b92">
+      <Output>
+        <ErrorInfo>
+          <Message>Microsoft.EntityFrameworkCore.DbUpdateException : Required properties '{'BaseNoteName'}' are missing for the instance of entity type 'BaseNote'. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see the entity key value.</Message>
+          <StackTrace>   at Microsoft.EntityFrameworkCore.InMemory.Storage.Internal.InMemoryTable`1.ThrowNullabilityErrorException(IUpdateEntry entry, IList`1 nullabilityErrors)&#xD;
+   at Microsoft.EntityFrameworkCore.InMemory.Storage.Internal.InMemoryTable`1.Create(IUpdateEntry entry, IDiagnosticsLogger`1 updateLogger)&#xD;
+   at Microsoft.EntityFrameworkCore.InMemory.Storage.Internal.InMemoryStore.ExecuteTransaction(IList`1 entries, IDiagnosticsLogger`1 updateLogger)&#xD;
+   at Microsoft.EntityFrameworkCore.InMemory.Storage.Internal.InMemoryDatabase.SaveChanges(IList`1 entries)&#xD;
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChanges(IList`1 entriesToSave)&#xD;
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChanges(StateManager stateManager, Boolean acceptAllChangesOnSuccess)&#xD;
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.&lt;&gt;c.&lt;SaveChanges&gt;b__112_0(DbContext _, ValueTuple`2 t)&#xD;
+   at Microsoft.EntityFrameworkCore.Storage.NonRetryingExecutionStrategy.Execute[TState,TResult](TState state, Func`3 operation, Func`3 verifySucceeded)&#xD;
+   at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChanges(Boolean acceptAllChangesOnSuccess)&#xD;
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChanges(Boolean acceptAllChangesOnSuccess)&#xD;
+   at Microsoft.EntityFrameworkCore.DbContext.SaveChanges()&#xD;
+   at PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetBaseNotes_ReturnsAll() in F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\Admin\SemiFinishedPagesTests.cs:line 224&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="9aa60148-f910-4e09-a73c-6c7bdf5d390f" testId="ba536fdb-b0f0-f43d-55bb-647ebc9b80cc" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetAccordProductionDetail_ReturnsRecord" computerName="屋企" duration="00:00:00.0088071" startTime="2026-07-10T12:56:15.8671532+08:00" endTime="2026-07-10T12:56:15.8671539+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9aa60148-f910-4e09-a73c-6c7bdf5d390f" />
+    <UnitTestResult executionId="6e441c60-5bb6-41f1-ba0e-f63536147dd9" testId="48f8a283-e2b5-08c2-8eaf-00bdc62ad43d" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrder_ExistingId_ReturnsDetail" computerName="屋企" duration="00:00:00.0139535" startTime="2026-07-10T12:56:17.2111376+08:00" endTime="2026-07-10T12:56:17.2111378+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6e441c60-5bb6-41f1-ba0e-f63536147dd9">
+      <Output>
+        <ErrorInfo>
+          <Message>System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.</Message>
+          <StackTrace>   at System.Text.Json.JsonElement.GetProperty(String propertyName)&#xD;
+   at PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrder_ExistingId_ReturnsDetail() in F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\Admin\ProductionPagesTests.cs:line 133&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="52fab2ec-63f7-40d1-ace5-556cc8d57052" testId="c6fefd79-3af8-ae85-6d66-a8f58152a550" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetQualityChecks_ReturnsCompletedAndQC" computerName="屋企" duration="00:00:00.0168547" startTime="2026-07-10T12:56:17.3102269+08:00" endTime="2026-07-10T12:56:17.3102297+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="52fab2ec-63f7-40d1-ace5-556cc8d57052" />
+    <UnitTestResult executionId="ad83eaed-e55f-4bf9-af77-4ff9fec9b428" testId="b4a10970-7aeb-2245-185c-53fdd9bdd6a6" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetNoteInventory_ReturnsAll" computerName="屋企" duration="00:00:00.0288071" startTime="2026-07-10T12:56:16.0796479+08:00" endTime="2026-07-10T12:56:16.0796490+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ad83eaed-e55f-4bf9-af77-4ff9fec9b428" />
+    <UnitTestResult executionId="1840f84e-7c42-4a93-adc5-17dc51692859" testId="5573f9a5-b9f4-0731-10ec-1e81af6f42df" testName="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.BatchStatus_Products_TogglesActive" computerName="屋企" duration="00:00:00.0521753" startTime="2026-07-10T12:56:17.1083516+08:00" endTime="2026-07-10T12:56:17.1083523+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1840f84e-7c42-4a93-adc5-17dc51692859" />
+    <UnitTestResult executionId="be71d521-05cd-4a9d-b99b-696b86600c8a" testId="516fdcd0-ed04-ca32-19e5-28228203d92b" testName="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.FulfillTransfer_NonExisting_ReturnsFalse" computerName="屋企" duration="00:00:00.0026051" startTime="2026-07-10T12:56:16.0824600+08:00" endTime="2026-07-10T12:56:16.0824606+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="be71d521-05cd-4a9d-b99b-696b86600c8a" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.FulfillTransfer_NonExisting_ReturnsFalse" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="516fdcd0-ed04-ca32-19e5-28228203d92b">
+      <Execution id="be71d521-05cd-4a9d-b99b-696b86600c8a" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="FulfillTransfer_NonExisting_ReturnsFalse" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.FulfillTransfer_CompletesTransfer" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="718e56c3-a666-4790-3ed7-86dcf88b3fca">
+      <Execution id="2451c4c1-3dec-42f7-8f52-023bc4b349aa" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="FulfillTransfer_CompletesTransfer" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.FixStatus_ChineseToEnglish_MigratesStatus" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="63164f69-3fc0-ddeb-5cb9-9f4b570ed4c8">
+      <Execution id="2b94be4c-0ac4-4aab-8e2b-28029b561cd1" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="FixStatus_ChineseToEnglish_MigratesStatus" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.UpdateBlendStatus_ChangesState" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="c6bb48b7-add0-caa8-ed82-ecc450786af1">
+      <Execution id="16351215-27c9-4332-91aa-4bdb6fb3724c" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="UpdateBlendStatus_ChangesState" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.BatchCancel_PendingOrders_Cancels" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="69fbcee4-72b6-0be6-16a6-7ddf327ed41d">
+      <Execution id="fb75c03b-5cd6-4f05-9164-a8fe46b3aa45" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="BatchCancel_PendingOrders_Cancels" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.BatchStatus_Products_TogglesActive" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="5573f9a5-b9f4-0731-10ec-1e81af6f42df">
+      <Execution id="1840f84e-7c42-4a93-adc5-17dc51692859" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="BatchStatus_Products_TogglesActive" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrder_ExistingId_ReturnsDetail" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="48f8a283-e2b5-08c2-8eaf-00bdc62ad43d">
+      <Execution id="6e441c60-5bb6-41f1-ba0e-f63536147dd9" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="GetOrder_ExistingId_ReturnsDetail" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetAccordProductions_ReturnsPaginated" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="c9f39c90-e44f-12f5-b9bd-6b902caa8a7f">
+      <Execution id="50f38f65-fbe8-4b8d-a636-17bfe4634b37" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetAccordProductions_ReturnsPaginated" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetAccordProductionDetail_ReturnsRecord" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="ba536fdb-b0f0-f43d-55bb-647ebc9b80cc">
+      <Execution id="9aa60148-f910-4e09-a73c-6c7bdf5d390f" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetAccordProductionDetail_ReturnsRecord" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetInventoryAlerts_ReturnsLowStock" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="9c79d4c6-530d-61f1-cbc9-91df94fdc77a">
+      <Execution id="6bce9f04-7384-4ecf-ae88-543a347ba700" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetInventoryAlerts_ReturnsLowStock" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.UpdateStatus_ValidRequest_ReturnsOk" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="22436385-6571-e5ac-0e4f-78782cc35c76">
+      <Execution id="e46f799c-fce7-45f0-a8cd-5f24f56f5024" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="UpdateStatus_ValidRequest_ReturnsOk" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetQualityChecks_ReturnsCompletedAndQC" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="c6fefd79-3af8-ae85-6d66-a8f58152a550">
+      <Execution id="52fab2ec-63f7-40d1-ace5-556cc8d57052" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="GetQualityChecks_ReturnsCompletedAndQC" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.TransferSemiFinished_CreatesRecord" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="90501c10-d581-cc01-2ca9-035cb9914561">
+      <Execution id="49904342-709d-48db-825d-5fd8b795c998" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="TransferSemiFinished_CreatesRecord" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.SyncOrders_AlreadySynced_ReturnsZero" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="03e682b6-0a31-1534-2931-5634dd5d3244">
+      <Execution id="8ef03d2e-c456-4387-8d81-85570a57e643" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="SyncOrders_AlreadySynced_ReturnsZero" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.UpdateBlendStatus_Completed_SetsCompletedAt" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="fb7b72cc-5d8f-2dbf-ca25-68d0dbbd0bb1">
+      <Execution id="d2259860-d35e-49e2-a01d-995df5ee8f2c" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="UpdateBlendStatus_Completed_SetsCompletedAt" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetAccordProductions_FilterByStatus" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="520dc1f1-86bc-46d7-6440-b18b5b3708fe">
+      <Execution id="105329de-c769-48cd-8653-c719e7efd6db" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetAccordProductions_FilterByStatus" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.SyncOrders_NewPaidOrders_CreatesProductionOrders" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="fbbb1a87-3217-aead-439d-2066fdf18ecb">
+      <Execution id="acd69599-9c3c-4792-958a-3c6daa874b2f" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="SyncOrders_NewPaidOrders_CreatesProductionOrders" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.BatchShip_ValidOrders_UpdatesStatus" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="6f20f317-cd95-f3df-3680-2d47721855f3">
+      <Execution id="cc2c75fd-dde4-400b-a966-f447a0d06001" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="BatchShip_ValidOrders_UpdatesStatus" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.CreateBlendRecord_InsertsAndReturns" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="f1bc0027-027f-59a0-e483-e89d89fd001d">
+      <Execution id="9a416e9f-c6a6-4b5b-b121-56ea6118e887" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="CreateBlendRecord_InsertsAndReturns" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrders_FilterByStatus_ReturnsOnlyPending" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="7066d9a1-ebe6-53b6-97f7-5b7cc9f00629">
+      <Execution id="c1987935-c68b-4748-b9d4-2bf73e01f802" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="GetOrders_FilterByStatus_ReturnsOnlyPending" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrder_NonExisting_ReturnsNotFound" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="2f5fad96-4b68-2d3e-a0e0-bb4e8d2ce987">
+      <Execution id="73da4df9-b781-4b62-a71c-cf74bf47a602" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="GetOrder_NonExisting_ReturnsNotFound" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.SyncOrders_Concurrent100Orders_Idempotent" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="a0031162-b14c-e3e0-e909-afd1af68fa81">
+      <Execution id="a86004a2-c37a-4979-ae66-41cd573b90f8" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="SyncOrders_Concurrent100Orders_Idempotent" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetNoteInventory_ReturnsAll" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="b4a10970-7aeb-2245-185c-53fdd9bdd6a6">
+      <Execution id="ad83eaed-e55f-4bf9-af77-4ff9fec9b428" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetNoteInventory_ReturnsAll" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetReport_ReturnsGroupedData" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="0a655fa6-db89-838f-7496-c58d6a322452">
+      <Execution id="da4ccc64-fa58-422c-b838-fe18ae690972" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="GetReport_ReturnsGroupedData" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetBaseNotes_ReturnsAll" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="4033c7ff-eb88-c52d-b835-85c3f55e6b37">
+      <Execution id="a92aac9c-71bd-469b-ae7b-958bd9022b92" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetBaseNotes_ReturnsAll" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetRawMaterialInventory_ReturnsAll" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="283c58d5-491f-b4d5-778a-0222f52bbb51">
+      <Execution id="62b469b0-711b-4b50-9038-3c5e381b637d" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetRawMaterialInventory_ReturnsAll" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrders_SearchByWorkOrderNo" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="48f268d4-9905-70da-a4f6-da94613601df">
+      <Execution id="e4291a83-dc94-494c-bfdd-3c3201aedad3" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="GetOrders_SearchByWorkOrderNo" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrders_ReturnsPaginatedList" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="77d6229d-8b51-d29a-0385-a305c39f587c">
+      <Execution id="6fe52a12-47a2-4ea7-9118-5538e963dfe2" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="GetOrders_ReturnsPaginatedList" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.UpdateStatus_EmptyStatus_ReturnsBadRequest" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="b73a28d8-bb39-0176-b67e-5565b2f30a8d">
+      <Execution id="998d8769-c8b0-4a57-8829-33f241ef26ae" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.ProductionPagesTests" name="UpdateStatus_EmptyStatus_ReturnsBadRequest" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetReportData_ReturnsDateRange" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="22bc54ec-6c0f-5555-72da-c128532fcf6b">
+      <Execution id="422b641d-ed54-4b07-bac2-daaf8007c5b0" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetReportData_ReturnsDateRange" />
+    </UnitTest>
+    <UnitTest name="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetWorkshopTransfers_ReturnsPaginated" storage="f:\网站制作\网站\网站二\tests\perfumeshop.integrationtests\bin\debug\net8.0\perfumeshop.integrationtests.dll" id="5d0bc1ed-4c46-8bbc-278d-87c19860cb45">
+      <Execution id="41f3b644-54bc-4e18-8c0b-f6991de4e01c" />
+      <TestMethod codeBase="F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\bin\Debug\net8.0\PerfumeShop.IntegrationTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests" name="GetWorkshopTransfers_ReturnsPaginated" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="b73a28d8-bb39-0176-b67e-5565b2f30a8d" executionId="998d8769-c8b0-4a57-8829-33f241ef26ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c9f39c90-e44f-12f5-b9bd-6b902caa8a7f" executionId="50f38f65-fbe8-4b8d-a636-17bfe4634b37" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="90501c10-d581-cc01-2ca9-035cb9914561" executionId="49904342-709d-48db-825d-5fd8b795c998" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9c79d4c6-530d-61f1-cbc9-91df94fdc77a" executionId="6bce9f04-7384-4ecf-ae88-543a347ba700" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="69fbcee4-72b6-0be6-16a6-7ddf327ed41d" executionId="fb75c03b-5cd6-4f05-9164-a8fe46b3aa45" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="718e56c3-a666-4790-3ed7-86dcf88b3fca" executionId="2451c4c1-3dec-42f7-8f52-023bc4b349aa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="22436385-6571-e5ac-0e4f-78782cc35c76" executionId="e46f799c-fce7-45f0-a8cd-5f24f56f5024" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0a655fa6-db89-838f-7496-c58d6a322452" executionId="da4ccc64-fa58-422c-b838-fe18ae690972" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fbbb1a87-3217-aead-439d-2066fdf18ecb" executionId="acd69599-9c3c-4792-958a-3c6daa874b2f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="63164f69-3fc0-ddeb-5cb9-9f4b570ed4c8" executionId="2b94be4c-0ac4-4aab-8e2b-28029b561cd1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="22bc54ec-6c0f-5555-72da-c128532fcf6b" executionId="422b641d-ed54-4b07-bac2-daaf8007c5b0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c6bb48b7-add0-caa8-ed82-ecc450786af1" executionId="16351215-27c9-4332-91aa-4bdb6fb3724c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a0031162-b14c-e3e0-e909-afd1af68fa81" executionId="a86004a2-c37a-4979-ae66-41cd573b90f8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="283c58d5-491f-b4d5-778a-0222f52bbb51" executionId="62b469b0-711b-4b50-9038-3c5e381b637d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2f5fad96-4b68-2d3e-a0e0-bb4e8d2ce987" executionId="73da4df9-b781-4b62-a71c-cf74bf47a602" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7066d9a1-ebe6-53b6-97f7-5b7cc9f00629" executionId="c1987935-c68b-4748-b9d4-2bf73e01f802" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="48f268d4-9905-70da-a4f6-da94613601df" executionId="e4291a83-dc94-494c-bfdd-3c3201aedad3" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="77d6229d-8b51-d29a-0385-a305c39f587c" executionId="6fe52a12-47a2-4ea7-9118-5538e963dfe2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="fb7b72cc-5d8f-2dbf-ca25-68d0dbbd0bb1" executionId="d2259860-d35e-49e2-a01d-995df5ee8f2c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="03e682b6-0a31-1534-2931-5634dd5d3244" executionId="8ef03d2e-c456-4387-8d81-85570a57e643" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5d0bc1ed-4c46-8bbc-278d-87c19860cb45" executionId="41f3b644-54bc-4e18-8c0b-f6991de4e01c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="520dc1f1-86bc-46d7-6440-b18b5b3708fe" executionId="105329de-c769-48cd-8653-c719e7efd6db" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6f20f317-cd95-f3df-3680-2d47721855f3" executionId="cc2c75fd-dde4-400b-a966-f447a0d06001" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f1bc0027-027f-59a0-e483-e89d89fd001d" executionId="9a416e9f-c6a6-4b5b-b121-56ea6118e887" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4033c7ff-eb88-c52d-b835-85c3f55e6b37" executionId="a92aac9c-71bd-469b-ae7b-958bd9022b92" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ba536fdb-b0f0-f43d-55bb-647ebc9b80cc" executionId="9aa60148-f910-4e09-a73c-6c7bdf5d390f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="48f8a283-e2b5-08c2-8eaf-00bdc62ad43d" executionId="6e441c60-5bb6-41f1-ba0e-f63536147dd9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c6fefd79-3af8-ae85-6d66-a8f58152a550" executionId="52fab2ec-63f7-40d1-ace5-556cc8d57052" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b4a10970-7aeb-2245-185c-53fdd9bdd6a6" executionId="ad83eaed-e55f-4bf9-af77-4ff9fec9b428" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5573f9a5-b9f4-0731-10ec-1e81af6f42df" executionId="1840f84e-7c42-4a93-adc5-17dc51692859" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="516fdcd0-ed04-ca32-19e5-28228203d92b" executionId="be71d521-05cd-4a9d-b99b-696b86600c8a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="31" executed="31" passed="29" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.28)&#xD;
+[xUnit.net 00:00:00.50]   Discovering: PerfumeShop.IntegrationTests&#xD;
+[xUnit.net 00:00:00.65]   Discovered:  PerfumeShop.IntegrationTests&#xD;
+[xUnit.net 00:00:00.66]   Starting:    PerfumeShop.IntegrationTests&#xD;
+[xUnit.net 00:00:02.66]       Microsoft.EntityFrameworkCore.DbUpdateException : Required properties '{'BaseNoteName'}' are missing for the instance of entity type 'BaseNote'. Consider using 'DbContextOptionsBuilder.EnableSensitiveDataLogging' to see the entity key value.&#xD;
+[xUnit.net 00:00:02.66]       Stack Trace:&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.InMemory.Storage.Internal.InMemoryTable`1.ThrowNullabilityErrorException(IUpdateEntry entry, IList`1 nullabilityErrors)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.InMemory.Storage.Internal.InMemoryTable`1.Create(IUpdateEntry entry, IDiagnosticsLogger`1 updateLogger)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.InMemory.Storage.Internal.InMemoryStore.ExecuteTransaction(IList`1 entries, IDiagnosticsLogger`1 updateLogger)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.InMemory.Storage.Internal.InMemoryDatabase.SaveChanges(IList`1 entries)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChanges(IList`1 entriesToSave)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChanges(StateManager stateManager, Boolean acceptAllChangesOnSuccess)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.&lt;&gt;c.&lt;SaveChanges&gt;b__112_0(DbContext _, ValueTuple`2 t)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.Storage.NonRetryingExecutionStrategy.Execute[TState,TResult](TState state, Func`3 operation, Func`3 verifySucceeded)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.SaveChanges(Boolean acceptAllChangesOnSuccess)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.DbContext.SaveChanges(Boolean acceptAllChangesOnSuccess)&#xD;
+[xUnit.net 00:00:02.66]            at Microsoft.EntityFrameworkCore.DbContext.SaveChanges()&#xD;
+[xUnit.net 00:00:02.66]         F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\Admin\SemiFinishedPagesTests.cs(224,0): at PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetBaseNotes_ReturnsAll()&#xD;
+[xUnit.net 00:00:02.66]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:03.69]       System.Collections.Generic.KeyNotFoundException : The given key was not present in the dictionary.&#xD;
+[xUnit.net 00:00:03.69]       Stack Trace:&#xD;
+[xUnit.net 00:00:03.69]            at System.Text.Json.JsonElement.GetProperty(String propertyName)&#xD;
+[xUnit.net 00:00:03.69]         F:\网站制作\网站\网站二\tests\PerfumeShop.IntegrationTests\Admin\ProductionPagesTests.cs(133,0): at PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrder_ExistingId_ReturnsDetail()&#xD;
+[xUnit.net 00:00:03.69]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:03.79]   Finished:    PerfumeShop.IntegrationTests&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="屋企" outcome="Error" timestamp="2026-07-10T12:56:16.1776979+08:00">
+        <Text>[xUnit.net 00:00:02.66]     PerfumeShop.IntegrationTests.Admin.SemiFinishedPagesTests.GetBaseNotes_ReturnsAll [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="屋企" outcome="Error" timestamp="2026-07-10T12:56:17.2104131+08:00">
+        <Text>[xUnit.net 00:00:03.69]     PerfumeShop.IntegrationTests.Admin.ProductionPagesTests.GetOrder_ExistingId_ReturnsDetail [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

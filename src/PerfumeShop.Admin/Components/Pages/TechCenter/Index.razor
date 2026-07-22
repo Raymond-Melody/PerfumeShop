@@ -1,0 +1,86 @@
+@page "/admin/TechCenter"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+
+<PageTitle>技术概览</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-flask" style="color:#00bcd4;"></i> 产品技术管理中心</h2><div class="breadcrumb"><span>技术概览</span></div></div>
+@if(_loaded){
+
+@* ---- 统计卡片 ---- *@
+<div class="stats-row"><div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#00bcd4,#00838f);"><i class="fas fa-box-open"></i></div><div class="stat-value">@_totalProducts</div><div class="stat-label">产品总数</div></div><div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#26c6da,#0097a7);"><i class="fas fa-leaf"></i></div><div class="stat-value">@_totalNotes</div><div class="stat-label">香调总数</div></div><div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#4dd0e1,#00acc1);"><i class="fas fa-wine-bottle"></i></div><div class="stat-value">@_totalBaseNotes</div><div class="stat-label">基香总数</div></div><div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#80deea,#26c6da);"><i class="fas fa-tags"></i></div><div class="stat-value">@_totalTypes</div><div class="stat-label">产品类型数</div></div></div>
+
+@* ---- 配方发布状态 ---- *@
+<div class="section-title"><i class="fas fa-link" style="color:#00bcd4;"></i> 配方发布状态（供应链对接）</div>
+<div class="stats-row"><div class="stat-card" style="border-left:3px solid #FF9800;"><div class="stat-value" style="color:#FF9800;">@_accordPublished</div><div class="stat-label">已发布香调配方</div><div style="font-size:11px;color:#888;margin-top:4px;">香调车间可见</div></div><div class="stat-card" style="border-left:3px solid #2196F3;"><div class="stat-value" style="color:#2196F3;">@_productPublished</div><div class="stat-label">已发布产品配方</div><div style="font-size:11px;color:#888;margin-top:4px;">制造车间可见</div></div><div class="stat-card" style="border-left:3px solid #4CAF50;"><div class="stat-value" style="color:#4CAF50;">@_totalRecipes</div><div class="stat-label">活跃配方总数</div><div style="font-size:11px;color:#888;margin-top:4px;">Recipes</div></div><div class="stat-card" style="border-left:3px solid #9C27B0;"><div class="stat-value">@_totalLogs</div><div class="stat-label">审计日志总数</div><div style="font-size:11px;color:#888;margin-top:4px;">RecipePublishLog</div></div></div>
+
+@* ---- 快捷导航 ---- *@
+<div class="section-title"><i class="fas fa-th-large"></i> 快捷入口</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px;">
+<a href="/admin/TechCenter/BaseNoteManagement" class="quick-card"><div class="qc-icon" style="background:linear-gradient(135deg,#FF9800,#E65100);"><i class="fas fa-wine-bottle"></i></div><div class="qc-title">基香管理</div><div class="qc-desc">基香成分配置</div></a>
+<a href="/admin/TechCenter/NoteManagement" class="quick-card"><div class="qc-icon" style="background:linear-gradient(135deg,#4CAF50,#1B5E20);"><i class="fas fa-leaf"></i></div><div class="qc-title">香调管理</div><div class="qc-desc">香调配比调整</div></a>
+<a href="/admin/TechCenter/FormulaManagement" class="quick-card"><div class="qc-icon" style="background:linear-gradient(135deg,#00bcd4,#00838f);"><i class="fas fa-vial"></i></div><div class="qc-title">配方设置</div><div class="qc-desc">管理产品配方与工艺</div></a>
+<a href="/admin/TechCenter/ProductSettings" class="quick-card"><div class="qc-icon" style="background:linear-gradient(135deg,#2196F3,#1565C0);"><i class="fas fa-box-open"></i></div><div class="qc-title">产品设置</div><div class="qc-desc">产品规格与类型配置</div></a>
+<a href="/admin/TechCenter/RecipePublish" class="quick-card"><div class="qc-icon" style="background:linear-gradient(135deg,#FF9800,#F57C00);"><i class="fas fa-lock"></i></div><div class="qc-title">配方拆分发布</div><div class="qc-desc">拆分下发供应链配方</div></a>
+<a href="/admin/TechCenter/BottleManagement" class="quick-card"><div class="qc-icon" style="background:linear-gradient(135deg,#9C27B0,#4A148C);"><i class="fas fa-prescription-bottle"></i></div><div class="qc-title">瓶型管理</div><div class="qc-desc">瓶型样式与价格</div></a>
+<a href="/admin/TechCenter/KolReviews" class="quick-card"><div class="qc-icon" style="background:linear-gradient(135deg,#FF5722,#BF360C);"><i class="fas fa-user-check"></i></div><div class="qc-title">KOL审核</div><div class="qc-desc">KOL产品审核管理</div></a>
+</div>
+
+@* ---- 最近发布操作 ---- *@
+<div class="card"><div class="ch"><i class="fas fa-history"></i> 最近发布操作</div><div class="cb">
+@if(_recentLogs.Any()){<table class="dt"><thead><tr><th>时间</th><th>类型</th><th>发布人</th></tr></thead><tbody>@foreach(var l in _recentLogs){<tr><td style="font-size:12px;color:#888;"><i class="far fa-clock"></i> @(l.PublishedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@if(l.PublishType=="Accord"){<span style="color:#FF9800;"><i class="fas fa-flask"></i> 香调配方</span>}else{<span style="color:#2196F3;"><i class="fas fa-industry"></i> 产品配方</span>}</td><td>@(l.PublishedBy??"-")</td></tr>}</tbody></table>}else{<div style="padding:20px;text-align:center;color:#666;"><i class="fas fa-inbox"></i><p>暂无发布操作记录</p></div>}
+</div></div>
+
+@* ---- 最近更新产品 ---- *@
+<div class="card"><div class="ch"><i class="fas fa-clock"></i> 最近更新</div><div class="cb">
+@if(_recentProducts.Any()){<table class="dt"><thead><tr><th>产品名称</th><th>更新时间</th></tr></thead><tbody>@foreach(var p in _recentProducts){<tr><td><i class="fas fa-box" style="color:#00bcd4;margin-right:8px;"></i>@p.ProductName</td><td style="font-size:12px;color:#888;"><i class="far fa-clock"></i> @(p.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td></tr>}</tbody></table>}else{<div style="padding:20px;text-align:center;color:#666;"><i class="fas fa-inbox"></i><p>暂无最近更新的产品</p></div>}
+</div></div>
+
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.section-title{font-size:18px;font-weight:600;margin-bottom:16px;color:#fff;display:flex;align-items:center;gap:10px;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;transition:transform 0.2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-icon{width:40px;height:40px;margin:0 auto 10px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.quick-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;color:#e0e0e0;text-decoration:none;border:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;align-items:center;gap:8px;transition:all 0.3s;text-align:center;}
+.quick-card:hover{transform:translateY(-3px);border-color:rgba(0,188,212,0.3);box-shadow:0 8px 25px rgba(0,0,0,0.3);}
+.qc-icon{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;}
+.qc-title{font-size:15px;font-weight:600;color:#fff;}.qc-desc{font-size:12px;color:#888;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:10px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.ch{padding:14px 20px;background:rgba(0,188,212,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;}
+.cb{padding:0;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(0,188,212,0.06);color:#888;padding:12px 16px;font-size:12px;text-align:left;text-transform:uppercase;}.dt td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e0e0e0;font-size:14px;}.dt tr:hover td{background:rgba(255,255,255,0.02);}
+@@media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr);}}
+</style>
+
+@code {
+    private bool _loaded;private int _totalProducts,_totalNotes,_totalBaseNotes,_totalRecipes,_totalTypes,_totalLogs,_accordPublished,_productPublished;
+    private List<RecipePublishLog> _recentLogs=new();private List<Product> _recentProducts=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            _totalProducts=await Db.Products.CountAsync();
+            _totalNotes=await Db.FragranceNotes.CountAsync(fn=>fn.IsActive==true);
+            _totalBaseNotes=await Db.BaseNotes.CountAsync(bn=>bn.IsActive==true);
+            _totalTypes=await Db.ProductTypeConfigs.CountAsync(t=>t.IsActive==true);
+            _totalRecipes=await Db.Recipes.CountAsync(r=>r.IsActive==true);
+            _accordPublished=await Db.RecipeAccords.CountAsync(a=>a.Status=="Published");
+            _productPublished=await Db.RecipeProducts.CountAsync(p=>p.Status=="Published");
+            _totalLogs=await Db.RecipePublishLogs.CountAsync();
+            _recentLogs=await Db.RecipePublishLogs.AsNoTracking().OrderByDescending(l=>l.LogId).Take(5).ToListAsync();
+            _recentProducts=await Db.Products.AsNoTracking().OrderByDescending(p=>p.CreatedAt).Take(5).ToListAsync();
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+}

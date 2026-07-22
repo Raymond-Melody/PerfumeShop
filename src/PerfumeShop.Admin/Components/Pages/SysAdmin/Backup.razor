@@ -1,0 +1,71 @@
+@page "/admin/system/backup"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+
+<PageTitle>备份中心</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-database" style="color:#E91E63;"></i> 备份中心</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>备份中心</span></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="backup-panel" style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:30px;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;">
+<h3 style="color:#e0e0e0;margin-bottom:20px;"><i class="fas fa-cloud-upload-alt" style="color:#E91E63;"></i> 数据库备份</h3>
+<p style="color:#888;margin-bottom:20px;">数据库: PerfumeShop @@ localhost\YOURPERFUME · 备份存储在 database/backups/ 目录</p>
+<button class="btn-backup" @onclick="TriggerBackup" disabled="@_busy">
+<i class="fas @(_busy?"fa-spinner fa-spin":"fa-database")"></i> @(_busy?"备份中...":"立即备份")
+</button>
+</div>
+<div class="backup-list">
+<h3 style="color:#e0e0e0;margin-bottom:15px;"><i class="fas fa-history"></i> 备份历史</h3>
+@if(_backups.Any()){
+<div class="table-container"><table class="orders-table"><thead><tr><th>备份文件</th><th>大小</th><th>时间</th></tr></thead><tbody>
+@foreach(var b in _backups){<tr><td>@b.Name</td><td>@b.Size</td><td>@b.Date</td></tr>}
+</tbody></table></div>
+}else{<div style="text-align:center;color:#666;padding:40px;">暂无备份记录</div>}
+</div>
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
+.breadcrumb{font-size:13px;color:#888;}
+.btn-backup{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:14px 32px;border-radius:10px;cursor:pointer;font-size:16px;font-weight:600;}
+.btn-backup:disabled{opacity:0.6;cursor:not-allowed;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+</style>
+
+@code {
+    private bool _busy;
+    private string _msg="",_msgType="";
+    private List<(string Name,string Size,string Date)> _backups=new();
+
+    protected override async Task OnInitializedAsync(){
+        try{
+            var dir=Path.Combine(Directory.GetCurrentDirectory(),"..","..","..","..","..","database","backups");
+            if(Directory.Exists(dir)){
+                foreach(var f in Directory.GetFiles(dir,"*.bak").OrderByDescending(f=>new FileInfo(f).LastWriteTime).Take(20)){
+                    var fi=new FileInfo(f);
+                    _backups.Add((fi.Name,$"{fi.Length/1024.0/1024.0:F1} MB",fi.LastWriteTime.ToString("yyyy-MM-dd HH:mm")));
+                }
+            }
+        }catch{}
+    }
+    async Task TriggerBackup(){
+        _busy=true;_msg="";
+        try{
+            var dbName="PerfumeShop";var server="localhost\\YOURPERFUME";
+            var backupDir=Path.Combine(Directory.GetCurrentDirectory(),"..","..","..","..","..","database","backups",$"V19.{DateTime.Now:yyMMddHHmm}");
+            Directory.CreateDirectory(backupDir);
+            var bakPath=Path.Combine(backupDir,$"{dbName}_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
+            var sql=$"BACKUP DATABASE [{dbName}] TO DISK=N'{bakPath}' WITH INIT,COMPRESSION";
+            await Db.Database.ExecuteSqlRawAsync(sql);
+            _msg=$"备份成功: {Path.GetFileName(bakPath)}";_msgType="ok";
+            _backups.Insert(0,(Path.GetFileName(bakPath),$"{new FileInfo(bakPath).Length/1024.0/1024.0:F1} MB",DateTime.Now.ToString("yyyy-MM-dd HH:mm")));
+        }catch(Exception ex){_msg="备份失败: "+ex.Message;_msgType="err";}
+        finally{_busy=false;}
+    }
+}

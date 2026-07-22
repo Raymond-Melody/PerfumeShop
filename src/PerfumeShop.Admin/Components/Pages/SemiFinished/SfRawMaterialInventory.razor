@@ -1,0 +1,131 @@
+@page "/admin/semifinished/raw-material-inventory"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>原料库存</PageTitle>
+<div class="ph"><h2 class="pt"><i class="fas fa-boxes" style="color:#4CAF50;"></i> 原料库存管理</h2><div class="hdr">
+<div class="sbx"><form @onsubmit="Search"><input type="text" @bind="_search" class="fi" placeholder="搜索原料名称/编码..." style="width:220px;"/><button type="submit" class="btn btn-primary btn-sm">搜索</button>@if(!string.IsNullOrEmpty(_search)){<button type="button" class="btn btn--neutral btn-sm" @onclick="ClearSearch">清除</button>}</form></div>
+</div><div class="br"><a href="/admin/semifinished" style="color:#2196F3;text-decoration:none;">半成品中心</a> / 原料库存</div></div>
+
+@if(_loaded){
+@if(!string.IsNullOrEmpty(_msg)){<div class="@(_msgErr?"alert-err":"alert-ok")">@_msg</div>}
+
+<div class="sg"><div class="sc"><span class="n" style="color:#2196F3;">@_rmTotal</span><span class="l">原料种类</span></div><div class="sc"><span class="n" style="color:#FF9800;">@_rmLowStock</span><span class="l">低库存预警</span></div><div class="sc"><span class="n" style="color:#f44336;">@_rmZeroStock</span><span class="l">零库存</span></div><div class="sc"><span class="n" style="color:#4CAF50;">@_rmTotalValue.ToString("C2")</span><span class="l">库存总值</span></div></div>
+
+<div class="card"><div class="ch">原料清单<button class="btn btn-success btn-sm" @onclick="OpenAddModal">+ 添加原料</button></div><div class="cb"><table class="dt"><thead><tr><th>编码</th><th>名称</th><th>类别</th><th>库存量</th><th>安全库存</th><th>单位</th><th>参考单价</th><th>操作</th></tr></thead><tbody>
+@foreach(var m in _materials){var qty=m.StockQty??0;var safety=m.SafetyStock??0;var pct=safety>0?Math.Min(100,(qty/safety)*100):100;var scls=qty<=0?"danger":qty<=safety?"warning":"safe";<tr class="@(safety>0&&qty<=safety?"low":"")"><td style="color:#888;font-size:13px;">@m.ItemCode</td><td><strong>@m.ItemName</strong></td><td>@m.CategoryCode</td><td>@qty.ToString("F1")<div class="sbar"><div class="sbar-f @scls" style="width:@(pct)%;"></div></div></td><td>@safety.ToString("F1")</td><td>@m.Unit</td><td>@((m.UnitPrice??0).ToString("C2"))</td><td><button class="btn btn-primary btn-sm" @onclick="()=>OpenEditModal(m)">编辑</button><button class="btn btn-success btn-sm" @onclick="()=>OpenRestockModal(m)">入库</button><button class="btn btn-warning btn-sm" @onclick="()=>OpenOutboundModal(m)">出库</button></td></tr>}
+@if(!_materials.Any()){<tr><td colspan="8" class="tac tm" style="padding:40px;">暂无原料数据</td></tr>}
+</tbody></table></div></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@* Add Modal *@@if(_showAdd){<div class="mo" @onclick="()=>_showAdd=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>添加原料</h3><button class="mcl" @onclick="()=>_showAdd=false">&times;</button></div>
+<div class="fg"><label>原料名称 *</label><input type="text" @bind="_fName" class="fi" required/></div>
+<div class="fg"><label>编码</label><input type="text" @bind="_fCode" class="fi"/></div>
+<div class="fg"><label>类别</label><input type="text" @bind="_fCat" class="fi" placeholder="香料、溶剂、辅料"/></div>
+<div class="fg"><label>初始库存</label><input type="number" @bind="_fQty" class="fi" step="0.1"/></div>
+<div class="fg"><label>安全库存</label><input type="number" @bind="_fSafety" class="fi" step="0.1"/></div>
+<div class="fg"><label>单位</label><input type="text" @bind="_fUnit" class="fi"/></div>
+<div class="fg"><label>单价</label><input type="number" @bind="_fPrice" class="fi" step="0.01"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showAdd=false">取消</button><button class="btn btn-success" @onclick="HandleAdd" disabled="@_saving">确认添加</button></div>
+</div></div>}
+
+@* Edit Modal *@@if(_showEdit){<div class="mo" @onclick="()=>_showEdit=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>编辑原料库存</h3><button class="mcl" @onclick="()=>_showEdit=false">&times;</button></div>
+<div class="fg"><label>当前库存</label><input type="number" @bind="_eQty" class="fi" step="0.1"/></div>
+<div class="fg"><label>安全库存</label><input type="number" @bind="_eSafety" class="fi" step="0.1"/></div>
+<div class="fg"><label>单价</label><input type="number" @bind="_ePrice" class="fi" step="0.01"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showEdit=false">取消</button><button class="btn btn-primary" @onclick="HandleUpdate" disabled="@_saving">保存</button></div>
+</div></div>}
+
+@* Outbound Modal *@@if(_showOutbound){<div class="mo" @onclick="()=>_showOutbound=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>原料出库 - @_oName</h3><button class="mcl" @onclick="()=>_showOutbound=false">&times;</button></div>
+<div class="fg"><label>出库数量</label><input type="number" @bind="_oAddQty" class="fi" required min="0.1" step="0.1"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showOutbound=false">取消</button><button class="btn btn-warning" @onclick="HandleOutbound" disabled="@_saving">确认出库</button></div>
+</div></div>}
+
+@* Restock Modal *@@if(_showRestock){<div class="mo" @onclick="()=>_showRestock=false"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>原料入库 - @_rName</h3><button class="mcl" @onclick="()=>_showRestock=false">&times;</button></div>
+<div class="fg"><label>入库数量</label><input type="number" @bind="_rAddQty" class="fi" required min="0.1" step="0.1"/></div>
+<div class="mft"><button class="btn btn--neutral" @onclick="()=>_showRestock=false">取消</button><button class="btn btn-success" @onclick="HandleRestock" disabled="@_saving">确认入库</button></div>
+</div></div>}
+
+@code{
+[Inject] PerfumeShopContext Db{get;set;}=default!;
+bool _loaded,_msgErr,_saving,_showAdd,_showEdit,_showRestock;string? _msg,_search;
+int _rmTotal,_rmLowStock,_rmZeroStock;decimal _rmTotalValue;
+List<RawMaterialInventory> _materials=new();
+// Form fields
+string _fName="",_fCode="",_fCat="",_fUnit="g";double _fQty,_fSafety;decimal _fPrice;
+int _eId;double _eQty,_eSafety;decimal _ePrice;
+int _rId;string _rName="";double _rAddQty;
+int _oId;bool _showOutbound;string _oName="";double _oAddQty;
+
+protected override async Task OnInitializedAsync(){await LoadData();}
+
+async Task LoadData(){
+    try{
+        var q=Db.RawMaterialInventories.AsQueryable();
+        if(!string.IsNullOrEmpty(_search))q=q.Where(r=>r.ItemName!=null&&r.ItemName.Contains(_search)||r.ItemCode!=null&&r.ItemCode.Contains(_search));
+        _materials=await q.OrderBy(r=>r.ItemName).ToListAsync();
+        _rmTotal=await Db.RawMaterialInventories.CountAsync();
+        _rmLowStock=await Db.RawMaterialInventories.CountAsync(r=>r.StockQty!=null&&r.SafetyStock!=null&&r.StockQty<=r.SafetyStock&&r.SafetyStock>0);
+        _rmZeroStock=await Db.RawMaterialInventories.CountAsync(r=>r.StockQty!=null&&r.StockQty<=0);
+        _rmTotalValue=(decimal)await Db.RawMaterialInventories.SumAsync(r=>(r.StockQty??0)*(double)(r.UnitPrice??0));
+    }catch(Exception ex){_msg="加载失败: "+ex.Message;_msgErr=true;}
+    _loaded=true;
+}
+
+async Task Search(){await LoadData();await InvokeAsync(StateHasChanged);}
+async Task ClearSearch(){_search="";await LoadData();await InvokeAsync(StateHasChanged);}
+
+void OpenAddModal(){_fName=_fCode=_fCat="";_fQty=_fSafety=0;_fPrice=0;_fUnit="g";_showAdd=true;}
+async Task HandleAdd(){
+    if(string.IsNullOrEmpty(_fName))return;_saving=true;
+    try{
+        // RawMaterialInventory 为 keyless 实体，无法 .Add() 跟踪，改用参数化原始SQL插入
+        await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO RawMaterialInventory (ItemName,ItemCode,CategoryCode,StockQty,SafetyStock,Unit,UnitPrice,UpdatedAt) VALUES ({_fName},{_fCode},{_fCat},{_fQty},{_fSafety},{_fUnit},{_fPrice},GETDATE())");
+        _msg="原料添加成功";_msgErr=false;_showAdd=false;await LoadData();
+    }
+    catch(Exception ex){_msg="添加失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+void OpenEditModal(RawMaterialInventory m){_eId=m.MaterialId;_eQty=m.StockQty??0;_eSafety=m.SafetyStock??0;_ePrice=m.UnitPrice??0;_showEdit=true;}
+async Task HandleUpdate(){
+    if(_eId<=0)return;_saving=true;
+    try{await Db.RawMaterialInventories.Where(r=>r.MaterialId==_eId).ExecuteUpdateAsync(s=>s.SetProperty(r=>r.StockQty,_eQty).SetProperty(r=>r.SafetyStock,_eSafety).SetProperty(r=>r.UnitPrice,_ePrice).SetProperty(r=>r.UpdatedAt,DateTime.Now));_msg="原料更新成功";_msgErr=false;_showEdit=false;await LoadData();}
+    catch(Exception ex){_msg="更新失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+void OpenRestockModal(RawMaterialInventory m){_rId=m.MaterialId;_rName=m.ItemName??"";_rAddQty=0;_showRestock=true;}
+
+void OpenOutboundModal(RawMaterialInventory m){_oId=m.MaterialId;_oName=m.ItemName??"";_oAddQty=0;_showOutbound=true;}
+async Task HandleOutbound(){
+    if(_oId<=0||_oAddQty<=0)return;_saving=true;
+    try{
+        var cur=await Db.RawMaterialInventories.Where(r=>r.MaterialId==_oId).Select(r=>r.StockQty).FirstOrDefaultAsync()??0;
+        if(_oAddQty>cur){_msg="库存不足！当前库存: "+cur.ToString("F1");_msgErr=true;}
+        else{await Db.RawMaterialInventories.Where(r=>r.MaterialId==_oId).ExecuteUpdateAsync(s=>s.SetProperty(r=>r.StockQty,r=>(r.StockQty??0)-_oAddQty).SetProperty(r=>r.UpdatedAt,DateTime.Now));_msg="出库成功";_msgErr=false;_showOutbound=false;await LoadData();}
+    }catch(Exception ex){_msg="出库失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+
+async Task HandleRestock(){
+    if(_rId<=0||_rAddQty<=0)return;_saving=true;
+    try{await Db.RawMaterialInventories.Where(r=>r.MaterialId==_rId).ExecuteUpdateAsync(s=>s.SetProperty(r=>r.StockQty,r=>(r.StockQty??0)+_rAddQty).SetProperty(r=>r.UpdatedAt,DateTime.Now).SetProperty(r=>r.LastPurchaseDate,DateTime.Now));_msg="入库成功";_msgErr=false;_showRestock=false;await LoadData();}
+    catch(Exception ex){_msg="入库失败: "+ex.Message;_msgErr=true;}
+    _saving=false;await InvokeAsync(StateHasChanged);
+}
+}
+
+<style>
+.ph{margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.pt{font-size:24px;color:#e0e0e0;display:flex;align-items:center;gap:10px;}.br{font-size:13px;color:#888;margin-top:5px;}.hdr{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;text-align:center;border:1px solid rgba(255,255,255,0.06);}.sc .n{font-size:28px;font-weight:bold;display:block;}.sc .l{font-size:12px;color:#888;display:block;margin-top:5px;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.06);}.ch{padding:14px 20px;background:rgba(76,175,80,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;display:flex;justify-content:space-between;align-items:center;}.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(76,175,80,0.15);color:#81c784;padding:12px 15px;text-align:left;font-weight:600;font-size:13px;}.dt td{padding:12px 15px;border-bottom:1px solid rgba(255,255,255,0.04);color:#e0e0e0;font-size:14px;}.dt tr:hover td{background:rgba(255,255,255,0.03);}.dt tr.low td{background:rgba(244,67,54,0.06);}
+.sbar{height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:4px;}.sbar-f{height:100%;border-radius:3px;}.sbar-f.safe{background:#4CAF50;}.sbar-f.warning{background:#FF9800;}.sbar-f.danger{background:#f44336;}
+.alert-ok{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}.alert-err{padding:15px 20px;border-radius:8px;margin-bottom:20px;background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+.mo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);width:90%;max-width:500px;padding:30px;border-radius:15px;border:1px solid rgba(255,255,255,0.06);}.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.06);}.mh h3{margin:0;font-size:18px;color:#e0e0e0;}.mcl{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.mft{display:flex;justify-content:flex-end;gap:10px;margin-top:25px;}
+.fg{margin-bottom:18px;}.fg label{display:block;margin-bottom:6px;font-weight:600;color:#e0e0e0;font-size:13px;}.fi{width:100%;padding:10px 12px;background:#2d2d44;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:14px;}.fi:focus{outline:none;border-color:#2196F3;}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:#fff;}.btn-primary{background:#2196F3;}.btn-success{background:#4CAF50;}.btn--neutral{background:#555;}.btn-sm{padding:6px 12px;font-size:12px;}.btn:disabled{opacity:0.6;}
+.tac{text-align:center;}.tm{color:#888;font-size:13px;}
+</style>

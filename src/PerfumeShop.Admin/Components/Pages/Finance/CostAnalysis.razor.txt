@@ -1,0 +1,27 @@
+@page "/admin/finance/cost-analysis"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>成本分析</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">成本分析</MudText>
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">费用总数</MudText><MudText Typo="Typo.h5">@_expenseCount</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">总费用</MudText><MudText Typo="Typo.h5">¥@_totalExpense.ToString("F2")</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">成本中心</MudText><MudText Typo="Typo.h5">@_centerCount</MudText></MudCardContent></MudCard></MudItem>
+</MudGrid>
+<MudTable Items="@_expenses" Hover="true" Dense="true">
+    <HeaderContent><MudTh>费用名</MudTh><MudTh>类型</MudTh><MudTh>金额</MudTh><MudTh>分摊方式</MudTh><MudTh>期间</MudTh></HeaderContent>
+    <RowTemplate><MudTd>@context.ExpenseName</MudTd><MudTd>@context.ExpenseType</MudTd><MudTd>¥@context.Amount?.ToString("F2")</MudTd><MudTd>@context.AllocationMethod</MudTd><MudTd>@context.Period</MudTd></RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private int _expenseCount, _centerCount; private decimal _totalExpense;
+    private List<ExpenseRecord> _expenses = new();
+    protected override async Task OnInitializedAsync()
+    {
+        _expenses = await Db.ExpenseRecords.AsNoTracking().OrderByDescending(e => e.ExpenseId).Take(100).ToListAsync();
+        _expenseCount = _expenses.Count; _totalExpense = _expenses.Sum(e => e.Amount ?? 0);
+        _centerCount = await Db.CostCenters.CountAsync();
+    }
+}

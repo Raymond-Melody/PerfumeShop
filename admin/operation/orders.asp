@@ -62,50 +62,50 @@ Call LogAdminAction("查看订单列表", "operation_orders", "", "", "")
         <link rel="stylesheet" href="/css/buttons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .filter-bar { background: white; padding: 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .filter-bar { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 20px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .filter-form { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { display: flex; flex-direction: column; gap: 5px; }
-        .filter-group label { font-size: 13px; color: #666; font-weight: 500; }
-        .filter-group select, .filter-group input { padding: 10px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; min-width: 150px; }
-        .filter-group select:focus, .filter-group input:focus { border-color: #667eea; outline: none; }
+        .filter-group label { font-size: 13px; color: #b0b0b0; font-weight: 500; }
+        .filter-group select, .filter-group input { padding: 10px 15px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; font-size: 14px; min-width: 150px; }
+        .filter-group select:focus, .filter-group input:focus { border-color: #00bcd4; outline: none; }
         
-        .orders-table { width: 100%; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .orders-table th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; text-align: left; font-weight: 500; }
-        .orders-table td { padding: 15px; border-bottom: 1px solid #f0f0f0; }
-        .orders-table tr:hover { background: #f8f9fa; }
+        .orders-table { width: 100%; background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .orders-table th { background: linear-gradient(135deg, #00bcd4 0%, #00838f 100%); color: white; padding: 15px; text-align: left; font-weight: 500; }
+        .orders-table td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .orders-table tr:hover { background: rgba(255,255,255,0.04); }
         .orders-table tr:last-child td { border-bottom: none; }
         
-        .order-no { font-weight: 600; color: #667eea; }
+        .order-no { font-weight: 600; color: #00bcd4; }
         .customer-info { display: flex; flex-direction: column; }
-        .customer-name { font-weight: 500; color: #333; }
-        .customer-contact { font-size: 12px; color: #999; margin-top: 3px; }
+        .customer-name { font-weight: 500; color: #e0e0e0; }
+        .customer-contact { font-size: 12px; color: #888; margin-top: 3px; }
         
-        .order-amount { font-size: 16px; font-weight: 600; color: #333; }
-        .order-items { font-size: 12px; color: #999; margin-top: 3px; }
+        .order-amount { font-size: 16px; font-weight: 600; color: #e0e0e0; }
+        .order-items { font-size: 12px; color: #888; margin-top: 3px; }
         
         .status-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-        .status-pending { background: #fff3e0; color: #e65100; }
-        .status-paid { background: #e8f5e9; color: #2e7d32; }
-        .status-processing { background: #e3f2fd; color: #1976d2; }
-        .status-shipped { background: #f3e5f5; color: #7b1fa2; }
-        .status-completed { background: #e0f2f1; color: #00695c; }
-        .status-cancelled { background: #ffebee; color: #c62828; }
+        .status-pending { background: rgba(255,152,0,0.12); color: #e65100; }
+        .status-paid { background: rgba(46,125,50,0.2); color: #2e7d32; }
+        .status-processing { background: rgba(25,118,210,0.2); color: #00bcd4; }
+        .status-shipped { background: rgba(123,31,162,0.2); color: #7b1fa2; }
+        .status-completed { background: rgba(0,105,92,0.2); color: #00695c; }
+        .status-cancelled { background: rgba(198,40,40,0.2); color: #c62828; }
         
         .action-btns { display: flex; gap: 8px; }
         .action-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; text-decoration: none; transition: all 0.3s; }
-        .action-btn.view { background: #e3f2fd; color: #1976d2; }
-        .action-btn.view:hover { background: #1976d2; color: white; }
-        .action-btn.edit { background: #fff3e0; color: #e65100; }
+        .action-btn.view { background: rgba(25,118,210,0.2); color: #00bcd4; }
+        .action-btn.view:hover { background: #00bcd4; color: white; }
+        .action-btn.edit { background: rgba(255,152,0,0.12); color: #e65100; }
         .action-btn.edit:hover { background: #e65100; color: white; }
         
         .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 25px; }
-        .pagination a { padding: 10px 15px; background: white; border-radius: 8px; text-decoration: none; color: #666; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
-        .pagination a:hover, .pagination a.active { background: #667eea; color: white; }
+        .pagination a { padding: 10px 15px; background: linear-gradient(135deg, #2d2d44, #1e1e32); border-radius: 8px; text-decoration: none; color: #b0b0b0; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .pagination a:hover, .pagination a.active { background: #00bcd4; color: white; }
         
         .stats-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 25px; }
-        .summary-item { background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .summary-item { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .summary-number { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
-        .summary-label { font-size: 13px; color: #666; }
+        .summary-label { font-size: 13px; color: #b0b0b0; }
     </style>
 </head>
 <body data-theme="operation-dark">
@@ -138,7 +138,7 @@ Call LogAdminAction("查看订单列表", "operation_orders", "", "", "")
                 <div class="summary-label">已发货</div>
             </div>
             <div class="summary-item">
-                <div class="summary-number" style="color: #333;"><%= GetScalar("SELECT COUNT(*) FROM Orders") %></div>
+                <div class="summary-number" style="color: #e0e0e0;"><%= GetScalar("SELECT COUNT(*) FROM Orders") %></div>
                 <div class="summary-label">全部订单</div>
             </div>
         </div>

@@ -1,0 +1,29 @@
+@page "/admin/analytics/sales"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+<PageTitle>销售分析</PageTitle>
+<div class="ph"><h2><i class="fas fa-chart-line" style="color:#2196F3;"></i> 销售分析</h2><div class="br"><a href="/admin/analytics" style="color:#2196F3;text-decoration:none;">数据分析</a> / <span>销售分析</span></div></div>
+@if(_l){
+<div class="sr"><div class="sc"><div class="sv">@_totalOrders</div><div class="sl">总订单</div></div><div class="sc"><div class="sv" style="color:#4CAF50;">@_totalRev.ToString("N0")</div><div class="sl">总营收</div></div><div class="sc"><div class="sv">@_avgOrder.ToString("N0")</div><div class="sl">客单价</div></div><div class="sc"><div class="sv" style="color:#FF9800;">@_pendingOrders</div><div class="sl">待处理</div></div></div>
+<div class="tn"><a class="tl @(_tab=="monthly"?"at":"")" @onclick='()=>Switch("monthly")' @onclick:preventDefault>月度趋势</a><a class="tl @(_tab=="top"?"at":"")" @onclick='()=>Switch("top")' @onclick:preventDefault>热门产品</a></div>
+@switch(_tab){
+case "monthly":
+<div class="tc"><table class="ot"><thead><tr><th>月份</th><th>订单数</th><th>营收</th><th>均价</th></tr></thead><tbody>@foreach(var m in _monthly){<tr><td>@m.Month</td><td>@m.Cnt</td><td>@m.Rev.ToString("N0")</td><td>@((m.Cnt>0?m.Rev/m.Cnt:0).ToString("N0"))</td></tr>}@if(!_monthly.Any()){<tr><td colspan="4" style="text-align:center;color:#666;padding:30px;">暂无数据</td></tr>}</tbody></table></div>
+break;
+case "top":
+<div class="tc"><table class="ot"><thead><tr><th>#</th><th>产品名称</th><th>分类</th><th>销量</th></tr></thead><tbody>@{int i=1;}@foreach(var p in _products.Take(15)){<tr><td>@(i++)</td><td>@p.ProductName</td><td>@(p.Category??"-")</td><td style="color:#4CAF50;">#@p.ProductId</td></tr>}@if(!_products.Any()){<tr><td colspan="4" style="text-align:center;color:#666;padding:30px;">暂无产品</td></tr>}</tbody></table></div>
+break;}
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.sr{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.sc{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}.sv{font-size:26px;font-weight:bold;}.sl{font-size:13px;color:#888;}.tn{display:flex;border-bottom:2px solid #3a3a4a;margin-bottom:20px;}.tl{padding:12px 24px;color:#888;cursor:pointer;border-bottom:3px solid transparent;}.tl.at{color:#2196F3;border-bottom-color:#2196F3;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(33,150,243,0.1);color:#2196F3;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}</style>
+@code{bool _l;string _tab="monthly";int _totalOrders,_pendingOrders;decimal _totalRev,_avgOrder;
+List<(string Month,int Cnt,decimal Rev)> _monthly=new();List<Product> _products=new();
+protected override async Task OnInitializedAsync(){try{
+    var paid=new[]{"Paid","paid","Completed","completed","shipped","delivered"};
+    var orders=await Db.Orders.Where(o=>paid.Contains(o.Status!)).ToListAsync();
+    _totalOrders=orders.Count;_totalRev=orders.Sum(o=>o.TotalAmount);_avgOrder=_totalOrders>0?_totalRev/_totalOrders:0;
+    _pendingOrders=await Db.Orders.CountAsync(o=>o.Status=="Processing"||o.Status=="pending");
+    _monthly=orders.Where(o=>o.CreatedAt.HasValue).GroupBy(o=>new{o.CreatedAt!.Value.Year,o.CreatedAt!.Value.Month}).Select(g=>{var m=g.Key.Year+"-"+(g.Key.Month.ToString().PadLeft(2,'0'));return(m,g.Count(),g.Sum(o=>o.TotalAmount));}).OrderByDescending(x=>x.Item1).Take(12).ToList();
+    try{_products=await Db.Products.AsNoTracking().OrderByDescending(p=>p.ProductId).Take(15).ToListAsync();}catch{_products=new();}
+    _l=true;}catch{_l=true;}}async Task Switch(string t){_tab=t;}}

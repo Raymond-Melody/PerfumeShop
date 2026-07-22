@@ -1,0 +1,60 @@
+@page "/admin/prodcenter/prod-warehouse"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>仓库管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">仓库管理</MudText>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+    <MudTabPanel Text="成品入库" Icon="@Icons.Material.Filled.Inventory">
+        <MudTable ServerData="@(new Func<TableState, Task<TableData<ProductionOrder>>>(LoadCompleted))" Hover="true" Dense="true" RowsPerPage="10">
+            <HeaderContent><MudTh>工单号</MudTh><MudTh>配方</MudTh><MudTh>完成时间</MudTh><MudTh>入库状态</MudTh><MudTh>操作</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.WorkOrderNo</MudTd>
+                <MudTd>@(context.RecipeName ?? "-")</MudTd>
+                <MudTd>@context.CompletedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.WarehouseInAt.HasValue ? Color.Success : Color.Warning)">@(context.WarehouseInAt.HasValue ? "已入库" : "待入库")</MudChip></MudTd>
+                <MudTd>
+                    @if (!context.WarehouseInAt.HasValue)
+                    { <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" OnClick="@(() => WarehouseIn(context))">入库</MudButton> }
+                </MudTd>
+            </RowTemplate>
+            <PagerContent><MudTablePager /></PagerContent>
+        </MudTable>
+    </MudTabPanel>
+    <MudTabPanel Text="出库记录" Icon="@Icons.Material.Filled.LocalShipping">
+        <MudTable Items="@_shippedOut" Hover="true" Dense="true" RowsPerPage="10">
+            <HeaderContent><MudTh>工单号</MudTh><MudTh>出库时间</MudTh><MudTh>状态</MudTh></HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.WorkOrderNo</MudTd>
+                <MudTd>@context.ShippedOutAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd><MudChip T="string" Size="Size.Small" Color="Color.Info">已出库</MudChip></MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    private List<ProductionOrder> _shippedOut = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _shippedOut = await Db.ProductionOrders.AsNoTracking().Where(p => p.ShippedOutAt != null).OrderByDescending(p => p.ShippedOutAt).Take(50).ToListAsync();
+    }
+
+    private async Task<TableData<ProductionOrder>> LoadCompleted(TableState state)
+    {
+        var query = Db.ProductionOrders.AsNoTracking().Where(p => p.Status == "Completed");
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(p => p.CompletedAt).Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<ProductionOrder> { TotalItems = total, Items = items };
+    }
+
+    private async Task WarehouseIn(ProductionOrder po)
+    {
+        var item = await Db.ProductionOrders.FirstOrDefaultAsync(p => p.ProductionId == po.ProductionId);
+        if (item != null) { item.WarehouseInAt = DateTime.Now; item.UpdatedAt = DateTime.Now; await Db.SaveChangesAsync(); Snackbar.Add("入库成功", Severity.Success); }
+    }
+}

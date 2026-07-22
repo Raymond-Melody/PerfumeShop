@@ -1,0 +1,123 @@
+@page "/admin/semifinished/workshop-transfer"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using TransferModel = PerfumeShop.Data.Models.WorkshopTransfer
+
+<PageTitle>车间转移管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">车间转移管理</MudText>
+
+@* 操作栏 *@
+<MudGrid Class="mb-3">
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_statusFilter" Placeholder="状态筛选" Clearable="true">
+            <MudSelectItem Value="@("Pending")">待处理</MudSelectItem>
+            <MudSelectItem Value="@("Completed")">已完成</MudSelectItem>
+            <MudSelectItem Value="@("Cancelled")">已取消</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@(() => _showCreateDialog = true)">新建转移单</MudButton>
+    </MudItem>
+</MudGrid>
+
+@* 转移记录表 *@
+<MudTable ServerData="@(new Func<TableState, Task<TableData<TransferModel>>>(ServerReload))"
+          Hover="true" Dense="true" Striped="true" RowsPerPage="15">
+    <HeaderContent>
+        <MudTh>转移单号</MudTh><MudTh>来源车间</MudTh><MudTh>目标车间</MudTh><MudTh>NoteID</MudTh>
+        <MudTh>申请数量</MudTh><MudTh>申请人</MudTh><MudTh>状态</MudTh><MudTh>申请时间</MudTh><MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><code>@(context.TransferNo ?? "-")</code></MudTd>
+        <MudTd>@(context.FromWorkshop ?? "-")</MudTd>
+        <MudTd>@(context.ToWorkshop ?? "-")</MudTd>
+        <MudTd>@(context.NoteId?.ToString() ?? "-")</MudTd>
+        <MudTd>@(context.RequestQty?.ToString("F2") ?? "0")</MudTd>
+        <MudTd>@(context.RequestedBy ?? "-")</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@(context.Status == "Completed" ? Color.Success : context.Status == "Cancelled" ? Color.Error : Color.Warning)">
+                @(context.Status ?? "-")
+            </MudChip>
+        </MudTd>
+        <MudTd>@context.RequestedAt?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd>
+            @if (context.Status == "Pending")
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success"
+                               OnClick="@(() => FulfillTransfer(context.TransferId))" Title="确认接收" />
+            }
+        </MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@* 新建转移对话框 *@
+<MudDialog @bind-Visible="_showCreateDialog" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent><MudText Typo="Typo.h6">新建转移单</MudText></TitleContent>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudTextField @bind-Value="_newTransfer.FromWorkshop" Label="来源车间" Required="true" />
+            <MudTextField @bind-Value="_newTransfer.ToWorkshop" Label="目标车间" Required="true" />
+            <MudNumericField @bind-Value="_newTransfer.NoteId" Label="香料 NoteID" />
+            <MudNumericField @bind-Value="_newTransfer.RequestQty" Label="申请数量" />
+            <MudTextField @bind-Value="_newTransfer.RequestedBy" Label="申请人" />
+            <MudTextField @bind-Value="_newTransfer.Notes" Label="备注" Lines="2" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showCreateDialog = false" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="CreateTransfer" Variant="Variant.Filled" Color="Color.Primary">创建</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string _statusFilter = "";
+    private bool _showCreateDialog;
+    private TransferModel _newTransfer = new();
+
+    private async Task<TableData<TransferModel>> ServerReload(TableState state)
+    {
+        var q = Db.WorkshopTransfers.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(_statusFilter)) q = q.Where(t => t.Status == _statusFilter);
+        var total = await q.CountAsync();
+        var items = await q.OrderByDescending(t => t.CreatedAt)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<TransferModel> { TotalItems = total, Items = items };
+    }
+
+    private async Task CreateTransfer()
+    {
+        var transfer = new TransferModel
+        {
+            TransferNo = $"TF-{DateTime.Now:yyyyMMddHHmmss}-{new Random().Next(100, 999)}",
+            FromWorkshop = _newTransfer.FromWorkshop,
+            ToWorkshop = _newTransfer.ToWorkshop,
+            NoteId = _newTransfer.NoteId,
+            RequestQty = _newTransfer.RequestQty,
+            RequestedBy = _newTransfer.RequestedBy,
+            Notes = _newTransfer.Notes,
+            Status = "Pending",
+            RequestedAt = DateTime.Now,
+            CreatedAt = DateTime.Now
+        };
+        Db.WorkshopTransfers.Add(transfer);
+        await Db.SaveChangesAsync();
+        Snackbar.Add("转移单已创建", Severity.Success);
+        _showCreateDialog = false;
+        _newTransfer = new();
+    }
+
+    private async Task FulfillTransfer(int transferId)
+    {
+        var t = await Db.WorkshopTransfers.FirstOrDefaultAsync(x => x.TransferId == transferId);
+        if (t == null) return;
+        t.Status = "Completed";
+        t.FulfilledAt = DateTime.Now;
+        await Db.SaveChangesAsync();
+        Snackbar.Add($"转移单 {t.TransferNo} 已完成", Severity.Success);
+    }
+}

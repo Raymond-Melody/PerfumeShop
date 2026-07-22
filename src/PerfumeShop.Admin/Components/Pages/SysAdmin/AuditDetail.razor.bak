@@ -1,0 +1,23 @@
+@page "/admin/system/audit-detail/{LogId:int}"
+@using PerfumeShop.Data.Models
+
+<PageTitle>审计日志详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">审计日志详情</MudText>
+@if (_log != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>日志ID:</b> @_log.LogId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>管理员:</b> @_log.AdminName</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>操作类型:</b> @_log.ActionType</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>目标:</b> @_log.TargetType #@_log.TargetId</MudText></MudItem>
+    <MudItem xs="12"><MudText><b>详情:</b> @_log.Details</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>IP:</b> @_log.Ipaddress</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>时间:</b> @_log.CreatedAt?.ToString("yyyy-MM-dd HH:mm:ss")</MudText></MudItem>
+</MudGrid></MudCardContent></MudCard>}
+<MudButton Variant="Variant.Text" Href="/admin/system/audit-log" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public int LogId { get; set; }
+    private AdminAuditLog? _log;
+    protected override async Task OnInitializedAsync() { _log = await Db.AdminAuditLogs.FindAsync(LogId); }
+}

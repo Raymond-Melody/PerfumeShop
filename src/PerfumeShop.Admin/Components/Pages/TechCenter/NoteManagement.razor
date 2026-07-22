@@ -1,0 +1,85 @@
+@page "/admin/TechCenter/NoteManagement"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+<PageTitle>香调管理</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-leaf" style="color:#4CAF50;"></i> 香调管理</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>香调管理</span></div></div>
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_total</div><div class="stat-label">香调总数</div></div><div class="stat-card" style="border-left:3px solid #4CAF50;"><div class="stat-value" style="color:#4CAF50;">@_active</div><div class="stat-label">已启用</div></div><div class="stat-card" style="border-left:3px solid #f44336;"><div class="stat-value" style="color:#f44336;">@(_total-_active)</div><div class="stat-label">已禁用</div></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="tab-row"><button class="tab-link @(_typeFilter==""?"tab-active":"")" @onclick='()=>SwitchFilter("")'>全部</button><button class="tab-link @(_typeFilter=="Top"?"tab-active":"")" @onclick='()=>SwitchFilter("Top")'>前调</button><button class="tab-link @(_typeFilter=="Middle"?"tab-active":"")" @onclick='()=>SwitchFilter("Middle")'>中调</button><button class="tab-link @(_typeFilter=="Base"?"tab-active":"")" @onclick='()=>SwitchFilter("Base")'>基调</button><button class="btn-add" @onclick="OpenAddModal" style="margin-left:auto;">+ 新建香调</button></div>
+<div class="filter-bar"><input class="filter-input" @bind="_search" placeholder="搜索香调名称..." /><button class="btn-search" @onclick="DoSearch"><i class="fas fa-search"></i> 搜索</button>@if(!string.IsNullOrEmpty(_search)){<button class="btn-clear" @onclick="ClearSearch"><i class="fas fa-times"></i> 清除</button>}</div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>香调名称</th><th>类型</th><th>描述</th><th>状态</th><th>操作</th></tr></thead><tbody>
+@foreach(var n in _items){<tr><td>#@n.NoteId</td><td>@n.NoteName</td><td>@(n.NoteType??"-")</td><td>@(n.Description??"-")</td><td><span class="status-badge @(n.IsActive==true?"status-normal":"status-warning")">@(n.IsActive==true?"启用":"禁用")</span></td><td><button class="btn-edit" @onclick='()=>OpenEditModal(n)'>编辑</button></td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+@if(_showModal){
+<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>@(_editing?"编辑香调":"新建香调")</h3><button class="modal-close" @onclick="CloseModal">X</button></div><div class="modal-body">
+<div class="form-group"><label>名称</label><input @bind="_edit.NoteName" /></div>
+<div class="form-group"><label>类型</label><select @bind="_edit.NoteType"><option value="Top">前调</option><option value="Middle">中调</option><option value="Base">基调</option></select></div>
+<div class="form-group"><label>描述</label><input @bind="_edit.Description" /></div>
+<div class="form-group"><label>状态</label><select @bind="_edit.IsActive"><option value="true">启用</option><option value="false">禁用</option></select></div>
+</div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveItem">保存</button></div></div></div>
+}
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;}
+.btn-add{background:linear-gradient(135deg,#4CAF50,#1B5E20);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;}
+.tab-row{display:flex;gap:4px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.tab-link{background:none;border:1px solid rgba(255,255,255,0.08);color:#888;padding:6px 14px;font-size:13px;border-radius:6px;cursor:pointer;}
+.tab-link:hover{color:#e0e0e0;}.tab-active{background:rgba(76,175,80,0.15);color:#4CAF50;border-color:rgba(76,175,80,0.3);}
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;}
+.filter-input{flex:1;max-width:280px;padding:10px 14px;background:#1a1a2e;border:2px solid #3a3a4a;border-radius:8px;color:#e0e0e0;font-size:14px;}
+.filter-input:focus{border-color:#4CAF50;outline:none;}
+.btn-search{background:rgba(76,175,80,0.15);color:#4CAF50;border:1px solid rgba(76,175,80,0.3);padding:8px 16px;border-radius:6px;cursor:pointer;}
+.btn-clear{background:rgba(158,158,158,0.15);color:#9e9e9e;border:1px solid rgba(158,158,158,0.3);padding:8px 16px;border-radius:6px;cursor:pointer;}
+.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(76,175,80,0.1);color:#4CAF50;padding:14px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}
+.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
+.btn-edit{background:rgba(76,175,80,0.15);color:#4CAF50;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;}.alert-error{background:rgba(244,67,54,0.15);color:#e57373;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:500px;border:1px solid rgba(255,255,255,0.06);}
+.modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;}
+.modal-body{padding:25px;max-height:55vh;overflow-y:auto;}.modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:15px;}.form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus,.form-group select:focus{border-color:#4CAF50;outline:none;}
+.btn-save{background:linear-gradient(135deg,#4CAF50,#1B5E20);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+</style>
+@code {
+    private bool _loaded,_editing,_showModal;private int _total,_active;private string _msg="",_msgType="",_typeFilter="",_search="";
+    private List<FragranceNote> _items=new();private FragranceNote _edit=new();
+    protected override async Task OnInitializedAsync(){await LoadItems();}
+    async Task LoadItems(){
+        try{
+            var q=Db.FragranceNotes.AsNoTracking().AsQueryable();
+            if(!string.IsNullOrEmpty(_typeFilter))q=q.Where(n=>n.NoteType==_typeFilter);
+            _items=await q.OrderByDescending(n=>n.NoteId).ToListAsync();
+            _total=(await Db.FragranceNotes.CountAsync(n=>string.IsNullOrEmpty(_typeFilter)||n.NoteType==_typeFilter));
+            _active=_items.Count(n=>n.IsActive==true);_loaded=true;
+        }catch{_loaded=true;}
+    }
+    void SwitchFilter(string type){_typeFilter=type;StateHasChanged();LoadItems();}
+    async Task DoSearch(){if(!string.IsNullOrWhiteSpace(_search)){var q=Db.FragranceNotes.AsNoTracking().Where(n=>n.NoteName.Contains(_search));if(!string.IsNullOrEmpty(_typeFilter))q=q.Where(n=>n.NoteType==_typeFilter);_items=await q.OrderByDescending(n=>n.NoteId).ToListAsync();}else await LoadItems();}
+    void ClearSearch(){_search="";StateHasChanged();}
+    void OpenAddModal(){_editing=false;_edit=new(){IsActive=true};_showModal=true;}
+    void OpenEditModal(FragranceNote n){_editing=true;_edit=new(){NoteId=n.NoteId,NoteName=n.NoteName,NoteType=n.NoteType,Description=n.Description,IsActive=n.IsActive};_showModal=true;}
+    void CloseModal(){_showModal=false;}
+    async Task SaveItem(){
+        if(string.IsNullOrWhiteSpace(_edit.NoteName)){_msg="名称不能为空";_msgType="err";return;}
+        try{if(!_editing)Db.FragranceNotes.Add(_edit);else Db.FragranceNotes.Update(_edit);await Db.SaveChangesAsync();_msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+}

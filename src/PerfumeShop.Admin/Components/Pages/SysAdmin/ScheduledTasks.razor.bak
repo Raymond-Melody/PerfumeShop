@@ -1,0 +1,24 @@
+@page "/admin/system/scheduled-tasks"
+
+<PageTitle>定时任务</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">定时任务</MudText>
+<MudTable Items="@_tasks" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>任务名</MudTh><MudTh>Cron表达式</MudTh><MudTh>状态</MudTh><MudTh>上次执行</MudTh><MudTh>下次执行</MudTh><MudTh>操作</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.Name</MudTd><MudTd><code>@context.Cron</code></MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Enabled ? Color.Success : Color.Default)">@(context.Enabled ? "启用" : "停用")</MudChip></MudTd>
+        <MudTd>@context.LastRun?.ToString("yyyy-MM-dd HH:mm")</MudTd><MudTd>@context.NextRun?.ToString("yyyy-MM-dd HH:mm")</MudTd>
+        <MudTd><MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Info" Href="/admin/system/scheduled-task-edit" /></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<TaskInfo> _tasks = new()
+    {
+        new() { Name = "数据库备份", Cron = "0 2 * * *", Enabled = true, LastRun = DateTime.Today.AddDays(-1).AddHours(2), NextRun = DateTime.Today.AddHours(2) },
+        new() { Name = "日志清理", Cron = "0 3 * * 0", Enabled = true, LastRun = DateTime.Today.AddDays(-3).AddHours(3), NextRun = DateTime.Today.AddDays(4).AddHours(3) },
+        new() { Name = "缓存刷新", Cron = "*/30 * * * *", Enabled = true, LastRun = DateTime.Now.AddMinutes(-30), NextRun = DateTime.Now.AddMinutes(30) },
+        new() { Name = "统计聚合", Cron = "0 1 * * *", Enabled = false },
+    };
+    private class TaskInfo { public string Name { get; set; } = ""; public string Cron { get; set; } = ""; public bool Enabled { get; set; } public DateTime? LastRun { get; set; } public DateTime? NextRun { get; set; } }
+}

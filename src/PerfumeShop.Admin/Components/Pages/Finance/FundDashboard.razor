@@ -1,0 +1,512 @@
+@page "/admin/finance/fund-dashboard"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+@inject PerfumeShopContext Db
+@inject FinanceRepository FinRepo
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>资金看板</PageTitle>
+
+@if (_loaded)
+{
+<div class="page-header">
+    <h2 class="page-title"><i class="fas fa-wallet" style="color:#00bcd4;"></i> 资金看板</h2>
+    <div class="breadcrumb"><a href="/admin/finance" style="color:#00bcd4;text-decoration:none;">财务中心</a> / <span>资金看板</span></div>
+</div>
+@if (!string.IsNullOrEmpty(_msg))
+{
+<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>
+}
+
+@if (_canEdit)
+{
+<div class="action-bar">
+    <button class="btn-primary" @onclick="OpenAddModal"><i class="fas fa-plus"></i> 添加账户</button>
+</div>
+}
+
+<!-- 区块1: 账户总览统计卡（4卡，对齐V18） -->
+<div class="stats-row fund-stats">
+    <div class="stat-card total">
+        <div class="stat-label"><i class="fas fa-coins"></i> 账面总余额</div>
+        <div class="stat-value">@_totalBalance.ToString("N0")</div>
+        <div class="stat-sub">所有账户合计</div>
+    </div>
+    <div class="stat-card available @(_totalAvailable < _totalBalance * 0.2m ? "highlight-warning" : "")">
+        <div class="stat-label"><i class="fas fa-check-circle"></i> 可用余额</div>
+        <div class="stat-value">@_totalAvailable.ToString("N0")</div>
+        <div class="stat-sub">占总账面 @(_totalBalance > 0 ? (_totalAvailable / _totalBalance * 100m).ToString("F1") : "0")%</div>
+    </div>
+    <div class="stat-card frozen">
+        <div class="stat-label"><i class="fas fa-lock"></i> 冻结金额</div>
+        <div class="stat-value">@_totalFrozen.ToString("N0")</div>
+        <div class="stat-sub">保证金/冻结资金</div>
+    </div>
+    <div class="stat-card pending">
+        <div class="stat-label"><i class="fas fa-clock"></i> 待结算金额</div>
+        <div class="stat-value">@_pendingTotal.ToString("N0")</div>
+        <div class="stat-sub">在途资金(交易+提现+保证金)</div>
+    </div>
+</div>
+
+<!-- 区块2: 账户明细表格 -->
+<h3 class="section-title">
+    <i class="fas fa-credit-card"></i> 账户明细
+    <span style="font-size:13px;color:#888;font-weight:400;margin-left:12px;">共 @_accounts.Count 个 · @_alertCount 预警</span>
+</h3>
+<div class="table-container">
+    <table class="orders-table">
+        <thead><tr><th>ID</th><th>账户名称</th><th>类型</th><th>余额</th><th>可用</th><th>冻结</th><th>阈值</th><th>状态</th><th>同步</th>@if(_canEdit){<th style="width:140px;">操作</th>}</tr></thead>
+        <tbody>
+            @foreach (var a in _accounts)
+            {
+            var isAlert = a.AvailableBalance < a.AlertThreshold && (a.AlertThreshold ?? 0) > 0;
+            var isInactive = a.IsActive == false;
+            <tr class="@(isAlert ? "warning-row" : "") @(isInactive ? "inactive-row" : "")">
+                <td>#@a.AccountId</td>
+                <td><span class="account-icon @GetIconClass(a.AccountType)"><i class="fas @GetIconFa(a.AccountType)"></i></span> @(a.AccountName ?? "-")</td>
+                <td>@GetTypeLabel(a.AccountType)</td>
+                <td class="cost-value">@((a.TotalBalance ?? 0).ToString("N2"))</td>
+                <td style="color:#38ef7d;">@((a.AvailableBalance ?? 0).ToString("N2"))</td>
+                <td style="color:#f7b733;">@((a.FrozenAmount ?? 0).ToString("N2"))</td>
+                <td>@((a.AlertThreshold ?? 0).ToString("N2"))</td>
+                <td><span class="status-badge @(isInactive ? "status-inactive" : isAlert ? "status-warning" : "status-normal")">@(isInactive ? "停用" : isAlert ? "预警" : "正常")</span></td>
+                <td style="font-size:12px;color:#888;">@(a.LastSyncAt?.ToString("yyyy-MM-dd HH:mm") ?? "未同步")</td>
+                @if (_canEdit)
+                {
+                <td>
+                    <button class="btn-icon-sm edit" title="编辑" @onclick="()=>OpenEditModal(a)"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon-sm balance" title="更新余额" @onclick="()=>OpenBalanceModal(a)"><i class="fas fa-sync-alt"></i></button>
+                    <button class="btn-icon-sm threshold" title="设阈值" @onclick="()=>OpenThresholdModal(a)"><i class="fas fa-bell"></i></button>
+                    <button class="btn-icon-sm toggle @(isInactive ? "enable" : "")" title="@(isInactive ? "启用" : "停用")" @onclick="()=>ToggleAccount(a)"><i class="fas @(isInactive ? "fa-play" : "fa-pause")"></i></button>
+                </td>
+                }
+            </tr>
+            }
+            @if (!_accounts.Any())
+            {
+            <tr><td colspan="@(_canEdit?10:9)" style="text-align:center;color:#666;padding:40px;">暂无资金账户</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- 区块3: 待结算资金穿透（3张可点击卡） -->
+<h3 class="section-title"><i class="fas fa-hourglass-half"></i> 待结算资金穿透</h3>
+<div class="pending-grid">
+    <div class="pending-card orders" @onclick='()=>ShowPendingDetail("orders")'>
+        <div class="pending-header"><i class="fas fa-shopping-cart"></i> 交易在途</div>
+        <div class="pending-amount">@_penetration.OrdersInTransit.ToString("N0")</div>
+        <div class="pending-desc">Orders.Status='Paid' 未结算</div>
+    </div>
+    <div class="pending-card withdraw" @onclick='()=>ShowPendingDetail("withdraw")'>
+        <div class="pending-header"><i class="fas fa-money-bill-wave"></i> 提现中</div>
+        <div class="pending-amount">@_penetration.PendingWithdraw.ToString("N0")</div>
+        <div class="pending-desc">PaymentRecords 提现待处理</div>
+    </div>
+    <div class="pending-card frozen" @onclick='()=>ShowPendingDetail("frozen")'>
+        <div class="pending-header"><i class="fas fa-shield-alt"></i> 不可用保证金</div>
+        <div class="pending-amount">@_penetration.FrozenMargin.ToString("N0")</div>
+        <div class="pending-desc">FundAccounts.FrozenAmount</div>
+    </div>
+</div>
+
+<!-- 应付/应收概览 -->
+<h3 class="section-title"><i class="fas fa-exchange-alt"></i> 往来款项</h3>
+<div class="pending-grid" style="grid-template-columns:1fr 1fr;">
+    <div class="pending-card ap">
+        <div class="pending-header"><i class="fas fa-file-invoice-dollar"></i> 待付应付账款</div>
+        <div class="pending-amount">@_pendingAP.ToString("N0")</div>
+        <div class="pending-desc">AP 待付/部分付款</div>
+    </div>
+    <div class="pending-card ar">
+        <div class="pending-header"><i class="fas fa-hand-holding-usd"></i> 待收应收账款</div>
+        <div class="pending-amount">@_pendingAR.ToString("N0")</div>
+        <div class="pending-desc">AR 待收/部分收款</div>
+    </div>
+</div>
+
+<!-- 区块4: 收支预警 -->
+<h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> 收支预警</h3>
+@if (_largeTransferCount > 0)
+{
+<div class="abnormal-alert">
+    <i class="fas fa-radiation"></i>
+    <div class="abnormal-content">
+        <h4>异常监控提醒</h4>
+        <p>检测到 @_largeTransferCount 笔大额转账（单笔>=10,000元），请核实</p>
+    </div>
+</div>
+}
+<div class="alert-section">
+    <table class="alert-table">
+        <thead><tr><th>账户名称</th><th>当前可用余额</th><th>预警阈值</th><th>差额</th><th>预警级别</th></tr></thead>
+        <tbody>
+            @foreach (var a in _alerts)
+            {
+            var levelCls = a.AlertLevel == "高危" ? "level-high" : a.AlertLevel == "中危" ? "level-medium" : "level-low";
+            <tr>
+                <td>@a.AccountName</td>
+                <td>@a.AvailableBalance.ToString("N2")</td>
+                <td>@a.AlertThreshold.ToString("N2")</td>
+                <td class="diff-negative">-@a.DiffAmount.ToString("N2")</td>
+                <td><span class="alert-level @levelCls">@a.AlertLevel</span></td>
+            </tr>
+            }
+            @if (!_alerts.Any())
+            {
+            <tr><td colspan="5" style="text-align:center;color:#38ef7d;padding:30px;"><i class="fas fa-check-circle"></i> 暂无预警，所有账户余额正常</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- 月度收支趋势（保留V19） -->
+<div style="margin-top:20px;">
+    <div class="section-title"><i class="fas fa-chart-bar"></i> 月度收支趋势</div>
+    <div style="margin-bottom:20px;"><div style="position:relative;height:250px;"><canvas id="fundFlowChart"></canvas></div></div>
+</div>
+
+<!-- 最近资金流水（保留V19） -->
+<div style="margin-top:30px;">
+    <div class="section-title"><i class="fas fa-exchange-alt"></i> 最近资金流水</div>
+    <div class="table-container">
+        <table class="orders-table">
+            <thead><tr><th>ID</th><th>类型</th><th>金额</th><th>状态</th><th>时间</th></tr></thead>
+            <tbody>
+                @foreach (var p in _recentPayments)
+                {
+                <tr><td>#@p.RecordId</td><td>@(p.PaymentType ?? "-")</td><td>@((p.Amount ?? 0).ToString("N2"))</td><td>@(p.Status ?? "-")</td><td>@(p.CreatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "-")</td></tr>
+                }
+                @if (!_recentPayments.Any())
+                {
+                <tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无流水</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ====== 模态框 ====== -->
+@if (_canEdit)
+{
+    @* 添加/编辑账户模态框 *@
+    if (_showAccountModal)
+    {
+    <div class="modal-overlay" @onclick="CloseAllModals">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header"><h3><i class="fas @(_editingAccount!.AccountId==0?"fa-plus-circle":"fa-edit")"></i> @(_editingAccount!.AccountId==0?"添加":"编辑")资金账户</h3><button class="modal-close" @onclick="CloseAllModals"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>账户名称</label><input @bind="_editingAccount.AccountName" placeholder="如：支付宝主账户" /></div>
+                <div class="form-group"><label>账户类型</label><select @bind="_editingAccount.AccountType"><option value="alipay">支付宝</option><option value="wechat">微信支付</option><option value="bank">银行账户</option><option value="paypal">PayPal</option><option value="cash">现金</option><option value="other">其他</option></select></div>
+                @if (_editingAccount.AccountId == 0)
+                {
+                <div class="form-group"><label>初始余额</label><input type="number" step="0.01" @bind="_editTotalBalance" /></div>
+                <div class="form-group"><label>预警阈值</label><input type="number" step="0.01" @bind="_editThreshold" /></div>
+                }
+            </div>
+            <div class="modal-footer"><button class="btn-secondary" @onclick="CloseAllModals">取消</button><button class="btn-save" @onclick="SaveAccount">保存</button></div>
+        </div>
+    </div>
+    }
+
+    @* 更新余额模态框 *@
+    if (_showBalanceModal)
+    {
+    <div class="modal-overlay" @onclick="CloseAllModals">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header"><h3><i class="fas fa-sync-alt"></i> 更新余额 - @_editingAccount?.AccountName</h3><button class="modal-close" @onclick="CloseAllModals"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>最新余额</label><input type="number" step="0.01" @bind="_editTotalBalance" /></div>
+            </div>
+            <div class="modal-footer"><button class="btn-secondary" @onclick="CloseAllModals">取消</button><button class="btn-save" @onclick="UpdateBalance">确认更新</button></div>
+        </div>
+    </div>
+    }
+
+    @* 设置阈值模态框 *@
+    if (_showThresholdModal)
+    {
+    <div class="modal-overlay" @onclick="CloseAllModals">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header"><h3><i class="fas fa-bell"></i> 设置预警阈值 - @_editingAccount?.AccountName</h3><button class="modal-close" @onclick="CloseAllModals"><i class="fas fa-times"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>预警阈值</label><input type="number" step="0.01" @bind="_editThreshold" /><small style="color:#666;display:block;margin-top:5px;">可用余额低于此值触发预警</small></div>
+            </div>
+            <div class="modal-footer"><button class="btn-secondary" @onclick="CloseAllModals">取消</button><button class="btn-save" @onclick="SetThreshold">确认设置</button></div>
+        </div>
+    </div>
+    }
+}
+
+@* 待结算明细弹窗 *@
+@if (_showDetailModal)
+{
+<div class="modal-overlay" @onclick="CloseAllModals">
+    <div class="modal-content" style="max-width:600px;" @onclick:stopPropagation="true">
+        <div class="modal-header"><h3><i class="fas fa-list"></i> @_detailTitle</h3><button class="modal-close" @onclick="CloseAllModals"><i class="fas fa-times"></i></button></div>
+        <div class="modal-body">
+            <div class="detail-list">
+                @if (_detailLoading)
+                {
+                <div style="text-align:center;padding:30px;color:#888;"><i class="fas fa-spinner fa-spin"></i> 加载中...</div>
+                }
+                else if (!_detailItems.Any())
+                {
+                <div style="text-align:center;padding:30px;color:#888;"><i class="fas fa-inbox"></i> 暂无数据</div>
+                }
+                else
+                {
+                @foreach (var d in _detailItems)
+                {
+                <div class="detail-item"><div class="detail-info"><h4>@(string.IsNullOrEmpty(d.No) ? "#"+d.Id.ToString() : d.No)</h4>@if(!string.IsNullOrEmpty(d.Extra)){<p>@d.Extra</p>}</div><div class="detail-amount">@d.Amount.ToString("N2")</div></div>
+                }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+}
+else
+{
+<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" />
+}
+
+<style>
+/* 本页统计卡（继承 finance-dark.css 基础上定制彩色顶边与预警动画）*/
+.fund-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.fund-stats .stat-card { background: linear-gradient(135deg, #2d2d44 0%, #1e1e32 100%); border-radius: 16px; padding: 25px; border: 1px solid rgba(255,255,255,0.06); position: relative; overflow: hidden; }
+.fund-stats .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+.fund-stats .stat-card.total::before { background: linear-gradient(90deg, #00bcd4, #00838f); }
+.fund-stats .stat-card.available::before { background: linear-gradient(90deg, #11998e, #38ef7d); }
+.fund-stats .stat-card.frozen::before { background: linear-gradient(90deg, #fc4a1a, #f7b733); }
+.fund-stats .stat-card.pending::before { background: linear-gradient(90deg, #4facfe, #00f2fe); }
+.fund-stats .stat-card.available .stat-value { color: #38ef7d; }
+.fund-stats .stat-card.frozen .stat-value { color: #f7b733; }
+.fund-stats .stat-card.pending .stat-value { color: #00f2fe; }
+.fund-stats .stat-card.highlight-warning { border-color: #ff4757; animation: pulse-warning 2s infinite; }
+/* 待结算穿透卡片（3列） */
+.pending-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.pending-card { background: linear-gradient(135deg, #2d2d44 0%, #1e1e32 100%); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: all 0.3s; }
+.pending-card:hover { border-color: #00bcd4; transform: translateY(-3px); }
+.pending-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; color: #888; font-size: 14px; }
+.pending-amount { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+.pending-desc { font-size: 12px; color: #888; }
+.pending-card.orders .pending-amount { color: #4facfe; }
+.pending-card.withdraw .pending-amount { color: #f7b733; }
+.pending-card.frozen .pending-amount { color: #ff6b6b; }
+.pending-card.ap .pending-amount { color: #4CAF50; }
+.pending-card.ar .pending-amount { color: #2196F3; }
+/* 预警表格 */
+.alert-section { background: linear-gradient(135deg, #2d2d44 0%, #1e1e32 100%); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
+.alert-table { width: 100%; border-collapse: collapse; }
+.alert-table th, .alert-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.alert-table th { color: #888; font-weight: 500; font-size: 13px; }
+.alert-table td { color: #e0e0e0; font-size: 14px; }
+.alert-table tr:hover { background: #323242; }
+.alert-level { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+.level-high { background: #5e1b1b; color: #ff4757; }
+.level-medium { background: #5e4b1b; color: #ffa726; }
+.level-low { background: #1b3e5e; color: #4facfe; }
+.diff-negative { color: #ff4757; font-weight: 600; }
+/* 异常监控横幅 */
+.abnormal-alert { background: linear-gradient(135deg, #5e1b1b 0%, #3e1b1b 100%); border: 1px solid #ff4757; border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
+.abnormal-alert i { font-size: 24px; color: #ff4757; animation: blink 1s infinite; }
+.abnormal-content h4 { margin: 0 0 5px; color: #ff4757; }
+.abnormal-content p { margin: 0; color: #ff8a8a; font-size: 13px; }
+/* 操作按钮栏 */
+.action-bar { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+.btn-icon-sm { width: 28px; height: 28px; border-radius: 6px; border: none; background: #3a3a4a; color: #888; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; margin-right: 4px; font-size: 12px; }
+.btn-icon-sm:hover { background: #4a4a5a; color: #fff; }
+.btn-icon-sm.edit:hover { background: #00bcd4; } .btn-icon-sm.balance:hover { background: #11998e; }
+.btn-icon-sm.threshold:hover { background: #f7b733; color: #333; }
+.btn-icon-sm.toggle:hover { background: #ff4757; } .btn-icon-sm.toggle.enable:hover { background: #38ef7d; color: #333; }
+tr.inactive-row { opacity: 0.55; }
+.account-icon { display: inline-flex; width: 22px; height: 22px; border-radius: 5px; align-items: center; justify-content: center; margin-right: 6px; font-size: 11px; vertical-align: middle; }
+.account-icon.alipay { background: #1677ff20; color: #1677ff; } .account-icon.wechat { background: #07c16020; color: #07c160; }
+.account-icon.bank { background: #ff6b6b20; color: #ff6b6b; } .account-icon.paypal { background: #00308720; color: #0070ba; }
+.account-icon.cash { background: #ffa72620; color: #ffa726; } .account-icon.other { background: #9c27b020; color: #9c27b0; }
+/* 明细弹窗 */
+.detail-list { max-height: 400px; overflow-y: auto; }
+.detail-item { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; }
+.detail-item:last-child { border-bottom: none; }
+.detail-info h4 { margin: 0 0 5px; color: #e0e0e0; font-size: 14px; }
+.detail-info p { margin: 0; color: #888; font-size: 12px; }
+.detail-amount { font-size: 16px; font-weight: 600; color: #fff; }
+/* 统计卡响应式（修复#3） */
+@@media (max-width: 1200px) { .fund-stats { grid-template-columns: repeat(2, 1fr); } .pending-grid { grid-template-columns: repeat(2, 1fr); } }
+@@media (max-width: 768px) { .fund-stats { grid-template-columns: 1fr; } .pending-grid { grid-template-columns: 1fr; } }
+/* 复用finance-dark.css的通用样式 */
+.page-header, .page-title, .breadcrumb, .section-title, .stat-label, .stat-value, .stat-sub,
+.table-container, .orders-table, .orders-table th, .orders-table td, .orders-table tr:hover,
+.orders-table tr.warning-row, .status-badge, .status-normal, .status-warning, .status-inactive,
+.cost-value, .btn-primary, .btn-secondary, .btn-save, .modal-overlay, .modal-content,
+.modal-header, .modal-close, .modal-body, .modal-footer, .form-group, .form-group label,
+.form-group input, .form-group select, .alert, .alert-success, .alert-error,
+@@keyframes pulse-warning, @@keyframes blink { /* 已在 finance-dark.css 定义，此处不重复 */ }
+</style>
+
+@code {
+    private bool _loaded, _canEdit, _chartsRendering, _chartDataChanged;
+    private string? _msg, _msgType;
+    private int _alertCount;
+    private int _largeTransferCount;
+    private decimal _totalBalance, _totalAvailable, _totalFrozen, _pendingTotal, _pendingAP, _pendingAR;
+
+    private List<FundAccount> _accounts = new();
+    private List<PaymentRecord> _recentPayments = new();
+    private List<FinanceRepository.MonthRevenueRow> _flowTrend = new();
+    private FinanceRepository.PendingPenetrationDto _penetration = new();
+    private List<FinanceRepository.FundAlertRow> _alerts = new();
+
+    // 模态框状态
+    private bool _showAccountModal, _showBalanceModal, _showThresholdModal, _showDetailModal;
+    private bool _detailLoading;
+    private string _detailTitle = "";
+    private List<FinanceRepository.PendingDetailRow> _detailItems = new();
+    private FundAccount? _editingAccount;
+    private decimal _editTotalBalance, _editThreshold;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var auth = await AuthState.GetAuthenticationStateAsync();
+            var rc = auth.User.FindFirst("RoleCode")?.Value;
+            _canEdit = rc == "FIN_MANAGER" || rc == "SUPER_ADMIN";
+
+            // 顺序查询（DbContext 非线程安全，MARS 下单连多读已足够快）
+            _accounts = await FinRepo.GetFundAccountsAsync();
+            _recentPayments = await Db.PaymentRecords.AsNoTracking().OrderByDescending(p => p.RecordId).Take(20).ToListAsync();
+            _penetration = await FinRepo.GetPendingPenetrationAsync();
+            _alerts = await FinRepo.GetFundAlertsDetailAsync();
+            _flowTrend = await FinRepo.GetMonthlyRevenueTrendAsync(6);
+            _largeTransferCount = await FinRepo.GetLargeTransferCountAsync(); // 已有方法
+            _alertCount = await FinRepo.GetFundAlertCountAsync();
+            _pendingAP = await Db.AccountsPayables.Where(a => a.Status == "Pending" || a.Status == "Partial").SumAsync(a => (decimal?)(a.Amount - a.PaidAmount)) ?? 0;
+            _pendingAR = await Db.AccountsReceivables.Where(a => a.Status == "Pending" || a.Status == "Partial").SumAsync(a => (decimal?)(a.Amount - a.ReceivedAmount)) ?? 0;
+
+            _totalBalance = _accounts.Sum(a => a.TotalBalance ?? 0);
+            _totalAvailable = _accounts.Sum(a => a.AvailableBalance ?? 0);
+            _totalFrozen = _accounts.Sum(a => a.FrozenAmount ?? 0);
+            _pendingTotal = _penetration.Total;
+            _chartDataChanged = true;
+            _loaded = true;
+        }
+        catch { _loaded = true; }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_loaded && !_chartsRendering && _chartDataChanged)
+        {
+            _chartsRendering = true;
+            _chartDataChanged = false;
+            try
+            {
+                // 确保 canvas 布局稳定后再渲染（修复#2）
+                await Task.Delay(200);
+                var labels = _flowTrend.Select(t => t.Label).ToArray();
+                var revData = _flowTrend.Select(t => (double)t.RevenueWan).ToArray();
+                var profData = _flowTrend.Select(t => (double)t.ProfitWan).ToArray();
+                await JS.InvokeVoidAsync("financeCharts.renderMultiBar", "fundFlowChart", labels,
+                    new[] { new { label = "营收(万元)", data = (object)revData, color = "#4CAF50" },
+                            new { label = "利润(万元)", data = (object)profData, color = "#2196F3" } });
+            }
+            catch { }
+            finally { _chartsRendering = false; }
+            StateHasChanged();
+        }
+    }
+
+    // ===== 辅助 =====
+    static string GetIconClass(string? t) => t?.ToLower() switch
+    {
+        "alipay" => "alipay", "wechat" => "wechat", "bank" => "bank", "paypal" => "paypal", "cash" => "cash", _ => "other"
+    };
+    static string GetIconFa(string? t) => t?.ToLower() switch
+    {
+        "alipay" => "fa-alipay", "wechat" => "fa-weixin", "bank" => "fa-university", "paypal" => "fa-paypal", _ => "fa-wallet"
+    };
+    static string GetTypeLabel(string? t) => t?.ToLower() switch
+    {
+        "alipay" => "支付宝", "wechat" => "微信支付", "bank" => "银行账户", "paypal" => "PayPal", "cash" => "现金", _ => "其他"
+    };
+
+    // ===== CRUD =====
+    void CloseAllModals() { _showAccountModal = _showBalanceModal = _showThresholdModal = _showDetailModal = false; _editingAccount = null; }
+
+    async Task ReloadData()
+    {
+        _accounts = await FinRepo.GetFundAccountsAsync();
+        _recentPayments = await Db.PaymentRecords.AsNoTracking().OrderByDescending(p => p.RecordId).Take(20).ToListAsync();
+        _penetration = await FinRepo.GetPendingPenetrationAsync();
+        _alerts = await FinRepo.GetFundAlertsDetailAsync();
+        _totalBalance = _accounts.Sum(a => a.TotalBalance ?? 0);
+        _totalAvailable = _accounts.Sum(a => a.AvailableBalance ?? 0);
+        _totalFrozen = _accounts.Sum(a => a.FrozenAmount ?? 0);
+        _pendingTotal = _penetration.Total;
+        _alertCount = _alerts.Count;
+    }
+
+    void OpenAddModal() { _editingAccount = new FundAccount(); _editTotalBalance = 0; _editThreshold = 1000; _showAccountModal = true; }
+    void OpenEditModal(FundAccount a) { _editingAccount = new FundAccount { AccountId = a.AccountId, AccountName = a.AccountName, AccountType = a.AccountType }; _showAccountModal = true; }
+    void OpenBalanceModal(FundAccount a) { _editingAccount = a; _editTotalBalance = a.TotalBalance ?? 0; _showBalanceModal = true; }
+    void OpenThresholdModal(FundAccount a) { _editingAccount = a; _editThreshold = a.AlertThreshold ?? 0; _showThresholdModal = true; }
+
+    async Task SaveAccount()
+    {
+        if (string.IsNullOrWhiteSpace(_editingAccount?.AccountName)) return;
+        if (_editingAccount!.AccountId == 0) _editingAccount.TotalBalance = _editTotalBalance;
+        _editingAccount.AlertThreshold = _editThreshold;
+        await FinRepo.SaveFundAccountAsync(_editingAccount);
+        _msg = _editingAccount.AccountId == 0 ? "账户已添加" : "账户已更新"; _msgType = "ok";
+        CloseAllModals();
+        await ReloadData();
+    }
+
+    async Task UpdateBalance()
+    {
+        if (_editingAccount == null) return;
+        await FinRepo.UpdateFundBalanceAsync(_editingAccount.AccountId, _editTotalBalance);
+        _msg = "余额已更新"; _msgType = "ok";
+        CloseAllModals();
+        await ReloadData();
+    }
+
+    async Task SetThreshold()
+    {
+        if (_editingAccount == null) return;
+        await FinRepo.UpdateFundThresholdAsync(_editingAccount.AccountId, _editThreshold);
+        _msg = "阈值已设置"; _msgType = "ok";
+        CloseAllModals();
+        await ReloadData();
+    }
+
+    async Task ToggleAccount(FundAccount a)
+    {
+        var newState = a.IsActive == false;
+        if (!newState && !await JS.InvokeAsync<bool>("confirm", $"确定要停用「{a.AccountName}」吗？")) return;
+        await FinRepo.ToggleFundStatusAsync(a.AccountId, newState);
+        _msg = newState ? "账户已启用" : "账户已停用"; _msgType = "ok";
+        await ReloadData();
+    }
+
+    // ===== 待结算穿透明细 =====
+    async Task ShowPendingDetail(string type)
+    {
+        _detailTitle = type switch { "orders" => "交易在途明细", "withdraw" => "提现中明细", "frozen" => "不可用保证金明细", _ => "明细" };
+        _detailItems = new();
+        _detailLoading = true;
+        _showDetailModal = true;
+        try { _detailItems = await FinRepo.GetPendingDetailAsync(type); }
+        finally { _detailLoading = false; }
+    }
+}

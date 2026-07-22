@@ -1,0 +1,356 @@
+@page "/admin/coupons"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>优惠券管理</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">优惠券管理</MudText>
+
+@if (!string.IsNullOrEmpty(_msg))
+{
+    <MudAlert Severity="_msgSeverity" ShowCloseIcon="true" CloseIconClicked="() => _msg = null" Class="mb-4">@_msg</MudAlert>
+}
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudTextField @bind-Value="_searchText" Placeholder="搜索优惠券名称/编码..." Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" DebounceInterval="300" />
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudSelect @bind-Value="_typeFilter" Placeholder="类型筛选" Clearable="true">
+            <MudSelectItem Value="@("discount")">折扣券</MudSelectItem>
+            <MudSelectItem Value="@("fixed")">满减券</MudSelectItem>
+            <MudSelectItem Value="@("free_shipping")">免运费</MudSelectItem>
+            <MudSelectItem Value="@("gift")">礼品券</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="2">
+        <MudSwitch @bind-Value="_activeOnly" Label="仅有效券" Color="Color.Success" />
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@OpenCreate" Class="ml-auto">新增优惠券</MudButton>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<Coupon>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>名称</MudTh>
+        <MudTh>编码</MudTh>
+        <MudTh>类型</MudTh>
+        <MudTh>优惠</MudTh>
+        <MudTh>使用门槛</MudTh>
+        <MudTh>有效期</MudTh>
+        <MudTh>使用情况</MudTh>
+        <MudTh>状态</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.CouponId</MudTd>
+        <MudTd>@context.CouponName</MudTd>
+        <MudTd><code>@context.CouponCode</code></MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetTypeColor(context.CouponType)">
+                @FormatCouponType(context.CouponType)
+            </MudChip>
+        </MudTd>
+        <MudTd>@FormatDiscount(context)</MudTd>
+        <MudTd>@(context.MinSpend > 0 ? $"满¥{context.MinSpend:F0}" : "无门槛")</MudTd>
+        <MudTd>@context.ValidFrom.ToString("MM/dd") ~ @context.ValidTo.ToString("MM/dd")</MudTd>
+        <MudTd>@context.UsedQty / @context.TotalQty</MudTd>
+        <MudTd>
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context)">
+                @GetStatusText(context)
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Info"
+                           OnClick="@(() => OpenEdit(context))" />
+            <MudIconButton Icon="@(context.IsActive == true ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                           Size="Size.Small" OnClick="@(() => ToggleActive(context))" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent><MudTablePager /></PagerContent>
+</MudTable>
+
+@* 编辑/新增对话框 *@
+@if(_showDialog){<div class="modal-overlay" @onclick="()=>_showDialog=false"><div class="modal" @onclick:stopPropagation="true"><div class="modal-header"><h3>@(_isEditing?"编辑优惠券":"新增优惠券")</h3><button class="modal-close" @onclick="()=>_showDialog=false">&times;</button></div>
+<div class="modal-body"><MudGrid>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.CouponName" Label="优惠券名称" Required="true" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.CouponCode" Label="优惠码" Required="true"
+                              Disabled="_isEditing" HelperText="用户使用时输入的代码" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudSelect @bind-Value="_editItem.CouponType" Label="类型" Required="true">
+                    <MudSelectItem Value="@("discount")">折扣券 (百分比)</MudSelectItem>
+                    <MudSelectItem Value="@("fixed")">满减券 (固定金额)</MudSelectItem>
+                    <MudSelectItem Value="@("free_shipping")">免运费</MudSelectItem>
+                    <MudSelectItem Value="@("gift")">礼品券</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            @if (_editItem.CouponType is "discount" or "fixed")
+            {
+                <MudItem xs="6">
+                    <MudNumericField @bind-Value="_discountValue" Label="@(_editItem.CouponType == "discount" ? "折扣百分比(%)" : "减免金额(元)")" />
+                </MudItem>
+            }
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_editItem.MinSpend" Label="最低消费(元, 0=无门槛)" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_editItem.MaxDiscount" Label="最大优惠金额(元, 0=不限)" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_validFromStr" Label="开始日期" Type="InputType.Date" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_validToStr" Label="结束日期" Type="InputType.Date" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_editItem.TotalQty" Label="发放总量" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_editItem.ApplicableCategory" Label="适用分类(空=全场)" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_editItem.ApplicableProductId" Label="适用产品ID(空=全部)" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_editItem.Description" Label="描述" Lines="2" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_editItem.Terms" Label="使用条款" Lines="2" />
+            </MudItem>
+            <MudItem xs="4">
+                <MudSwitch @bind-Value="_editItem.IsActive" Label="启用" Color="Color.Success" />
+            </MudItem>
+            <MudItem xs="4">
+                <MudSwitch @bind-Value="_editItem.IsPublic" Label="公开领取" Color="Color.Info" />
+            </MudItem>
+            <MudItem xs="4">
+                <MudSwitch @bind-Value="_editItem.FirstOrderOnly" Label="仅首单" Color="Color.Warning" />
+            </MudItem>
+        </MudGrid></div>
+<div class="modal-footer">
+        <MudButton OnClick="() => _showDialog = false" Variant="Variant.Text">取消</MudButton>
+        <MudButton OnClick="SaveCoupon" Variant="Variant.Filled" Color="Color.Primary">
+            @(_isEditing ? "保存" : "创建")
+        </MudButton>
+    </div></div></div>}
+
+<style>
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;justify-content:center;align-items:center;}
+.modal{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:16px;border:1px solid rgba(255,255,255,0.1);padding:30px;width:90%;max-width:720px;max-height:90vh;overflow-y:auto;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.modal-header h3{color:#fff;margin:0;font-size:18px;}
+.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);}
+</style>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private string? _msg;
+    private Severity _msgSeverity = Severity.Success;
+
+    private MudTable<Coupon>? _table;
+    private string _searchText = "";
+    private string? _typeFilter;
+    private bool _activeOnly = true;
+    private bool _showDialog;
+    private bool _isEditing;
+    private Coupon _editItem = new();
+    private double _discountValue;
+    private string _validFromStr = "";
+    private string _validToStr = "";
+
+    private async Task<TableData<Coupon>> ServerReload(TableState state)
+    {
+        var query = Db.Coupons.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            var s = _searchText.Trim();
+            query = query.Where(c => (c.CouponName??"").Contains(s) || (c.CouponCode??"").Contains(s));
+        }
+        if (!string.IsNullOrWhiteSpace(_typeFilter))
+            query = query.Where(c => c.CouponType == _typeFilter);
+        if (_activeOnly)
+        {
+            var now = DateTime.Now;
+            query = query.Where(c => c.IsActive == true && c.ValidFrom <= now && c.ValidTo >= now);
+        }
+
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(c => c.CouponId)
+            .Skip(state.Page * state.PageSize).Take(state.PageSize).ToListAsync();
+        return new TableData<Coupon> { TotalItems = total, Items = items };
+    }
+
+    private void OpenCreate()
+    {
+        _isEditing = false;
+        _discountValue = 10;
+        _editItem = new Coupon
+        {
+            CouponCode = $"CPN{DateTime.Now:yyMMddHHmm}",
+            CouponName = "",
+            CouponType = "discount",
+            DiscountValue = 0.10m,
+            MinSpend = 0,
+            MaxDiscount = 0,
+            ValidFrom = DateTime.Today,
+            ValidTo = DateTime.Today.AddMonths(1),
+            TotalQty = 100,
+            IsActive = true,
+            IsPublic = true,
+            FirstOrderOnly = false,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        };
+        _validFromStr = _editItem.ValidFrom.ToString("yyyy-MM-dd");
+        _validToStr = _editItem.ValidTo.ToString("yyyy-MM-dd");
+        _showDialog = true;
+    }
+
+    private void OpenEdit(Coupon coupon)
+    {
+        _isEditing = true;
+        _editItem = new Coupon
+        {
+            CouponId = coupon.CouponId,
+            CouponCode = coupon.CouponCode,
+            CouponName = coupon.CouponName,
+            CouponType = coupon.CouponType,
+            DiscountValue = coupon.DiscountValue,
+            MinSpend = coupon.MinSpend,
+            MaxDiscount = coupon.MaxDiscount,
+            ValidFrom = coupon.ValidFrom,
+            ValidTo = coupon.ValidTo,
+            TotalQty = coupon.TotalQty,
+            ApplicableCategory = coupon.ApplicableCategory,
+            ApplicableProductId = coupon.ApplicableProductId,
+            Description = coupon.Description,
+            Terms = coupon.Terms,
+            IsActive = coupon.IsActive,
+            IsPublic = coupon.IsPublic,
+            FirstOrderOnly = coupon.FirstOrderOnly
+        };
+        _discountValue = coupon.CouponType == "discount"
+            ? (double)((coupon.DiscountValue ?? 0) * 100)
+            : (double)(coupon.DiscountValue ?? 0);
+        _validFromStr = coupon.ValidFrom.ToString("yyyy-MM-dd");
+        _validToStr = coupon.ValidTo.ToString("yyyy-MM-dd");
+        _showDialog = true;
+    }
+
+    private async Task SaveCoupon()
+    {
+        if (_editItem.CouponType == "discount")
+            _editItem.DiscountValue = (decimal)(_discountValue / 100.0);
+        else
+            _editItem.DiscountValue = (decimal)_discountValue;
+
+        if (DateTime.TryParse(_validFromStr, out var vf)) _editItem.ValidFrom = vf;
+        if (DateTime.TryParse(_validToStr, out var vt)) _editItem.ValidTo = vt;
+        _editItem.UpdatedAt = DateTime.Now;
+
+        if (_isEditing)
+        {
+            var existing = await Db.Coupons.FindAsync(_editItem.CouponId);
+            if (existing != null)
+            {
+                existing.CouponName = _editItem.CouponName;
+                existing.CouponType = _editItem.CouponType;
+                existing.DiscountValue = _editItem.DiscountValue;
+                existing.MinSpend = _editItem.MinSpend;
+                existing.MaxDiscount = _editItem.MaxDiscount;
+                existing.ValidFrom = _editItem.ValidFrom;
+                existing.ValidTo = _editItem.ValidTo;
+                existing.TotalQty = _editItem.TotalQty;
+                existing.ApplicableCategory = _editItem.ApplicableCategory;
+                existing.ApplicableProductId = _editItem.ApplicableProductId;
+                existing.Description = _editItem.Description;
+                existing.Terms = _editItem.Terms;
+                existing.IsActive = _editItem.IsActive;
+                existing.IsPublic = _editItem.IsPublic;
+                existing.FirstOrderOnly = _editItem.FirstOrderOnly;
+                existing.UpdatedAt = DateTime.Now;
+            }
+            _msg = $"优惠券 \"{_editItem.CouponName}\" 已更新"; _msgSeverity = Severity.Success;
+        }
+        else
+        {
+            _editItem.CreatedAt = DateTime.Now;
+            _editItem.UsedQty = 0;
+            Db.Coupons.Add(_editItem);
+            _msg = $"优惠券 \"{_editItem.CouponName}\" 已创建"; _msgSeverity = Severity.Success;
+        }
+
+        await Db.SaveChangesAsync();
+        _showDialog = false;
+        await _table!.ReloadServerData();
+    }
+
+    private async Task ToggleActive(Coupon coupon)
+    {
+        var newVal = coupon.IsActive != true;
+        await Db.Coupons.Where(c => c.CouponId == coupon.CouponId)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsActive, newVal).SetProperty(c => c.UpdatedAt, DateTime.Now));
+        coupon.IsActive = newVal;
+        _msg = $"优惠券 \"{coupon.CouponName}\" 已{(newVal ? "启用" : "停用")}"; _msgSeverity = Severity.Success;
+        await _table!.ReloadServerData();
+    }
+
+    private static string FormatCouponType(string type) => type switch
+    {
+        "discount" => "折扣券",
+        "fixed" => "满减券",
+        "free_shipping" => "免运费",
+        "gift" => "礼品券",
+        _ => type
+    };
+
+    private static string FormatDiscount(Coupon c) => c.CouponType switch
+    {
+        "discount" => $"{(c.DiscountValue ?? 0) * 100:F0}% OFF",
+        "fixed" => $"¥{c.DiscountValue ?? 0:F0}",
+        "free_shipping" => "免邮",
+        "gift" => "赠品",
+        _ => "-"
+    };
+
+    private static Color GetTypeColor(string type) => type switch
+    {
+        "discount" => Color.Primary,
+        "fixed" => Color.Warning,
+        "free_shipping" => Color.Success,
+        "gift" => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private static Color GetStatusColor(Coupon c)
+    {
+        if (c.IsActive != true) return Color.Error;
+        var now = DateTime.Now;
+        if (c.ValidTo < now) return Color.Error;
+        if (c.ValidFrom > now) return Color.Warning;
+        if (c.UsedQty >= c.TotalQty) return Color.Error;
+        return Color.Success;
+    }
+
+    private static string GetStatusText(Coupon c)
+    {
+        if (c.IsActive != true) return "已停用";
+        var now = DateTime.Now;
+        if (c.ValidTo < now) return "已过期";
+        if (c.ValidFrom > now) return "未开始";
+        if (c.UsedQty >= c.TotalQty) return "已领完";
+        return "有效";
+    }
+}

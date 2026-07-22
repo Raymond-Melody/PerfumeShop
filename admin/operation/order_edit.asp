@@ -123,25 +123,25 @@ Call LogAdminAction("访问订单编辑页面", "operation", "Orders", orderId, 
         <link rel="stylesheet" href="/css/buttons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .form-container { max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .form-container { max-width: 900px; background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #333; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #e0e0e0; }
         .form-group label .required { color: #e74c3c; margin-left: 4px; }
-        .form-control { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
-        .form-control:focus { outline: none; border-color: #667eea; }
+        .form-control { width: 100%; padding: 12px 15px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .form-control:focus { outline: none; border-color: #00bcd4; }
         textarea.form-control { min-height: 80px; resize: vertical; }
         select.form-control { height: 42px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-actions { display: flex; gap: 15px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #f0f0f0; }
+        .form-actions { display: flex; gap: 15px; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); }
         .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .alert-error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-        .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .alert-error { background: rgba(198,40,40,0.2); color: #c62828; border: 1px solid rgba(198,40,40,0.3); }
+        .alert-success { background: rgba(46,125,50,0.2); color: #2e7d32; border: 1px solid rgba(46,125,50,0.3); }
         
-        .info-section { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #eee; }
-        .info-section h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .info-section { background: rgba(255,255,255,0.04); padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.08); }
+        .info-section h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #e0e0e0; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; }
         .info-row { display: flex; margin-bottom: 10px; font-size: 14px; }
-        .info-row .label { width: 100px; color: #666; font-weight: bold; }
-        .info-row .value { flex: 1; color: #333; }
+        .info-row .label { width: 100px; color: #b0b0b0; font-weight: bold; }
+        .info-row .value { flex: 1; color: #e0e0e0; }
         
         .status-Pending { color: #f39c12; }
         .status-Paid { color: #27ae60; font-weight: bold; }
@@ -151,12 +151,12 @@ Call LogAdminAction("访问订单编辑页面", "operation", "Orders", orderId, 
         .status-Cancelled { color: #e74c3c; }
         .status-Refunded { color: #95a5a6; }
         
-        .product-card { border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
-        .product-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #eee; padding-bottom: 10px; margin-bottom: 10px; }
-        .product-name { font-weight: bold; font-size: 16px; color: #007bff; }
-        .product-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 13px; color: #666; }
+        .product-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 15px; margin-bottom: 15px; background: linear-gradient(135deg, #2d2d44, #1e1e32); }
+        .product-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 10px; }
+        .product-name { font-weight: bold; font-size: 16px; color: #00bcd4; }
+        .product-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 13px; color: #b0b0b0; }
         
-        .readonly-field { background: #f5f5f5; color: #666; cursor: not-allowed; }
+        .readonly-field { background: rgba(255,255,255,0.04); color: #b0b0b0; cursor: not-allowed; }
     </style>
 </head>
 <body data-theme="operation-dark">

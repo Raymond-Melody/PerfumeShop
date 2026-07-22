@@ -97,10 +97,10 @@ Call LogAdminAction("查看支付开关", "operation", "", "", "")
         <link rel="stylesheet" href="/css/buttons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .warning-box { background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin-bottom: 25px; border-radius: 4px; }
+        .warning-box { background: rgba(255,152,0,0.12); border-left: 4px solid #ff9800; padding: 15px; margin-bottom: 25px; border-radius: 4px; }
         .warning-box i { color: #ff9800; margin-right: 8px; }
-        .switch-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        .payment-item { display: flex; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 1px solid #f0f0f0; }
+        .switch-container { background: linear-gradient(135deg, #2d2d44, #1e1e32); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .payment-item { display: flex; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
         .payment-item:last-child { border-bottom: none; }
         .payment-info { display: flex; align-items: center; gap: 20px; }
         .payment-icon { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
@@ -111,17 +111,24 @@ Call LogAdminAction("查看支付开关", "operation", "", "", "")
         .payment-icon.cod { background: #ff9800; color: white; }
         .payment-icon.stripe { background: #635bff; color: white; }
         .payment-icon.unionpay { background: #c00; color: white; }
-        .payment-details h4 { margin: 0 0 5px 0; color: #333; }
-        .payment-details p { margin: 0; color: #999; font-size: 13px; }
+        .payment-details h4 { margin: 0 0 5px 0; color: #e0e0e0; }
+        .payment-details p { margin: 0; color: #b0b0b0; font-size: 13px; }
         
         .toggle-switch { position: relative; width: 60px; height: 30px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 30px; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.15); transition: .4s; border-radius: 30px; }
         .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #4CAF50; }
         input:checked + .slider:before { transform: translateX(30px); }
         
-        .readonly-notice { background: #e3f2fd; padding: 10px 15px; border-radius: 6px; color: #1976d2; font-size: 13px; margin-top: 10px; }
+        .readonly-notice { background: rgba(0,188,212,0.1); padding: 10px 15px; border-radius: 6px; color: #00bcd4; font-size: 13px; margin-top: 10px; }
+        .btn-save { padding: 10px 30px; background: linear-gradient(135deg, #00bcd4, #00838f); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .btn-save:hover { opacity: 0.9; }
+        .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+        @media (max-width: 768px) {
+            .stats-cards { grid-template-columns: 1fr !important; }
+            .filter-bar { flex-direction: column; }
+        }
     </style>
 </head>
 <body data-theme="operation-dark">
@@ -257,7 +264,7 @@ Call LogAdminAction("查看支付开关", "operation", "", "", "")
                 </label>
             </div>
             
-            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #f0f0f0;">
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08);">
                 <% If Session("AdminRoleCode") = "OP_MANAGER" OR Session("AdminRoleCode") = "SUPER_ADMIN" Then %>
                 <button type="submit" class="btn-save"><i class="fas fa-save"></i> 保存设置</button>
                 <% Else %>
@@ -270,7 +277,7 @@ Call LogAdminAction("查看支付开关", "operation", "", "", "")
         </form>
         
         <div style="text-align: center; margin-top: 20px;">
-            <a href="../finance/payment_config.asp" style="color: #667eea; text-decoration: none;">
+            <a href="../finance/payment_config.asp" style="color: #00bcd4; text-decoration: none;">
                 <i class="fas fa-arrow-right"></i> 前往财务后台配置支付参数
             </a>
         </div>

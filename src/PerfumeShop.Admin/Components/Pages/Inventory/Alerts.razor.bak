@@ -1,0 +1,28 @@
+@page "/admin/inventory/alerts"
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>库存预警</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">库存预警</MudText>
+<MudAlert Severity="Severity.Warning" Class="mb-4">当前有 @_lowProducts.Count 个成品和 @_lowMaterials.Count 种原料库存不足。</MudAlert>
+<MudText Typo="Typo.h5" Class="mb-3">低库存成品</MudText>
+<MudTable Items="@_lowProducts" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>库存ID</MudTh><MudTh>产品ID</MudTh><MudTh>库存量</MudTh><MudTh>安全库存</MudTh><MudTh>状态</MudTh></HeaderContent>
+    <RowTemplate><MudTd>@context.InventoryId</MudTd><MudTd>@context.ProductId</MudTd><MudTd>@context.StockQty</MudTd><MudTd>@context.SafetyStock</MudTd><MudTd><MudChip T="string" Size="Size.Small" Color="Color.Error">不足</MudChip></MudTd></RowTemplate>
+</MudTable>
+<MudText Typo="Typo.h5" Class="mt-6 mb-3">低库存原料</MudText>
+<MudTable Items="@_lowMaterials" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>物料ID</MudTh><MudTh>名称</MudTh><MudTh>数量</MudTh><MudTh>单位</MudTh></HeaderContent>
+    <RowTemplate><MudTd>@context.MaterialId</MudTd><MudTd>@context.ItemName</MudTd><MudTd>@context.StockQty</MudTd><MudTd>@context.Unit</MudTd></RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<ProductInventory> _lowProducts = new();
+    private List<RawMaterialInventory> _lowMaterials = new();
+    protected override async Task OnInitializedAsync()
+    {
+        _lowProducts = await Db.ProductInventories.AsNoTracking().Where(p => p.StockQty <= p.SafetyStock).ToListAsync();
+        _lowMaterials = await Db.RawMaterialInventories.AsNoTracking().Where(m => m.StockQty <= 50).ToListAsync();
+    }
+}

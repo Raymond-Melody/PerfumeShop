@@ -1,0 +1,162 @@
+@page "/admin/TechCenter/ProductSettings"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+
+<PageTitle>产品设置</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-box-open" style="color:#00bcd4;"></i> 产品设置</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>产品设置</span></div></div>
+
+@if(_loaded){
+<div class="stats-row"><div class="stat-card"><div class="stat-value">@_total</div><div class="stat-label">产品总数</div></div><div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_activeCount</div><div class="stat-label">在售</div></div><div class="stat-card"><div class="stat-value" style="color:#FF9800;">@_types.Count</div><div class="stat-label">类型数</div></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+
+@* ---- Tab Navigation ---- *@
+<div class="tab-nav">
+    <button class="tab-link @(_tab=="products"?"tab-active":"")" @onclick='()=>SwitchTab("products")'><i class="fas fa-box"></i> 产品管理</button>
+    <button class="tab-link @(_tab=="types"?"tab-active":"")" @onclick='()=>SwitchTab("types")'><i class="fas fa-tags"></i> 类型配置</button>
+    <button class="tab-link @(_tab=="ratio"?"tab-active":"")" @onclick='()=>SwitchTab("ratio")'><i class="fas fa-percentage"></i> 香调配比参数</button>
+</div>
+
+@* ---- Tab: 产品管理 ---- *@
+@if(_tab=="products"){
+<div class="filter-bar"><input class="filter-input" @bind="_search" placeholder="搜索产品名称..." /><button class="btn-search" @onclick="LoadProducts"><i class="fas fa-search"></i> 搜索</button></div>
+<div class="card"><div class="ch">产品列表</div><div class="cb"><table class="dt"><thead><tr><th>ID</th><th>产品名称</th><th>分类</th><th>类型</th><th>状态</th><th>操作</th></tr></thead><tbody>
+@foreach(var p in _items){<tr><td>#@p.ProductId</td><td>@p.ProductName</td><td>@(p.Category??"-")</td><td>@(p.ProductType??"-")</td><td><span class="status-badge @(p.IsActive==true?"sn":"sw")">@(p.IsActive==true?"在售":"下架")</span></td><td><button class="btn-edit" @onclick='()=>OpenProductEdit(p)'>编辑</button><button class="btn-toggle" @onclick='()=>ToggleProductActive(p)'>@(p.IsActive==true?"下架":"上架")</button></td></tr>}
+@if(!_items.Any()){<tr><td colspan="6" style="text-align:center;color:#666;padding:40px;">暂无产品</td></tr>}
+</tbody></table></div></div>
+}
+
+@* ---- Tab: 类型配置 ---- *@
+@if(_tab=="types"){
+<button class="btn-add" @onclick="OpenTypeAdd" style="margin-bottom:16px;">+ 新建类型</button>
+<div class="card"><div class="ch">产品类型配置</div><div class="cb"><table class="dt"><thead><tr><th>ID</th><th>类型编码</th><th>显示名</th><th>排序</th><th>状态</th><th>操作</th></tr></thead><tbody>
+@foreach(var t in _types){<tr><td>#@t.ConfigId</td><td>@t.TypeCode</td><td>@t.DisplayName</td><td>@t.DisplayOrder</td><td><span class="status-badge @(t.IsActive==true?"sn":"sw")">@(t.IsActive==true?"启用":"禁用")</span></td><td><button class="btn-edit" @onclick='()=>OpenTypeEdit(t)'>编辑</button><button class="btn-toggle" @onclick='()=>ToggleTypeActive(t)'>@(t.IsActive==true?"禁用":"启用")</button></td></tr>}
+@if(!_types.Any()){<tr><td colspan="6" style="text-align:center;color:#666;padding:20px;">暂无类型配置</td></tr>}
+</tbody></table></div></div>
+}
+
+@* ---- Tab: 香调配比参数 ---- *@
+@if(_tab=="ratio"){
+<div class="card"><div class="ch">香调配比参数（SiteSettings）</div><div class="cb"><table class="dt"><thead><tr><th>参数键</th><th>当前值</th><th>说明</th><th>最后更新</th><th>操作</th></tr></thead><tbody>
+@foreach(var s in _ratioSettings){
+<tr><td><strong>@s.SettingKey</strong></td><td>@s.SettingValue</td><td>@(s.Description??"-")</td><td>@(s.UpdatedAt?.ToString("yyyy-MM-dd")??"-")</td><td><button class="btn-edit" @onclick='()=>OpenRatioEdit(s)'>编辑</button></td></tr>
+}
+@if(!_ratioSettings.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:20px;">暂无比率参数</td></tr>}
+</tbody></table></div></div>
+}
+
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@* ---- 产品编辑模态框 ---- *@
+@if(_showProductModal){
+<div class="mo" @onclick="CloseProductModal"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>@(_productEditing?"编辑产品":"新建产品")</h3><button class="mcl" @onclick="CloseProductModal">&times;</button></div><div class="mb">
+<div class="fg"><label>名称</label><input @bind="_productEdit.ProductName" /></div>
+<div class="fg"><label>分类</label><input @bind="_productEdit.Category" /></div>
+<div class="fg"><label>类型</label><select @bind="_productEdit.ProductType"><option value="custom">定制香水</option><option value="kol">KOL推荐</option><option value="standard">品牌定香</option></select></div>
+<div class="fg"><label>描述</label><textarea @bind="_productEdit.Description" rows="3" class="input-full"></textarea></div>
+<div class="fg"><label>图片URL</label><input @bind="_productEdit.ImageUrl" /></div>
+<div class="fg"><label>基础价格</label><input type="number" @bind="_productEdit.BasePrice" step="0.01" /></div>
+<div class="fg"><label>状态</label><select @bind="_productEdit.IsActive"><option value="true">在售</option><option value="false">下架</option></select></div>
+</div><div class="mft"><button class="btn-secondary" @onclick="CloseProductModal">取消</button><button class="btn-save" @onclick="SaveProduct">保存</button></div></div></div>
+}
+
+@* ---- 类型编辑模态框 ---- *@
+@if(_showTypeModal){
+<div class="mo" @onclick="CloseTypeModal"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>@(_typeEditing?"编辑类型":"新建类型")</h3><button class="mcl" @onclick="CloseTypeModal">&times;</button></div><div class="mb">
+<div class="fg"><label>类型编码</label><input @bind="_typeEdit.TypeCode" /></div>
+<div class="fg"><label>显示名</label><input @bind="_typeEdit.DisplayName" /></div>
+<div class="fg"><label>排序</label><input type="number" @bind="_typeEdit.DisplayOrder" /></div>
+<div class="fg"><label>描述</label><input @bind="_typeEdit.Description" /></div>
+<div class="fg"><label>状态</label><select @bind="_typeEdit.IsActive"><option value="true">启用</option><option value="false">禁用</option></select></div>
+</div><div class="mft"><button class="btn-secondary" @onclick="CloseTypeModal">取消</button><button class="btn-save" @onclick="SaveType">保存</button></div></div></div>
+}
+
+@* ---- 比率参数编辑模态框 ---- *@
+@if(_showRatioModal){
+<div class="mo" @onclick="CloseRatioModal"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>编辑参数: @_ratioEdit.SettingKey</h3><button class="mcl" @onclick="CloseRatioModal">&times;</button></div><div class="mb">
+<div class="fg"><label>值</label><input type="number" @bind="_ratioValue" step="0.1" min="0" max="100" /></div>
+</div><div class="mft"><button class="btn-secondary" @onclick="CloseRatioModal">取消</button><button class="btn-save" @onclick="SaveRatio">保存</button></div></div></div>
+}
+
+<style>
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;}
+.tab-nav{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid rgba(255,255,255,0.06);padding-bottom:0;}
+.tab-link{background:none;border:none;color:#888;padding:10px 20px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;display:flex;align-items:center;gap:8px;}
+.tab-link:hover{color:#e0e0e0;}
+.tab-active{color:#00bcd4 !important;border-bottom-color:#00bcd4;}
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:20px;}
+.filter-input{flex:1;max-width:300px;padding:10px 14px;background:#1a1a2e;border:2px solid #3a3a4a;border-radius:8px;color:#e0e0e0;font-size:14px;}
+.filter-input:focus{border-color:#00bcd4;outline:none;}
+.btn-search{background:rgba(0,188,212,0.15);color:#00bcd4;border:1px solid rgba(0,188,212,0.3);padding:8px 16px;border-radius:6px;cursor:pointer;}
+.btn-add{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;}
+.card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.ch{padding:14px 20px;background:rgba(0,188,212,0.08);border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:15px;color:#e0e0e0;}
+.cb{padding:16px 20px;overflow-x:auto;}
+.dt{width:100%;border-collapse:collapse;}.dt th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:14px 16px;font-size:13px;text-align:left;}
+.dt td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;}
+.sn{background:rgba(76,175,80,0.2);color:#81c784;}.sw{background:rgba(244,67,54,0.2);color:#e57373;}
+.btn-edit{background:rgba(0,188,212,0.15);color:#00bcd4;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;margin-right:4px;}
+.btn-toggle{background:rgba(158,158,158,0.15);color:#9e9e9e;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;}.alert-error{background:rgba(244,67,54,0.15);color:#e57373;}
+.mo{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:520px;border:1px solid rgba(255,255,255,0.06);}.mh{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}.mh h3{margin:0;color:#e0e0e0;font-size:18px;}.mcl{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}.mb{padding:25px;max-height:60vh;overflow-y:auto;}.mft{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.fg{margin-bottom:15px;}.fg label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}.fg input,.fg select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}.fg input:focus,.fg select:focus{border-color:#00bcd4;outline:none;}
+.input-full{width:100% !important;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;resize:vertical;min-height:60px;box-sizing:border-box;}
+.input-full:focus{border-color:#00bcd4;outline:none;}
+.btn-save{background:linear-gradient(135deg,#00bcd4,#00838f);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+</style>
+
+@code {
+    private bool _loaded,_showProductModal,_showTypeModal,_showRatioModal,_productEditing,_typeEditing;
+    private int _total,_activeCount;private string _msg="",_msgType="",_tab="products",_search="",_ratioValue="";
+    private List<Product> _items=new();private List<ProductTypeConfig> _types=new();
+    private List<SiteSetting> _ratioSettings=new();
+    private Product _productEdit=new();private ProductTypeConfig _typeEdit=new();private SiteSetting _ratioEdit=new();
+
+    protected override async Task OnInitializedAsync(){await LoadAll();}
+    async Task LoadAll(){
+        try{
+            _items=await Db.Products.AsNoTracking().OrderByDescending(p=>p.ProductId).Take(100).ToListAsync();
+            _total=_items.Count;_activeCount=_items.Count(p=>p.IsActive==true);
+            _types=await Db.ProductTypeConfigs.AsNoTracking().OrderBy(t=>t.DisplayOrder).ToListAsync();
+            _ratioSettings=await Db.SiteSettings.AsNoTracking().Where(s=>s.SettingKey!=null&&(s.SettingKey.StartsWith("Min")||s.SettingKey.StartsWith("Max"))&&s.SettingKey.Contains("Percent")).OrderBy(s=>s.SettingKey).ToListAsync();
+            _loaded=true;
+        }catch{_loaded=true;}
+    }
+    void SwitchTab(string tab){_tab=tab;StateHasChanged();}
+    async Task LoadProducts(){_items=await Db.Products.AsNoTracking().OrderByDescending(p=>p.ProductId).Take(100).ToListAsync();_total=_items.Count;}
+
+    // ===== Products =====
+    void OpenProductEdit(Product p){_productEdit=new(){ProductId=p.ProductId,ProductName=p.ProductName,Category=p.Category,ProductType=p.ProductType,Description=p.Description,ImageUrl=p.ImageUrl,BasePrice=p.BasePrice,IsActive=p.IsActive};_productEditing=true;_showProductModal=true;}
+    void CloseProductModal(){_showProductModal=false;}
+    async Task SaveProduct(){
+        try{if(_productEditing)Db.Products.Update(_productEdit);else Db.Products.Add(_productEdit);await Db.SaveChangesAsync();_msg="已保存";_msgType="ok";_showProductModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+    async Task ToggleProductActive(Product p){try{p.IsActive=!(p.IsActive??true);Db.Products.Update(p);await Db.SaveChangesAsync();_activeCount=_items.Count(x=>x.IsActive==true);_msg="状态已更新";_msgType="ok";}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}}
+
+    // ===== Types =====
+    void OpenTypeAdd(){_typeEditing=false;_typeEdit=new(){IsActive=true};_showTypeModal=true;}
+    void OpenTypeEdit(ProductTypeConfig t){_typeEditing=true;_typeEdit=new(){ConfigId=t.ConfigId,TypeCode=t.TypeCode,DisplayName=t.DisplayName,DisplayOrder=t.DisplayOrder,Description=t.Description,IsActive=t.IsActive};_showTypeModal=true;}
+    void CloseTypeModal(){_showTypeModal=false;}
+    async Task SaveType(){
+        if(string.IsNullOrWhiteSpace(_typeEdit.TypeCode)){_msg="编码不能为空";_msgType="err";return;}
+        try{if(!_typeEditing){_typeEdit.CreatedAt=DateTime.Now;Db.ProductTypeConfigs.Add(_typeEdit);}else Db.ProductTypeConfigs.Update(_typeEdit);await Db.SaveChangesAsync();_msg="已保存";_msgType="ok";_showTypeModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+    async Task ToggleTypeActive(ProductTypeConfig t){try{t.IsActive=!(t.IsActive??true);Db.ProductTypeConfigs.Update(t);await Db.SaveChangesAsync();_msg="状态已更新";_msgType="ok";await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}}
+
+    // ===== Ratio =====
+    void OpenRatioEdit(SiteSetting s){_ratioEdit=s;_ratioValue=s.SettingValue??"";_showRatioModal=true;}
+    void CloseRatioModal(){_showRatioModal=false;}
+    async Task SaveRatio(){
+        try{_ratioEdit.SettingValue=_ratioValue;_ratioEdit.UpdatedAt=DateTime.Now;Db.SiteSettings.Update(_ratioEdit);await Db.SaveChangesAsync();_msg="参数已更新";_msgType="ok";_showRatioModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+    }
+}

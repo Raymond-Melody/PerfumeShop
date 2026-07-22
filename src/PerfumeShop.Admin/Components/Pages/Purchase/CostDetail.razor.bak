@@ -1,0 +1,47 @@
+@page "/admin/Purchase/CostDetail"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>成本明细</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">采购成本明细</MudText>
+
+<MudAlert Severity="Severity.Info" Class="mb-4">
+    展示各采购订单的成本传导与利润分析
+</MudAlert>
+
+<MudTable Items="@_allocations" Hover="true" Dense="true" Striped="true">
+    <HeaderContent>
+        <MudTh>订单号</MudTh>
+        <MudTh>采购单号</MudTh>
+        <MudTh>产品</MudTh>
+        <MudTh>单位成本</MudTh>
+        <MudTh>数量</MudTh>
+        <MudTh>总成本</MudTh>
+        <MudTh>售价</MudTh>
+        <MudTh>利润</MudTh>
+        <MudTh>利润率</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@(context.OrderNo ?? "-")</MudTd>
+        <MudTd>@(context.PurchaseNo ?? "-")</MudTd>
+        <MudTd>@(context.ProductName ?? "-")</MudTd>
+        <MudTd>¥@(context.CostPerUnit?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>@context.Quantity</MudTd>
+        <MudTd>¥@(context.TotalCost?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>¥@(context.SalePrice?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>¥@(context.ProfitAmount?.ToString("N2") ?? "0.00")</MudTd>
+        <MudTd>@((context.ProfitRate * 100)?.ToString("N1") ?? "0.0")%</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private List<FixedBrandCostAllocation> _allocations = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _allocations = await Repo.GetFixedBrandCostAllocationsAsync();
+    }
+}

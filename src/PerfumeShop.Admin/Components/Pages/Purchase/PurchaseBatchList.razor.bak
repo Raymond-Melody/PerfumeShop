@@ -1,0 +1,65 @@
+@page "/admin/Purchase/PurchaseBatchList"
+@using PerfumeShop.Data.Models
+@using PerfumeShop.Data.Repositories
+
+<PageTitle>采购批次列表</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">采购批次管理</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4">
+        <MudSelect @bind-Value="_typeFilter" Placeholder="物料类型" Clearable="true">
+            <MudSelectItem Value="@("Packaging")">包装物</MudSelectItem>
+            <MudSelectItem Value="@("Bottle")">瓶子</MudSelectItem>
+            <MudSelectItem Value="@("Printing")">印刷品</MudSelectItem>
+            <MudSelectItem Value="@("SprayHead")">喷头</MudSelectItem>
+            <MudSelectItem Value="@("BaseNote")">基调原料</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+<MudTable ServerData="@(new Func<TableState, Task<TableData<PurchaseBatch>>>(ServerReload))"
+          @ref="_table" Hover="true" Dense="true" Striped="true" RowsPerPage="20">
+    <HeaderContent>
+        <MudTh>批次号</MudTh>
+        <MudTh>类型</MudTh>
+        <MudTh>物料编码</MudTh>
+        <MudTh>物料名称</MudTh>
+        <MudTh>数量</MudTh>
+        <MudTh>已收货</MudTh>
+        <MudTh>剩余</MudTh>
+        <MudTh>供应商</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>@(context.BatchNo ?? "-")</MudTd>
+        <MudTd>@(context.ItemType ?? "-")</MudTd>
+        <MudTd>@(context.ItemCode ?? "-")</MudTd>
+        <MudTd>@(context.ItemName ?? "-")</MudTd>
+        <MudTd>@context.Quantity</MudTd>
+        <MudTd>@context.ReceivedQty</MudTd>
+        <MudTd>@context.RemainingQty</MudTd>
+        <MudTd>@context.SupplierId</MudTd>
+        <MudTd>
+            <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                           Href="@($"/admin/Purchase/BatchDetail?id={context.BatchId}")" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    [Inject] private PurchaseRepository Repo { get; set; } = default!;
+
+    private MudTable<PurchaseBatch>? _table;
+    private string? _typeFilter;
+
+    private async Task<TableData<PurchaseBatch>> ServerReload(TableState state)
+    {
+        var (items, total) = await Repo.GetPurchaseBatchesAsync(
+            itemType: _typeFilter, page: state.Page + 1, pageSize: state.PageSize);
+        return new TableData<PurchaseBatch> { TotalItems = total, Items = items };
+    }
+}
