@@ -1,10 +1,17 @@
 @page "/admin/system/users"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
+@using PerfumeShop.Admin.Services
+@using PerfumeShop.Shared.Security
+@using Microsoft.AspNetCore.Components.Authorization
 @inject PerfumeShopContext Db
 @inject SystemRepository SysRepo
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
+@inject Microsoft.JSInterop.IJSRuntime JS
 
 <PageTitle>管理员管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-users-cog" style="color:#E91E63;"></i> 管理员管理</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>管理员管理</span></div></div>
@@ -14,7 +21,7 @@
 <div class="toolbar"><input class="search-input" @bind="_search" placeholder="搜索用户名/邮箱..." /><button class="btn-search" @onclick="Search">搜索</button><button class="btn-add" @onclick="OpenAddModal">+ 添加管理员</button></div>
 @if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
 <div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>用户名</th><th>姓名</th><th>角色</th><th>部门</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead><tbody>
-@foreach(var u in _users){<tr><td>#@u.AdminId</td><td>@u.Username</td><td>@(u.FullName??"-")</td><td>@GetRoleName(u.RoleId)</td><td>@(u.Department??"-")</td><td><span class="status-badge @(u.IsActive==true?"status-normal":"status-warning")">@(u.IsActive==true?"正常":"锁定")</span></td><td>@(u.LastLogin?.ToString("yyyy-MM-dd HH:mm")??"从未")</td><td><button class="btn-edit" @onclick='()=>OpenEditModal(u)'>编辑</button><button class="btn-reset" @onclick='()=>ResetPwd(u.AdminId)'>重置密码</button></td></tr>}
+@foreach(var u in _users){<tr><td>#@u.AdminId</td><td>@u.Username</td><td>@(u.FullName??"-")</td><td>@GetRoleName(u.RoleId)</td><td>@(u.Department??"-")</td><td><span class="status-badge @(u.IsActive==true?"status-normal":"status-warning")">@(u.IsActive==true?"正常":"锁定")</span></td><td>@(u.LastLogin?.ToString("yyyy-MM-dd HH:mm")??"从未")</td><td><button class="btn-edit" @onclick='()=>OpenEditModal(u)'>编辑</button><button class="btn-reset" @onclick='()=>ResetPwd(u.AdminId)'>重置密码</button>@if(u.AdminId!=_actorId){<button class="btn-delete" @onclick='()=>DeleteUser(u)'>删除</button>}</td></tr>}
 @if(!_users.Any()){<tr><td colspan="8" style="text-align:center;color:#666;padding:40px;">暂无管理员</td></tr>}
 </tbody></table></div>
 @RenderPagination(_totalPages)
@@ -30,9 +37,9 @@
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
+
+
+
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
 .stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
@@ -52,6 +59,7 @@
 .status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
 .btn-edit{background:rgba(233,30,99,0.15);color:#E91E63;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:6px;}
 .btn-reset{background:rgba(255,152,0,0.15);color:#FF9800;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;}
+.btn-delete{background:rgba(244,67,54,0.15);color:#e57373;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;margin-left:6px;}
 .pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:25px;}
 .pagination button{padding:8px 14px;border-radius:6px;border:none;font-size:14px;cursor:pointer;background:#3a3a4a;color:#e0e0e0;}
 .pagination button:hover{background:#4a4a5a;}
@@ -86,9 +94,13 @@
     private List<AdminRole> _roles=new();
     private AdminUser _editUser=new(){IsActive=true};
     private Dictionary<int,string> _roleNames=new();
+    private int _actorId; private string _actorName="";
 
     protected override async Task OnInitializedAsync(){
         try{
+            var state=await AuthState.GetAuthenticationStateAsync();
+            int.TryParse(state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,out _actorId);
+            _actorName=state.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value??"";
             _roles=await Db.AdminRoles.AsNoTracking().ToListAsync();
             _roleNames=_roles.ToDictionary(r=>r.RoleId,r=>r.RoleName??r.RoleCode);
             await LoadData();
@@ -119,10 +131,11 @@
             if(string.IsNullOrWhiteSpace(_editUser.Username)||string.IsNullOrWhiteSpace(_editUser.Email)){_msg="用户名和邮箱不能为空";_msgType="err";return;}
             if(!_editing&&string.IsNullOrWhiteSpace(_editPassword)){_msg="请输入密码";_msgType="err";return;}
             if(!_editing){
-                _editUser.PasswordHash=Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(_editPassword)));
+                _editUser.PasswordHash=PasswordHasher.Hash(_editPassword);
                 _editUser.CreatedAt=DateTime.Now;
             }
             await SysRepo.SaveAdminUserAsync(_editUser);
+            await Auditor.LogAsync(_actorId,_actorName,_editing?"编辑管理员":"创建管理员","AdminUser",_editUser.AdminId,_editUser.Username);
             _msg=_editing?"管理员已更新":"管理员已创建";_msgType="ok";_showModal=false;
             await LoadData();
         }catch(Exception ex){_msg="保存失败: "+ex.Message;_msgType="err";}
@@ -132,10 +145,25 @@
         try{
             var user=await SysRepo.GetAdminUserAsync(id);
             if(user==null)return;
-            user.PasswordHash=Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("123456")));
+            var temp=PasswordHasher.GenerateTempPassword();
+            user.PasswordHash=PasswordHasher.Hash(temp);
             await SysRepo.SaveAdminUserAsync(user);
-            _msg=$"用户 {user.Username} 密码已重置为 123456";_msgType="ok";
+            await Auditor.LogAsync(_actorId,_actorName,"重置密码","AdminUser",user.AdminId,user.Username);
+            _msg=$"用户 {user.Username} 密码已重置为临时密码：{temp}（请尽快通知本人修改）";_msgType="ok";
         }catch(Exception ex){_msg="重置失败: "+ex.Message;_msgType="err";}
+    }
+
+    async Task DeleteUser(AdminUser u){
+        try{
+            if(u.AdminId==_actorId){_msg="不能删除自己的账号";_msgType="err";return;}
+            if(!await JS.InvokeAsync<bool>("confirm",$"确定删除管理员 {u.Username}？此操作不可恢复！"))return;
+            var total=await Db.AdminUsers.CountAsync();
+            if(total<=1){_msg="不能删除最后一个管理员";_msgType="err";return;}
+            await SysRepo.DeleteAdminUserAsync(u.AdminId);
+            await Auditor.LogAsync(_actorId,_actorName,"删除管理员","AdminUser",u.AdminId,u.Username);
+            _msg=$"管理员 {u.Username} 已删除";_msgType="ok";
+            await LoadData();
+        }catch(Exception ex){_msg="删除失败: "+ex.Message;_msgType="err";}
     }
 
     RenderFragment RenderPagination(int totalPages)=>builder=>{

@@ -2,10 +2,13 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
 @inject AuthenticationStateProvider AuthState
 @inject NavigationManager Navigation
+@inject IPermissionService Perms
 
 <PageTitle>管理中心 - 香氛电商系统</PageTitle>
 
@@ -83,6 +86,7 @@
 .portal-card.purchase::before { background: #FF5722; }
 .portal-card.logistics::before { background: #2196F3; }
 .portal-card.inventory::before { background: #00BCD4; }
+.portal-card.analytics::before { background: #2196F3; }
 .portal-card.logout::before { background: #f44336; }
 
 .card-top { display: flex; align-items: center; gap: 16px; margin-bottom: 15px; }
@@ -101,6 +105,7 @@
 .portal-card.purchase .portal-icon { background: linear-gradient(135deg, #FF5722 0%, #BF360C 100%); }
 .portal-card.logistics .portal-icon { background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%); }
 .portal-card.inventory .portal-icon { background: linear-gradient(135deg, #00BCD4 0%, #006064 100%); }
+.portal-card.analytics .portal-icon { background: linear-gradient(135deg, #2196F3 0%, #0D47A1 100%); }
 .portal-card.logout .portal-icon { background: linear-gradient(135deg, #f44336 0%, #b71c1c 100%); }
 
 .card-title h3 { font-size: 20px; color: #fff; margin-bottom: 4px; }
@@ -174,149 +179,26 @@
     </div>
 
     <div class="portal-grid">
-        <MudElement HtmlTag="a" href="/admin/Operation/Index" class="portal-card operation">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">bar_chart</span></div>
-                <div class="card-title">
-                    <h3>运营管理中心</h3>
-                    <p>订单、客户、商品、评价</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>订单管理</li><li>客户CRM画像</li>
-                <li>售后管理</li><li>评价审核</li>
-            </ul>
-        </MudElement>
+        @foreach (var c in _cards)
+        {
+            @if (Can(c.Module))
+            {
+                <MudElement HtmlTag="a" href="@c.Url" class="@($"portal-card {c.Css}")">
+                    <div class="card-top">
+                        <div class="portal-icon"><span class="material-icons" style="font-size:28px;">@c.Icon</span></div>
+                        <div class="card-title">
+                            <h3>@c.Title@if (!string.IsNullOrEmpty(c.Badge)){<span class="badge-new">@c.Badge</span>}</h3>
+                            <p>@c.Sub</p>
+                        </div>
+                    </div>
+                    <ul class="portal-features">
+                        @foreach (var f in c.Features){<li>@f</li>}
+                    </ul>
+                </MudElement>
+            }
+        }
 
-        <MudElement HtmlTag="a" href="/admin/semifinished" class="portal-card semifinished">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">science</span></div>
-                <div class="card-title">
-                    <h3>半成品生产中心<span class="badge-new">NEW</span></h3>
-                    <p>原料、基香、香调生产</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>Accord生产</li><li>原料库存</li>
-                <li>基香&香调库存</li><li>车间调拨</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/admin/prodcenter" class="portal-card prodcenter">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">factory</span></div>
-                <div class="card-title">
-                    <h3>产品生产管理中心<span class="badge-new">NEW</span></h3>
-                    <p>工单、排产、质检、入库</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>生产工单</li><li>排产调度</li>
-                <li>质量检验</li><li>成品库存</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/admin/logistics" class="portal-card logistics">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">local_shipping</span></div>
-                <div class="card-title">
-                    <h3>物流管理中心<span class="badge-new">NEW</span></h3>
-                    <p>发货、在途、签收、退货</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>发货单管理</li><li>在途跟踪</li>
-                <li>签收确认</li><li>退货入库</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/admin/Purchase/Dashboard" class="portal-card purchase">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">shopping_cart</span></div>
-                <div class="card-title">
-                    <h3>采购管理中心</h3>
-                    <p>品牌定香产品采购与管理、供应商管理、价格管理</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>采购订单</li><li>供应商管理</li>
-                <li>价格管理</li><li>采购分析</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/admin/finance" class="portal-card finance">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">account_balance</span></div>
-                <div class="card-title">
-                    <h3>财务管理中心</h3>
-                    <p>应收应付、成本、总账</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>应收应付</li><li>付款凭证</li>
-                <li>总账报表</li><li>现金流预测</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/admin/TechCenter" class="portal-card techcenter">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">science</span></div>
-                <div class="card-title">
-                    <h3>产品技术管理中心</h3>
-                    <p>配方、基香、规格设置</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>配方工艺</li><li>基香管理</li>
-                <li>香调调整</li><li>产品规格</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/admin/system/users" class="portal-card system">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">shield</span></div>
-                <div class="card-title">
-                    <h3>站点技术管理</h3>
-                    <p>权限、安全、备份、日志</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>管理员&角色</li><li>安全审计</li>
-                <li>备份中心</li><li>站点设置</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/admin/inventory" class="portal-card inventory">
-            <div class="card-top">
-                <div class="portal-icon"><span class="material-icons" style="font-size:28px;">warehouse</span></div>
-                <div class="card-title">
-                    <h3>库存管理中心<span class="badge-new">NEW</span></h3>
-                    <p>全品类统一库存管控</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>库存仪表盘</li><li>全品类预警</li>
-                <li>库存流水</li><li>快捷入口</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/admin/analytics" class="portal-card" style="border-left-color:#2196F3;">
-            <div class="card-top">
-                <div class="portal-icon" style="background:linear-gradient(135deg, #2196F3 0%, #0D47A1 100%);">
-                    <span class="material-icons" style="font-size:28px;">analytics</span>
-                </div>
-                <div class="card-title">
-                    <h3>数据分析仪表盘<span class="badge-new">V19</span></h3>
-                    <p>营收趋势、转化漏斗、热门产品</p>
-                </div>
-            </div>
-            <ul class="portal-features">
-                <li>实时数据概览</li><li>转化漏斗分析</li>
-                <li>热门产品排行</li><li>营收趋势图</li>
-            </ul>
-        </MudElement>
-
-        <MudElement HtmlTag="a" href="/login" class="portal-card logout logout-card">
+        <MudElement HtmlTag="a" href="/logout" class="portal-card logout logout-card">
             <div class="card-top">
                 <div class="portal-icon"><span class="material-icons" style="font-size:28px;">logout</span></div>
                 <div class="card-title">
@@ -337,18 +219,38 @@
 
     private string _userDisplayName = "管理员";
     private string _userRole = "系统管理员";
+    private HashSet<string> _modules = new();
 
     protected override async Task OnInitializedAsync()
     {
-        if (AuthStateTask != null)
+        // 统一使用注入的 AuthenticationStateProvider（与全站一致）；
+        // 早先依赖级联参数 AuthStateTask 在本页为 null，导致门户卡片恒不显示。
+        var state = await AuthState.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity?.IsAuthenticated == true)
         {
-            var state = await AuthStateTask;
-            var user = state.User;
-            if (user.Identity?.IsAuthenticated == true)
-            {
-                _userDisplayName = user.FindFirst(global::System.Security.Claims.ClaimTypes.Name)?.Value ?? "管理员";
-                _userRole = user.FindFirst(global::System.Security.Claims.ClaimTypes.Role)?.Value ?? "系统管理员";
-            }
+            _userDisplayName = user.FindFirst(ClaimTypes.Name)?.Value ?? "管理员";
+            _userRole = user.FindFirst(ClaimTypes.Role)?.Value ?? "系统管理员";
+            var roleCode = user.FindFirst("RoleCode")?.Value;
+            try { _modules = await Perms.GetAccessibleModulesAsync(roleCode); } catch { }
         }
     }
+
+    private bool Can(string module) => _modules.Contains(module);
+
+    private record PortalCard(string Module, string Url, string Css, string Icon, string Title, string Sub, string? Badge, string[] Features);
+
+    private static readonly PortalCard[] _cards =
+    {
+        new("operation", "/admin/Operation/Index", "operation", "bar_chart", "运营管理中心", "订单、客户、商品、评价", null, new[]{"订单管理","客户CRM画像","售后管理","评价审核"}),
+        new("semifinished", "/admin/semifinished", "semifinished", "science", "半成品生产中心", "原料、基香、香调生产", "NEW", new[]{"Accord生产","原料库存","基香&香调库存","车间调拨"}),
+        new("prodcenter", "/admin/prodcenter", "prodcenter", "factory", "产品生产管理中心", "工单、排产、质检、入库", "NEW", new[]{"生产工单","排产调度","质量检验","成品库存"}),
+        new("logistics", "/admin/logistics", "logistics", "local_shipping", "物流管理中心", "发货、在途、签收、退货", "NEW", new[]{"发货单管理","在途跟踪","签收确认","退货入库"}),
+        new("purchase", "/admin/Purchase/Dashboard", "purchase", "shopping_cart", "采购管理中心", "品牌定香采购、供应商、价格管理", null, new[]{"采购订单","供应商管理","价格管理","采购分析"}),
+        new("finance", "/admin/finance", "finance", "account_balance", "财务管理中心", "应收应付、成本、总账", null, new[]{"应收应付","付款凭证","总账报表","现金流预测"}),
+        new("techcenter", "/admin/TechCenter", "techcenter", "science", "产品技术管理中心", "配方、基香、规格设置", null, new[]{"配方工艺","基香管理","香调调整","产品规格"}),
+        new("system", "/admin/system/users", "system", "shield", "站点技术管理", "权限、安全、备份、日志", null, new[]{"管理员&角色","安全审计","备份中心","站点设置"}),
+        new("inventory", "/admin/inventory", "inventory", "warehouse", "库存管理中心", "全品类统一库存管控", "NEW", new[]{"库存仪表盘","全品类预警","库存流水","快捷入口"}),
+        new("analytics", "/admin/analytics", "analytics", "analytics", "数据分析仪表盘", "营收趋势、转化漏斗、热门产品", "V19", new[]{"实时数据概览","转化漏斗分析","热门产品排行","营收趋势图"}),
+    };
 }

@@ -1,7 +1,11 @@
-﻿@page "/admin/Operation/GroupBuy"
+@page "/admin/Operation/GroupBuy"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 
 <PageTitle>拼团管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-users"></i> 拼团活动管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>拼团管理</span></div></div>
@@ -37,7 +41,7 @@
 <table class="data-table"><thead><tr><th>团编号</th><th>产品</th><th>团长</th><th>进度</th><th>状态</th><th>创建时间</th></tr></thead>
 <tbody>@if(_groups.Any()){@foreach(var g in _groups){<tr><td><code style="background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:3px;font-size:11px;">@g.GroupSn</code></td><td>@GetProdName(g.PlanId)</td><td>@GetUser(g.InitiatorId)</td><td>@g.CurrentSize/@g.TargetSize 人</td><td><span class="badge @GetGroupStatusClass(g.Status)">@GetGroupStatusLabel(g.Status)</span></td><td>@g.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td></tr>}}else{<tr><td colspan="6" class="empty-cell">暂无拼团记录</td></tr>}</tbody></table></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
 
-<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+<style>
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
 .panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px;}.panel h3{color:#fff;margin:0 0 16px;font-size:18px;display:flex;align-items:center;gap:8px;}.panel h3 i{color:#7c4dff;}
 .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px;}.form-group{display:flex;flex-direction:column;gap:4px;}.form-group label{font-size:12px;color:#888;}.form-input{padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;font-size:13px;}.form-input:focus{border-color:#7c4dff;outline:none;}
@@ -51,13 +55,16 @@
 
 @code {
     [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private IAdminAuditor Auditor { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthState { get; set; } = default!;
     private bool _loaded, _showForm, _saving; private string? _msg;
+    private int _adminId; private string _adminName = "";
     private List<GroupBuyPlan> _plans=new(); private List<GroupBuyOrder> _groups=new();
     private Dictionary<int,string> _pn=new(),_un=new(); private int _total,_active,_editId;
     private string _fProductId="",_fPrice="",_fTeamSize="2",_fDuration="24",_fMin="0",_fMax="0",_fSort="0";
     private DateTime _fStart=DateTime.Now, _fEnd=DateTime.Now.AddDays(7);
 
-    protected override async Task OnInitializedAsync(){try{await Load();_loaded=true;}catch{_loaded=true;}}
+    protected override async Task OnInitializedAsync(){try{var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await Load();_loaded=true;}catch{_loaded=true;}}
     async Task Load(){
         _plans=await Db.GroupBuyPlans.OrderByDescending(p=>p.StartTime).ToListAsync();_total=_plans.Count;
         var now=DateTime.Now;_active=_plans.Count(p=>p.IsActive&&now>=p.StartTime&&now<=p.EndTime);
@@ -77,9 +84,10 @@
         var min=int.TryParse(_fMin,out var mn)?mn:0;var max=int.TryParse(_fMax,out var mx)?mx:0;var sort=int.TryParse(_fSort,out var so)?so:0;
         if(_editId>0){await Db.GroupBuyPlans.Where(p=>p.PlanId==_editId).ExecuteUpdateAsync(s=>s.SetProperty(p=>p.ProductId,pid).SetProperty(p=>p.TeamSize,ts).SetProperty(p=>p.GroupPrice,pr).SetProperty(p=>p.MinUnit,min).SetProperty(p=>p.MaxUnit,max).SetProperty(p=>p.StartTime,_fStart).SetProperty(p=>p.EndTime,_fEnd).SetProperty(p=>p.DurationHours,dur).SetProperty(p=>p.SortOrder,sort));_msg="更新成功";}
         else{Db.GroupBuyPlans.Add(new GroupBuyPlan{ProductId=pid,TeamSize=ts,GroupPrice=pr,MinUnit=min,MaxUnit=max,StartTime=_fStart,EndTime=_fEnd,DurationHours=dur,SortOrder=sort,IsActive=true,CreatedAt=DateTime.Now});await Db.SaveChangesAsync();_msg="创建成功";}
+        await Auditor.LogAsync(_adminId,_adminName,_editId>0?"编辑拼团计划":"创建拼团计划","GroupBuyPlan",_editId>0?_editId:(int?)null,GetProdName(pid));
         _showForm=false;await Load();}catch(Exception ex){_msg="操作失败: "+ex.Message;}_saving=false;}
-    async Task Toggle(GroupBuyPlan p){p.IsActive=!p.IsActive;await Db.GroupBuyPlans.Where(x=>x.PlanId==p.PlanId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.IsActive,p.IsActive));_active=_plans.Count(x=>x.IsActive);await InvokeAsync(StateHasChanged);}
-    async Task Delete(int id){await Db.GroupBuyPlans.Where(p=>p.PlanId==id).ExecuteDeleteAsync();_plans=_plans.Where(p=>p.PlanId!=id).ToList();_total--;_msg="已删除";;await InvokeAsync(StateHasChanged);}
+    async Task Toggle(GroupBuyPlan p){p.IsActive=!p.IsActive;await Db.GroupBuyPlans.Where(x=>x.PlanId==p.PlanId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.IsActive,p.IsActive));await Auditor.LogAsync(_adminId,_adminName,p.IsActive?"启用拼团计划":"停用拼团计划","GroupBuyPlan",p.PlanId,GetProdName(p.ProductId));_active=_plans.Count(x=>x.IsActive);await InvokeAsync(StateHasChanged);}
+    async Task Delete(int id){await Db.GroupBuyPlans.Where(p=>p.PlanId==id).ExecuteDeleteAsync();await Auditor.LogAsync(_adminId,_adminName,"删除拼团计划","GroupBuyPlan",id,null);_plans=_plans.Where(p=>p.PlanId!=id).ToList();_total--;_msg="已删除";;await InvokeAsync(StateHasChanged);}
     string GetProdName(int pid)=>_pn.TryGetValue(pid,out var n)?n:$"#{pid}";
     string GetUser(int uid)=>_un.TryGetValue(uid,out var n)?n:$"#{uid}";
     (string Label,string Class) GetStatus(GroupBuyPlan p){var n=DateTime.Now;if(!p.IsActive)return("已禁用","badge-inactive");if(n<p.StartTime)return("未开始","badge-pending");if(n>p.EndTime)return("已结束","badge-failed");return("进行中","badge-active");}

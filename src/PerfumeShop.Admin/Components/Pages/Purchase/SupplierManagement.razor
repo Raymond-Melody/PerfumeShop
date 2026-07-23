@@ -1,5 +1,6 @@
 @page "/admin/Purchase/SupplierManagement"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.purchase")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @inject PerfumeShopContext Db
@@ -19,8 +20,8 @@
 <div class="form-group"><label>电话</label><input @bind="_edit.Phone" /></div>
 </div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveItem">保存</button></div></div></div>}
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+
+
 .btn-add{background:linear-gradient(135deg,#FF9800,#E65100);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;}
 .table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
 .orders-table{width:100%;border-collapse:collapse;}

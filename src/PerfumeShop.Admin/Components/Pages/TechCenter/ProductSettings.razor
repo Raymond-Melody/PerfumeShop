@@ -1,10 +1,15 @@
 @page "/admin/TechCenter/ProductSettings"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@attribute [Authorize(Policy = "Module.techcenter")]
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>产品设置</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-box-open" style="color:#00bcd4;"></i> 产品设置</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>产品设置</span></div></div>
@@ -82,8 +87,8 @@
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
+
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}
 .stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;}
@@ -121,8 +126,9 @@
     private List<Product> _items=new();private List<ProductTypeConfig> _types=new();
     private List<SiteSetting> _ratioSettings=new();
     private Product _productEdit=new();private ProductTypeConfig _typeEdit=new();private SiteSetting _ratioEdit=new();
+    private int _adminId;private string _adminName="";
 
-    protected override async Task OnInitializedAsync(){await LoadAll();}
+    protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await LoadAll();}
     async Task LoadAll(){
         try{
             _items=await Db.Products.AsNoTracking().OrderByDescending(p=>p.ProductId).Take(100).ToListAsync();
@@ -139,9 +145,9 @@
     void OpenProductEdit(Product p){_productEdit=new(){ProductId=p.ProductId,ProductName=p.ProductName,Category=p.Category,ProductType=p.ProductType,Description=p.Description,ImageUrl=p.ImageUrl,BasePrice=p.BasePrice,IsActive=p.IsActive};_productEditing=true;_showProductModal=true;}
     void CloseProductModal(){_showProductModal=false;}
     async Task SaveProduct(){
-        try{if(_productEditing)Db.Products.Update(_productEdit);else Db.Products.Add(_productEdit);await Db.SaveChangesAsync();_msg="已保存";_msgType="ok";_showProductModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{if(_productEditing)Db.Products.Update(_productEdit);else Db.Products.Add(_productEdit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_productEditing?"编辑产品":"新建产品","Product",_productEdit.ProductId,_productEdit.ProductName);_msg="已保存";_msgType="ok";_showProductModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
-    async Task ToggleProductActive(Product p){try{p.IsActive=!(p.IsActive??true);Db.Products.Update(p);await Db.SaveChangesAsync();_activeCount=_items.Count(x=>x.IsActive==true);_msg="状态已更新";_msgType="ok";}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}}
+    async Task ToggleProductActive(Product p){try{p.IsActive=!(p.IsActive??true);Db.Products.Update(p);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,p.IsActive==true?"上架产品":"下架产品","Product",p.ProductId,p.ProductName);_activeCount=_items.Count(x=>x.IsActive==true);_msg="状态已更新";_msgType="ok";}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}}
 
     // ===== Types =====
     void OpenTypeAdd(){_typeEditing=false;_typeEdit=new(){IsActive=true};_showTypeModal=true;}
@@ -149,7 +155,7 @@
     void CloseTypeModal(){_showTypeModal=false;}
     async Task SaveType(){
         if(string.IsNullOrWhiteSpace(_typeEdit.TypeCode)){_msg="编码不能为空";_msgType="err";return;}
-        try{if(!_typeEditing){_typeEdit.CreatedAt=DateTime.Now;Db.ProductTypeConfigs.Add(_typeEdit);}else Db.ProductTypeConfigs.Update(_typeEdit);await Db.SaveChangesAsync();_msg="已保存";_msgType="ok";_showTypeModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{if(!_typeEditing){_typeEdit.CreatedAt=DateTime.Now;Db.ProductTypeConfigs.Add(_typeEdit);}else Db.ProductTypeConfigs.Update(_typeEdit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_typeEditing?"编辑产品类型":"新建产品类型","ProductTypeConfig",_typeEdit.ConfigId,_typeEdit.TypeCode);_msg="已保存";_msgType="ok";_showTypeModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
     async Task ToggleTypeActive(ProductTypeConfig t){try{t.IsActive=!(t.IsActive??true);Db.ProductTypeConfigs.Update(t);await Db.SaveChangesAsync();_msg="状态已更新";_msgType="ok";await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}}
 
@@ -157,6 +163,6 @@
     void OpenRatioEdit(SiteSetting s){_ratioEdit=s;_ratioValue=s.SettingValue??"";_showRatioModal=true;}
     void CloseRatioModal(){_showRatioModal=false;}
     async Task SaveRatio(){
-        try{_ratioEdit.SettingValue=_ratioValue;_ratioEdit.UpdatedAt=DateTime.Now;Db.SiteSettings.Update(_ratioEdit);await Db.SaveChangesAsync();_msg="参数已更新";_msgType="ok";_showRatioModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{_ratioEdit.SettingValue=_ratioValue;_ratioEdit.UpdatedAt=DateTime.Now;Db.SiteSettings.Update(_ratioEdit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,"修改香调配比参数","Settings",null,_ratioEdit.SettingKey,_ratioValue);_msg="参数已更新";_msgType="ok";_showRatioModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
 }

@@ -1,7 +1,11 @@
 @page "/admin/Operation/CommunityComments"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 
 <PageTitle>评论管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-comment-dots"></i> 评论管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>评论管理</span></div></div>
@@ -87,7 +91,7 @@ else
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
 .filter-bar{display:flex;gap:12px;align-items:center;margin-bottom:20px;padding:15px 20px;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.05);}.filter-select{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:8px 12px;font-size:13px;cursor:pointer;min-width:120px;}.filter-select:focus{border-color:#00bcd4;outline:none;}.filter-select option{background:#2d2d44;color:#e0e0e0;}.filter-input{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:8px 12px;font-size:13px;min-width:200px;}.filter-input:focus{border-color:#00bcd4;outline:none;}.filter-input::placeholder{color:#666;}
 .table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.data-table{width:100%;border-collapse:collapse;}.data-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:12px 14px;font-size:13px;text-align:left;font-weight:600;}.data-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.data-table tr:last-child td{border-bottom:none;}.data-table tr:hover td{background:rgba(255,255,255,0.03);}
@@ -101,7 +105,10 @@ else
 
 @code {
     [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private IAdminAuditor Auditor { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthState { get; set; } = default!;
     private bool _loaded;
+    private int _adminId; private string _adminName = "";
     private List<PostComment> _comments = new();
     private Dictionary<int, string> _un = new();
     private string? _statusFilter, _keyword = "";
@@ -111,7 +118,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        try { await LoadData(); _loaded = true; } catch { _loaded = true; }
+        try { var st = await AuthState.GetAuthenticationStateAsync(); int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out _adminId); _adminName = st.User.FindFirst(ClaimTypes.Name)?.Value ?? ""; await LoadData(); _loaded = true; } catch { _loaded = true; }
     }
 
     async Task LoadData()
@@ -156,6 +163,7 @@ else
     {
         c.IsActive = !c.IsActive;
         await Db.PostComments.Where(x => x.CommentId == c.CommentId).ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, c.IsActive));
+        await Auditor.LogAsync(_adminId, _adminName, c.IsActive ? "通过评论" : "隐藏评论", "PostComment", c.CommentId, null);
         if(_detailComment?.CommentId == c.CommentId) _detailComment.IsActive = c.IsActive;
         await LoadData();
         await InvokeAsync(StateHasChanged);
@@ -166,6 +174,7 @@ else
         await Db.PostComments.Where(c => c.CommentId == id).ExecuteDeleteAsync();
         // Also delete replies to this comment
         await Db.PostComments.Where(c => c.ParentCommentId == id).ExecuteDeleteAsync();
+        await Auditor.LogAsync(_adminId, _adminName, "删除评论", "PostComment", id, null);
         _comments = _comments.Where(c => c.CommentId != id && c.ParentCommentId != id).ToList();
         _totalComments = _comments.Count;
         await InvokeAsync(StateHasChanged);

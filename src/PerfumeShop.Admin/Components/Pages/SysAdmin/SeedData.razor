@@ -1,5 +1,6 @@
 @page "/admin/system/seed-data"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
 @using PerfumeShop.Admin.Services
 @inject DataSeeder Seeder
 

@@ -1,5 +1,6 @@
 @page "/admin/finance/profit-report"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories

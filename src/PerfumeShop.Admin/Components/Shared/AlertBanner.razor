@@ -1,0 +1,16 @@
+@* ============================================================
+   AlertBanner — V19 统一提示条（M3 可复用组件）
+   基于 admin-v19.css 的 av-alert 类。空消息不渲染。
+   用法：<AlertBanner Message="@_msg" IsError="@(_msgType=="err")" />
+   ============================================================ *@
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="av-alert @(IsError ? "err" : "ok")">
+        <i class="fas @(IsError ? "fa-exclamation-circle" : "fa-check-circle")" style="margin-right:8px;"></i>@Message
+    </div>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public bool IsError { get; set; }
+}

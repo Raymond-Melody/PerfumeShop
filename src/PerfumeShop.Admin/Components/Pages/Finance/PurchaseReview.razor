@@ -1,5 +1,6 @@
 @page "/admin/finance/purchase-review"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -9,6 +10,7 @@
 @inject FinanceRepository FinRepo
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthState
+@inject PerfumeShop.Admin.Services.IAdminAuditor Auditor
 
 <PageTitle>采购审核</PageTitle>
 <div class="page-header">
@@ -119,7 +121,7 @@
 else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}
+
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
 .stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
@@ -156,6 +158,7 @@ else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my
 @code {
     private bool _loaded, _canReview;
     private int _adminId;
+    private string _adminName = "";
     private string _tab = "pending";
     private string? _msg, _msgType;
     private int _pendingCount, _approvedCount, _rejectedCount;
@@ -175,6 +178,7 @@ else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my
             var rc = auth.User.FindFirst("RoleCode")?.Value;
             _canReview = rc == "FIN_MANAGER" || rc == "SUPER_ADMIN";
             int.TryParse(auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out _adminId);
+            _adminName = auth.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
             if (_canReview) await LoadData();
             _loaded = true;
         }
@@ -204,6 +208,7 @@ else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my
         if (string.IsNullOrEmpty(_costAllocation)) { _msg = "请选择成本归类"; _msgType = "err"; return; }
         var ok = await FinRepo.ApprovePurchaseAsync(_current.PurchaseId, _adminId, _reviewAmount, _costAllocation, _reviewComments);
         _msg = ok ? "审核通过成功" : "操作失败：采购单不存在"; _msgType = ok ? "ok" : "err";
+        if (ok) await Auditor.LogAsync(_adminId, _adminName, "采购审核通过", "PurchaseOrder", _current.PurchaseId, _current.PurchaseNo, $"金额{_reviewAmount:F2} 归类{_costAllocation}");
         CloseModal();
         await LoadData();
     }
@@ -214,6 +219,7 @@ else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my
         if (string.IsNullOrWhiteSpace(_rejectReason)) { _msg = "请填写驳回原因"; _msgType = "err"; return; }
         var ok = await FinRepo.RejectPurchaseAsync(_current.PurchaseId, _adminId, _rejectReason);
         _msg = ok ? "审核驳回成功" : "操作失败：采购单不存在"; _msgType = ok ? "ok" : "err";
+        if (ok) await Auditor.LogAsync(_adminId, _adminName, "采购审核驳回", "PurchaseOrder", _current.PurchaseId, _current.PurchaseNo, _rejectReason);
         CloseModal();
         await LoadData();
     }

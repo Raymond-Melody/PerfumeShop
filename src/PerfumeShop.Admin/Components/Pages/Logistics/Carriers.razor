@@ -1,10 +1,104 @@
 @page "/admin/logistics/carriers"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.logistics")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
+@inject Microsoft.JSInterop.IJSRuntime JS
+
 <PageTitle>物流公司</PageTitle>
-<div class="ph"><h2><i class="fas fa-building" style="color:#2196F3;"></i> 物流公司</h2><div class="br"><a href="/admin/logistics" style="text-decoration:none;color:#2196F3;">返回物流中心</a></div></div>
-@if(_l){<div class="tc"><table class="ot"><thead><tr><th>ID</th><th>公司名称</th><th>联系人</th><th>电话</th><th>状态</th></tr></thead><tbody>@foreach(var c in _items){<tr><td>#@c.CompanyId</td><td>@(c.CompanyName??"-")</td><td>@(c.ContactPerson??"-")</td><td>@(c.ContactPhone??"-")</td><td>@(c.IsActive==true?"启用":"禁用")</td></tr>}@if(!_items.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">暂无物流公司</td></tr>}</tbody></table></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
-<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(33,150,243,0.1);color:#2196F3;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}</style>
-@code{bool _l;List<ShippingCompany> _items=new();protected override async Task OnInitializedAsync(){try{_items=await Db.ShippingCompanies.AsNoTracking().OrderByDescending(c=>c.CompanyId).Take(30).ToListAsync();_l=true;}catch{_l=true;}}}
+<div class="ph"><h2><i class="fas fa-building" style="color:#2196F3;"></i> 物流公司</h2><div class="br"><a href="/admin/logistics" style="color:#2196F3;text-decoration:none;">返回物流中心</a></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="al @(_msgType=="err"?"al-e":"al-s")">@_msg</div>}
+<button class="btn-add" @onclick="OpenAdd">+ 新增物流公司</button>
+@if(_l){
+<div class="tc"><table class="ot"><thead><tr><th>ID</th><th>公司名称</th><th>联系人</th><th>电话</th><th>官网</th><th>状态</th><th>操作</th></tr></thead><tbody>
+@foreach(var c in _items){<tr><td>#@c.CompanyId</td><td>@c.CompanyName</td><td>@(c.ContactPerson??"-")</td><td>@(c.ContactPhone??"-")</td><td>@(c.Website??"-")</td><td><span class="badge @(c.IsActive==true?"b-on":"b-off")">@(c.IsActive==true?"启用":"禁用")</span></td><td><button class="btn-e" @onclick="()=>OpenEdit(c)">编辑</button><button class="btn-d" @onclick="()=>Delete(c)">删除</button></td></tr>}
+@if(!_items.Any()){<tr><td colspan="7" style="text-align:center;color:#666;padding:30px;">暂无物流公司</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_show){
+<div class="mo" @onclick="Close"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>@(_editing?"编辑物流公司":"新增物流公司")</h3><button class="mx" @onclick="Close"><i class="fas fa-times"></i></button></div><div class="mb">
+<div class="fg"><label>公司名称 *</label><input @bind="_edit.CompanyName" /></div>
+<div class="fr"><div class="fg"><label>联系人</label><input @bind="_edit.ContactPerson" /></div><div class="fg"><label>联系电话</label><input @bind="_edit.ContactPhone" /></div></div>
+<div class="fg"><label>官网</label><input @bind="_edit.Website" /></div>
+<div class="fg"><label>状态</label><select @bind="_edit.IsActive"><option value="true">启用</option><option value="false">禁用</option></select></div>
+<div class="fg"><label>备注</label><input @bind="_edit.Notes" /></div>
+</div><div class="mf"><button class="btn-s2" @onclick="Close">取消</button><button class="btn-s" @onclick="Save">保存</button></div></div></div>
+}
+
+<style>
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;}
+.btn-add{background:linear-gradient(135deg,#2196F3,#0D47A1);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;margin-bottom:16px;}
+.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}
+.ot th{background:rgba(33,150,243,0.1);color:#2196F3;padding:12px 16px;font-size:13px;text-align:left;}.ot td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}.b-on{background:rgba(76,175,80,0.2);color:#81c784;}.b-off{background:rgba(158,158,158,0.2);color:#BDBDBD;}
+.btn-e{background:rgba(33,150,243,0.15);color:#2196F3;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:6px;}.btn-d{background:rgba(244,67,54,0.15);color:#e57373;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
+.al{padding:12px 18px;border-radius:8px;margin-bottom:16px;}.al-s{background:rgba(76,175,80,0.15);color:#81c784;}.al-e{background:rgba(244,67,54,0.15);color:#e57373;}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:560px;border:1px solid rgba(255,255,255,0.06);}
+.mh{padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}.mh h3{margin:0;color:#e0e0e0;font-size:18px;}.mx{background:none;border:none;color:#888;font-size:22px;cursor:pointer;}
+.mb{padding:24px;}.mf{padding:18px 24px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.fg{margin-bottom:14px;flex:1;}.fg label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}.fg input,.fg select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}.fr{display:flex;gap:12px;}
+.btn-s{background:linear-gradient(135deg,#2196F3,#0D47A1);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}.btn-s2{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+</style>
+
+@code {
+    private bool _l, _show, _editing;
+    private string _msg = "", _msgType = "";
+    private int _actorId; private string _actorName = "";
+    private List<ShippingCompany> _items = new();
+    private ShippingCompany _edit = new() { IsActive = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var s = await AuthState.GetAuthenticationStateAsync();
+            int.TryParse(s.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _actorId);
+            _actorName = s.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+            await Load();
+            _l = true;
+        }
+        catch { _l = true; }
+    }
+
+    private async Task Load() =>
+        _items = await Db.ShippingCompanies.AsNoTracking().OrderBy(c => c.CompanyId).ToListAsync();
+
+    private void OpenAdd() { _editing = false; _edit = new() { IsActive = true }; _show = true; }
+    private void OpenEdit(ShippingCompany c) { _editing = true; _edit = new() { CompanyId = c.CompanyId, CompanyName = c.CompanyName, ContactPerson = c.ContactPerson, ContactPhone = c.ContactPhone, Website = c.Website, IsActive = c.IsActive, Notes = c.Notes }; _show = true; }
+    private void Close() { _show = false; }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_edit.CompanyName)) { _msg = "公司名称不能为空"; _msgType = "err"; return; }
+        try
+        {
+            if (_edit.CompanyId == 0) { _edit.CreatedAt = DateTime.Now; Db.ShippingCompanies.Add(_edit); }
+            else { _edit.UpdatedAt = DateTime.Now; Db.ShippingCompanies.Update(_edit); }
+            await Db.SaveChangesAsync();
+            await Auditor.LogAsync(_actorId, _actorName, _editing ? "编辑物流公司" : "新增物流公司", "ShippingCompany", _edit.CompanyId, _edit.CompanyName);
+            _msg = _editing ? "物流公司已更新" : "物流公司已创建"; _msgType = "ok"; _show = false;
+            await Load();
+        }
+        catch (Exception ex) { _msg = "保存失败: " + ex.Message; _msgType = "err"; }
+    }
+
+    private async Task Delete(ShippingCompany c)
+    {
+        try
+        {
+            if (!await JS.InvokeAsync<bool>("confirm", $"确定删除物流公司 {c.CompanyName}？")) return;
+            var e = await Db.ShippingCompanies.FindAsync(c.CompanyId);
+            if (e != null) { Db.ShippingCompanies.Remove(e); await Db.SaveChangesAsync(); }
+            await Auditor.LogAsync(_actorId, _actorName, "删除物流公司", "ShippingCompany", c.CompanyId, c.CompanyName);
+            _msg = "已删除"; _msgType = "ok";
+            await Load();
+        }
+        catch (Exception ex) { _msg = "删除失败: " + ex.Message; _msgType = "err"; }
+    }
+}

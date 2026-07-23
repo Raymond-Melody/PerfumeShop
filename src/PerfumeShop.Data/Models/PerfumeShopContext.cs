@@ -544,7 +544,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<BaseNote>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.BaseNoteId);
 
             entity.Property(e => e.BaseNoteId)
                 .ValueGeneratedOnAdd()
@@ -578,7 +578,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<BottleStyle>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.BottleId);
 
             entity.HasIndex(e => e.BottleName, "IX_BottleStyles_Name");
 
@@ -1069,7 +1069,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<FragranceNote>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.NoteId);
 
             entity.HasIndex(e => e.NoteType, "IX_FragranceNotes_NoteType");
 

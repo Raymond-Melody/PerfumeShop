@@ -1,7 +1,11 @@
-﻿@page "/admin/Operation/CouponManagement"
+@page "/admin/Operation/CouponManagement"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 
 <PageTitle>优惠券管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-ticket-alt" style="color:#00bcd4;"></i> 优惠券管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>优惠券管理</span></div></div>
@@ -25,7 +29,7 @@ else{
 <table class="data-table"><thead><tr><th>ID</th><th>优惠码</th><th>名称</th><th>类型</th><th>面额</th><th>门槛</th><th>发行/已用</th><th>有效期</th><th>状态</th><th>操作</th></tr></thead>
 <tbody>@if(_coupons.Any()){@foreach(var c in _coupons){var usedQty=c.UsedQty;var totalQty=c.TotalQty;<tr><td>@c.CouponId</td><td><strong style="color:#00bcd4;">@(c.CouponCode??"-")</strong></td><td>@(c.CouponName??"-")</td><td><span class="badge @GetTypeBadge(c.CouponType)">@GetTypeLabel(c.CouponType)</span></td><td>@FormatValue(c)</td><td>@(c.MinSpend>0?$"¥{c.MinSpend:F0}":"无门槛")</td><td>@usedQty/@(totalQty==0?"∞":totalQty.ToString())</td><td style="font-size:11px;">@c.ValidFrom.ToString("yyyy-MM-dd")<br>~@c.ValidTo.ToString("yyyy-MM-dd")</td><td><span class="badge @(c.IsActive==true&&DateTime.Now>=c.ValidFrom&&DateTime.Now<=c.ValidTo?"badge-active":"badge-inactive")">@(c.IsActive==true&&DateTime.Now>=c.ValidFrom&&DateTime.Now<=c.ValidTo?"启用":"禁用")</span></td><td><button class="btn btn-sm" style="background:#00bcd4;color:#fff;" @onclick="()=>Edit(c)"><i class="fas fa-edit"></i></button><button class="btn btn-sm" style="background:#c62828;color:#fff;" @onclick="()=>Delete(c.CouponId)"><i class="fas fa-trash"></i></button></td></tr>}}else{<tr><td colspan="10" class="empty-cell">暂无优惠券</td></tr>}</tbody></table></div>}
 
-<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+<style>
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
 .panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px;}.panel h3{color:#fff;margin:0 0 16px;font-size:18px;display:flex;align-items:center;gap:8px;}.panel h3 i{color:#00bcd4;}
 .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px;}.form-group{display:flex;flex-direction:column;gap:4px;}.form-group label{font-size:12px;color:#888;font-weight:500;}.form-input{padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#e0e0e0;font-size:13px;}.form-input:focus{border-color:#00bcd4;outline:none;}.form-input option{background:#2d2d44;color:#e0e0e0;}
@@ -37,7 +41,10 @@ else{
 
 @code{
 [Inject] private PerfumeShopContext Db{get;set;}=default!;
+[Inject] private IAdminAuditor Auditor{get;set;}=default!;
+[Inject] private AuthenticationStateProvider AuthState{get;set;}=default!;
 private bool _loaded,_showForm,_saving,_msgErr;
+private int _adminId;private string _adminName="";
 private string? _error,_msg;
 private List<Coupon> _coupons=new();
 private int _totalCoupons,_activeCoupons,_totalIssued,_totalUsed;
@@ -46,7 +53,7 @@ private string _fCode="",_fName="",_fType="fixed",_fValue="",_fMinSpend="0",_fMa
 private DateTime _fValidFrom=DateTime.Today,_fValidTo=DateTime.Today.AddMonths(1);
 private bool _fIsActive=true,_fFirstOrder;
 
-protected override async Task OnInitializedAsync(){try{await Load();_loaded=true;}catch(Exception ex){_error=ex.Message;_loaded=true;}}
+protected override async Task OnInitializedAsync(){try{var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await Load();_loaded=true;}catch(Exception ex){_error=ex.Message;_loaded=true;}}
 
 async Task Load(){
 _coupons=await Db.Coupons.AsNoTracking().OrderByDescending(c=>c.CouponId).ToListAsync();
@@ -89,12 +96,13 @@ await Db.SaveChangesAsync();
 _msg="创建成功";
 }
 _msgErr=false;_showForm=false;await Load();
+await Auditor.LogAsync(_adminId,_adminName,_editId>0?"编辑优惠券":"创建优惠券","Coupon",_editId>0?_editId:(int?)null,_fName);
 await InvokeAsync(StateHasChanged);
 }catch(Exception ex){_msg="操作失败: "+ex.Message;_msgErr=true;}
 _saving=false;
 }
 
-async Task Delete(int id){await Db.Coupons.Where(c=>c.CouponId==id).ExecuteDeleteAsync();_coupons=_coupons.Where(c=>c.CouponId!=id).ToList();_totalCoupons--;_msg="已删除";_msgErr=false;await InvokeAsync(StateHasChanged);}
+async Task Delete(int id){await Db.Coupons.Where(c=>c.CouponId==id).ExecuteDeleteAsync();await Auditor.LogAsync(_adminId,_adminName,"删除优惠券","Coupon",id,null);_coupons=_coupons.Where(c=>c.CouponId!=id).ToList();_totalCoupons--;_msg="已删除";_msgErr=false;await InvokeAsync(StateHasChanged);}
 
 static string GetTypeLabel(string? t)=>t?.ToLower() switch{"fixed"=>"满减券","percentage"=>"折扣券","free_shipping"=>"免邮券","gift"=>"礼品券",_=>t??"-"};
 static string GetTypeBadge(string? t)=>t?.ToLower() switch{"fixed"=>"badge-fixed","percentage"=>"badge-percentage","free_shipping"=>"badge-freeship","gift"=>"badge-gift",_=>"badge-inactive"};

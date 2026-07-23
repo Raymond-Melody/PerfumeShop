@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using PerfumeShop.Admin.Components;
@@ -11,6 +12,9 @@ using PerfumeShop.Shared;
 using PerfumeShop.Shared.Auth;
 using PerfumeShop.Shared.Services;
 using PerfumeShop.Admin.Services;
+using PerfumeShop.Admin.Authorization;
+using PerfumeShop.Admin.Middleware;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +66,13 @@ builder.Services.AddScoped<TechCenterRepository>();
 
 // V19.8: Data Seeder for test data
 builder.Services.AddScoped<DataSeeder>();
+
+// V19 M1: 安全基座（统一当前用户 / 操作审计 / 数据驱动 RBAC / 登录安全）
+builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
+builder.Services.AddScoped<IAdminAuditor, AdminAuditor>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<ILoginSecurityService, LoginSecurityService>();
+builder.Services.AddSingleton<IAuthorizationHandler, ModuleAccessHandler>();
 
 // Business Services
 builder.Services.AddMemoryCache();
@@ -137,7 +148,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             return Task.CompletedTask;
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // V19 M1: 按模块注册数据驱动授权策略（Module.system / Module.finance / ...）
+    foreach (var m in ModulePolicies.Modules)
+        options.AddPolicy(ModulePolicies.PolicyName(m), p =>
+            p.RequireAuthenticatedUser().AddRequirements(new ModuleAccessRequirement(m)));
+});
 builder.Services.Configure<AuthBridgeOptions>(builder.Configuration.GetSection(AuthBridgeOptions.SectionName));
 builder.Services.AddScoped<IAuthTokenStore, DbAuthTokenStore>();
 
@@ -145,6 +162,8 @@ var app = builder.Build();
 
 // V19 M2: Authentication MUST come before any response-writing middleware
 app.UseAuthentication();
+// V19 M1: IP 黑名单运行时拦截（认证后、授权前）
+app.UseIpBlacklist();
 app.UseAuthorization();
 app.UseAuthBridge();
 
@@ -190,6 +209,36 @@ app.MapGet("/api/admin/reconciliation/export", async (HttpContext ctx, PerfumeSh
     ctx.Response.Headers.ContentDisposition = $"attachment; filename=reconciliation_{DateTime.Now:yyyyMMdd}.csv";
     await ctx.Response.Body.WriteAsync(System.Text.Encoding.UTF8.Preamble.ToArray());
     await ctx.Response.Body.WriteAsync(csv);
+});
+
+// V19 M1: 备份文件下载（鉴权 + 文件名白名单，防目录穿越）
+app.MapGet("/admin/system/backup/download", async (HttpContext ctx, string file) =>
+{
+    if (string.IsNullOrWhiteSpace(file) || file.Contains("..") || file.Contains('/') || file.Contains('\\'))
+    { ctx.Response.StatusCode = 400; return; }
+    string? dir = null;
+    foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+    {
+        var d = new DirectoryInfo(start);
+        for (int i = 0; i < 8 && d != null; i++, d = d.Parent)
+        {
+            var candidate = Path.Combine(d.FullName, "database", "backups");
+            if (Directory.Exists(candidate)) { dir = candidate; break; }
+        }
+        if (dir != null) break;
+    }
+    var match = dir != null ? Directory.GetFiles(dir, file, SearchOption.AllDirectories).FirstOrDefault() : null;
+    if (match == null || !File.Exists(match)) { ctx.Response.StatusCode = 404; return; }
+    ctx.Response.ContentType = "application/octet-stream";
+    ctx.Response.Headers.ContentDisposition = $"attachment; filename=\"{Path.GetFileName(match)}\"";
+    await ctx.Response.SendFileAsync(match);
+}).RequireAuthorization(ModulePolicies.PolicyName("system"));
+
+// V19: 登出端点——清除认证 Cookie 后回到登录页（修复 LogoutPath 无实现导致登出无效）
+app.MapGet("/logout", async (HttpContext ctx) =>
+{
+    await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    return Results.Redirect("/login");
 });
 
 app.MapRazorComponents<App>()

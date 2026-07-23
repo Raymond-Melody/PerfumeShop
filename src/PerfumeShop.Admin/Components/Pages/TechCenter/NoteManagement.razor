@@ -1,11 +1,16 @@
 @page "/admin/TechCenter/NoteManagement"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@attribute [Authorize(Policy = "Module.techcenter")]
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
+@using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
 <PageTitle>香调管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-leaf" style="color:#4CAF50;"></i> 香调管理</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>香调管理</span></div></div>
 @if(_loaded){
@@ -26,8 +31,8 @@
 </div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveItem">保存</button></div></div></div>
 }
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
+
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}
 .stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;}
@@ -62,7 +67,8 @@
 @code {
     private bool _loaded,_editing,_showModal;private int _total,_active;private string _msg="",_msgType="",_typeFilter="",_search="";
     private List<FragranceNote> _items=new();private FragranceNote _edit=new();
-    protected override async Task OnInitializedAsync(){await LoadItems();}
+    private int _adminId;private string _adminName="";
+    protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await LoadItems();}
     async Task LoadItems(){
         try{
             var q=Db.FragranceNotes.AsNoTracking().AsQueryable();
@@ -80,6 +86,6 @@
     void CloseModal(){_showModal=false;}
     async Task SaveItem(){
         if(string.IsNullOrWhiteSpace(_edit.NoteName)){_msg="名称不能为空";_msgType="err";return;}
-        try{if(!_editing)Db.FragranceNotes.Add(_edit);else Db.FragranceNotes.Update(_edit);await Db.SaveChangesAsync();_msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{if(!_editing)Db.FragranceNotes.Add(_edit);else Db.FragranceNotes.Update(_edit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_editing?"编辑香调":"新建香调","FragranceNote",_edit.NoteId,_edit.NoteName);_msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
 }

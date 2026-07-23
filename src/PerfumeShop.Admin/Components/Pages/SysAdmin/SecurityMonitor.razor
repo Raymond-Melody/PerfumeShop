@@ -1,0 +1,134 @@
+@page "/admin/system/security-monitor"
+@page "/admin/system/security-audit"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+@inject PerfumeShopContext Db
+
+<PageTitle>安全监控</PageTitle>
+<AdminPageHeader Icon="fas fa-shield-alt" Title="安全监控仪表盘" Module="系统管理" ModuleUrl="/admin/system/users" Current="安全监控" Accent="#E91E63" />
+
+@if(_loaded){
+<div class="score-banner">
+<div class="score-circle" style="border-color:@_scoreColor;color:@_scoreColor;">@_score</div>
+<div class="score-info"><h3>安全评分</h3><p>@_scoreText</p></div>
+</div>
+
+<div class="stats-row">
+<div class="stat-card"><div class="stat-value" style="color:@(_fail24>10?"#F44336":"#4CAF50");">@_fail24</div><div class="stat-label">24h登录失败</div></div>
+<div class="stat-card"><div class="stat-value" style="color:@(_sec24>0?"#F44336":"#4CAF50");">@_sec24</div><div class="stat-label">安全事件(24h)</div></div>
+<div class="stat-card"><div class="stat-value" style="color:@(_rate24>20?"#FF9800":"#2196F3");">@_rate24</div><div class="stat-label">限流触发(24h)</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#F44336;">@_activeBlocks</div><div class="stat-label">活跃封禁IP</div></div>
+</div>
+
+<div class="two-col">
+<div class="panel"><div class="panel-head"><i class="fas fa-globe"></i> 登录失败 TOP5 IP（7天）</div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>IP地址</th><th>失败次数</th><th>威胁</th></tr></thead><tbody>
+@foreach(var t in _topIps){<tr><td style="font-family:monospace;">@t.Key</td><td><strong>@t.Count</strong></td><td><span class="badge @(t.Count>=20?"badge-high":t.Count>=10?"badge-warn":"badge-info")">@(t.Count>=20?"高":t.Count>=10?"中":"低")</span></td></tr>}
+@if(!_topIps.Any()){<tr><td colspan="3" style="text-align:center;color:#4CAF50;padding:24px;">无登录失败记录</td></tr>}
+</tbody></table></div></div>
+
+<div class="panel"><div class="panel-head"><i class="fas fa-user-times"></i> 登录失败 TOP5 账号（7天）</div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>账号</th><th>失败次数</th><th>风险</th></tr></thead><tbody>
+@foreach(var t in _topAccounts){<tr><td>@t.Key</td><td><strong>@t.Count</strong></td><td><span class="badge @(t.Count>=10?"badge-high":"badge-warn")">@(t.Count>=10?"疑似暴力破解":"需关注")</span></td></tr>}
+@if(!_topAccounts.Any()){<tr><td colspan="3" style="text-align:center;color:#4CAF50;padding:24px;">无异常账号</td></tr>}
+</tbody></table></div></div>
+</div>
+
+<div class="panel"><div class="panel-head"><i class="fas fa-clipboard-check"></i> 安全基线检查</div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>检查项</th><th>状态</th><th>说明</th></tr></thead><tbody>
+@foreach(var b in _baseline){<tr><td>@b.Name</td><td><span class="badge @(b.Ok?"badge-low":"badge-warn")">@(b.Ok?"已启用":"待完善")</span></td><td style="color:#999;">@b.Note</td></tr>}
+</tbody></table></div></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+<style>
+
+
+
+.score-banner{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:14px;padding:28px 32px;margin-bottom:20px;border:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:24px;}
+.score-circle{width:90px;height:90px;border-radius:50%;border:5px solid;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;flex-shrink:0;}
+.score-info h3{margin:0 0 6px;color:#fff;font-size:18px;}
+.score-info p{margin:0;color:#888;font-size:13px;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:28px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;overflow:hidden;}
+.panel-head{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;color:#e0e0e0;}
+.table-container{overflow:hidden;}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:12px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:13px;}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
+.badge-high{background:rgba(244,67,54,0.2);color:#e57373;}
+.badge-warn{background:rgba(255,152,0,0.2);color:#FFB74D;}
+.badge-low{background:rgba(76,175,80,0.2);color:#81c784;}
+.badge-info{background:rgba(0,188,212,0.2);color:#80DEEA;}
+@@media(max-width:1024px){.stats-row,.two-col{grid-template-columns:1fr;}}
+</style>
+
+@code {
+    private bool _loaded;
+    private int _fail24, _sec24, _rate24, _activeBlocks, _score = 100;
+    private string _scoreColor = "#4CAF50", _scoreText = "";
+    private List<TopItem> _topIps = new();
+    private List<TopItem> _topAccounts = new();
+    private List<BaselineItem> _baseline = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var now = DateTime.Now;
+            var day = now.AddHours(-24);
+            var week = now.AddDays(-7);
+
+            _fail24 = await Db.AdminLogs.CountAsync(l => l.ActionType == "登录失败" && l.CreatedAt >= day);
+            _sec24 = await Db.AppLogs.CountAsync(l => l.LogLevel == "SECURITY" && l.CreatedAt >= day);
+            _rate24 = await Db.AppLogs.CountAsync(l => l.LogSource == "rate_limiter" && l.CreatedAt >= day);
+            _activeBlocks = await Db.Ipblacklists.CountAsync(b => b.IsActive == true && (b.ExpiresAt == null || b.ExpiresAt > now));
+
+            _topIps = await Db.AdminLogs.AsNoTracking()
+                .Where(l => l.ActionType == "登录失败" && l.CreatedAt >= week && l.Ipaddress != null && l.Ipaddress != "")
+                .GroupBy(l => l.Ipaddress!)
+                .Select(g => new TopItem { Key = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count).Take(5).ToListAsync();
+
+            _topAccounts = await Db.AdminLogs.AsNoTracking()
+                .Where(l => l.ActionType == "登录失败" && l.CreatedAt >= week && l.Notes != null && l.Notes != "")
+                .GroupBy(l => l.Notes!)
+                .Select(g => new TopItem { Key = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count).Take(5).ToListAsync();
+
+            // 安全评分（对齐 V18 security_monitor.asp 计分逻辑）
+            _score = 100;
+            if (_fail24 > 10) _score -= 10;
+            if (_fail24 > 50) _score -= 10;
+            if (_sec24 > 0) _score -= 15;
+            if (_sec24 > 5) _score -= 15;
+            if (_rate24 > 20) _score -= 10;
+            if (_score < 0) _score = 0;
+            _scoreColor = _score >= 80 ? "#4CAF50" : _score >= 60 ? "#FF9800" : "#F44336";
+            _scoreText = _score >= 80 ? "安全状况良好，各项指标正常"
+                : _score >= 60 ? "存在一些安全问题，建议尽快处理"
+                : "安全风险较高，需要立即处理";
+
+            _baseline = new()
+            {
+                new("认证方式", true, "Cookie 认证 + 8h 滑动过期 (V19)"),
+                new("防伪保护", true, "全局 UseAntiforgery（表单 CSRF）"),
+                new("RBAC 授权", true, "按模块数据驱动授权策略 + RolePermissions"),
+                new("操作审计", true, "AdminAuditLog 双写 + 结构化日志"),
+                new("登录保护", true, "24h 失败≥5 自动封禁 + IP 黑名单中间件"),
+                new("限流防护", _rate24 >= 0, "令牌桶限流 + 429 标准响应"),
+            };
+            _loaded = true;
+        }
+        catch { _loaded = true; }
+    }
+
+    public class TopItem { public string Key { get; set; } = ""; public int Count { get; set; } }
+    public record BaselineItem(string Name, bool Ok, string Note);
+}

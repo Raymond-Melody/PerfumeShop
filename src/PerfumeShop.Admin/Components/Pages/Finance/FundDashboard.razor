@@ -1,5 +1,6 @@
 @page "/admin/finance/fund-dashboard"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -9,6 +10,7 @@
 @inject FinanceRepository FinRepo
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthState
+@inject PerfumeShop.Admin.Services.IAdminAuditor Auditor
 
 <PageTitle>资金看板</PageTitle>
 
@@ -356,6 +358,7 @@ tr.inactive-row { opacity: 0.55; }
 @code {
     private bool _loaded, _canEdit, _chartsRendering, _chartDataChanged;
     private string? _msg, _msgType;
+    private int _adminId; private string _adminName = "";
     private int _alertCount;
     private int _largeTransferCount;
     private decimal _totalBalance, _totalAvailable, _totalFrozen, _pendingTotal, _pendingAP, _pendingAR;
@@ -380,6 +383,8 @@ tr.inactive-row { opacity: 0.55; }
         {
             var auth = await AuthState.GetAuthenticationStateAsync();
             var rc = auth.User.FindFirst("RoleCode")?.Value;
+            int.TryParse(auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out _adminId);
+            _adminName = auth.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
             _canEdit = rc == "FIN_MANAGER" || rc == "SUPER_ADMIN";
 
             // 顺序查询（DbContext 非线程安全，MARS 下单连多读已足够快）
@@ -466,8 +471,10 @@ tr.inactive-row { opacity: 0.55; }
         if (string.IsNullOrWhiteSpace(_editingAccount?.AccountName)) return;
         if (_editingAccount!.AccountId == 0) _editingAccount.TotalBalance = _editTotalBalance;
         _editingAccount.AlertThreshold = _editThreshold;
+        var isNew = _editingAccount.AccountId == 0;
         await FinRepo.SaveFundAccountAsync(_editingAccount);
-        _msg = _editingAccount.AccountId == 0 ? "账户已添加" : "账户已更新"; _msgType = "ok";
+        await Auditor.LogAsync(_adminId, _adminName, isNew ? "新增资金账户" : "编辑资金账户", "FundAccount", _editingAccount.AccountId, _editingAccount.AccountName);
+        _msg = isNew ? "账户已添加" : "账户已更新"; _msgType = "ok";
         CloseAllModals();
         await ReloadData();
     }
@@ -476,6 +483,7 @@ tr.inactive-row { opacity: 0.55; }
     {
         if (_editingAccount == null) return;
         await FinRepo.UpdateFundBalanceAsync(_editingAccount.AccountId, _editTotalBalance);
+        await Auditor.LogAsync(_adminId, _adminName, "更新账户余额", "FundAccount", _editingAccount.AccountId, _editingAccount.AccountName, $"新余额{_editTotalBalance:F2}");
         _msg = "余额已更新"; _msgType = "ok";
         CloseAllModals();
         await ReloadData();
@@ -485,6 +493,7 @@ tr.inactive-row { opacity: 0.55; }
     {
         if (_editingAccount == null) return;
         await FinRepo.UpdateFundThresholdAsync(_editingAccount.AccountId, _editThreshold);
+        await Auditor.LogAsync(_adminId, _adminName, "设置预警阈值", "FundAccount", _editingAccount.AccountId, _editingAccount.AccountName, $"阈值{_editThreshold:F2}");
         _msg = "阈值已设置"; _msgType = "ok";
         CloseAllModals();
         await ReloadData();
@@ -495,6 +504,7 @@ tr.inactive-row { opacity: 0.55; }
         var newState = a.IsActive == false;
         if (!newState && !await JS.InvokeAsync<bool>("confirm", $"确定要停用「{a.AccountName}」吗？")) return;
         await FinRepo.ToggleFundStatusAsync(a.AccountId, newState);
+        await Auditor.LogAsync(_adminId, _adminName, newState ? "启用资金账户" : "停用资金账户", "FundAccount", a.AccountId, a.AccountName);
         _msg = newState ? "账户已启用" : "账户已停用"; _msgType = "ok";
         await ReloadData();
     }

@@ -1,5 +1,6 @@
-﻿@page "/admin/finance/reconciliation"
+@page "/admin/finance/reconciliation"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
@@ -109,7 +110,7 @@
 <style>
 /* ===== 统一财务中心UI ===== */
 /* 页面头 */
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}
+
 /* 统计卡片（对齐Index kpi-card标准） */
 .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:25px 20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);}

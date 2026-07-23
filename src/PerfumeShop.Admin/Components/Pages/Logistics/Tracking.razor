@@ -1,5 +1,6 @@
 @page "/admin/logistics/tracking"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.logistics")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @inject PerfumeShopContext Db

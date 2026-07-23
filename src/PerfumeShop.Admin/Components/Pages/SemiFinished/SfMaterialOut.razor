@@ -1,7 +1,11 @@
 @page "/admin/semifinished/material-outbound"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.semifinished")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <PageTitle>原料出库</PageTitle>
 <div class="ph"><h2 class="pt"><i class="fas fa-truck-loading" style="color:#9C27B0;"></i> 原料出库管理</h2><button class="btn btn-primary" @onclick="OpenOutboundModal">+ 新建出库单</button><div class="br"><a href="/admin/semifinished" style="color:#2196F3;text-decoration:none;">半成品中心</a> / 原料出库</div></div>
@@ -27,12 +31,15 @@
 
 @code{
 [Inject] PerfumeShopContext Db{get;set;}=default!;
+[Inject] IAdminAuditor Auditor{get;set;}=default!;
+[Inject] AuthenticationStateProvider AuthState{get;set;}=default!;
 bool _loaded,_msgErr,_showModal,_saving;string? _msg;int _total,_today,_pending;
 List<MoVm> _items=new();string _oType="",_oRefType="",_oNotes="";int _oRefId;
+int _adminId;string _adminName="";
 
 class MoVm{public int Id{get;set;}public string? OutboundNo{get;set;}public string? OutboundType{get;set;}public int DetailCount{get;set;}public string? RequestedBy{get;set;}public DateTime? OutboundDate{get;set;}public string? Status{get;set;}public string? Notes{get;set;}}
 
-protected override async Task OnInitializedAsync(){await Load();}
+protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await Load();}
 async Task Load(){
     try{
         var items=await Db.MaterialOutbounds.OrderByDescending(x=>x.CreatedAt).Take(40).ToListAsync();
@@ -50,6 +57,7 @@ async Task CreateOutbound(){
         var no="OUT"+DateTime.Now.ToString("yyyyMMddHHmmss");
         // MaterialOutbound 为 keyless 实体，改用参数化原始SQL插入
         await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO MaterialOutbound (OutboundNo,OutboundType,ReferenceID,ReferenceType,Status,RequestedBy,OutboundDate,Notes,CreatedAt) VALUES ({no},{_oType},{_oRefId},{_oRefType},'Confirmed','admin',GETDATE(),{_oNotes},GETDATE())");
+        await Auditor.LogAsync(_adminId,_adminName,"创建原料出库","MaterialOutbound",null,no,_oType);
         _msg="出库成功！单号："+no;_msgErr=false;_showModal=false;await Load();
     }catch(Exception ex){_msg="出库失败: "+ex.Message;_msgErr=true;}
     _saving=false;await InvokeAsync(StateHasChanged);

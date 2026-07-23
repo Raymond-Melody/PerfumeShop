@@ -1,11 +1,16 @@
 @page "/admin/TechCenter/BaseNoteManagement"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@attribute [Authorize(Policy = "Module.techcenter")]
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
+@using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>基香管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-wine-bottle" style="color:#FF9800;"></i> 基香管理</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>基香管理</span></div></div>
@@ -30,9 +35,9 @@
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
+
+
+
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;}
 .stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}.stat-label{font-size:13px;color:#888;}
@@ -70,7 +75,8 @@
 @code {
     private bool _loaded,_editing,_showModal;private int _total,_active;private string _msg="",_msgType="",_search="",_editIngredients="";
     private List<BaseNote> _items=new();private BaseNote _edit=new();
-    protected override async Task OnInitializedAsync(){await LoadItems();}
+    private int _adminId;private string _adminName="";
+    protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await LoadItems();}
     async Task LoadItems(){
         try{_items=await Db.BaseNotes.AsNoTracking().OrderByDescending(b=>b.BaseNoteId).ToListAsync();_total=_items.Count;_active=_items.Count(b=>b.IsActive==true);_loaded=true;}catch{_loaded=true;}
     }
@@ -87,6 +93,6 @@
             var lines=ing.Split('\n').Select(s=>s.Trim()).Where(s=>!string.IsNullOrEmpty(s));
             _edit.Ingredients=string.Join(",",lines);
         }else _edit.Ingredients=null;
-        try{if(!_editing){_edit.CreatedAt=DateTime.Now;Db.BaseNotes.Add(_edit);}else Db.BaseNotes.Update(_edit);await Db.SaveChangesAsync();_msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{if(!_editing){_edit.CreatedAt=DateTime.Now;Db.BaseNotes.Add(_edit);}else Db.BaseNotes.Update(_edit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_editing?"编辑基香":"新建基香","BaseNote",_edit.BaseNoteId,_edit.BaseNoteName);_msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
 }

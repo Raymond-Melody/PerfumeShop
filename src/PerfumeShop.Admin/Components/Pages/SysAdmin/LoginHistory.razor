@@ -1,65 +1,181 @@
 @page "/admin/system/login-history"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
-@using PerfumeShop.Data.Repositories
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject PerfumeShopContext Db
-@inject SystemRepository SysRepo
+@inject ILoginSecurityService LoginSec
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>登录监控</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-user-shield" style="color:#E91E63;"></i> 登录监控</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>登录监控</span></div></div>
+
 @if(_loaded){
-<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#F44336;">@_failedLogins</div><div class="stat-label">失败登录</div></div><div class="stat-card"><div class="stat-value">@_totalAlerts</div><div class="stat-label">告警总数</div></div></div>
-<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>用户名</th><th>IP</th><th>结果</th><th>时间</th></tr></thead><tbody>
-@foreach(var l in _alerts){<tr><td>#@l.AlertId</td><td>@(l.AdminId?.ToString()??"-")</td><td>@(l.Ipaddress??"-")</td><td><span class="status-badge @(l.AlertLevel=="HIGH"?"status-warning":"status-normal")">@(l.AlertType??"登录")</span></td><td>@(l.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td></tr>}
-@if(!_alerts.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无登录记录</td></tr>}
-</tbody></table></div>
-@RenderPagination(_totalPages)
+@if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
+<div class="stats-row">
+<div class="stat-card"><div class="stat-value" style="color:#4CAF50;">@_todaySuccess</div><div class="stat-label">24h登录成功</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#F44336;">@_todayFail</div><div class="stat-label">24h登录失败</div></div>
+<div class="stat-card"><div class="stat-value">@_online</div><div class="stat-label">当前在线管理</div></div>
+<div class="stat-card"><div class="stat-value" style="color:@(_unread>0?"#FF9800":"#e0e0e0");">@_unread</div><div class="stat-label">未读告警</div></div>
+</div>
+
+<div class="toolbar">
+<button class="btn-primary" @onclick="RunCheck" disabled="@_busy"><i class="fas @(_busy?"fa-spinner fa-spin":"fa-search")"></i> 运行告警检查</button>
+<button class="btn-secondary" @onclick="ClearRead"><i class="fas fa-trash-alt"></i> 清空已读告警</button>
+<a class="btn-secondary" href="/admin/system/ip-blacklist"><i class="fas fa-ban"></i> 黑名单管理</a>
+</div>
+
+<div class="panel"><div class="panel-head"><i class="fas fa-chart-bar"></i> 近7天登录统计</div>
+<div class="week-summary">
+<div class="summary-item"><div class="val" style="color:#4CAF50;">@_weekSuccess</div><div class="sub">登录成功</div></div>
+<div class="summary-item"><div class="val" style="color:@(_weekFail>10?"#F44336":"#FF9800");">@_weekFail</div><div class="sub">登录失败</div></div>
+<div class="summary-item"><div class="val">@_successRate</div><div class="sub">成功率</div></div>
+</div></div>
+
+<div class="panel"><div class="panel-head"><i class="fas fa-bell"></i> 安全告警（@_unread 未读）</div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>类型</th><th>级别</th><th>告警信息</th><th>时间</th><th>操作</th></tr></thead><tbody>
+@foreach(var a in _alerts){<tr style="@(a.IsRead==true?"":"background:rgba(244,67,54,0.06);")"><td>@(a.AlertType??"-")</td><td><span class="badge @LevelClass(a.AlertLevel)">@(a.AlertLevel?.ToUpper()??"-")</span></td><td style="max-width:360px;word-break:break-all;">@(a.AlertMessage??"-")</td><td>@(a.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@if(a.IsRead!=true){<button class="btn-mini" @onclick="()=>MarkRead(a.AlertId)">标记已读</button>}else{<span style="color:#666;">已读</span>}</td></tr>}
+@if(!_alerts.Any()){<tr><td colspan="5" style="text-align:center;color:#4CAF50;padding:30px;"><i class="fas fa-shield-alt"></i> 暂无安全告警</td></tr>}
+</tbody></table></div></div>
+
+<div class="panel"><div class="panel-head"><i class="fas fa-history"></i> 最近50条登录记录</div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>时间</th><th>管理员</th><th>结果</th><th>IP</th><th>备注</th></tr></thead><tbody>
+@foreach(var l in _recent){<tr><td>@(l.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@(l.AdminId?.ToString()??"-")</td><td><span class="badge @(l.ActionType=="登录成功"?"badge-low":"badge-high")">@(l.ActionType=="登录成功"?"成功":"失败")</span></td><td>@(l.Ipaddress??"-")</td><td style="color:#999;">@(l.Notes??"")</td></tr>}
+@if(!_recent.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">暂无登录记录</td></tr>}
+</tbody></table></div></div>
+
+<div class="panel"><div class="panel-head"><i class="fas fa-cog"></i> 监控规则</div>
+<div style="padding:16px 20px;font-size:13px;color:#999;line-height:1.9;">
+<p><i class="fas fa-shield-alt" style="color:#F44336;"></i> <strong>暴力破解检测</strong>：同一 IP 24 小时内失败 ≥ 5 次 → 自动加入黑名单（封锁 7 天）。</p>
+<p><i class="fas fa-shield-alt" style="color:#FF9800;"></i> <strong>已封禁重试</strong>：黑名单 IP 再次尝试 → 生成 critical 严重告警。</p>
+<p><i class="fas fa-info-circle" style="color:#888;"></i> 点击"运行告警检查"可手动触发规则；登录失败在提交时已实时评估。</p>
+</div></div>
 }else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
-.stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px;}
+
+
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
 .stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
 .stat-label{font-size:13px;color:#888;margin-top:4px;}
-.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;}
+.toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.btn-primary{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;text-decoration:none;}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed;}
+.btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;overflow:hidden;}
+.panel-head{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;color:#e0e0e0;}
+.week-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;padding:20px;}
+.summary-item{background:rgba(255,255,255,0.03);padding:15px;border-radius:8px;text-align:center;}
+.summary-item .val{font-size:22px;font-weight:700;color:#e0e0e0;}
+.summary-item .sub{font-size:12px;color:#888;margin-top:3px;}
+.table-container{overflow:hidden;}
 .orders-table{width:100%;border-collapse:collapse;}
-.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:14px 16px;font-size:13px;text-align:left;}
-.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
-.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}
-.status-normal{background:rgba(76,175,80,0.2);color:#81c784;}
-.status-warning{background:rgba(244,67,54,0.2);color:#e57373;}
-.pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:25px;}
-.pagination button{padding:8px 14px;border-radius:6px;border:none;font-size:14px;cursor:pointer;background:#3a3a4a;color:#e0e0e0;}
-.pagination button.current{background:#E91E63;color:#fff;}
-.pagination button:disabled{background:#2a2a3a;color:#666;cursor:not-allowed;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:12px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:13px;}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
+.badge-critical{background:rgba(183,28,28,0.3);color:#FF8A80;}
+.badge-high{background:rgba(244,67,54,0.2);color:#e57373;}
+.badge-warn{background:rgba(255,152,0,0.2);color:#FFB74D;}
+.badge-low{background:rgba(76,175,80,0.2);color:#81c784;}
+.badge-info{background:rgba(0,188,212,0.2);color:#80DEEA;}
+.btn-mini{background:rgba(0,188,212,0.15);color:#00bcd4;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
+.alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
+.alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
+.alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
+@@media(max-width:768px){.stats-row{grid-template-columns:1fr 1fr;}.week-summary{grid-template-columns:1fr;}}
 </style>
 
 @code {
-    private bool _loaded;
-    private int _failedLogins,_totalAlerts,_page=1,_totalPages=1; const int PageSize=20;
-    private List<LoginAlert> _alerts=new();
+    private bool _loaded, _busy;
+    private int _todaySuccess, _todayFail, _online, _unread, _weekSuccess, _weekFail;
+    private string _successRate = "N/A", _msg = "", _msgType = "";
+    private int _actorId;
+    private List<LoginAlert> _alerts = new();
+    private List<AdminLog> _recent = new();
 
-    protected override async Task OnInitializedAsync(){
-        try{
-            var(items,total)=await SysRepo.GetLoginAlertsAsync(1,PageSize);
-            _alerts=items;_totalAlerts=total;_totalPages=(int)Math.Ceiling(total/(double)PageSize);
-            _failedLogins=await Db.LoginAlerts.CountAsync(l=>l.AlertLevel=="HIGH");
-            _loaded=true;
-        }catch{_loaded=true;}
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var state = await AuthState.GetAuthenticationStateAsync();
+            int.TryParse(state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _actorId);
+            await LoadAll();
+            _loaded = true;
+        }
+        catch { _loaded = true; }
     }
-    async Task GoToPage(int p){_page=p;var(items,total)=await SysRepo.GetLoginAlertsAsync(p,PageSize);_alerts=items;_totalAlerts=total;_totalPages=(int)Math.Ceiling(total/(double)PageSize);}
-    RenderFragment RenderPagination(int tp)=>builder=>{
-        if(tp<=1)return;
-        builder.OpenElement(0,"div");builder.AddAttribute(1,"class","pagination");
-        builder.OpenElement(2,"button");builder.AddAttribute(3,"disabled",_page<=1);builder.AddAttribute(4,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(1)));builder.AddContent(5,"首页");builder.CloseElement();
-        builder.OpenElement(6,"button");builder.AddAttribute(7,"disabled",_page<=1);builder.AddAttribute(8,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(_page-1)));builder.AddContent(9,"上一页");builder.CloseElement();
-        builder.OpenElement(10,"button");builder.AddAttribute(11,"class","current");builder.AddContent(12,$"{_page}/{tp}");builder.CloseElement();
-        builder.OpenElement(13,"button");builder.AddAttribute(14,"disabled",_page>=tp);builder.AddAttribute(15,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(_page+1)));builder.AddContent(16,"下一页");builder.CloseElement();
-        builder.OpenElement(17,"button");builder.AddAttribute(18,"disabled",_page>=tp);builder.AddAttribute(19,"onclick",EventCallback.Factory.Create(this,()=>GoToPage(tp)));builder.AddContent(20,"末页");builder.CloseElement();
-        builder.CloseElement();
+
+    private async Task LoadAll()
+    {
+        var now = DateTime.Now;
+        var day = now.AddHours(-24);
+        var week = now.AddDays(-7);
+        var hour = now.AddHours(-1);
+
+        _todaySuccess = await Db.AdminLogs.CountAsync(l => l.ActionType == "登录成功" && l.CreatedAt >= day);
+        _todayFail = await Db.AdminLogs.CountAsync(l => l.ActionType == "登录失败" && l.CreatedAt >= day);
+        _weekSuccess = await Db.AdminLogs.CountAsync(l => l.ActionType == "登录成功" && l.CreatedAt >= week);
+        _weekFail = await Db.AdminLogs.CountAsync(l => l.ActionType == "登录失败" && l.CreatedAt >= week);
+        _online = await Db.AdminUsers.CountAsync(u => u.LastLogin >= hour);
+        _unread = await Db.LoginAlerts.CountAsync(a => a.IsRead != true);
+        _successRate = (_weekSuccess + _weekFail) > 0
+            ? (_weekSuccess * 100.0 / (_weekSuccess + _weekFail)).ToString("F1") + "%"
+            : "N/A";
+
+        _alerts = await Db.LoginAlerts.AsNoTracking()
+            .OrderBy(a => a.IsRead).ThenByDescending(a => a.CreatedAt).Take(30).ToListAsync();
+        _recent = await Db.AdminLogs.AsNoTracking()
+            .Where(l => l.ActionType == "登录成功" || l.ActionType == "登录失败")
+            .OrderByDescending(l => l.CreatedAt).Take(50).ToListAsync();
+    }
+
+    private async Task RunCheck()
+    {
+        _busy = true;
+        try
+        {
+            var blocked = await LoginSec.RunAlertCheckAsync(_actorId);
+            _msg = $"告警检查完成，本次新封禁 {blocked} 个 IP。"; _msgType = "ok";
+            await LoadAll();
+        }
+        catch (Exception ex) { _msg = "检查失败: " + ex.Message; _msgType = "err"; }
+        finally { _busy = false; }
+    }
+
+    private async Task MarkRead(int alertId)
+    {
+        try
+        {
+            var a = await Db.LoginAlerts.FindAsync(alertId);
+            if (a != null) { a.IsRead = true; await Db.SaveChangesAsync(); }
+            await LoadAll();
+        }
+        catch (Exception ex) { _msg = "操作失败: " + ex.Message; _msgType = "err"; }
+    }
+
+    private async Task ClearRead()
+    {
+        try
+        {
+            var read = await Db.LoginAlerts.Where(a => a.IsRead == true).ToListAsync();
+            Db.LoginAlerts.RemoveRange(read);
+            await Db.SaveChangesAsync();
+            _msg = "已清空已读告警"; _msgType = "ok";
+            await LoadAll();
+        }
+        catch (Exception ex) { _msg = "操作失败: " + ex.Message; _msgType = "err"; }
+    }
+
+    private static string LevelClass(string? level) => (level ?? "").ToLower() switch
+    {
+        "critical" => "badge-critical",
+        "high" => "badge-high",
+        "medium" => "badge-warn",
+        "low" => "badge-low",
+        _ => "badge-info"
     };
 }

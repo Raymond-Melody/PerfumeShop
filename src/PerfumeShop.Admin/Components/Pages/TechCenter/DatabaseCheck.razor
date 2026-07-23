@@ -1,6 +1,6 @@
 @page "/admin/TechCenter/DatabaseCheck"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "TECH_MANAGER,SUPER_ADMIN")]
+@attribute [Authorize(Policy = "Module.techcenter")]
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
@@ -28,8 +28,8 @@
 </div>
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
+
 .info-card{background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.3);padding:12px 15px;border-radius:8px;margin-bottom:20px;font-size:13px;color:#ccc;}
 .check-card{margin-bottom:12px;border-radius:8px;padding:16px 20px;border-left:4px solid;}
 .check-ok{border-left-color:#4CAF50;background:rgba(76,175,80,0.05);}

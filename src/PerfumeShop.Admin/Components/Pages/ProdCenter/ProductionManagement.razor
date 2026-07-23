@@ -1,7 +1,11 @@
 @page "/admin/prodcenter/production-management"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.prodcenter")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <PageTitle>生产工单管理</PageTitle>
 
@@ -37,8 +41,11 @@ else if(po.Status=="InProgress"){<button class="btn btn-warning btn-sm" @onclick
 
 @code{
 [Inject] PerfumeShopContext Db{get;set;}=default!;
+[Inject] IAdminAuditor Auditor{get;set;}=default!;
+[Inject] AuthenticationStateProvider AuthState{get;set;}=default!;
 [SupplyParameterFromQuery] string? status{get;set;}
 bool _loaded,_msgErr,_saving,_showCreate;string? _msg,_filterStatus;
+int _adminId;string _adminName="";
 int _poTotal,_poPending,_poProgress,_poCompleted;
 List<ProductionOrder> _items=new();
 List<OrderOption> _orderOptions=new();
@@ -46,6 +53,7 @@ List<OrderOption> _orderOptions=new();
 int _cOrderId,_cRecipeId=0,_cQty=1,_cPriority=2;string _cProductName="",_cAssigned="",_cNotes="";
 
 protected override async Task OnInitializedAsync(){
+    var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";
     _filterStatus=string.IsNullOrEmpty(status)?null:status;
     await LoadData();
 }
@@ -77,6 +85,7 @@ async Task UpdateStatus(int poId,string newStatus){
         string sql;if(newStatus=="InProgress")sql=$"UPDATE ProductionOrders SET Status='{newStatus}',StartedAt=GETDATE(),UpdatedAt=GETDATE() WHERE ProductionId={poId}";else if(newStatus=="Completed")sql=$"UPDATE ProductionOrders SET Status='{newStatus}',CompletedAt=GETDATE(),UpdatedAt=GETDATE() WHERE ProductionId={poId}";else sql=$"UPDATE ProductionOrders SET Status='{newStatus}',UpdatedAt=GETDATE() WHERE ProductionId={poId}";
         await Db.Database.ExecuteSqlRawAsync(sql);
         await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO ProductionLogs (ProductionID,Status,CreatedBy,Notes,CreatedAt) VALUES ({poId},{newStatus},{System.Environment.UserName},{("状态更新为: "+newStatus)},GETDATE())");
+        await Auditor.LogAsync(_adminId,_adminName,"生产工单状态变更","ProductionOrder",poId,null,newStatus);
         _msg="状态已更新";_msgErr=false;await LoadData();
     }catch(Exception ex){_msg="更新失败: "+ex.Message;_msgErr=true;}
     _saving=false;await InvokeAsync(StateHasChanged);
@@ -103,6 +112,7 @@ async Task HandleCreate(){
         var newId=await Db.ProductionOrders.Where(p=>p.WorkOrderNo==workNo).Select(p=>p.ProductionId).FirstOrDefaultAsync();
         if(newId>0)await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO ProductionLogs (ProductionID,Status,CreatedBy,Notes,CreatedAt) VALUES ({newId},{("Pending")},{System.Environment.UserName},{("手动创建工单")},GETDATE())");
         if(_cOrderId>0)await Db.Orders.Where(o=>o.OrderId==_cOrderId).ExecuteUpdateAsync(s=>s.SetProperty(o=>o.Status,"Processing").SetProperty(o=>o.UpdatedAt,DateTime.Now));
+        await Auditor.LogAsync(_adminId,_adminName,"创建生产工单","ProductionOrder",null,workNo,$"产量{_cQty}");
         _msg="工单已创建："+workNo;_msgErr=false;_showCreate=false;await LoadData();
     }catch(Exception ex){_msg="创建失败: "+ex.Message;_msgErr=true;}
     _saving=false;await InvokeAsync(StateHasChanged);

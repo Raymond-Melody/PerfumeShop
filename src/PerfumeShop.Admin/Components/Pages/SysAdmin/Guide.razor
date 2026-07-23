@@ -1,5 +1,6 @@
 @page "/admin/system/guide"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
 
 <PageTitle>使用指南</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-book-open" style="color:#E91E63;"></i> 使用指南</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>使用指南</span></div></div>
@@ -14,9 +15,9 @@
 </div>
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
+
+
+
 .guide-section{margin-bottom:20px;padding:15px 20px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid #E91E63;}
 .guide-section h4{margin:0 0 8px;display:flex;align-items:center;gap:10px;}
 .guide-section p{margin:0;}

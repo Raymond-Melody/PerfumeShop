@@ -1,5 +1,6 @@
 @page "/admin/finance/cost-management"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -104,9 +105,9 @@ var idx = _editItems.IndexOf(item);
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
+
+
+
 .cost-method-banner{background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;margin-bottom:25px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;}
 .method-info{display:flex;align-items:center;gap:15px;}
 .method-info i{font-size:28px;color:#ffa726;}

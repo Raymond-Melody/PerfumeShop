@@ -1,10 +1,15 @@
 @page "/admin/system/roles"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject PerfumeShopContext Db
 @inject SystemRepository SysRepo
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>角色管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-user-tag" style="color:#E91E63;"></i> 角色管理</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>角色管理</span></div></div>
@@ -13,7 +18,7 @@
 <button class="btn-add" @onclick="OpenAddModal" style="margin-bottom:20px;">+ 添加角色</button>
 @if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
 <div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>角色名称</th><th>角色代码</th><th>说明</th><th>可访问模块</th><th>操作</th></tr></thead><tbody>
-@foreach(var r in _roles){<tr><td>#@r.RoleId</td><td>@r.RoleName</td><td style="color:#E91E63;">@r.RoleCode</td><td>@(r.Description??"-")</td><td>@(r.ModuleAccess??"-")</td><td><button class="btn-edit" @onclick='()=>OpenEditModal(r)'>编辑</button><button class="btn-delete" @onclick='()=>DeleteRole(r.RoleId)'>删除</button></td></tr>}
+@foreach(var r in _roles){<tr><td>#@r.RoleId</td><td>@r.RoleName</td><td style="color:#E91E63;">@r.RoleCode</td><td>@(r.Description??"-")</td><td>@(r.ModuleAccess??"-")</td><td><button class="btn-edit" @onclick='()=>OpenEditModal(r)'>编辑</button><button class="btn-perm" @onclick='()=>OpenPermModal(r)'>操作权限</button><button class="btn-delete" @onclick='()=>DeleteRole(r.RoleId)'>删除</button></td></tr>}
 @if(!_roles.Any()){<tr><td colspan="6" style="text-align:center;color:#666;padding:40px;">暂无角色</td></tr>}
 </tbody></table></div>
 }else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
@@ -27,10 +32,19 @@
 </div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="SaveRole">保存</button></div></div></div>
 }
 
+@if(_showPermModal){
+<div class="modal-overlay" @onclick="ClosePermModal"><div class="modal-content" @onclick:stopPropagation="true" style="max-width:760px;"><div class="modal-header"><h3>操作权限 - @_permRole?.RoleName</h3><button class="modal-close" @onclick="ClosePermModal"><i class="fas fa-times"></i></button></div><div class="modal-body">
+<p style="color:#888;font-size:12px;margin:0 0 12px;">按模块配置细粒度操作权限（对齐 V18 RolePermissions）。SUPER_ADMIN 不受此限制。</p>
+<table class="perm-table"><thead><tr><th>模块</th><th>查看</th><th>新增</th><th>编辑</th><th>删除</th><th>导出</th><th>审批</th></tr></thead><tbody>
+@foreach(var p in _permRows){<tr><td>@p.Name</td><td><input type="checkbox" @bind="p.View" /></td><td><input type="checkbox" @bind="p.Create" /></td><td><input type="checkbox" @bind="p.Edit" /></td><td><input type="checkbox" @bind="p.Delete" /></td><td><input type="checkbox" @bind="p.Export" /></td><td><input type="checkbox" @bind="p.Approve" /></td></tr>}
+</tbody></table>
+</div><div class="modal-footer"><button class="btn-secondary" @onclick="ClosePermModal">取消</button><button class="btn-save" @onclick="SavePerms">保存权限</button></div></div></div>
+}
+
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
+
+
+
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
 .stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
@@ -43,6 +57,11 @@
 .orders-table tr:hover{background:rgba(255,255,255,0.03);}
 .btn-edit{background:rgba(233,30,99,0.15);color:#E91E63;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:6px;}
 .btn-delete{background:rgba(244,67,54,0.15);color:#e57373;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;}
+.btn-perm{background:rgba(0,188,212,0.15);color:#00bcd4;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;margin-right:6px;}
+.perm-table{width:100%;border-collapse:collapse;}
+.perm-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:10px;font-size:12px;text-align:center;}
+.perm-table td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:13px;text-align:center;}
+.perm-table td:first-child{text-align:left;color:#e0e0e0;}
 .alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
 .alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
 .alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
@@ -67,9 +86,15 @@
     private string _msg="",_msgType="";
     private List<AdminRole> _roles=new();
     private AdminRole _editRole=new();
+    private int _actorId; private string _actorName="";
 
     protected override async Task OnInitializedAsync(){
-        try{_roles=await SysRepo.GetRolesAsync();_totalRoles=_roles.Count;_loaded=true;}catch{_loaded=true;}
+        try{
+            var state=await AuthState.GetAuthenticationStateAsync();
+            int.TryParse(state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,out _actorId);
+            _actorName=state.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value??"";
+            _roles=await SysRepo.GetRolesAsync();_totalRoles=_roles.Count;_loaded=true;
+        }catch{_loaded=true;}
     }
     void OpenAddModal(){_editing=false;_editRole=new();_showModal=true;}
     void OpenEditModal(AdminRole r){_editing=true;_editRole=new(){RoleId=r.RoleId,RoleName=r.RoleName,RoleCode=r.RoleCode,Description=r.Description,ModuleAccess=r.ModuleAccess};_showModal=true;}
@@ -80,12 +105,54 @@
             if(!_editing)_editRole.CreatedAt=DateTime.Now;
             else _editRole.UpdatedAt=DateTime.Now;
             await SysRepo.SaveRoleAsync(_editRole);
+            await Auditor.LogAsync(_actorId,_actorName,_editing?"编辑角色":"创建角色","AdminRole",_editRole.RoleId,_editRole.RoleName);
             _msg=_editing?"角色已更新":"角色已创建";_msgType="ok";_showModal=false;
             _roles=await SysRepo.GetRolesAsync();_totalRoles=_roles.Count;
         }catch(Exception ex){_msg="保存失败: "+ex.Message;_msgType="err";}
     }
     async Task DeleteRole(int id){
-        try{await SysRepo.DeleteRoleAsync(id);_msg="角色已删除";_msgType="ok";_roles=await SysRepo.GetRolesAsync();_totalRoles=_roles.Count;}
+        try{await SysRepo.DeleteRoleAsync(id);await Auditor.LogAsync(_actorId,_actorName,"删除角色","AdminRole",id,null);_msg="角色已删除";_msgType="ok";_roles=await SysRepo.GetRolesAsync();_totalRoles=_roles.Count;}
         catch(Exception ex){_msg="删除失败: "+ex.Message;_msgType="err";}
     }
+
+    // ===== 操作权限矩阵（对齐 V18 roles.asp 的 RolePermissions） =====
+    private bool _showPermModal;
+    private AdminRole? _permRole;
+    private List<PermRow> _permRows=new();
+
+    static readonly (string Code,string Name)[] Modules=new[]{
+        ("operation","运营管理"),("finance","财务管理"),("purchase","采购管理"),
+        ("techcenter","技术中心"),("system","站点技术管理"),("prodcenter","生产中心"),
+        ("semifinished","半成品生产"),("logistics","物流管理"),("inventory","库存管理"),("analytics","数据分析")
+    };
+
+    async Task OpenPermModal(AdminRole r){
+        _permRole=r;
+        var existing=await SysRepo.GetRolePermissionsAsync(r.RoleId);
+        _permRows=Modules.Select(m=>{
+            var e=existing.FirstOrDefault(p=>p.ModuleCode==m.Code);
+            return new PermRow{Code=m.Code,Name=m.Name,PermId=e?.PermId??0,
+                View=e?.CanView==true,Create=e?.CanCreate==true,Edit=e?.CanEdit==true,
+                Delete=e?.CanDelete==true,Export=e?.CanExport==true,Approve=e?.CanApprove==true};
+        }).ToList();
+        _showPermModal=true;
+    }
+    void ClosePermModal(){_showPermModal=false;}
+
+    async Task SavePerms(){
+        try{
+            if(_permRole==null)return;
+            foreach(var p in _permRows){
+                await SysRepo.SaveRolePermissionAsync(new RolePermission{
+                    PermId=p.PermId,RoleId=_permRole.RoleId,ModuleCode=p.Code,
+                    CanView=p.View,CanCreate=p.Create,CanEdit=p.Edit,
+                    CanDelete=p.Delete,CanExport=p.Export,CanApprove=p.Approve});
+            }
+            await Auditor.LogAsync(_actorId,_actorName,"配置角色权限","AdminRole",_permRole.RoleId,_permRole.RoleName);
+            _msg=$"角色 {_permRole.RoleName} 的操作权限已保存";_msgType="ok";_showPermModal=false;
+        }catch(Exception ex){_msg="保存失败: "+ex.Message;_msgType="err";}
+    }
+
+    class PermRow{ public string Code="";public string Name="";public int PermId;
+        public bool View,Create,Edit,Delete,Export,Approve; }
 }

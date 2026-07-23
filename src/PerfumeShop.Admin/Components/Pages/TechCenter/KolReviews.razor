@@ -1,10 +1,15 @@
 @page "/admin/TechCenter/KolReviews"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "TECH_MANAGER,TECH_STAFF,SUPER_ADMIN")]
+@attribute [Authorize(Policy = "Module.techcenter")]
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>KOL审核</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-user-check" style="color:#FF5722;"></i> KOL审核</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>KOL审核</span></div></div>
@@ -32,8 +37,8 @@
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+
+
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{cursor:pointer;background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;text-align:center;transition:all 0.2s;}
 .stat-card:hover{transform:translateY(-2px);}
@@ -60,7 +65,8 @@
 @code {
     private bool _loaded,_showDetail;private int _totalAll,_totalPending,_totalApproved,_totalRejected;private string _msg="",_msgType="",_filter="pending";
     private List<ProductReview> _reviews=new();private ProductReview? _detailReview;
-    protected override async Task OnInitializedAsync(){await LoadStats();await LoadReviews();_loaded=true;}
+    private int _adminId; private string _adminName="";
+    protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await LoadStats();await LoadReviews();_loaded=true;}
     async Task LoadStats(){
         try{_totalAll=await Db.ProductReviews.CountAsync();_totalPending=await Db.ProductReviews.CountAsync(r=>r.Status=="pending");_totalApproved=await Db.ProductReviews.CountAsync(r=>r.Status=="approved");_totalRejected=await Db.ProductReviews.CountAsync(r=>r.Status=="rejected");}catch{}
     }
@@ -73,10 +79,10 @@
     async Task ApproveFromDetail(){if(_detailReview!=null){await Approve(_detailReview);CloseDetail();}}
     async Task RejectFromDetail(){if(_detailReview!=null){await Reject(_detailReview);CloseDetail();}}
     async Task Approve(ProductReview r){
-        try{r.Status="approved";Db.ProductReviews.Update(r);await Db.SaveChangesAsync();_msg="已通过";_msgType="ok";await Reload();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{r.Status="approved";Db.ProductReviews.Update(r);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,"KOL评价审核通过","ProductReview",r.ReviewId,$"商品{r.ProductId}");_msg="已通过";_msgType="ok";await Reload();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
     async Task Reject(ProductReview r){
-        try{r.Status="rejected";Db.ProductReviews.Update(r);await Db.SaveChangesAsync();_msg="已驳回";_msgType="ok";await Reload();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{r.Status="rejected";Db.ProductReviews.Update(r);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,"KOL评价审核驳回","ProductReview",r.ReviewId,$"商品{r.ProductId}");_msg="已驳回";_msgType="ok";await Reload();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
     async Task Reload(){await LoadReviews();await LoadStats();}
 }

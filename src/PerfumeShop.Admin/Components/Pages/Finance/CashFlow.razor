@@ -1,5 +1,6 @@
-﻿@page "/admin/finance/cash-flow"
+@page "/admin/finance/cash-flow"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
@@ -65,9 +66,9 @@ var data = _cf;
 }else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
+
+
+
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:25px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
 .stat-card .num{font-size:28px;font-weight:700;}

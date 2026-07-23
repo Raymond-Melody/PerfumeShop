@@ -1,5 +1,6 @@
 @page "/admin/system/version-info"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
 @using System.Diagnostics
 @using Microsoft.EntityFrameworkCore
 @inject PerfumeShopContext Db
@@ -23,9 +24,9 @@
 }else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
+
+
+
 </style>
 
 @code {

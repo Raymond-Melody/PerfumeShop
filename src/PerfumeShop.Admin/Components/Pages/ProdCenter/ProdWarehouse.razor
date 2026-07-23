@@ -1,7 +1,11 @@
 @page "/admin/prodcenter/prod-warehouse"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.prodcenter")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <PageTitle>成品入库</PageTitle>
 
@@ -23,10 +27,13 @@
 
 @code{
 [Inject] PerfumeShopContext Db{get;set;}=default!;
+[Inject] IAdminAuditor Auditor{get;set;}=default!;
+[Inject] AuthenticationStateProvider AuthState{get;set;}=default!;
 bool _loaded,_msgErr,_saving;string? _msg;
 int _whPending,_whCompleted,_whToday;List<ProductionOrder> _items=new();
+int _adminId;string _adminName="";
 
-protected override async Task OnInitializedAsync(){await LoadData();}
+protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await LoadData();}
 
 async Task LoadData(){
     try{
@@ -43,6 +50,7 @@ async Task DoWarehouseIn(int poId){
     try{
         await Db.Database.ExecuteSqlInterpolatedAsync($@"UPDATE ProductionOrders SET Status={"WarehouseIn"},WarehouseInAt=GETDATE(),UpdatedAt=GETDATE() WHERE ProductionId={poId}");
         await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO ProductionLogs (ProductionID,Status,CreatedBy,Notes,CreatedAt) VALUES ({poId},{"WarehouseIn"},{System.Environment.UserName},{"成品入库"},GETDATE())");
+        await Auditor.LogAsync(_adminId,_adminName,"成品入库","ProductionOrder",poId,null);
         _msg="入库成功";_msgErr=false;await LoadData();
     }catch(Exception ex){_msg="入库失败: "+ex.Message;_msgErr=true;}
     _saving=false;await InvokeAsync(StateHasChanged);

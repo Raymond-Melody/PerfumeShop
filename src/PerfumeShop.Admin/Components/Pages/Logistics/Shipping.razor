@@ -1,10 +1,92 @@
 @page "/admin/logistics/shipping"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.logistics")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
+
 <PageTitle>待发货订单</PageTitle>
-<div class="ph"><h2><i class="fas fa-clipboard-check" style="color:#2196F3;"></i> 待发货订单</h2><div class="br"><a href="/admin/logistics" style="text-decoration:none;color:#2196F3;">返回物流中心</a></div></div>
-@if(_l){<div class="tc"><table class="ot"><thead><tr><th>订单号</th><th>收货人</th><th>金额</th><th>状态</th><th>时间</th></tr></thead><tbody>@foreach(var o in _items){<tr><td>@o.OrderNo</td><td>@(o.ShippingName??"-")</td><td>@((o.TotalAmount).ToString("N2"))</td><td>@(o.Status??"-")</td><td>@(o.CreatedAt?.ToString("MM-dd HH:mm")??"-")</td></tr>}@if(!_items.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:30px;">暂无待发货订单</td></tr>}</tbody></table></div>}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
-<style>.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;color:#888;}.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}.ot th{background:rgba(33,150,243,0.1);color:#2196F3;padding:14px 16px;font-size:13px;text-align:left;}.ot td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}</style>
-@code{bool _l;List<Order> _items=new();protected override async Task OnInitializedAsync(){try{_items=await Db.Orders.AsNoTracking().Where(o=>o.Status=="paid").OrderByDescending(o=>o.OrderId).Take(30).ToListAsync();_l=true;}catch{_l=true;}}}
+<div class="ph"><h2><i class="fas fa-clipboard-check" style="color:#2196F3;"></i> 待发货订单</h2><div class="br"><a href="/admin/logistics" style="color:#2196F3;text-decoration:none;">返回物流中心</a></div></div>
+@if(!string.IsNullOrEmpty(_msg)){<div class="al @(_msgType=="err"?"al-e":"al-s")">@_msg</div>}
+@if(_l){
+<div class="tc"><table class="ot"><thead><tr><th>订单号</th><th>收货人</th><th>电话</th><th>地址</th><th>金额</th><th>下单时间</th><th>操作</th></tr></thead><tbody>
+@foreach(var o in _items){<tr><td>@o.OrderNo</td><td>@(o.ShippingName??"-")</td><td>@(o.ShippingPhone??"-")</td><td>@(o.ShippingCity??"")@(o.ShippingAddress??"-")</td><td>¥@o.TotalAmount.ToString("N2")</td><td>@(o.CreatedAt?.ToString("MM-dd HH:mm")??"-")</td><td><button class="btn-ship" @onclick="()=>OpenShip(o)">发货</button></td></tr>}
+@if(!_items.Any()){<tr><td colspan="7" style="text-align:center;color:#666;padding:30px;">暂无待发货订单</td></tr>}
+</tbody></table></div>
+}else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
+
+@if(_show && _ship!=null){
+<div class="mo" @onclick="Close"><div class="mc" @onclick:stopPropagation="true"><div class="mh"><h3>订单发货 - @_ship.OrderNo</h3><button class="mx" @onclick="Close"><i class="fas fa-times"></i></button></div><div class="mb">
+<div style="color:#888;font-size:13px;margin-bottom:14px;">收货人：@_ship.ShippingName · @_ship.ShippingPhone</div>
+<div class="fg"><label>物流公司 *</label><select @bind="_carrier"><option value="">-- 选择物流公司 --</option>@foreach(var c in _carriers){<option value="@c.CompanyName">@c.CompanyName</option>}</select></div>
+<div class="fg"><label>运单号 *</label><input @bind="_tracking" placeholder="请输入快递单号" /></div>
+</div><div class="mf"><button class="btn-s2" @onclick="Close">取消</button><button class="btn-s" @onclick="ConfirmShip">确认发货</button></div></div></div>
+}
+
+<style>
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.ph h2{font-size:24px;color:#fff;margin:0;}.br{font-size:13px;}
+.tc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;}.ot{width:100%;border-collapse:collapse;}
+.ot th{background:rgba(33,150,243,0.1);color:#2196F3;padding:12px 16px;font-size:13px;text-align:left;}.ot td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+.btn-ship{background:linear-gradient(135deg,#2196F3,#0D47A1);color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;}
+.al{padding:12px 18px;border-radius:8px;margin-bottom:16px;}.al-s{background:rgba(76,175,80,0.15);color:#81c784;}.al-e{background:rgba(244,67,54,0.15);color:#e57373;}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}.mc{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:520px;border:1px solid rgba(255,255,255,0.06);}
+.mh{padding:18px 24px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}.mh h3{margin:0;color:#e0e0e0;font-size:18px;}.mx{background:none;border:none;color:#888;font-size:22px;cursor:pointer;}
+.mb{padding:24px;}.mf{padding:18px 24px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
+.fg{margin-bottom:14px;}.fg label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}.fg input,.fg select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.btn-s{background:linear-gradient(135deg,#2196F3,#0D47A1);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}.btn-s2{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;}
+</style>
+
+@code {
+    private bool _l, _show;
+    private string _msg = "", _msgType = "", _carrier = "", _tracking = "";
+    private int _actorId; private string _actorName = "";
+    private List<Order> _items = new();
+    private List<ShippingCompany> _carriers = new();
+    private Order? _ship;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var s = await AuthState.GetAuthenticationStateAsync();
+            int.TryParse(s.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _actorId);
+            _actorName = s.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+            _carriers = await Db.ShippingCompanies.AsNoTracking().Where(c => c.IsActive == true).ToListAsync();
+            await Load();
+            _l = true;
+        }
+        catch { _l = true; }
+    }
+
+    private async Task Load() =>
+        _items = await Db.Orders.AsNoTracking().Where(o => o.Status == "paid")
+            .OrderByDescending(o => o.OrderId).Take(50).ToListAsync();
+
+    private void OpenShip(Order o) { _ship = o; _carrier = ""; _tracking = ""; _show = true; }
+    private void Close() { _show = false; }
+
+    private async Task ConfirmShip()
+    {
+        if (_ship == null) return;
+        if (string.IsNullOrWhiteSpace(_carrier)) { _msg = "请选择物流公司"; _msgType = "err"; return; }
+        if (string.IsNullOrWhiteSpace(_tracking)) { _msg = "请输入运单号"; _msgType = "err"; return; }
+        try
+        {
+            var o = await Db.Orders.FindAsync(_ship.OrderId);
+            if (o != null)
+            {
+                o.Status = "shipped"; o.ShippingStatus = "shipped"; o.ShippedAt = DateTime.Now;
+                o.ShippingCompany = _carrier; o.TrackingNumber = _tracking; o.UpdatedAt = DateTime.Now;
+                await Db.SaveChangesAsync();
+                await Auditor.LogAsync(_actorId, _actorName, "订单发货", "Order", o.OrderId, o.OrderNo, $"{_carrier} {_tracking}");
+            }
+            _msg = $"订单 {_ship.OrderNo} 已发货"; _msgType = "ok"; _show = false;
+            await Load();
+        }
+        catch (Exception ex) { _msg = "发货失败: " + ex.Message; _msgType = "err"; }
+    }
+}

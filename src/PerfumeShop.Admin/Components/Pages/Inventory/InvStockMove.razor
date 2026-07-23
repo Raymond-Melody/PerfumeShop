@@ -1,5 +1,6 @@
 @page "/admin/inventory/stock-movements"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.inventory")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @inject PerfumeShopContext Db

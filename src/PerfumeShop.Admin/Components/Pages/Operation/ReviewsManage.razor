@@ -1,7 +1,11 @@
 @page "/admin/Operation/ReviewsManage"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 
 <PageTitle>评价管理</PageTitle>
 
@@ -93,7 +97,7 @@ else
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
 .filter-bar{display:flex;gap:12px;align-items:center;margin-bottom:20px;padding:15px 20px;background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.05);}.filter-select{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:8px 12px;font-size:13px;cursor:pointer;min-width:120px;}.filter-select:focus{border-color:#00bcd4;outline:none;}.filter-select option{background:#2d2d44;color:#e0e0e0;}.filter-input{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;padding:8px 12px;font-size:13px;min-width:180px;}.filter-input:focus{border-color:#00bcd4;outline:none;}.filter-input::placeholder{color:#666;}
 .table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.data-table{width:100%;border-collapse:collapse;}.data-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:12px 14px;font-size:13px;text-align:left;font-weight:600;}.data-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.data-table tr:last-child td{border-bottom:none;}.data-table tr:hover td{background:rgba(255,255,255,0.03);}
@@ -106,7 +110,10 @@ else
 
 @code {
     [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private IAdminAuditor Auditor { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthState { get; set; } = default!;
     private bool _loaded;
+    private int _adminId; private string _adminName = "";
     private List<ProductReview> _reviews = new();
     private Dictionary<int, string> _pn = new(), _un = new();
     private string? _statusFilter, _keyword = "";
@@ -117,7 +124,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        try { await LoadData(); _loaded = true; } catch { _loaded = true; }
+        try { var st = await AuthState.GetAuthenticationStateAsync(); int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out _adminId); _adminName = st.User.FindFirst(ClaimTypes.Name)?.Value ?? ""; await LoadData(); _loaded = true; } catch { _loaded = true; }
     }
 
     async Task LoadData()
@@ -160,6 +167,7 @@ else
     async Task UpdateStatus(int id, string st)
     {
         await Db.ProductReviews.Where(r => r.ReviewId == id).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, st).SetProperty(r => r.UpdatedAt, DateTime.Now));
+        await Auditor.LogAsync(_adminId, _adminName, "评价审核-" + GetSL(st), "ProductReview", id, null);
         await LoadData();
         await InvokeAsync(StateHasChanged);
     }
@@ -174,6 +182,7 @@ else
         if (_selected.Count == 0) return;
         var ids = _selected.ToList();
         await Db.ProductReviews.Where(r => ids.Contains(r.ReviewId)).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, st).SetProperty(r => r.UpdatedAt, DateTime.Now));
+        await Auditor.LogAsync(_adminId, _adminName, "批量评价审核-" + GetSL(st), "ProductReview", null, $"{ids.Count}条");
         _selected.Clear();
         await LoadData();
     }

@@ -1,7 +1,11 @@
-﻿@page "/admin/Operation/FlashSale"
+@page "/admin/Operation/FlashSale"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 @using FSModel = PerfumeShop.Data.Models.FlashSale
 
 <PageTitle>秒杀管理</PageTitle>
@@ -40,7 +44,7 @@ else
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}.stat-value{font-size:26px;font-weight:bold;}.stat-label{font-size:13px;color:#888;margin-top:4px;}
 .panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:24px;border:1px solid rgba(255,255,255,0.05);margin-bottom:24px;}.panel h3{color:#fff;margin:0 0 16px;font-size:18px;display:flex;align-items:center;gap:8px;}.panel h3 i{color:#f44336;}
 .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px;}.form-group{display:flex;flex-direction:column;gap:4px;}.form-group label{font-size:12px;color:#888;}.form-input{padding:9px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e0e0e0;font-size:13px;}.form-input:focus{border-color:#f44336;outline:none;}.form-input option{background:#2d2d44;color:#e0e0e0;}
@@ -56,7 +60,10 @@ else
 
 @code {
     [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private IAdminAuditor Auditor { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthState { get; set; } = default!;
     private bool _loaded, _showForm, _saving, _msgErr;
+    private int _adminId; private string _adminName = "";
     private string? _error, _msg;
     private string? _statusFilter;
     private List<FSModel> _items = new();
@@ -83,7 +90,7 @@ else
         }
     }
 
-    protected override async Task OnInitializedAsync() => await LoadData();
+    protected override async Task OnInitializedAsync() { var st = await AuthState.GetAuthenticationStateAsync(); int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out _adminId); _adminName = st.User.FindFirst(ClaimTypes.Name)?.Value ?? ""; await LoadData(); }
 
     async Task LoadData()
     {
@@ -141,15 +148,16 @@ else
                 await Db.SaveChangesAsync();
                 _msg = "创建成功";
             }
+            await Auditor.LogAsync(_adminId, _adminName, _editId > 0 ? "编辑秒杀活动" : "创建秒杀活动", "FlashSale", _editId > 0 ? _editId : (int?)null, GetProdName(int.TryParse(_fProductId, out var apid) ? apid : 0));
             _msgErr = false; _showForm = false; await LoadData();
         }
         catch (Exception ex) { _msg = "保存失败: " + ex.Message; _msgErr = true; }
         _saving = false;
     }
 
-    async Task ToggleActive(FSModel f) { var nv = !f.IsActive; await Db.FlashSales.Where(x => x.FlashSaleId == f.FlashSaleId).ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, nv)); f.IsActive = nv;await InvokeAsync(StateHasChanged); _msg = $"秒杀已{(nv ? "启用" : "暂停")}"; _msgErr = false; ComputeStats(); }
+    async Task ToggleActive(FSModel f) { var nv = !f.IsActive; await Db.FlashSales.Where(x => x.FlashSaleId == f.FlashSaleId).ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, nv)); await Auditor.LogAsync(_adminId, _adminName, nv ? "启用秒杀活动" : "暂停秒杀活动", "FlashSale", f.FlashSaleId, GetProdName(f.ProductId)); f.IsActive = nv;await InvokeAsync(StateHasChanged); _msg = $"秒杀已{(nv ? "启用" : "暂停")}"; _msgErr = false; ComputeStats(); }
 
-    async Task Delete(FSModel f) { try { await Db.FlashSales.Where(x => x.FlashSaleId == f.FlashSaleId).ExecuteDeleteAsync(); _msg = "已删除"; _msgErr = false; _items.Remove(f); ComputeStats();await InvokeAsync(StateHasChanged); } catch (Exception ex) { _msg = ex.Message; _msgErr = true; } }
+    async Task Delete(FSModel f) { try { await Db.FlashSales.Where(x => x.FlashSaleId == f.FlashSaleId).ExecuteDeleteAsync(); await Auditor.LogAsync(_adminId, _adminName, "删除秒杀活动", "FlashSale", f.FlashSaleId, GetProdName(f.ProductId)); _msg = "已删除"; _msgErr = false; _items.Remove(f); ComputeStats();await InvokeAsync(StateHasChanged); } catch (Exception ex) { _msg = ex.Message; _msgErr = true; } }
 
     void ComputeStats() { var n = DateTime.Now; _totalCount = _items.Count; _activeCount = _items.Count(f => f.IsActive && n >= f.StartTime && n <= f.EndTime); _upcomingCount = _items.Count(f => f.IsActive && f.StartTime > n); _endedCount = _items.Count(f => f.EndTime < n || !f.IsActive); }
     

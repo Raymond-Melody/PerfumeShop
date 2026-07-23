@@ -1,5 +1,6 @@
 @page "/admin/Purchase/Receiving"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.purchase")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @inject PerfumeShopContext Db
@@ -12,8 +13,8 @@
 </tbody></table></div>
 }else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;}.breadcrumb{font-size:13px;color:#888;}
+
+
 .table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
 .orders-table{width:100%;border-collapse:collapse;}
 .orders-table th{background:rgba(255,152,0,0.1);color:#FF9800;padding:14px 16px;font-size:13px;text-align:left;}

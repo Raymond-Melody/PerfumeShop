@@ -1,13 +1,16 @@
 @page "/admin/finance/payment-config"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
+@using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
 @inject FinanceRepository FinRepo
 @inject AuthenticationStateProvider AuthState
+@inject IAdminAuditor Auditor
 
 <PageTitle>支付配置</PageTitle>
 <div class="page-header">
@@ -85,7 +88,7 @@
 else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8" /> }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;}.breadcrumb{font-size:13px;color:#888;}
+
 .action-bar{display:flex;justify-content:flex-end;margin-bottom:20px;}
 .config-container{display:grid;grid-template-columns:repeat(2,1fr);gap:25px;}
 .config-card{background:linear-gradient(135deg,#2d2d44 0%,#1e1e32 100%);border-radius:12px;padding:25px;box-shadow:0 4px 20px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);}
@@ -112,6 +115,7 @@ else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my
 @code {
     private bool _loaded, _canEdit;
     private string? _msg, _msgType;
+    private int _adminId; private string _adminName = "";
     private Dictionary<string, string> _cfg = new();
 
     private record PayField(string Label, string Key, string Type = "text", string Placeholder = "");
@@ -141,6 +145,8 @@ else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my
         {
             var auth = await AuthState.GetAuthenticationStateAsync();
             var rc = auth.User.FindFirst("RoleCode")?.Value;
+            int.TryParse(auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out _adminId);
+            _adminName = auth.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
             _canEdit = rc == "FIN_MANAGER" || rc == "SUPER_ADMIN";
             if (_canEdit) _cfg = await FinRepo.GetPaymentConfigAsync();
             _loaded = true;
@@ -161,6 +167,7 @@ else { <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my
             foreach (var key in FinanceRepository.PaymentConfigKeys)
                 if (!_cfg.ContainsKey(key)) _cfg[key] = "";
             await FinRepo.SavePaymentConfigAsync(_cfg);
+            await Auditor.LogAsync(_adminId, _adminName, "保存支付配置", "Settings", null, "payment-config");
             _msg = "支付配置已保存"; _msgType = "ok";
         }
         catch (Exception ex) { _msg = "保存失败：" + ex.Message; _msgType = "err"; }

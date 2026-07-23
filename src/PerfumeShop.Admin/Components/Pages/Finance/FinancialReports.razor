@@ -1,5 +1,6 @@
 @page "/admin/finance/reports"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @inject PerfumeShopContext Db

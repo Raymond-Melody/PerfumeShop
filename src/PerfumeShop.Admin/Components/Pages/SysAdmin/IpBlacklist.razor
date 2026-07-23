@@ -1,49 +1,76 @@
 @page "/admin/system/ip-blacklist"
-@page "/admin/system/security-audit"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
-@using PerfumeShop.Data.Repositories
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
 
-<PageTitle>IP黑名单 & 安全审计</PageTitle>
-<div class="page-header"><h2 class="page-title"><i class="fas fa-ban" style="color:#E91E63;"></i> IP黑名单 & 安全审计</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>安全</span></div></div>
+<PageTitle>IP黑名单</PageTitle>
+<div class="page-header"><h2 class="page-title"><i class="fas fa-ban" style="color:#E91E63;"></i> IP黑名单管理</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>IP黑名单</span></div></div>
 @if(_loaded){
 @if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
-<div class="stats-row"><div class="stat-card"><div class="stat-value" style="color:#F44336;">@_totalIps</div><div class="stat-label">封禁IP</div></div></div>
-<button class="btn-add" @onclick="OpenAddModal" style="margin-bottom:20px;">+ 添加IP黑名单</button>
-<div class="table-container"><table class="orders-table"><thead><tr><th>ID</th><th>IP地址</th><th>原因</th><th>封禁时间</th><th>操作</th></tr></thead><tbody>
-@foreach(var ip in _ips){<tr><td>#@ip.Ipid</td><td style="color:#F44336;">@ip.Ipaddress</td><td>@(ip.Reason??"-")</td><td>@(ip.BlockedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td><button class="btn-delete" @onclick='()=>RemoveIp(ip.Ipid)'>解除</button></td></tr>}
-@if(!_ips.Any()){<tr><td colspan="5" style="text-align:center;color:#666;padding:40px;">暂无封禁IP</td></tr>}
+<div class="stats-row">
+<div class="stat-card"><div class="stat-value" style="color:#F44336;">@_active</div><div class="stat-label">活跃封锁</div></div>
+<div class="stat-card"><div class="stat-value">@_total</div><div class="stat-label">历史封锁总数</div></div>
+<div class="stat-card"><div class="stat-value">@_today</div><div class="stat-label">今日新增</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#FF9800;">@_expiring</div><div class="stat-label">3日内到期</div></div>
+</div>
+<button class="btn-add" @onclick="OpenAddModal" style="margin-bottom:20px;">+ 封禁IP</button>
+<div class="table-container"><table class="orders-table"><thead><tr><th>IP地址</th><th>原因</th><th>状态</th><th>封禁时间</th><th>到期</th><th>命中</th><th>操作者</th><th>操作</th></tr></thead><tbody>
+@foreach(var ip in _ips){
+    var expired = ip.ExpiresAt.HasValue && ip.ExpiresAt.Value <= DateTime.Now;
+    var active = ip.IsActive == true && !expired;
+    var expiring = active && ip.ExpiresAt.HasValue && (ip.ExpiresAt.Value - DateTime.Now).TotalDays <= 3;
+    <tr>
+    <td style="color:#F44336;font-family:monospace;">@ip.Ipaddress</td>
+    <td>@(ip.Reason??"-")</td>
+    <td><span class="badge @(active?(expiring?"badge-warn":"badge-high"):"badge-muted")">@(active?(expiring?"即将到期":"活跃"):"已解除")</span></td>
+    <td>@(ip.BlockedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td>
+    <td>@(ip.ExpiresAt.HasValue?(expired?"已过期":ip.ExpiresAt.Value.ToString("yyyy-MM-dd")):"永久")</td>
+    <td>@(ip.HitCount??0) 次</td>
+    <td>@OperatorName(ip.BlockedBy)</td>
+    <td>@if(active){<button class="btn-mini" @onclick="()=>Unblock(ip.Ipid)">解除</button>}else{<span style="color:#666;">—</span>}</td>
+    </tr>
+}
+@if(!_ips.Any()){<tr><td colspan="8" style="text-align:center;color:#4CAF50;padding:30px;"><i class="fas fa-shield-alt"></i> 暂无封禁记录</td></tr>}
 </tbody></table></div>
 }else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
 
 @if(_showModal){
-<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>添加IP黑名单</h3><button class="modal-close" @onclick="CloseModal"><i class="fas fa-times"></i></button></div><div class="modal-body">
-<div class="form-group"><label>IP地址</label><input @bind="_editIp" /></div>
-<div class="form-group"><label>封禁原因</label><input @bind="_editReason" /></div>
+<div class="modal-overlay" @onclick="CloseModal"><div class="modal-content" @onclick:stopPropagation="true"><div class="modal-header"><h3>封禁IP</h3><button class="modal-close" @onclick="CloseModal"><i class="fas fa-times"></i></button></div><div class="modal-body">
+<div class="form-group"><label>IP地址</label><input @bind="_editIp" placeholder="如 192.168.1.100" /></div>
+<div class="form-group"><label>封禁原因</label><input @bind="_editReason" placeholder="如：频繁登录失败、恶意扫描" /></div>
+<div class="form-group"><label>封锁时长</label><select @bind="_editDays"><option value="0">永久封锁</option><option value="1">1天</option><option value="3">3天</option><option value="7">7天</option><option value="30">30天</option><option value="180">180天</option></select></div>
 </div><div class="modal-footer"><button class="btn-secondary" @onclick="CloseModal">取消</button><button class="btn-save" @onclick="AddIp">封禁</button></div></div></div>
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+
+
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
 .stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
 .stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
 .stat-label{font-size:13px;color:#888;margin-top:4px;}
 .btn-add{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;}
 .table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
 .orders-table{width:100%;border-collapse:collapse;}
-.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:14px 16px;font-size:13px;text-align:left;}
-.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
-.btn-delete{background:rgba(244,67,54,0.15);color:#e57373;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:12px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:13px;}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;}
+.badge-high{background:rgba(244,67,54,0.2);color:#e57373;}
+.badge-warn{background:rgba(255,152,0,0.2);color:#FFB74D;}
+.badge-muted{background:rgba(158,158,158,0.2);color:#BDBDBD;}
+.btn-mini{background:rgba(76,175,80,0.15);color:#81c784;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
 .alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
 .alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
 .alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;}
-.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:500px;max-height:85vh;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
+.modal-content{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;width:90%;max-width:500px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);}
 .modal-header{padding:20px 25px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}
 .modal-header h3{margin:0;color:#e0e0e0;font-size:18px;}
 .modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;}
@@ -51,28 +78,89 @@
 .modal-footer{padding:20px 25px;border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:flex-end;gap:10px;}
 .form-group{margin-bottom:15px;}
 .form-group label{display:block;margin-bottom:6px;color:#b0b0b0;font-size:13px;}
-.form-group input{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
-.form-group input:focus{border-color:#E91E63;outline:none;}
+.form-group input,.form-group select{width:100%;padding:10px 14px;border:2px solid #3a3a4a;border-radius:8px;font-size:14px;background:#1a1a2e;color:#e0e0e0;box-sizing:border-box;}
+.form-group input:focus,.form-group select:focus{border-color:#E91E63;outline:none;}
 .btn-save{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
 .btn-secondary{background:#3a3a4a;color:#e0e0e0;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;}
+@@media(max-width:768px){.stats-row{grid-template-columns:1fr 1fr;}}
 </style>
 
 @code {
-    private bool _loaded,_showModal;
-    private int _totalIps;
-    private string _msg="",_msgType="",_editIp="",_editReason="";
-    private List<Ipblacklist> _ips=new();
+    private bool _loaded, _showModal;
+    private int _active, _total, _today, _expiring;
+    private string _msg = "", _msgType = "", _editIp = "", _editReason = "";
+    private int _editDays;
+    private int _actorId; private string _actorName = "";
+    private List<Ipblacklist> _ips = new();
+    private Dictionary<int, string> _adminNames = new();
 
-    protected override async Task OnInitializedAsync(){
-        try{_ips=await Db.Ipblacklists.AsNoTracking().OrderByDescending(i=>i.Ipid).Take(100).ToListAsync();_totalIps=_ips.Count;_loaded=true;}catch{_loaded=true;}
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var state = await AuthState.GetAuthenticationStateAsync();
+            int.TryParse(state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _actorId);
+            _actorName = state.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+            _adminNames = await Db.AdminUsers.AsNoTracking().ToDictionaryAsync(u => u.AdminId, u => u.Username);
+            await LoadData();
+            _loaded = true;
+        }
+        catch { _loaded = true; }
     }
-    void OpenAddModal(){_editIp="";_editReason="";_showModal=true;}
-    void CloseModal(){_showModal=false;}
-    async Task AddIp(){
-        if(string.IsNullOrWhiteSpace(_editIp)){_msg="请输入IP地址";_msgType="err";return;}
-        try{Db.Ipblacklists.Add(new Ipblacklist{Ipaddress=_editIp,Reason=_editReason,BlockedAt=DateTime.Now});await Db.SaveChangesAsync();_msg="IP已封禁";_msgType="ok";_showModal=false;_ips=await Db.Ipblacklists.AsNoTracking().OrderByDescending(i=>i.Ipid).Take(100).ToListAsync();_totalIps=_ips.Count;}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+
+    private async Task LoadData()
+    {
+        var now = DateTime.Now;
+        _ips = await Db.Ipblacklists.AsNoTracking()
+            .OrderByDescending(i => i.IsActive).ThenByDescending(i => i.BlockedAt).Take(200).ToListAsync();
+        _total = await Db.Ipblacklists.CountAsync();
+        _active = await Db.Ipblacklists.CountAsync(i => i.IsActive == true && (i.ExpiresAt == null || i.ExpiresAt > now));
+        _today = await Db.Ipblacklists.CountAsync(i => i.BlockedAt >= now.Date);
+        var soon = now.AddDays(3);
+        _expiring = await Db.Ipblacklists.CountAsync(i => i.IsActive == true && i.ExpiresAt != null && i.ExpiresAt <= soon && i.ExpiresAt > now);
     }
-    async Task RemoveIp(int id){
-        try{var ip=await Db.Ipblacklists.FindAsync(id);if(ip!=null){Db.Ipblacklists.Remove(ip);await Db.SaveChangesAsync();}_msg="已解除封禁";_msgType="ok";_ips=await Db.Ipblacklists.AsNoTracking().OrderByDescending(i=>i.Ipid).Take(100).ToListAsync();_totalIps=_ips.Count;}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+
+    private string OperatorName(int? id) => id.HasValue && _adminNames.TryGetValue(id.Value, out var n) ? n : (id.HasValue ? $"#{id}" : "系统");
+
+    private void OpenAddModal() { _editIp = ""; _editReason = ""; _editDays = 0; _showModal = true; }
+    private void CloseModal() { _showModal = false; }
+
+    private async Task AddIp()
+    {
+        if (string.IsNullOrWhiteSpace(_editIp)) { _msg = "请输入IP地址"; _msgType = "err"; return; }
+        try
+        {
+            var now = DateTime.Now;
+            var exists = await Db.Ipblacklists.AnyAsync(b => b.Ipaddress == _editIp && b.IsActive == true && (b.ExpiresAt == null || b.ExpiresAt > now));
+            if (exists) { _msg = $"IP {_editIp} 已在黑名单中"; _msgType = "err"; return; }
+            Db.Ipblacklists.Add(new Ipblacklist
+            {
+                Ipaddress = _editIp,
+                Reason = _editReason,
+                IsActive = true,
+                BlockedBy = _actorId,
+                BlockedAt = now,
+                ExpiresAt = _editDays > 0 ? now.AddDays(_editDays) : (DateTime?)null,
+                HitCount = 0
+            });
+            await Db.SaveChangesAsync();
+            await Auditor.LogAsync(_actorId, _actorName, "封禁IP", "IPBlacklist", null, _editIp,
+                _editDays > 0 ? $"封锁{_editDays}天" : "永久封锁");
+            _msg = $"IP {_editIp} 已加入黑名单"; _msgType = "ok"; _showModal = false;
+            await LoadData();
+        }
+        catch (Exception ex) { _msg = "失败: " + ex.Message; _msgType = "err"; }
+    }
+
+    private async Task Unblock(int id)
+    {
+        try
+        {
+            var ip = await Db.Ipblacklists.FindAsync(id);
+            if (ip != null) { ip.IsActive = false; await Db.SaveChangesAsync(); await Auditor.LogAsync(_actorId, _actorName, "解除IP封禁", "IPBlacklist", ip.Ipid, ip.Ipaddress); }
+            _msg = "已解除封禁"; _msgType = "ok";
+            await LoadData();
+        }
+        catch (Exception ex) { _msg = "失败: " + ex.Message; _msgType = "err"; }
     }
 }

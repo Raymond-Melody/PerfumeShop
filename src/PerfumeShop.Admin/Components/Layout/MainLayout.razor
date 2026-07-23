@@ -5,6 +5,7 @@
 @attribute [Authorize]
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthState
+@inject PerfumeShop.Admin.Services.IPermissionService Perms
 
 @if (_isPortal)
 {
@@ -67,7 +68,19 @@ else
         </MudDrawer>
 
         <MudMainContent Class="main-content v19-admin-main pa-4">
-            @Body
+            @if (_accessDenied)
+            {
+                <div style="max-width:560px;margin:80px auto;text-align:center;background:linear-gradient(135deg,#2d2d44,#1e1e32);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:48px 40px;">
+                    <i class="fas fa-lock" style="font-size:48px;color:#E91E63;"></i>
+                    <h2 style="color:#fff;margin:18px 0 10px;font-size:22px;">无权限访问</h2>
+                    <p style="color:#9aa;font-size:14px;line-height:1.8;margin:0 0 24px;">您的账号无权访问该模块，请联系超级管理员为当前角色分配相应模块权限。</p>
+                    <a href="/" style="color:#00bcd4;text-decoration:none;font-size:14px;"><i class="fas fa-arrow-left"></i> 返回管理中心</a>
+                </div>
+            }
+            else
+            {
+                @Body
+            }
         </MudMainContent>
     </MudLayout>
 }
@@ -78,6 +91,8 @@ else
     private bool _isPortal;
     private bool _isFinanceManager;
     private bool _isTechManager;
+    private bool _accessDenied;
+    private string _roleCode = "";
     private string _moduleTitle = "V19 管理中心";
     private string _sidebarTitle = "管理中心";
     private string _moduleDesc = "";
@@ -110,13 +125,15 @@ else
         _isPortal = Navigation.Uri == Navigation.BaseUri || Navigation.Uri == Navigation.BaseUri + "/";
         await ReadAuthState();
         DetectModule(Navigation.Uri);
-        Navigation.LocationChanged += async (s, e) => { _isPortal = e.Location == Navigation.BaseUri || e.Location == Navigation.BaseUri + "/"; await ReadAuthState(); DetectModule(e.Location); StateHasChanged(); };
+        await CheckAccess(Navigation.Uri);
+        Navigation.LocationChanged += async (s, e) => { _isPortal = e.Location == Navigation.BaseUri || e.Location == Navigation.BaseUri + "/"; await ReadAuthState(); DetectModule(e.Location); await CheckAccess(e.Location); StateHasChanged(); };
     }
 
     async Task ReadAuthState()
     {
         var state = await AuthState.GetAuthenticationStateAsync();
         var roleCode = state.User.FindFirst("RoleCode")?.Value ?? "";
+        _roleCode = roleCode;
         _isFinanceManager = roleCode == "FIN_MANAGER" || roleCode == "SUPER_ADMIN";
         _isTechManager = roleCode == "TECH_MANAGER" || roleCode == "SUPER_ADMIN";
     }
@@ -134,6 +151,32 @@ else
         else if (p.StartsWith("/admin/inventory"))     LoadInventory();
         else if (p.StartsWith("/admin/analytics"))     LoadAnalytics();
         else                                           LoadOperation();
+    }
+
+    // V19 M3: 单点模块门禁 —— 依据 URL 模块段 + 角色 ModuleAccess 统一鉴权
+    async Task CheckAccess(string uri)
+    {
+        if (_isPortal) { _accessDenied = false; return; }
+        var p = uri.Replace(Navigation.BaseUri, "/").ToLower();
+        var module = ModuleCodeFor(p);
+        if (string.IsNullOrEmpty(module)) { _accessDenied = false; return; }
+        try { _accessDenied = !await Perms.CanAccessAsync(_roleCode, module); }
+        catch { _accessDenied = false; } // 校验异常时放行，避免误伤
+    }
+
+    static string ModuleCodeFor(string p)
+    {
+        if (p.StartsWith("/admin/finance"))      return "finance";
+        if (p.StartsWith("/admin/purchase"))     return "purchase";
+        if (p.StartsWith("/admin/techcenter"))   return "techcenter";
+        if (p.StartsWith("/admin/system"))       return "system";
+        if (p.StartsWith("/admin/prodcenter"))   return "prodcenter";
+        if (p.StartsWith("/admin/semifinished")) return "semifinished";
+        if (p.StartsWith("/admin/logistics"))    return "logistics";
+        if (p.StartsWith("/admin/inventory"))    return "inventory";
+        if (p.StartsWith("/admin/analytics"))    return "analytics";
+        if (p.StartsWith("/admin/operation"))    return "operation";
+        return "";
     }
 
     // ===== 运营管理 =====
@@ -269,17 +312,13 @@ else
             V18NavItem.Section("权限管理"),
             new("fa-users-cog","管理员管理","/admin/system/users"),
             new("fa-user-tag","角色管理","/admin/system/roles"),
-            new("fa-history","操作日志","/admin/system/operation-log"),
-            new("fa-shield-alt","审计日志 V16","/admin/system/audit-log"),
+            new("fa-history","操作/审计日志","/admin/system/audit-log"),
             V18NavItem.Section("系统安全"),
-            new("fa-shield-alt","安全审计","/admin/system/audit-log"),
-            new("fa-database","备份中心","/admin/system/backup"),
-            new("fa-ban","IP黑名单","/admin/system/users"),
+            new("fa-shield-alt","安全监控","/admin/system/security-monitor"),
             new("fa-user-shield","登录监控","/admin/system/login-history"),
-            V18NavItem.Section("安全防护"),
-            new("fa-key","密码重置","/admin/system/admin-reset"),
-            new("fa-shield-alt","安全审计","/admin/system/security-audit"),
             new("fa-ban","IP黑名单","/admin/system/ip-blacklist"),
+            new("fa-key","密码重置","/admin/system/admin-reset"),
+            new("fa-database","备份中心","/admin/system/backup"),
             V18NavItem.Section("站点配置"),
             new("fa-sliders-h","站点设置","/admin/system/config"),
             new("fa-images","图片管理","/admin/system/image-management"),

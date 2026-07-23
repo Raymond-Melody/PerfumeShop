@@ -1,7 +1,11 @@
-﻿@page "/admin/Operation/ContentPages"
+@page "/admin/Operation/ContentPages"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 
 <PageTitle>内容页面管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-file-alt"></i> 内容页面管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>内容页面</span></div></div>
@@ -30,7 +34,7 @@ else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8
 <div class="editor-preview-row"><div class="form-group"><label>页面内容 (HTML)</label><textarea class="form-input" @bind="_formContent" rows="10"></textarea></div><div class="form-group"><label>实时预览</label><div class="content-preview">@((MarkupString)(_formContent??""))</div></div></div></div>
 <div class="modal-footer"><button type="button" class="btn btn-outline" @onclick="()=>_showForm=false">取消</button><button type="submit" class="btn btn-primary" disabled="@_saving"><i class="fas fa-save"></i> @(_saving?"保存中...":"保存")</button></div></form></div></div>}
 
-<style>.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+<style>
 .table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}.data-table{width:100%;border-collapse:collapse;}.data-table th{background:rgba(0,188,212,0.1);color:#00bcd4;padding:12px 14px;font-size:13px;text-align:left;font-weight:600;}.data-table td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}.data-table tr:last-child td{border-bottom:none;}.data-table tr:hover td{background:rgba(255,255,255,0.03);}.empty-cell{text-align:center;color:#666;padding:40px;}
 .slug-text{font-family:Consolas,monospace;font-size:12px;color:#00bcd4;}.status-badge{display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;}.status-published{background:rgba(76,175,80,0.2);color:#A5D6A7;}.status-draft{background:rgba(158,158,158,0.2);color:#BDBDBD;}
 .btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.3s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}.btn-outline{background:rgba(255,255,255,0.05);color:#b0b0b0;border:1px solid rgba(255,255,255,0.1);}.btn-danger{background:#c62828;color:white;}.btn-sm{padding:5px 12px;font-size:11px;}.btn-primary[disabled]{opacity:0.5;cursor:not-allowed;}
@@ -43,14 +47,17 @@ else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8
 
 @code {
     [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private IAdminAuditor Auditor { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthState { get; set; } = default!;
     private bool _loaded, _showForm, _saving;
+    private int _adminId; private string _adminName = "";
     private string? _msg;
     private List<ContentPage> _pages = new();
     private int _editId;
     private string _formTitle = "", _formSlug = "", _formContent = "<p>页面内容...</p>", _formMeta = "";
     private string _formSort = "0"; private string _formPublished = "true";
 
-    protected override async Task OnInitializedAsync(){try{_pages=await Db.ContentPages.OrderBy(p=>p.SortOrder).ThenBy(p=>p.Title).ToListAsync();if(!_pages.Any())await InitDefaultPages();_loaded=true;}catch{_loaded=true;}}
+    protected override async Task OnInitializedAsync(){try{var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";_pages=await Db.ContentPages.OrderBy(p=>p.SortOrder).ThenBy(p=>p.Title).ToListAsync();if(!_pages.Any())await InitDefaultPages();_loaded=true;}catch{_loaded=true;}}
 
     async Task InitDefaultPages(){
         var defaults=new[]{("关于我们","about","<h2>关于我们</h2><p>欢迎来到香氛定制电商平台...</p>",1),("联系我们","contact","<h2>联系我们</h2><p>如有任何问题请与我们联系...</p>",2),("隐私政策","privacy","<h2>隐私政策</h2><p>我们重视您的隐私...</p>",3),("服务条款","terms","<h2>服务条款</h2><p>使用本平台即表示同意以下条款...</p>",4),("配送说明","shipping","<h2>配送说明</h2><p>全国顺丰包邮，预计3-5个工作日送达...</p>",5)};
@@ -71,8 +78,9 @@ else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8
             var sort=int.TryParse(_formSort,out var so)?so:0;var pub=bool.TryParse(_formPublished,out var v)&&v;
             if(_editId>0){await Db.ContentPages.Where(p=>p.PageId==_editId).ExecuteUpdateAsync(s=>s.SetProperty(p=>p.Title,_formTitle).SetProperty(p=>p.Slug,_formSlug).SetProperty(p=>p.Content,_formContent).SetProperty(p=>p.MetaDescription,_formMeta).SetProperty(p=>p.IsPublished,pub).SetProperty(p=>p.SortOrder,sort).SetProperty(p=>p.UpdatedAt,DateTime.Now));_msg="页面已更新";}
             else{Db.ContentPages.Add(new ContentPage{Title=_formTitle,Slug=_formSlug,Content=_formContent,MetaDescription=_formMeta,IsPublished=pub,SortOrder=sort,CreatedAt=DateTime.Now,UpdatedAt=DateTime.Now});await Db.SaveChangesAsync();_msg="页面已创建";}
+            await Auditor.LogAsync(_adminId,_adminName,_editId>0?"编辑内容页面":"新建内容页面","ContentPage",_editId>0?_editId:(int?)null,_formTitle);
             _showForm=false;_pages=await Db.ContentPages.OrderBy(p=>p.SortOrder).ThenBy(p=>p.Title).ToListAsync();
         }catch(Exception ex){_msg="操作失败: "+ex.Message;}_saving=false;
     }
-    async Task Delete(int id){await Db.ContentPages.Where(p=>p.PageId==id).ExecuteDeleteAsync();_pages=_pages.Where(p=>p.PageId!=id).ToList();_msg="页面已删除";await InvokeAsync(StateHasChanged);}
+    async Task Delete(int id){await Db.ContentPages.Where(p=>p.PageId==id).ExecuteDeleteAsync();await Auditor.LogAsync(_adminId,_adminName,"删除内容页面","ContentPage",id,null);_pages=_pages.Where(p=>p.PageId!=id).ToList();_msg="页面已删除";await InvokeAsync(StateHasChanged);}
 }

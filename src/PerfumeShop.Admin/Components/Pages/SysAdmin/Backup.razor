@@ -1,71 +1,194 @@
 @page "/admin/system/backup"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.system")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Repositories
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>备份中心</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-database" style="color:#E91E63;"></i> 备份中心</h2><div class="breadcrumb"><a href="/admin/system/users" style="color:#E91E63;text-decoration:none;">系统管理</a> / <span>备份中心</span></div></div>
 @if(!string.IsNullOrEmpty(_msg)){<div class="alert @(_msgType=="err"?"alert-error":"alert-success")">@_msg</div>}
-<div class="backup-panel" style="background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:30px;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;">
-<h3 style="color:#e0e0e0;margin-bottom:20px;"><i class="fas fa-cloud-upload-alt" style="color:#E91E63;"></i> 数据库备份</h3>
-<p style="color:#888;margin-bottom:20px;">数据库: PerfumeShop @@ localhost\YOURPERFUME · 备份存储在 database/backups/ 目录</p>
-<button class="btn-backup" @onclick="TriggerBackup" disabled="@_busy">
-<i class="fas @(_busy?"fa-spinner fa-spin":"fa-database")"></i> @(_busy?"备份中...":"立即备份")
-</button>
-</div>
-<div class="backup-list">
-<h3 style="color:#e0e0e0;margin-bottom:15px;"><i class="fas fa-history"></i> 备份历史</h3>
-@if(_backups.Any()){
-<div class="table-container"><table class="orders-table"><thead><tr><th>备份文件</th><th>大小</th><th>时间</th></tr></thead><tbody>
-@foreach(var b in _backups){<tr><td>@b.Name</td><td>@b.Size</td><td>@b.Date</td></tr>}
-</tbody></table></div>
-}else{<div style="text-align:center;color:#666;padding:40px;">暂无备份记录</div>}
+
+<div class="stats-row">
+<div class="stat-card"><div class="stat-value">@_backups.Count</div><div class="stat-label">备份文件数</div></div>
+<div class="stat-card"><div class="stat-value" style="color:@(_successRate>=80?"#4CAF50":_successRate>=50?"#FF9800":"#F44336");">@_successRate%</div><div class="stat-label">30天成功率</div></div>
+<div class="stat-card"><div class="stat-value" style="font-size:16px;color:#FF9800;">@_nextBackup</div><div class="stat-label">下次计划备份</div></div>
 </div>
 
+<div class="backup-panel">
+<h3 style="color:#e0e0e0;margin-bottom:16px;"><i class="fas fa-cloud-upload-alt" style="color:#E91E63;"></i> 数据库备份</h3>
+<p style="color:#888;margin-bottom:16px;">数据库: PerfumeShop @@ localhost\YOURPERFUME · 备份存储于 database/backups/</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap;">
+<button class="btn-backup" @onclick="TriggerBackup" disabled="@_busy"><i class="fas @(_busy?"fa-spinner fa-spin":"fa-database")"></i> @(_busy?"备份中...":"立即备份 (SQL)")</button>
+<button class="btn-ps" @onclick="TriggerPsBackup" disabled="@_psBusy"><i class="fas @(_psBusy?"fa-spinner fa-spin":"fa-terminal")"></i> @(_psBusy?"执行中...":"PowerShell 备份")</button>
+</div>
+</div>
+
+<div class="panel"><div class="panel-head"><i class="fas fa-calendar-check"></i> 最近7天备份时间线</div>
+<div class="timeline-bar">
+@foreach(var d in _timeline){<div class="timeline-day @(d.Has?"tl-ok":"tl-miss")"><div class="tl-icon"><i class="fas @(d.Has?"fa-check-circle":"fa-times-circle")"></i></div><div class="tl-label">@d.Label</div><div class="tl-date">@d.Day</div></div>}
+</div>
+<div style="display:flex;justify-content:center;gap:24px;margin:10px 0 4px;font-size:12px;color:#888;"><span><span style="color:#4CAF50;">●</span> 已备份</span><span><span style="color:#666;">●</span> 未备份</span></div>
+</div>
+
+<div class="panel"><div class="panel-head"><i class="fas fa-archive"></i> 备份文件列表</div>
+<div class="table-container"><table class="orders-table"><thead><tr><th>备份文件</th><th>大小</th><th>时间</th><th>操作</th></tr></thead><tbody>
+@foreach(var b in _backups){<tr><td>@b.Name</td><td>@b.Size</td><td>@b.Date</td><td><a class="btn-mini" href="/admin/system/backup/download?file=@Uri.EscapeDataString(b.Name)" target="_blank">下载</a></td></tr>}
+@if(!_backups.Any()){<tr><td colspan="4" style="text-align:center;color:#666;padding:30px;">暂无备份记录</td></tr>}
+</tbody></table></div></div>
+
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}
-.breadcrumb{font-size:13px;color:#888;}
-.btn-backup{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:14px 32px;border-radius:10px;cursor:pointer;font-size:16px;font-weight:600;}
-.btn-backup:disabled{opacity:0.6;cursor:not-allowed;}
+
+
+
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);text-align:center;}
+.stat-value{font-size:26px;font-weight:bold;color:#e0e0e0;}
+.stat-label{font-size:13px;color:#888;margin-top:4px;}
+.backup-panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;padding:26px;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;}
+.btn-backup{background:linear-gradient(135deg,#E91E63,#880E4F);color:#fff;border:none;padding:14px 28px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:600;}
+.btn-ps{background:#FF9800;color:#fff;border:none;padding:14px 28px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:600;}
+.btn-backup:disabled,.btn-ps:disabled{opacity:0.6;cursor:not-allowed;}
+.panel{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;overflow:hidden;}
+.panel-head{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;color:#e0e0e0;}
+.timeline-bar{display:flex;justify-content:space-between;gap:8px;padding:16px 20px;}
+.timeline-day{flex:1;text-align:center;padding:12px 8px;border-radius:8px;}
+.tl-ok{background:rgba(76,175,80,0.12);border:1px solid rgba(76,175,80,0.3);}
+.tl-miss{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);}
+.tl-icon{font-size:20px;margin-bottom:6px;}
+.tl-ok .tl-icon{color:#4CAF50;}
+.tl-miss .tl-icon{color:#555;}
+.tl-label{font-size:12px;color:#999;font-weight:600;}
+.tl-date{font-size:16px;font-weight:700;color:#e0e0e0;margin-top:2px;}
+.table-container{overflow:hidden;}
+.orders-table{width:100%;border-collapse:collapse;}
+.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:12px 16px;font-size:13px;text-align:left;}
+.orders-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:13px;}
+.btn-mini{background:rgba(0,188,212,0.15);color:#00bcd4;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;text-decoration:none;}
 .alert{padding:15px 20px;border-radius:8px;margin-bottom:20px;}
 .alert-success{background:rgba(76,175,80,0.15);color:#81c784;border:1px solid rgba(76,175,80,0.3);}
 .alert-error{background:rgba(244,67,54,0.15);color:#e57373;border:1px solid rgba(244,67,54,0.3);}
-.table-container{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.05);}
-.orders-table{width:100%;border-collapse:collapse;}
-.orders-table th{background:rgba(233,30,99,0.1);color:#E91E63;padding:14px 16px;font-size:13px;text-align:left;}
-.orders-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);color:#ccc;font-size:14px;}
+@@media(max-width:768px){.stats-row{grid-template-columns:1fr;}.timeline-bar{flex-wrap:wrap;}}
 </style>
 
 @code {
-    private bool _busy;
-    private string _msg="",_msgType="";
-    private List<(string Name,string Size,string Date)> _backups=new();
+    private bool _busy, _psBusy;
+    private string _msg = "", _msgType = "", _nextBackup = "";
+    private double _successRate;
+    private int _actorId; private string _actorName = "";
+    private List<BackupFile> _backups = new();
+    private List<TimelineDay> _timeline = new();
 
-    protected override async Task OnInitializedAsync(){
-        try{
-            var dir=Path.Combine(Directory.GetCurrentDirectory(),"..","..","..","..","..","database","backups");
-            if(Directory.Exists(dir)){
-                foreach(var f in Directory.GetFiles(dir,"*.bak").OrderByDescending(f=>new FileInfo(f).LastWriteTime).Take(20)){
-                    var fi=new FileInfo(f);
-                    _backups.Add((fi.Name,$"{fi.Length/1024.0/1024.0:F1} MB",fi.LastWriteTime.ToString("yyyy-MM-dd HH:mm")));
-                }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var state = await AuthState.GetAuthenticationStateAsync();
+            int.TryParse(state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out _actorId);
+            _actorName = state.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+            LoadBackups();
+            _nextBackup = DateTime.Now.Date.AddDays(1).ToString("yyyy-MM-dd") + " 02:00";
+        }
+        catch { }
+    }
+
+    private void LoadBackups()
+    {
+        _backups.Clear();
+        var dir = ResolveBackupDir();
+        try
+        {
+            if (Directory.Exists(dir))
+            {
+                var files = Directory.GetFiles(dir, "*.bak", SearchOption.AllDirectories)
+                    .Select(f => new FileInfo(f)).OrderByDescending(fi => fi.LastWriteTime).ToList();
+                foreach (var fi in files.Take(30))
+                    _backups.Add(new BackupFile(fi.Name, $"{fi.Length / 1024.0 / 1024.0:F1} MB", fi.LastWriteTime.ToString("yyyy-MM-dd HH:mm")));
+
+                // 30天成功率
+                var last30 = files.Where(f => (DateTime.Now - f.LastWriteTime).TotalDays <= 30).ToList();
+                _successRate = last30.Count > 0 ? Math.Round(last30.Count(f => f.Length > 0) * 100.0 / last30.Count, 1) : 0;
+
+                // 7天时间线
+                _timeline = Enumerable.Range(0, 7).Select(i =>
+                {
+                    var d = DateTime.Now.Date.AddDays(-i);
+                    var has = files.Any(f => f.LastWriteTime.Date == d);
+                    return new TimelineDay(d.ToString("ddd"), d.Day, has);
+                }).Reverse().ToList();
             }
-        }catch{}
+        }
+        catch { }
+        if (_timeline.Count == 0)
+            _timeline = Enumerable.Range(0, 7).Select(i => { var d = DateTime.Now.Date.AddDays(-6 + i); return new TimelineDay(d.ToString("ddd"), d.Day, false); }).ToList();
     }
-    async Task TriggerBackup(){
-        _busy=true;_msg="";
-        try{
-            var dbName="PerfumeShop";var server="localhost\\YOURPERFUME";
-            var backupDir=Path.Combine(Directory.GetCurrentDirectory(),"..","..","..","..","..","database","backups",$"V19.{DateTime.Now:yyMMddHHmm}");
+
+    private async Task TriggerBackup()
+    {
+        _busy = true; _msg = "";
+        try
+        {
+            var dbName = "PerfumeShop";
+            var backupDir = Path.Combine(ResolveBackupDir(), $"V19.{DateTime.Now:yyMMddHHmm}");
             Directory.CreateDirectory(backupDir);
-            var bakPath=Path.Combine(backupDir,$"{dbName}_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
-            var sql=$"BACKUP DATABASE [{dbName}] TO DISK=N'{bakPath}' WITH INIT,COMPRESSION";
+            var bakPath = Path.Combine(backupDir, $"{dbName}_{DateTime.Now:yyyyMMdd_HHmmss}.bak");
+            var sql = $"BACKUP DATABASE [{dbName}] TO DISK=N'{bakPath}' WITH INIT,COMPRESSION";
             await Db.Database.ExecuteSqlRawAsync(sql);
-            _msg=$"备份成功: {Path.GetFileName(bakPath)}";_msgType="ok";
-            _backups.Insert(0,(Path.GetFileName(bakPath),$"{new FileInfo(bakPath).Length/1024.0/1024.0:F1} MB",DateTime.Now.ToString("yyyy-MM-dd HH:mm")));
-        }catch(Exception ex){_msg="备份失败: "+ex.Message;_msgType="err";}
-        finally{_busy=false;}
+            await Auditor.LogAsync(_actorId, _actorName, "数据库备份", "System", null, Path.GetFileName(bakPath), "SQL 完整备份");
+            _msg = $"备份成功: {Path.GetFileName(bakPath)}"; _msgType = "ok";
+            LoadBackups();
+        }
+        catch (Exception ex) { _msg = "备份失败: " + ex.Message; _msgType = "err"; }
+        finally { _busy = false; }
     }
+
+    private async Task TriggerPsBackup()
+    {
+        _psBusy = true; _msg = "";
+        try
+        {
+            var backupDir = ResolveBackupDir();
+            var ps1 = Path.Combine(Directory.GetParent(backupDir)?.FullName ?? backupDir, "backup_database.ps1");
+            if (!File.Exists(ps1)) { _msg = "未找到 backup_database.ps1 脚本"; _msgType = "err"; return; }
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{ps1}\" -BackupDir \"{backupDir}\" -RetentionDays 30",
+                UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true
+            };
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc != null)
+            {
+                await proc.WaitForExitAsync();
+                await Auditor.LogAsync(_actorId, _actorName, "PowerShell备份", "System", null, null, $"exit={proc.ExitCode}");
+                _msg = proc.ExitCode == 0 ? "PowerShell 备份任务已完成。" : $"PowerShell 备份返回码 {proc.ExitCode}，请检查日志。";
+                _msgType = proc.ExitCode == 0 ? "ok" : "err";
+                LoadBackups();
+            }
+        }
+        catch (Exception ex) { _msg = "PowerShell 备份失败: " + ex.Message; _msgType = "err"; }
+        finally { _psBusy = false; }
+    }
+
+    // 稳健解析 database/backups 目录：从内容根/工作目录向上查找
+    public static string ResolveBackupDir()
+    {
+        foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            var d = new DirectoryInfo(start);
+            for (int i = 0; i < 8 && d != null; i++, d = d.Parent)
+            {
+                var candidate = Path.Combine(d.FullName, "database", "backups");
+                if (Directory.Exists(candidate)) return candidate;
+            }
+        }
+        return Path.Combine(Directory.GetCurrentDirectory(), "database", "backups");
+    }
+
+    public record BackupFile(string Name, string Size, string Date);
+    public record TimelineDay(string Label, int Day, bool Has);
 }

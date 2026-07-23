@@ -1,7 +1,11 @@
 @page "/admin/Operation/AfterSales"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 <PageTitle>售后管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-headset" style="color:#00bcd4;"></i> 售后管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>售后管理</span></div></div>
 @if(_loaded){
@@ -12,7 +16,7 @@
 @if(_showModal&&_modalItem!=null){<div class="modal-overlay show" @onclick="CloseModal"><div class="modal" @onclick:stopPropagation="true"><h3><i class="fas fa-gavel" style="color:#00bcd4;"></i> 处理售后申请</h3><div style="font-size:13px;color:#888;margin-bottom:15px;">订单: <strong style="color:#00bcd4;">@(_orderDict.TryGetValue(_modalItem.OrderId,out var mo)?mo.OrderNo:$"#{_modalItem.OrderId}")</strong> | 客户: <strong style="color:#e0e0e0;">@(_userDict.TryGetValue(_modalItem.UserId,out var mu)?mu:$"#{_modalItem.UserId}")</strong> | 类型: <strong>@GetTypeLabel(_modalItem.RequestType)</strong> | 金额: <strong style="color:#FF9800;">¥@((_modalItem.RefundAmount??0).ToString("N2"))</strong></div><div class="form-group"><label>处理结果</label><select class="form-control" @bind="_modalStatus" required><option value="approved">通过</option><option value="rejected">拒绝</option></select></div><div class="form-group"><label>处理备注</label><textarea class="form-control" @bind="_modalNotes" placeholder="输入处理备注..."></textarea></div><div class="modal-actions"><button class="btn btn-outline" @onclick="CloseModal" disabled="@_processing">取消</button><button class="btn btn-primary" @onclick="ProcessAfterSale" disabled="@_processing"><i class="fas fa-check"></i> @(_processing?"处理中...":"确认处理")</button></div></div></div>}
 }else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:25px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;cursor:pointer;transition:all 0.2s;}.stat-card:hover{transform:translateY(-2px);border-color:rgba(0,188,212,0.3);}.stat-num{font-size:28px;font-weight:700;color:#00bcd4;}.stat-label{font-size:13px;color:#888;margin-top:5px;}.stat-card.pending .stat-num{color:#FF9800;}.stat-card.approved .stat-num{color:#4CAF50;}.stat-card.rejected .stat-num{color:#f44336;}
 .card{background:linear-gradient(135deg,#2d2d44,#1e1e32);border-radius:12px;border:1px solid rgba(255,255,255,0.05);margin-bottom:20px;overflow:hidden;}.card-header{padding:15px 20px;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:600;font-size:16px;color:#e0e0e0;display:flex;justify-content:space-between;align-items:center;}.card-body{padding:0;}
 .data-table{width:100%;border-collapse:collapse;}.data-table th{text-align:left;padding:12px;background:rgba(0,188,212,0.06);border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#888;}.data-table td{padding:12px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#ccc;}.data-table tr:hover td{background:rgba(255,255,255,0.03);}.empty-cell{text-align:center;color:#666;padding:40px;}
@@ -25,7 +29,10 @@
 </style>
 @code{
 [Inject] private PerfumeShopContext Db{get;set;}=default!;
+[Inject] private AuthenticationStateProvider AuthState{get;set;}=default!;
+[Inject] private IAdminAuditor Auditor{get;set;}=default!;
 private bool _loaded,_processing,_showModal;
+private int _adminId;private string _adminName="";
 private string? _msg,_msgType,_statusFilter,_modalStatus,_modalNotes;
 private List<AfterSale> _allItems=new();
 private Dictionary<int,Order> _orderDict=new();
@@ -34,7 +41,7 @@ private AfterSale? _modalItem;
 private int _totalCount,_pendingCount,_approvedCount,_rejectedCount;
 
 protected override async Task OnInitializedAsync(){
-try{await LoadData();_loaded=true;}catch{_loaded=true;}
+try{var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await LoadData();_loaded=true;}catch{_loaded=true;}
 }
 
 async Task LoadData(){
@@ -87,6 +94,7 @@ if(_modalStatus=="approved"&&_modalItem.RequestType=="refund"){
 await Db.Orders.Where(o=>o.OrderId==_modalItem.OrderId)
 .ExecuteUpdateAsync(s=>s.SetProperty(o=>o.Status,"refunding"));
 }
+await Auditor.LogAsync(_adminId,_adminName,_modalStatus=="approved"?"售后通过":"售后拒绝","AfterSale",_modalItem.AfterSalesId,null,_modalNotes);
 _msg="售后申请已处理";
 _msgType="success";
 _showModal=false;

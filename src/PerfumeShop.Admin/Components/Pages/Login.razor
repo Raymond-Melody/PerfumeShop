@@ -12,6 +12,7 @@
 @inject IHttpContextAccessor HttpAccessor
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+@inject PerfumeShop.Admin.Services.ILoginSecurityService LoginSec
 @layout PerfumeShop.Admin.Components.Layout.LoginLayout
 
 @* V19 登录页 — 使用 HTML form POST 设置认证 Cookie（Blazor SignalR 无法设置 HTTP Cookie）
@@ -153,6 +154,7 @@
         if (admin == null || string.IsNullOrEmpty(admin.PasswordHash))
         {
             RecordLoginFailure(loginKey);
+            await LoginSec.RecordFailureAsync(username ?? "", GetClientIp());
             _error = "用户名或密码错误";
             return;
         }
@@ -163,6 +165,7 @@
         if (!verifyResult.Success)
         {
             RecordLoginFailure(loginKey);
+            await LoginSec.RecordFailureAsync(username ?? "", GetClientIp());
             _error = "用户名或密码错误";
             return;
         }
@@ -171,6 +174,7 @@
         // 重置失败计数
         _failCounts.TryRemove(loginKey, out _);
         _loginBuckets.TryRemove(loginKey, out _);
+        await LoginSec.RecordSuccessAsync(admin.AdminId, GetClientIp());
 
         // 自动升级密码哈希 (V1/V2 → V3)
         if (verifyResult.UpgradedHash != null)

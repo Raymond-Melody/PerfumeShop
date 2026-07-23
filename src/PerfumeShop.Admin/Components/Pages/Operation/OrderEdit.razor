@@ -1,7 +1,11 @@
 @page "/admin/Operation/OrderEdit/{OrderId:int}"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 
 <PageTitle>编辑订单</PageTitle>
 
@@ -125,7 +129,7 @@ else
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
 .form-container{max-width:900px;background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:30px;border-radius:14px;border:1px solid rgba(255,255,255,0.05);}.form-group{margin-bottom:20px;}.form-group label{display:block;margin-bottom:8px;font-weight:500;color:#e0e0e0;font-size:14px;}.form-group label .required{color:#e74c3c;margin-left:4px;}.form-control{width:100%;padding:12px 15px;border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:14px;box-sizing:border-box;background:rgba(255,255,255,0.04);color:#e0e0e0;}.form-control:focus{outline:none;border-color:#00bcd4;box-shadow:0 0 0 2px rgba(0,188,212,0.2);}textarea.form-control{min-height:80px;resize:vertical;}.form-control option{background:#2d2d44;color:#e0e0e0;}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;}.form-actions{display:flex;gap:15px;margin-top:30px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);}
 .info-section{background:rgba(255,255,255,0.04);padding:18px;border-radius:10px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.08);}.info-section h3{margin:0 0 15px;font-size:16px;color:#e0e0e0;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:10px;}.info-section h3 i{color:#00bcd4;margin-right:6px;}.info-row{display:flex;margin-bottom:10px;font-size:14px;}.info-label{width:100px;color:#888;font-weight:bold;flex-shrink:0;}.info-value{flex:1;color:#e0e0e0;}
 .btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.3s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}.btn-primary:hover{background:linear-gradient(135deg,#00bcd4,#0097a7);}.btn-primary[disabled]{opacity:0.5;cursor:not-allowed;}.btn-outline{background:rgba(255,255,255,0.05);color:#b0b0b0;border:1px solid rgba(255,255,255,0.1);}.btn-outline:hover{background:rgba(255,255,255,0.1);color:#fff;}
@@ -141,8 +145,11 @@ else
 
     [Inject] private PerfumeShopContext Db { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IAdminAuditor Auditor { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthState { get; set; } = default!;
 
     private bool _loaded, _saving;
+    private int _adminId; private string _adminName = "";
     private Order? _order;
     private User? _customer;
     private List<PerfumeShop.Data.Models.OrderDetail> _orderDetails = new();
@@ -162,6 +169,9 @@ else
     {
         try
         {
+            var st = await AuthState.GetAuthenticationStateAsync();
+            int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out _adminId);
+            _adminName = st.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
             _order = await Db.Orders.FirstOrDefaultAsync(o => o.OrderId == OrderId);
             if (_order != null)
             {
@@ -220,6 +230,7 @@ else
                     .SetProperty(o => o.Notes, _editModel.Notes)
                     .SetProperty(o => o.UpdatedAt, DateTime.Now));
 
+            await Auditor.LogAsync(_adminId, _adminName, "编辑订单", "Order", OrderId, _order?.OrderNo, $"状态={_editModel.Status}");
             _successMsg = "订单信息已成功更新";
             // Navigate to detail page after short delay
             Navigation.NavigateTo($"/admin/Operation/OrderDetail/{OrderId}");

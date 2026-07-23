@@ -1,7 +1,11 @@
 @page "/admin/prodcenter/prod-qc"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.prodcenter")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <PageTitle>质量检验</PageTitle>
 
@@ -29,10 +33,13 @@
 
 @code{
 [Inject] PerfumeShopContext Db{get;set;}=default!;
+[Inject] IAdminAuditor Auditor{get;set;}=default!;
+[Inject] AuthenticationStateProvider AuthState{get;set;}=default!;
 bool _loaded,_msgErr,_saving,_showQC;string? _msg,_qcResult="Pass",_qcNotes="";ProductionOrder? _qcPo;
 int _qcPending,_qcPassed,_qcFailed;List<ProductionOrder> _items=new();
+int _adminId;string _adminName="";
 
-protected override async Task OnInitializedAsync(){await LoadData();}
+protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await LoadData();}
 
 async Task LoadData(){
     try{
@@ -52,6 +59,7 @@ async Task SubmitQC(){
         var newStatus=_qcResult=="Pass"?"QC_Passed":"QC_Fail";
         await Db.Database.ExecuteSqlInterpolatedAsync($@"UPDATE ProductionOrders SET Status={newStatus},QCNotes={_qcNotes},QCPassedAt=GETDATE(),UpdatedAt=GETDATE() WHERE ProductionId={_qcPo.ProductionId}");
         await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO ProductionLogs (ProductionID,Status,CreatedBy,Notes,CreatedAt) VALUES ({_qcPo.ProductionId},{newStatus},{System.Environment.UserName},{("质检"+(_qcResult=="Pass"?"通过":"不通过")+" - "+_qcNotes)},GETDATE())");
+        await Auditor.LogAsync(_adminId,_adminName,_qcResult=="Pass"?"质检通过":"质检不通过","ProductionOrder",_qcPo.ProductionId,_qcPo.WorkOrderNo,_qcNotes);
         _msg=_qcResult=="Pass"?"质检通过":"质检未通过，需返工";_msgErr=_qcResult!="Pass";
         _showQC=false;await LoadData();
     }catch(Exception ex){_msg="提交失败: "+ex.Message;_msgErr=true;}

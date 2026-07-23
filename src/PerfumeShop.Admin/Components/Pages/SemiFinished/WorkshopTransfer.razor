@@ -1,7 +1,11 @@
 @page "/admin/semifinished/workshop-transfer"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.semifinished")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Admin.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
 
 <PageTitle>车间调拨</PageTitle>
 <div class="ph"><h2 class="pt"><i class="fas fa-exchange-alt" style="color:#00BCD4;"></i> 车间调拨管理</h2><button class="btn btn-primary" @onclick="OpenTransferModal">+ 新建调拨</button><div class="br"><a href="/admin/semifinished" style="color:#2196F3;text-decoration:none;">半成品中心</a> / 车间调拨</div></div>
@@ -25,11 +29,14 @@
 
 @code{
 [Inject] PerfumeShopContext Db{get;set;}=default!;
+[Inject] IAdminAuditor Auditor{get;set;}=default!;
+[Inject] AuthenticationStateProvider AuthState{get;set;}=default!;
 bool _loaded,_msgErr,_showModal,_saving;string? _msg;int _cntPending,_cntApproved,_cntFulfilled;
 List<MaterialOutbound> _items=new();
 string _tType="",_tNotes="";
+int _adminId;string _adminName="";
 
-protected override async Task OnInitializedAsync(){await Load();}
+protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await Load();}
 async Task Load(){
     try{
         _items=await Db.MaterialOutbounds.OrderByDescending(x=>x.CreatedAt).Take(50).ToListAsync();
@@ -46,6 +53,7 @@ async Task CreateTransfer(){
         var no="TRF"+DateTime.Now.ToString("yyyyMMddHHmmss");
         // MaterialOutbound 为 keyless 实体，改用参数化原始SQL插入
         await Db.Database.ExecuteSqlInterpolatedAsync($@"INSERT INTO MaterialOutbound (OutboundNo,OutboundType,Status,RequestedBy,OutboundDate,Notes,CreatedAt) VALUES ({no},{_tType},'Requested','admin',GETDATE(),{_tNotes},GETDATE())");
+        await Auditor.LogAsync(_adminId,_adminName,"创建车间调拨","MaterialOutbound",null,no,_tType);
         _msg="调拨申请成功！单号："+no;_msgErr=false;_showModal=false;await Load();
     }catch(Exception ex){_msg="创建失败: "+ex.Message;_msgErr=true;_showModal=false;}
     _saving=false;await InvokeAsync(StateHasChanged);
@@ -56,6 +64,7 @@ async Task HandleApprove(MaterialOutbound w,bool approve){
     try{
         var nst=approve?"Approved":"Rejected";
         await Db.MaterialOutbounds.Where(x=>x.OutboundId==w.OutboundId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.Status,nst));
+        await Auditor.LogAsync(_adminId,_adminName,approve?"批准车间调拨":"拒绝车间调拨","MaterialOutbound",w.OutboundId,w.OutboundNo);
         _msg=approve?"调拨已批准":"调拨已拒绝";_msgErr=false;await Load();
     }catch(Exception ex){_msg="操作失败: "+ex.Message;_msgErr=true;}
     _saving=false;await InvokeAsync(StateHasChanged);
@@ -63,7 +72,7 @@ async Task HandleApprove(MaterialOutbound w,bool approve){
 
 async Task HandleFulfill(MaterialOutbound w){
     _saving=true;
-    try{await Db.MaterialOutbounds.Where(x=>x.OutboundId==w.OutboundId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.Status,"Fulfilled"));_msg="调拨已确认收货";_msgErr=false;await Load();}
+    try{await Db.MaterialOutbounds.Where(x=>x.OutboundId==w.OutboundId).ExecuteUpdateAsync(s=>s.SetProperty(x=>x.Status,"Fulfilled"));await Auditor.LogAsync(_adminId,_adminName,"调拨确认收货","MaterialOutbound",w.OutboundId,w.OutboundNo);_msg="调拨已确认收货";_msgErr=false;await Load();}
     catch(Exception ex){_msg="操作失败: "+ex.Message;_msgErr=true;}
     _saving=false;await InvokeAsync(StateHasChanged);
 }

@@ -1,0 +1,104 @@
+/* =====================================================================
+   admin-v19.css — V19 后台统一样式基线（M3 一致性收口）
+   抽取自各 SysAdmin/Logistics/Finance 页面重复的内联样式，统一为可复用类。
+   通过 CSS 变量 --admin-accent 支持模块主题色（默认青色），
+   模块容器可用 style="--admin-accent:#E91E63" 覆盖（如站点技术管理用品红）。
+   ===================================================================== */
+
+:root {
+    --admin-accent: #00bcd4;
+    --admin-panel: linear-gradient(135deg, #2d2d44, #1e1e32);
+    --admin-border: rgba(255, 255, 255, 0.05);
+    --admin-text: #e0e0e0;
+    --admin-muted: #888;
+}
+
+/* ---- 页头 / 面包屑 ---- */
+.av-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.av-page-title { font-size: 24px; color: #fff; margin: 0; display: flex; align-items: center; gap: 10px; }
+.av-page-title i { color: var(--admin-accent); }
+.av-breadcrumb { font-size: 13px; color: var(--admin-muted); }
+.av-breadcrumb a { color: var(--admin-accent); text-decoration: none; }
+
+/* ---- 全量收口：通用页头/面包屑裸类名（各页统一从此取，页内不再重复定义；
+   图标/链接颜色多为页面内联设置，优先级高于此处默认，故不影响模块主题色） ---- */
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.page-title { font-size: 24px; color: #fff; margin: 0; display: flex; align-items: center; gap: 10px; }
+.page-title i { color: var(--admin-accent); }
+.breadcrumb { font-size: 13px; color: #888; }
+.breadcrumb a { color: var(--admin-accent); text-decoration: none; }
+
+/* ---- 统计卡片 ---- */
+.av-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.av-stats.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.av-stats.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.av-stat-card { background: var(--admin-panel); padding: 20px; border-radius: 10px; border: 1px solid var(--admin-border); text-align: center; }
+.av-stat-value { font-size: 26px; font-weight: bold; color: var(--admin-text); }
+.av-stat-label { font-size: 13px; color: var(--admin-muted); margin-top: 4px; }
+
+/* ---- 工具条 ---- */
+.av-toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.av-search { padding: 10px 14px; border: 1px solid #3a3a4a; border-radius: 8px; background: #1a1a2e; color: var(--admin-text); font-size: 14px; min-width: 220px; }
+.av-search:focus { border-color: var(--admin-accent); outline: none; }
+
+/* ---- 表格 ---- */
+.av-table-wrap { background: var(--admin-panel); border-radius: 12px; overflow: hidden; border: 1px solid var(--admin-border); margin-bottom: 20px; }
+.av-table { width: 100%; border-collapse: collapse; }
+.av-table th { background: color-mix(in srgb, var(--admin-accent) 12%, transparent); color: var(--admin-accent); padding: 14px 16px; font-size: 13px; text-align: left; }
+.av-table td { padding: 14px 16px; border-bottom: 1px solid var(--admin-border); color: #ccc; font-size: 14px; }
+.av-table tr:hover { background: rgba(255, 255, 255, 0.03); }
+.av-empty { text-align: center; color: #666; padding: 40px; }
+
+/* ---- 徽章 ---- */
+.av-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.av-badge.ok { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+.av-badge.warn { background: rgba(255, 152, 0, 0.2); color: #FFB74D; }
+.av-badge.err { background: rgba(244, 67, 54, 0.2); color: #e57373; }
+.av-badge.info { background: rgba(0, 188, 212, 0.2); color: #80DEEA; }
+.av-badge.muted { background: rgba(158, 158, 158, 0.2); color: #BDBDBD; }
+.av-badge.crit { background: rgba(183, 28, 28, 0.3); color: #FF8A80; }
+
+/* ---- 按钮 ---- */
+.av-btn { border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.av-btn-primary { background: linear-gradient(135deg, var(--admin-accent), #00838f); color: #fff; }
+.av-btn-secondary { background: #3a3a4a; color: var(--admin-text); }
+.av-btn-danger { background: rgba(244, 67, 54, 0.15); color: #e57373; }
+.av-btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 6px; }
+.av-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---- 提示条 ---- */
+.av-alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; }
+.av-alert.ok { background: rgba(76, 175, 80, 0.15); color: #81c784; border: 1px solid rgba(76, 175, 80, 0.3); }
+.av-alert.err { background: rgba(244, 67, 54, 0.15); color: #e57373; border: 1px solid rgba(244, 67, 54, 0.3); }
+
+/* ---- 模态框 ---- */
+.av-modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.av-modal { background: var(--admin-panel); border-radius: 12px; width: 90%; max-width: 600px; max-height: 85vh; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.06); }
+.av-modal-header { padding: 20px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); display: flex; justify-content: space-between; align-items: center; }
+.av-modal-header h3 { margin: 0; color: var(--admin-text); font-size: 18px; }
+.av-modal-close { background: none; border: none; color: var(--admin-muted); font-size: 24px; cursor: pointer; }
+.av-modal-body { padding: 25px; max-height: 55vh; overflow-y: auto; }
+.av-modal-footer { padding: 20px 25px; border-top: 1px solid rgba(255, 255, 255, 0.06); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ---- 表单 ---- */
+.av-form-group { margin-bottom: 15px; flex: 1; }
+.av-form-group label { display: block; margin-bottom: 6px; color: #b0b0b0; font-size: 13px; }
+.av-form-group input, .av-form-group select { width: 100%; padding: 10px 14px; border: 2px solid #3a3a4a; border-radius: 8px; font-size: 14px; background: #1a1a2e; color: var(--admin-text); box-sizing: border-box; }
+.av-form-group input:focus, .av-form-group select:focus { border-color: var(--admin-accent); outline: none; }
+.av-form-row { display: flex; gap: 12px; }
+
+/* ---- 分页 ---- */
+.av-pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 25px; }
+.av-pagination button { padding: 8px 14px; border-radius: 6px; border: none; font-size: 14px; cursor: pointer; background: #3a3a4a; color: var(--admin-text); }
+.av-pagination button.current { background: var(--admin-accent); color: #fff; }
+.av-pagination button:disabled { background: #2a2a3a; color: #666; cursor: not-allowed; }
+
+/* ---- 响应式（统一断点，修复 V18 平板/移动缺陷） ---- */
+@media (max-width: 1200px) {
+    .av-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+    .av-stats, .av-stats.cols-2, .av-stats.cols-3 { grid-template-columns: 1fr; }
+    .av-form-row { flex-direction: column; }
+    .av-toolbar { flex-direction: column; align-items: stretch; }
+}

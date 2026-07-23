@@ -1,12 +1,17 @@
 @page "/admin/TechCenter/RecipePublish"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "TECH_MANAGER,SUPER_ADMIN")]
+@attribute [Authorize(Policy = "Module.techcenter")]
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
 @using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
+@inject IAdminAuditor Auditor
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>配方拆分发布</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-lock" style="color:#FF9800;"></i> 配方拆分发布</h2><div class="breadcrumb"><a href="/admin/TechCenter" style="color:#00bcd4;text-decoration:none;">技术中心</a> / <span>配方拆分发布</span></div></div>
@@ -78,8 +83,8 @@
 }
 
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
+
 .security-note{background:rgba(255,152,0,0.08);border:1px solid rgba(255,152,0,0.3);border-radius:6px;padding:12px 15px;margin-bottom:20px;font-size:13px;color:#ccc;}
 .security-note i,.security-note strong{color:#FF9800;}
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
@@ -122,7 +127,9 @@
     class MaterialRow{public string Name="";public double Pct,Qty;public int Matched;}
     class NoteRow{public int NoteId;public string Name="",Type="";public double Pct,Qty;}
 
-    protected override async Task OnInitializedAsync(){await LoadAll();}
+    private int _adminId;private string _adminName="";
+    private string _pubBy=>string.IsNullOrEmpty(_adminName)?"Admin":_adminName;
+    protected override async Task OnInitializedAsync(){var st=await AuthState.GetAuthenticationStateAsync();int.TryParse(st.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);_adminName=st.User.FindFirst(ClaimTypes.Name)?.Value??"";await LoadAll();}
 
     async Task LoadAll(){
         try{
@@ -175,13 +182,14 @@
         if(_pubNoteId<=0){_msg="请选择香调";_msgType="err";return;}
         if(!_pubIngredients.Any()){_msg="该配方+香调在RecipeIngredients中无数据";_msgType="err";return;}
         try{
-            var accord=new RecipeAccord{RecipeId=_pubRecipeId,NoteId=_pubNoteId,BatchSize=_pubBatchSize,RecipeName=_pubRecipeName,Status="Published",PublishedAt=DateTime.Now,PublishedBy="Admin",CreatedAt=DateTime.Now};
+            var accord=new RecipeAccord{RecipeId=_pubRecipeId,NoteId=_pubNoteId,BatchSize=_pubBatchSize,RecipeName=_pubRecipeName,Status="Published",PublishedAt=DateTime.Now,PublishedBy=_pubBy,CreatedAt=DateTime.Now};
             Db.RecipeAccords.Add(accord);await Db.SaveChangesAsync();
             foreach(var mi in _pubIngredients){
                 Db.RecipeAccordMaterials.Add(new RecipeAccordMaterial{AccordRecipeId=accord.AccordRecipeId,MaterialId=mi.Matched,MaterialName=mi.Name,Percentage=mi.Pct,PlannedQty=mi.Qty});
             }
-            Db.RecipePublishLogs.Add(new RecipePublishLog{RecipeId=_pubRecipeId,PublishType="Accord",TargetRecipeId=accord.AccordRecipeId,PublishedBy="Admin",PublishedAt=DateTime.Now});
+            Db.RecipePublishLogs.Add(new RecipePublishLog{RecipeId=_pubRecipeId,PublishType="Accord",TargetRecipeId=accord.AccordRecipeId,PublishedBy=_pubBy,PublishedAt=DateTime.Now});
             await Db.SaveChangesAsync();
+            await Auditor.LogAsync(_adminId,_adminName,"发布香调配方","RecipeAccord",accord.AccordRecipeId,_pubRecipeName);
             _msg="香调配方发布成功";_msgType="ok";_showAccordModal=false;
             await LoadAll();
         }catch(Exception ex){_msg="发布失败: "+ex.Message;_msgType="err";}
@@ -189,7 +197,7 @@
 
     async Task DeprecateAccord(RecipeAccord a){
         if(!await ConfirmJs("确定废弃此香调配方？"))return;
-        try{a.Status="Deprecated";Db.RecipeAccords.Update(a);await Db.SaveChangesAsync();_msg="已废弃";_msgType="ok";await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{a.Status="Deprecated";Db.RecipeAccords.Update(a);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,"废弃香调配方","RecipeAccord",a.AccordRecipeId,a.RecipeName);_msg="已废弃";_msgType="ok";await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
 
     // ===== Product Publish =====
@@ -208,13 +216,14 @@
     async Task PublishProduct(){
         if(_prodPubRecipeId<=0){_msg="无效配方";_msgType="err";return;}
         try{
-            var prod=new RecipeProduct{RecipeId=_prodPubRecipeId,ProductId=_prodPubProductId>0?_prodPubProductId:null,BatchSize=_prodPubBatch,Status="Published",PublishedAt=DateTime.Now,PublishedBy="Admin",CreatedAt=DateTime.Now};
+            var prod=new RecipeProduct{RecipeId=_prodPubRecipeId,ProductId=_prodPubProductId>0?_prodPubProductId:null,BatchSize=_prodPubBatch,Status="Published",PublishedAt=DateTime.Now,PublishedBy=_pubBy,CreatedAt=DateTime.Now};
             Db.RecipeProducts.Add(prod);await Db.SaveChangesAsync();
             foreach(var pn in _pubProductNotes){
                 Db.RecipeProductNotes.Add(new RecipeProductNote{ProductRecipeId=prod.ProductRecipeId,NoteId=pn.NoteId,NoteName=pn.Name,Percentage=pn.Pct,PlannedQty=pn.Qty});
             }
-            Db.RecipePublishLogs.Add(new RecipePublishLog{RecipeId=_prodPubRecipeId,PublishType="Product",TargetRecipeId=prod.ProductRecipeId,PublishedBy="Admin",PublishedAt=DateTime.Now});
+            Db.RecipePublishLogs.Add(new RecipePublishLog{RecipeId=_prodPubRecipeId,PublishType="Product",TargetRecipeId=prod.ProductRecipeId,PublishedBy=_pubBy,PublishedAt=DateTime.Now});
             await Db.SaveChangesAsync();
+            await Auditor.LogAsync(_adminId,_adminName,"发布产品配方","RecipeProduct",prod.ProductRecipeId,_prodPubName);
             _msg="产品配方发布成功";_msgType="ok";_showProductModal=false;
             await LoadAll();
         }catch(Exception ex){_msg="发布失败: "+ex.Message;_msgType="err";}
@@ -222,7 +231,7 @@
 
     async Task DeprecateProduct(RecipeProduct p){
         if(!await ConfirmJs("确定废弃此产品配方？"))return;
-        try{p.Status="Deprecated";Db.RecipeProducts.Update(p);await Db.SaveChangesAsync();_msg="已废弃";_msgType="ok";await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{p.Status="Deprecated";Db.RecipeProducts.Update(p);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,"废弃产品配方","RecipeProduct",p.ProductRecipeId,null);_msg="已废弃";_msgType="ok";await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
 
     private bool _loadingIngredients;

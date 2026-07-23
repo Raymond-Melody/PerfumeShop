@@ -1,8 +1,11 @@
 @page "/admin/Operation/Points"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.operation")]
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using PerfumeShop.Admin.Services
 <PageTitle>积分管理</PageTitle>
 <div class="page-header"><h2 class="page-title"><i class="fas fa-coins" style="color:#00bcd4;"></i> 积分管理</h2><div class="breadcrumb"><a href="/admin/Operation/Index" style="color:#00bcd4;text-decoration:none;">运营中心</a> / <span>积分管理</span></div></div>
 @if(_loaded){
@@ -17,7 +20,7 @@
 <div class="table-container"><table class="transactions-table"><thead><tr><th>时间</th><th>用户</th><th>变动</th><th>原因</th><th>操作人</th></tr></thead><tbody>@if(_transactions.Any()){@foreach(var t in _transactions){var uc=_userDict.TryGetValue(t.UserId,out var un)?un:$"#{t.UserId}";var pc=t.PointsChange??t.Points;<tr><td>@(t.CreatedAt?.ToString("yyyy-MM-dd HH:mm")??"-")</td><td>@uc</td><td>@if(pc>=0){<span class="points-positive">+@pc</span>}else{<span class="points-negative">@pc</span>}</td><td>@(t.Reason??t.Description??"-")</td><td>@(string.IsNullOrEmpty(t.CreatedBy)?"系统":t.CreatedBy)</td></tr>}}else{<tr><td colspan="5" class="empty-cell">暂无交易记录</td></tr>}</tbody></table></div>
 }else{<MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="my-8"/>}
 <style>
-.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid rgba(255,255,255,0.08);}.page-title{font-size:24px;color:#fff;margin:0;display:flex;align-items:center;gap:10px;}.breadcrumb{font-size:13px;color:#888;}
+
 .stats-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:25px;}.stat-card{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:25px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);text-align:center;transition:transform 0.2s;}.stat-card:hover{transform:translateY(-2px);}.stat-card i{font-size:36px;margin-bottom:10px;display:block;}.stat-card h3{font-size:28px;margin:10px 0;color:#e0e0e0;}.stat-card p{color:#888;margin:0;font-size:13px;}
 .adjust-form{background:linear-gradient(135deg,#2d2d44,#1e1e32);padding:25px;border-radius:12px;margin-bottom:25px;border:1px solid rgba(255,255,255,0.05);}.form-row{display:flex;gap:15px;margin-bottom:15px;}.form-group{flex:1;}.form-group label{display:block;margin-bottom:8px;color:#e0e0e0;font-weight:500;font-size:14px;}.form-control{width:100%;padding:12px 15px;border:1px solid rgba(255,255,255,0.12);border-radius:8px;background:rgba(255,255,255,0.04);color:#e0e0e0;font-size:14px;box-sizing:border-box;}.form-control:focus{border-color:#00bcd4;outline:none;}.form-control option{background:#2d2d44;color:#e0e0e0;}
 .btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.3s;text-decoration:none;}.btn-primary{background:linear-gradient(135deg,#00bcd4,#00838f);color:white;}.btn-primary:hover{background:linear-gradient(135deg,#00bcd4,#0097a7);}.btn-primary[disabled]{opacity:0.5;cursor:not-allowed;}
@@ -28,8 +31,10 @@
 @code{
 [Inject] private PerfumeShopContext Db{get;set;}=default!;
 [Inject] private AuthenticationStateProvider AuthState{get;set;}=default!;
+[Inject] private IAdminAuditor Auditor{get;set;}=default!;
 private bool _loaded,_adjusting,_adjustSuccess,_canAdjust;
 private string? _adjustMsg;
+private int _adminId;private string _adminName="";
 private List<User> _userList=new();
 private Dictionary<int,string> _userDict=new();
 private List<PointTransaction> _transactions=new();
@@ -49,6 +54,8 @@ _loaded=true;
 async Task CheckPermission(){
 var state=await AuthState.GetAuthenticationStateAsync();
 var role=state.User.FindFirst("RoleCode")?.Value??"";
+int.TryParse(state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value,out _adminId);
+_adminName=state.User.FindFirst(ClaimTypes.Name)?.Value??"";
 _canAdjust=role=="OP_MANAGER"||role=="SUPER_ADMIN";
 }
 
@@ -93,13 +100,14 @@ PointsChange=_pointsChange,
 Reason=_adjustReason,
 Description=_adjustReason,
 TransactionType="ManualAdjust",
-CreatedBy="管理员",
+CreatedBy=string.IsNullOrEmpty(_adminName)?"管理员":_adminName,
 CreatedAt=DateTime.Now
 };
 Db.PointTransactions.Add(pt);
 await Db.SaveChangesAsync();
 });
 
+await Auditor.LogAsync(_adminId,_adminName,"积分调整","User",_selectedUserId,null,$"变动{_pointsChange} 原因:{_adjustReason}");
 _adjustMsg="积分调整成功！";
 _adjustSuccess=true;
 _selectedUserId=null;

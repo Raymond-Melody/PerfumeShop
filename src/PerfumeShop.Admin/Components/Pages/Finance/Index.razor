@@ -1,5 +1,6 @@
 ﻿@page "/admin/finance"
 @rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components.Authorization

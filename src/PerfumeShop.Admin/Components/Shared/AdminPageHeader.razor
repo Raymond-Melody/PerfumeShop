@@ -1,0 +1,36 @@
+@* ============================================================
+   AdminPageHeader — V19 统一后台页头 + 面包屑（M3 可复用组件）
+   基于 admin-v19.css 的 av- 类；Accent 可覆盖模块主题色。
+   用法：
+     <AdminPageHeader Icon="fas fa-users-cog" Title="管理员管理"
+                      Module="系统管理" Current="管理员管理" Accent="#E91E63" />
+   ============================================================ *@
+<div class="av-page-header" style="@(_style)">
+    <h2 class="av-page-title"><i class="@Icon"></i> @Title</h2>
+    <div class="av-breadcrumb">
+        @if (!string.IsNullOrEmpty(Module))
+        {
+            @if (!string.IsNullOrEmpty(ModuleUrl))
+            {
+                <a href="@ModuleUrl">@Module</a>
+            }
+            else
+            {
+                <span>@Module</span>
+            }
+            @if (!string.IsNullOrEmpty(Current)) { <span> / </span> }
+        }
+        @if (!string.IsNullOrEmpty(Current)) { <span>@Current</span> }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "fas fa-cube";
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Module { get; set; }
+    [Parameter] public string? ModuleUrl { get; set; }
+    [Parameter] public string? Current { get; set; }
+    [Parameter] public string? Accent { get; set; }
+
+    private string? _style => string.IsNullOrEmpty(Accent) ? null : $"--admin-accent:{Accent}";
+}
