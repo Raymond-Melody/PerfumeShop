@@ -156,6 +156,11 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                             
                             conn.Execute "UPDATE RawMaterialInventory SET StockQty=StockQty-" & mQty & ", UpdatedAt=GETDATE() WHERE MaterialID=" & mID
                             If Err.Number <> 0 Then anyOutError = True : Err.Clear
+
+                            ' V21: 领料出库补写库存流水（之前缺失，无法审计）
+                            conn.Execute "INSERT INTO InventoryTransactions (NoteID, MaterialID, Quantity, TransactionType, TransactionDirection, UnitCost, ReferenceType, Notes, CreatedBy, CreatedAt) VALUES (" & _
+                                "0, " & mID & ", -" & mQty & ", '" & SafeSQL(outType) & "', 'OUT', " & mPrice & ", 'MaterialOutbound', '领料出库 " & SafeSQL(outNo) & "', '" & SafeSQL(Session("AdminUsername")) & "', GETDATE())"
+                            If Err.Number <> 0 Then anyOutError = True : Err.Clear
                         End If
                     Next
                     

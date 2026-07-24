@@ -143,13 +143,29 @@ Sub CE_PreloadAllCostData()
     End If
     Set rs = Nothing
     
-    ' === 2.5. V9: 加载 BaseNotes 单价 (BaseNoteID → UnitPrice) ===
-    Set rs = conn.Execute("SELECT BaseNoteID, UnitPrice FROM BaseNotes WHERE IsActive <> 0")
+    ' === 2.5. V9/V21: 加载 BaseNotes 单价 (BaseNoteID → UnitPrice) ===
+    ' V21: 若基香显式关联原料(MaterialID)，优先采用该原料成本（替代手工单价/按名模糊匹配）；列缺失时容错回退
+    Dim ceBnHasMat
+    ceBnHasMat = True
+    On Error Resume Next
+    Set rs = conn.Execute("SELECT BaseNoteID, UnitPrice, ISNULL(MaterialID,0) AS MaterialID FROM BaseNotes WHERE IsActive <> 0")
+    If Err.Number <> 0 Then
+        Err.Clear
+        ceBnHasMat = False
+        Set rs = conn.Execute("SELECT BaseNoteID, UnitPrice FROM BaseNotes WHERE IsActive <> 0")
+    End If
+    On Error GoTo 0
     If Not rs Is Nothing Then
         Do While Not rs.EOF
             key = CStr(rs("BaseNoteID"))
             If key <> "" And key <> "0" Then
                 val = CE_SafeNum(rs("UnitPrice"))
+                If ceBnHasMat Then
+                    Dim bnMatKey : bnMatKey = CStr(rs("MaterialID"))
+                    If bnMatKey <> "" And bnMatKey <> "0" And CE_MaterialPrices.Exists(bnMatKey) Then
+                        val = CE_MaterialPrices(bnMatKey)
+                    End If
+                End If
                 If val > 0 And Not CE_BaseNotePrices.Exists(key) Then
                     CE_BaseNotePrices.Add key, val
                 End If
@@ -994,9 +1010,10 @@ Sub CE_UpdateOrderCosts(orderId)
     Set rsC = Nothing
     
     ' 更新订单的成本和利润
-    Dim totalAmount, shippingFee, profitAmount, gotOrder
+    Dim totalAmount, shippingFee, profitAmount, gotOrder, expenseAmount
     Dim rsOrder
     gotOrder = False
+    expenseAmount = 0
     Set rsOrder = conn.Execute("SELECT TotalAmount, ShippingFee FROM Orders WHERE OrderID=" & orderId)
     If Not rsOrder Is Nothing Then
         If Not rsOrder.EOF Then
@@ -1007,9 +1024,20 @@ Sub CE_UpdateOrderCosts(orderId)
         rsOrder.Close
     End If
     Set rsOrder = Nothing
+
+    ' V21: 读取费用分摊金额（ExpenseAmount 列可能未迁移，独立容错读取）
+    Dim rsExp
+    Set rsExp = conn.Execute("SELECT ISNULL(ExpenseAmount,0) FROM Orders WHERE OrderID=" & orderId)
+    If Not rsExp Is Nothing Then
+        If Not rsExp.EOF Then expenseAmount = CE_SafeNum(rsExp(0))
+        rsExp.Close
+    End If
+    Set rsExp = Nothing
+    If Err.Number <> 0 Then expenseAmount = 0 : Err.Clear
     
     If gotOrder Then
-        profitAmount = totalAmount - orderCost - shippingFee
+        ' V21: 利润纳入费用分摊：ProfitAmount = TotalAmount - CostAmount - ShippingFee - ExpenseAmount
+        profitAmount = totalAmount - orderCost - shippingFee - expenseAmount
         If profitAmount < 0 Then profitAmount = 0
         conn.Execute "UPDATE Orders SET CostAmount=" & orderCost & ", ProfitAmount=" & profitAmount & " WHERE OrderID=" & orderId
     End If

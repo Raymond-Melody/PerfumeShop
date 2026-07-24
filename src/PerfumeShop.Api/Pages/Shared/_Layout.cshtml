@@ -171,9 +171,16 @@
 
                 <!-- 用户菜单 -->
                 <div class="user-menu">
-                    <!-- TODO: 从 AuthService 获取登录状态，当前硬编码为未登录 -->
-                    <a href="/login" class="btn-login"><i class="fas fa-sign-in-alt"></i> 登录</a>
-                    <a href="/register" class="btn-register">注册</a>
+                    @if (User?.Identity?.IsAuthenticated == true)
+                    {
+                        <a href="/user" class="btn-login"><i class="fas fa-user-circle"></i> @(User.Identity!.Name)</a>
+                        <a href="/logout" class="btn-register">退出</a>
+                    }
+                    else
+                    {
+                        <a href="/login" class="btn-login"><i class="fas fa-sign-in-alt"></i> 登录</a>
+                        <a href="/register" class="btn-register">注册</a>
+                    }
                     <a href="/cart" class="cart-icon">
                         <i class="fas fa-shopping-cart"></i>
                         <span class="cart-count" id="cartCount">0</span>
@@ -357,9 +364,16 @@
             <li><a href="/about"><i class="fas fa-info-circle"></i> 关于我们</a></li>
             <li><a href="/contact"><i class="fas fa-phone"></i> 联系我们</a></li>
             <li class="divider"></li>
-            <!-- TODO: 根据登录状态动态渲染用户菜单 -->
-            <li><a href="/login"><i class="fas fa-sign-in-alt"></i> 登录</a></li>
-            <li><a href="/register"><i class="fas fa-user-plus"></i> 注册</a></li>
+            @if (User?.Identity?.IsAuthenticated == true)
+            {
+                <li><a href="/user"><i class="fas fa-user-circle"></i> 我的账户</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt"></i> 退出登录</a></li>
+            }
+            else
+            {
+                <li><a href="/login"><i class="fas fa-sign-in-alt"></i> 登录</a></li>
+                <li><a href="/register"><i class="fas fa-user-plus"></i> 注册</a></li>
+            }
         </ul>
         <div class="mobile-menu-footer">
             &copy; @DateTime.Now.Year 香氛定制

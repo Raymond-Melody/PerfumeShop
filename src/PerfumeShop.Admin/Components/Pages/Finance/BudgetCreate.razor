@@ -1,0 +1,23 @@
+﻿@page "/admin/finance/budget-create"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using PerfumeShop.Data.Models
+
+<PageTitle>新建预算</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">新建预算</MudText>
+<MudGrid><MudItem xs="12" md="6"><MudForm>
+    <MudTextField @bind-Value="_b.BudgetName" Label="预算名" Required="true" />
+    <MudTextField @bind-Value="_b.Category" Label="分类" />
+    <MudNumericField @bind-Value="_budgetAmt" Label="预算金额" />
+    <MudTextField @bind-Value="_b.Period" Label="期间" HelperText="例: 2026-Q1" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="Save">保存</MudButton>
+    <MudButton Variant="Variant.Text" Href="/admin/finance/budgets" Class="mt-4 ml-2">返回</MudButton>
+</MudForm></MudItem></MudGrid>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private BudgetPlan _b = new(); private decimal _budgetAmt;
+    private async Task Save() { _b.BudgetAmount = _budgetAmt; _b.Status = "draft"; _b.CreatedAt = DateTime.Now; Db.BudgetPlans.Add(_b); await Db.SaveChangesAsync(); Snackbar.Add("创建成功", Severity.Success); Nav.NavigateTo("/admin/finance/budgets"); }
+}

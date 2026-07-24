@@ -1,0 +1,28 @@
+﻿@page "/admin/finance/cost-report"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>成本报表</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">成本报表</MudText>
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2" Color="Color.Error">总成本</MudText><MudText Typo="Typo.h5">¥@_totalCost.ToString("F2")</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">成本中心数</MudText><MudText Typo="Typo.h5">@_centerCount</MudText></MudCardContent></MudCard></MudItem>
+</MudGrid>
+<MudTable Items="@_expenses" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>ID</MudTh><MudTh>费用名</MudTh><MudTh>类型</MudTh><MudTh>金额</MudTh><MudTh>期间</MudTh></HeaderContent>
+    <RowTemplate><MudTd>@context.ExpenseId</MudTd><MudTd>@context.ExpenseName</MudTd><MudTd>@context.ExpenseType</MudTd><MudTd>¥@context.Amount?.ToString("F2")</MudTd><MudTd>@context.Period</MudTd></RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private decimal _totalCost; private int _centerCount;
+    private List<ExpenseRecord> _expenses = new();
+    protected override async Task OnInitializedAsync()
+    {
+        _expenses = await Db.ExpenseRecords.AsNoTracking().OrderByDescending(e => e.ExpenseId).Take(100).ToListAsync();
+        _totalCost = _expenses.Sum(e => e.Amount ?? 0);
+        _centerCount = await Db.CostCenters.CountAsync();
+    }
+}

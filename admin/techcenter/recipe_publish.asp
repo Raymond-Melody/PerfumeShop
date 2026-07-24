@@ -8,6 +8,7 @@ Response.ContentType = "text/html"
 <!--#include file="../../includes/connection.asp"-->
 <!--#include file="../../includes/dal.asp"-->
 <!--#include file="../../includes/dal_techcenter.asp"-->
+<!--#include file="../../includes/cost_engine.asp"-->
 <%
 Call OpenConnection()
 
@@ -201,6 +202,13 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         Call DAL_TC_DeprecateProductVersions(newProductRID, ppRecipeID)
                         
                         Call CommitTransaction()
+                        ' V21: 发布产品配方后刷新该产品成本(BOMCost/UnitCost)
+                        If ppProductID > 0 Then
+                            On Error Resume Next
+                            Call CE_UpdateProductCost(ppProductID)
+                            Err.Clear
+                            On Error GoTo 0
+                        End If
                         Response.Redirect "recipe_publish.asp?msg=产品配方发布成功！" & ppRecipeName
                         Response.End
                     Else

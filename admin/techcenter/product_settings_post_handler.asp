@@ -334,6 +334,12 @@
                     End If
                 End If
                 
+                ' V21: 保存香调配比/瓶型后刷新该产品成本(BOMCost/UnitCost)
+                On Error Resume Next
+                If IsNumeric(productId) Then Call CE_UpdateProductCost(CLng(productId))
+                Err.Clear
+                On Error GoTo 0
+                
                 If isNewProduct Then
                     Response.Redirect "product_settings.asp?tab=products&msg=" & Server.URLEncode("产品添加成功")
                 Else

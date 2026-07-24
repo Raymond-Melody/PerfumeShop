@@ -53,13 +53,14 @@ Do While Not rsOrders.EOF
     orderNo = rsOrders("OrderNo") & ""
     
     ' 获取订单明细
+    ' V21: 跳过 standard(品牌定香) 明细——其走采购成品库存与发货扣减，不生成生产工单
     Dim sqlDetails, rsDetails
     sqlDetails = "SELECT od.DetailID, od.Quantity, od.ProductID, p.ProductName, p.RecipeID, " & _
                  "r.RecipeName, r.RecipeCode " & _
                  "FROM OrderDetails od " & _
                  "LEFT JOIN Products p ON od.ProductID = p.ProductID " & _
                  "LEFT JOIN Recipes r ON p.RecipeID = r.RecipeID " & _
-                 "WHERE od.OrderID = " & orderId
+                 "WHERE od.OrderID = " & orderId & " AND ISNULL(p.ProductType,'') <> 'standard'"
     
     Set rsDetails = conn.Execute(sqlDetails)
     

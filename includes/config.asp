@@ -192,6 +192,35 @@ Function GetCachedVolumes(conn)
     GetCachedVolumes = "OK"
 End Function
 
+' ============================================
+' V21: 功能开关后台化
+' 优先读 SiteSettings 键 'FEATURE_<key>'（'1'/'true' 为开），未配置时回退传入的 fallbackVal（config.asp 常量）。
+' 需在 OpenConnection 之后调用；连接不可用时直接返回 fallbackVal，不破坏现有 FEATURE_* 常量。
+' ============================================
+Function GetFeature(key, fallbackVal)
+    Dim v : v = fallbackVal
+    On Error Resume Next
+    If IsObject(conn) Then
+        If Not (conn Is Nothing) Then
+            If conn.State = 1 Then
+                Dim rsF
+                Set rsF = conn.Execute("SELECT SettingValue FROM SiteSettings WHERE SettingKey='FEATURE_" & Replace(key, "'", "''") & "'")
+                If Not rsF Is Nothing Then
+                    If Not rsF.EOF Then
+                        Dim sv : sv = rsF(0) & ""
+                        If sv <> "" Then v = (sv = "1" Or LCase(sv) = "true")
+                    End If
+                    rsF.Close
+                End If
+                Set rsF = Nothing
+            End If
+        End If
+    End If
+    Err.Clear
+    On Error GoTo 0
+    GetFeature = v
+End Function
+
 ' CDN functions
 Dim CDN_DOMAIN
 CDN_DOMAIN = "https://cdn.perfumeshop.com"

@@ -525,7 +525,7 @@ public class BusinessPathTests : IDisposable
         _db.Suppliers.Add(supplier);
         await _db.SaveChangesAsync();
 
-        var repo = new PurchaseRepository(_db);
+        var repo = new PurchaseRepository(_db, new InventoryLedger(_db));
 
         var po = new PurchaseOrder
         {
@@ -553,11 +553,11 @@ public class BusinessPathTests : IDisposable
             new() { ReceivedQty = 10.0, AcceptedQty = 10.0, UnitPrice = 500m }
         };
         var rcv = await repo.ReceivePurchaseAsync(receipt, rDetails);
-        Assert.Equal("received", rcv.Status);
+        Assert.Equal("Complete", rcv.Status);
 
         var rcvD = await repo.GetReceiptDetailsAsync(rcv.ReceiptId);
         // ReceiptDetail may be empty if ReceiptId assignment differs - verify receipt itself exists
-        Assert.Equal("received", rcv.Status);
+        Assert.Equal("Complete", rcv.Status);
         Assert.True(rcv.ReceiptId > 0);
     }
 
@@ -571,7 +571,7 @@ public class BusinessPathTests : IDisposable
         var product = await SeedProductAsync();
         var order = await SeedOrderAsync(user.UserId, product.ProductId, "Paid");
 
-        var prodRepo = new ProductionRepository(_db);
+        var prodRepo = new ProductionRepository(_db, new InventoryLedger(_db));
 
         var wo = new ProductionOrder
         {
@@ -608,7 +608,7 @@ public class BusinessPathTests : IDisposable
         var o1 = await SeedOrderAsync(user.UserId, product.ProductId, "Processing");
         var o2 = await SeedOrderAsync(user.UserId, product.ProductId, "Processing");
 
-        var logistics = new LogisticsRepository(_db);
+        var logistics = new LogisticsRepository(_db, new InventoryLedger(_db));
         await logistics.UpdateOrderStatusAsync(o1.OrderId, "Shipped");
         await logistics.UpdateOrderStatusAsync(o2.OrderId, "Shipped");
 

@@ -1,0 +1,28 @@
+﻿@page "/admin/finance/cost-trend"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>成本趋势</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">成本趋势</MudText>
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="6"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">近30天费用趋势</MudText><MudChart ChartType="ChartType.Line" InputData="@_chartData" InputLabels="@_chartLabels" Height="300px" /></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="6"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">按类型分布</MudText>
+    @foreach (var kv in _typeDist) { <MudChip T="string" Color="Color.Info" Class="mr-2 mb-2">@kv.Key: ¥@kv.Value.ToString("F2")</MudChip> }
+    </MudCardContent></MudCard></MudItem>
+</MudGrid>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private double[] _chartData = Array.Empty<double>(); private string[] _chartLabels = Array.Empty<string>();
+    private Dictionary<string, decimal> _typeDist = new();
+    protected override async Task OnInitializedAsync()
+    {
+        var expenses = await Db.ExpenseRecords.AsNoTracking().ToListAsync();
+        var groups = expenses.GroupBy(e => e.ExpenseType ?? "other").Select(g => new { Type = g.Key, Total = g.Sum(x => x.Amount ?? 0) });
+        _typeDist = groups.ToDictionary(x => x.Type, x => x.Total);
+        var byPeriod = expenses.Where(e => e.Period != null).GroupBy(e => e.Period!).OrderBy(g => g.Key).Select(g => new { Period = g.Key, Total = g.Sum(x => x.Amount ?? 0) }).Take(30).ToList();
+        _chartLabels = byPeriod.Select(b => b.Period).ToArray(); _chartData = byPeriod.Select(b => (double)b.Total).ToArray();
+    }
+}

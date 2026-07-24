@@ -33,7 +33,7 @@ public class UserBenefitsTests : IDisposable
         _db.Users.Add(new User
         {
             UserId = TestUserId, Username = "testuser", Email = "test@example.com",
-            Password = "oldpwd123", FullName = "TestUser", Phone = "13800000001",
+            Password = PerfumeShop.Shared.Security.PasswordHasher.Hash("oldpwd123"), FullName = "TestUser", Phone = "13800000001",
             Points = 500, CustomerTier = "GoldMember", IsActive = true, CreatedAt = DateTime.Now
         });
 

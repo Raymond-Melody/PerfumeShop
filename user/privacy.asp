@@ -4,6 +4,10 @@ Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
 %>
 <!--#include file="../includes/config.asp"-->
+<!--#include file="../includes/connection.asp"-->
+<%
+Call OpenConnection()
+%>
 <!--#include file="../includes/header.asp"-->
 
 <div class="privacy-page">

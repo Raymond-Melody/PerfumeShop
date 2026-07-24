@@ -122,14 +122,18 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                         
                         If newProdID > 0 Then
                             Dim anyError : anyError = False
+                            Dim totalMatCost, matCost   ' V21: 累加本批原料总成本用于香调成本结转
+                            totalMatCost = 0
                             
-                            Set rsMaterials = conn.Execute("SELECT MaterialID, MaterialName, Percentage, PlannedQty FROM RecipeAccordMaterials WHERE AccordRecipeID=" & prodAccordID)
+                            Set rsMaterials = conn.Execute("SELECT ram.MaterialID, ram.MaterialName, ram.Percentage, ram.PlannedQty, ISNULL(rmi.WeightedUnitCost, ISNULL(rmi.UnitPrice,0)) AS MatCost FROM RecipeAccordMaterials ram LEFT JOIN RawMaterialInventory rmi ON ram.MaterialID=rmi.MaterialID WHERE ram.AccordRecipeID=" & prodAccordID)
                             If Not rsMaterials Is Nothing Then
                                 Do While Not rsMaterials.EOF
                                     matID = SafeNum(rsMaterials("MaterialID"))
                                     matName = CStr(rsMaterials("MaterialName") & "")
                                     matPct = SafeNum(rsMaterials("Percentage"))
                                     matNeed = (matPct / prodBatchSize) * prodPlannedQty
+                                    matCost = SafeNum(rsMaterials("MatCost"))
+                                    totalMatCost = totalMatCost + matNeed * matCost
                                     
                                     conn.Execute "UPDATE RawMaterialInventory SET StockQty = StockQty - " & matNeed & ", UpdatedAt = GETDATE() WHERE MaterialID=" & matID
                                     If Err.Number <> 0 Then anyError = True : Err.Clear
@@ -166,8 +170,14 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                                 
                                 If Err.Number <> 0 Then anyError = True : Err.Clear
                                 
-                                conn.Execute "INSERT INTO InventoryTransactions (NoteID, Quantity, TransactionType, TransactionDirection, Notes, CreatedBy, CreatedAt) VALUES (" & _
-                                    prodNoteID & ", " & prodPlannedQty & ", '香调生产产出', 'IN', '批次" & prodBatchNo & "产出香调[" & SafeSQL(noteName) & "]', '" & SafeSQL(Session("AdminUsername")) & "', GETDATE())"
+                                ' V21: 结转香调单位成本 = 本批原料总成本 / 产出量，写入 NoteInventory.WeightedUnitCost
+                                Dim noteUnitCost
+                                noteUnitCost = 0
+                                If prodPlannedQty > 0 Then noteUnitCost = totalMatCost / prodPlannedQty
+                                conn.Execute "UPDATE NoteInventory SET WeightedUnitCost = " & noteUnitCost & " WHERE NoteID=" & prodNoteID
+                                
+                                conn.Execute "INSERT INTO InventoryTransactions (NoteID, Quantity, TransactionType, TransactionDirection, UnitCost, Notes, CreatedBy, CreatedAt) VALUES (" & _
+                                    prodNoteID & ", " & prodPlannedQty & ", '香调生产产出', 'IN', " & noteUnitCost & ", '批次" & prodBatchNo & "产出香调[" & SafeSQL(noteName) & "]', '" & SafeSQL(Session("AdminUsername")) & "', GETDATE())"
                                 
                                 conn.Execute "UPDATE AccordProductions SET Status='Completed', ActualQty=" & prodPlannedQty & ", CompletedAt=GETDATE(), UpdatedAt=GETDATE(), NoteName='" & SafeSQL(noteName) & "' WHERE ProductionID=" & newProdID
                             End If

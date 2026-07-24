@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using PerfumeShop.Data.Models;
 using PerfumeShop.Shared;
+using PerfumeShop.Shared.Security;
 using PerfumeShop.Shared.Services;
 
 namespace PerfumeShop.Api.Pages.User;
@@ -184,11 +185,8 @@ public class RegisterModel : PageModel
 
     private static string HashPasswordV3(string password)
     {
-        var saltBytes = RandomNumberGenerator.GetBytes(16);
-        var salt = Convert.ToBase64String(saltBytes);
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 10000, HashAlgorithmName.SHA256);
-        var hash = Convert.ToBase64String(pbkdf2.GetBytes(32));
-        return $"V3${salt}${hash}";
+        // V19 统一口令散列 — 委托共享 PasswordHasher（迭代SHA-256+pepper）
+        return PasswordHasher.Hash(password);
     }
 
     private static string ComputeSha256Hash(string input)

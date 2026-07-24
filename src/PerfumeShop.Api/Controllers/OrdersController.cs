@@ -206,7 +206,7 @@ public class OrdersController : ControllerBase
         });
     }
 
-    /// <summary>创建订单 (简化版)</summary>
+    /// <summary>创建订单 — V21: 写 Orders + OrderDetails + 成分固化(OrderDetailNoteSelections/OrderIngredients)，按产品类型分流</summary>
     [HttpPost]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
     {
@@ -214,25 +214,117 @@ public class OrdersController : ControllerBase
             return BadRequest(new { message = "无效的订单请求" });
 
         var orderNo = $"ORD{DateTime.Now:yyyyMMddHHmmss}{new Random().Next(1000, 9999)}";
-        var order = new Order
+        using var tx = await _db.Database.BeginTransactionAsync();
+        try
         {
-            OrderNo = orderNo,
-            UserId = request.UserId,
-            Status = "Pending",
-            TotalAmount = request.Items.Sum(i => i.Price * i.Quantity),
-            ShippingAddress = request.ShippingAddress,
-            ShippingCity = request.ShippingCity,
-            ShippingName = request.ShippingName,
-            ShippingPhone = request.ShippingPhone,
-            PaymentMethod = request.PaymentMethod ?? "online",
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now
-        };
+            var order = new Order
+            {
+                OrderNo = orderNo,
+                UserId = request.UserId,
+                Status = "Pending",
+                TotalAmount = request.Items.Sum(i => i.Price * i.Quantity),
+                ShippingAddress = request.ShippingAddress,
+                ShippingCity = request.ShippingCity,
+                ShippingName = request.ShippingName,
+                ShippingPhone = request.ShippingPhone,
+                PaymentMethod = request.PaymentMethod ?? "online",
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+            await _orderRepo.AddAsync(order);
+            await _orderRepo.SaveChangesAsync();
 
-        await _orderRepo.AddAsync(order);
-        await _orderRepo.SaveChangesAsync();
+            foreach (var item in request.Items)
+            {
+                if (item.ProductId <= 0 || item.Quantity <= 0) continue;
+                var product = await _db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.ProductId == item.ProductId);
 
-        return Ok(new { orderId = order.OrderId, orderNo = order.OrderNo, message = "订单创建成功" });
+                // 1) 写订单明细(OrderDetails)
+                var detail = new OrderDetail
+                {
+                    OrderId = order.OrderId,
+                    ProductId = item.ProductId,
+                    ProductName = product?.ProductName,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.Price,
+                    Subtotal = item.Price * item.Quantity,
+                    VolumeMl = item.VolumeMl,
+                    VolumeName = item.VolumeName,
+                    BottleName = item.BottleName,
+                    CustomLabel = item.CustomLabel
+                };
+                _db.OrderDetails.Add(detail);
+                await _db.SaveChangesAsync();
+
+                await FixOrderIngredientsAsync(order.OrderId, detail.DetailId, item, product);
+            }
+
+            await tx.CommitAsync();
+            return Ok(new { orderId = order.OrderId, orderNo = order.OrderNo, message = "订单创建成功" });
+        }
+        catch (Exception ex)
+        {
+            await tx.RollbackAsync();
+            return StatusCode(500, new { message = "订单创建失败: " + ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// V21 成分固化 — 对标 V18 checkout_order_creator.asp SyncOrderDetailsAndIngredients
+    /// custom/kol: 记录选中香调(OrderDetailNoteSelections) + 从产品关联配方 RecipeIngredients 固化成分(OrderIngredients)
+    /// standard: 从 Products.BaseIngredients 固化成分。下单不物理扣香调(由工单入库/发货扣减)。
+    /// </summary>
+    private async Task FixOrderIngredientsAsync(int orderId, int detailId, OrderItemRequest item, Product? product)
+    {
+        var type = (product?.ProductType ?? "").ToLowerInvariant();
+        var processed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // 记录选中香调配比
+        if (item.NoteSelections != null)
+        {
+            foreach (var ns in item.NoteSelections)
+            {
+                if (ns.NoteId <= 0) continue;
+                await _db.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO OrderDetailNoteSelections (DetailID, NoteID, NoteType, Percentage) VALUES ({detailId}, {ns.NoteId}, {ns.NoteType}, {ns.Percentage})");
+            }
+        }
+
+        // custom/kol: 优先从产品关联配方的 RecipeIngredients 固化成分
+        if (type == "custom" || type == "kol")
+        {
+            var recipeId = await _db.Database.SqlQueryRaw<int?>(
+                "SELECT RecipeID AS Value FROM Products WHERE ProductID = {0}", item.ProductId).ToListAsync();
+            var rid = recipeId.FirstOrDefault();
+            if (rid.HasValue && rid.Value > 0)
+            {
+                var ings = await _db.RecipeIngredients.AsNoTracking()
+                    .Where(r => r.RecipeId == rid.Value && r.IngredientName != null)
+                    .Select(r => r.IngredientName!).ToListAsync();
+                foreach (var name in ings)
+                {
+                    var n = name.Trim();
+                    if (n.Length == 0 || !processed.Add(n)) continue;
+                    await _db.Database.ExecuteSqlInterpolatedAsync(
+                        $"INSERT INTO OrderIngredients (OrderID, DetailID, IngredientName, CreatedAt) VALUES ({orderId}, {detailId}, {n}, GETDATE())");
+                }
+            }
+        }
+
+        // 品牌定香/兜底: 从 Products.BaseIngredients 固化
+        var baseIngr = await _db.Database.SqlQueryRaw<string?>(
+            "SELECT ISNULL(BaseIngredients,'') AS Value FROM Products WHERE ProductID = {0}", item.ProductId).ToListAsync();
+        var raw = baseIngr.FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            foreach (var part in raw.Split(new[] { ',', '，', ';', '；', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var n = part.Trim();
+                if (n.Length == 0 || !processed.Add(n)) continue;
+                await _db.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO OrderIngredients (OrderID, DetailID, IngredientName, CreatedAt) VALUES ({orderId}, {detailId}, {n}, GETDATE())");
+            }
+        }
     }
 
     /// <summary>取消订单</summary>
@@ -290,6 +382,19 @@ public class OrderItemRequest
     public int ProductId { get; set; }
     public int Quantity { get; set; }
     public decimal Price { get; set; }
+    // V21: 可选规格与香调选择（定制/KOL 下单时传入）
+    public int? VolumeMl { get; set; }
+    public string? VolumeName { get; set; }
+    public string? BottleName { get; set; }
+    public string? CustomLabel { get; set; }
+    public List<NoteSelectionRequest>? NoteSelections { get; set; }
+}
+
+public class NoteSelectionRequest
+{
+    public int NoteId { get; set; }
+    public string? NoteType { get; set; }
+    public int Percentage { get; set; }
 }
 
 public class CancelRequest

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using PerfumeShop.Data.Models;
+using PerfumeShop.Shared.Security;
 
 namespace PerfumeShop.Api.Pages;
 
@@ -105,24 +106,10 @@ public class LoginModel : PageModel
         return RedirectToPage("/User/Index");
     }
 
-    /// <summary>V3 密码验证 — 对齐 V18 VerifyPassword()</summary>
+    /// <summary>V19 统一口令校验 — 委托共享 PasswordHasher（迭代SHA-256+pepper，兼容 V1/V2/V3）</summary>
     private static bool VerifyPassword(string input, string stored)
     {
         if (string.IsNullOrEmpty(stored)) return false;
-
-        if (stored.StartsWith("V3$"))
-        {
-            var parts = stored.Split('$');
-            if (parts.Length != 3) return false;
-            var salt = parts[1];
-            var storedHash = parts[2];
-            var saltBytes = Convert.FromBase64String(salt);
-            using var pbkdf2 = new Rfc2898DeriveBytes(input, saltBytes, 10000, HashAlgorithmName.SHA256);
-            var computedHash = Convert.ToBase64String(pbkdf2.GetBytes(32));
-            return computedHash == storedHash;
-        }
-
-        // 向后兼容明文 (逐步淘汰)
-        return input == stored;
+        return PasswordHasher.Verify(input, stored).Success;
     }
 }

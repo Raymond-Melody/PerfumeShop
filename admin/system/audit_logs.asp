@@ -221,6 +221,47 @@ If totalPages < 1 Then totalPages = 1
     </div>
     <% End If %>
     <% End If %>
+
+    <!-- V21 P1: 合并展示——系统操作日志 (AdminLogs) -->
+    <div style="margin-top:30px;">
+        <h1 style="font-size:1.2rem;color:#2c1810;margin-bottom:12px;"><i class="fas fa-list-alt"></i> 系统操作日志（AdminLogs · 最近50条）</h1>
+        <%
+        Dim rsSys, sysCount : sysCount = 0
+        Set rsSys = ExecuteQuery("SELECT TOP 50 l.LogID, l.AdminID, l.ActionType, l.ModuleCode, l.TableName, l.RecordID, l.Notes, l.CreatedAt, ISNULL(a.Username,'') AS Username FROM AdminLogs l LEFT JOIN AdminUsers a ON l.AdminID=a.AdminID ORDER BY l.CreatedAt DESC")
+        If Not rsSys Is Nothing Then
+        %>
+        <div class="table-responsive">
+        <table class="audit-table">
+            <thead>
+                <tr><th>ID</th><th>时间</th><th>管理员</th><th>操作</th><th>模块</th><th>目标表</th><th>记录</th><th>说明</th></tr>
+            </thead>
+            <tbody>
+            <% Do While Not rsSys.EOF
+                sysCount = sysCount + 1 %>
+                <tr>
+                    <td><%= rsSys("LogID") %></td>
+                    <td><%= rsSys("CreatedAt") %></td>
+                    <td><%= HTMLEncode(rsSys("Username") & "") %></td>
+                    <td><span class="badge-action badge-view"><%= HTMLEncode(rsSys("ActionType") & "") %></span></td>
+                    <td><%= HTMLEncode(rsSys("ModuleCode") & "") %></td>
+                    <td><%= HTMLEncode(rsSys("TableName") & "") %></td>
+                    <td><%= HTMLEncode(rsSys("RecordID") & "") %></td>
+                    <td><%= HTMLEncode(Left(rsSys("Notes") & "", 100)) %></td>
+                </tr>
+            <% rsSys.MoveNext
+            Loop
+            rsSys.Close %>
+            </tbody>
+        </table>
+        </div>
+        <% Set rsSys = Nothing
+        If sysCount = 0 Then %>
+        <div class="no-data"><i class="fas fa-inbox"></i> 暂无系统操作日志</div>
+        <% End If
+        Else %>
+        <div class="no-data"><i class="fas fa-inbox"></i> AdminLogs 表不可用</div>
+        <% End If %>
+    </div>
 </div>
 </main>
 

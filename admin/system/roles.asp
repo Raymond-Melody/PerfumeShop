@@ -60,6 +60,8 @@ Dim msg : msg = ""
 
 ' 处理 POST - 更新操作级权限
 If Request.ServerVariables("REQUEST_METHOD") = "POST" And Request.Form("action") = "save_perm" Then
+    ' V21: 高危权限变更——操作级校验（仅 SUPER_ADMIN/授权角色）
+    Call RequirePermissionOrDie("system", "edit")
     Dim permRoleID, permModule
     permRoleID = CInt(Request.Form("roleID"))
     permModule = Request.Form("moduleCode")
@@ -77,6 +79,8 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" And Request.Form("action")
         IIf(Request.Form("CanExport")="1",1,0) & ", " & _
         IIf(Request.Form("CanApprove")="1",1,0) & ")"
     msg = "权限已保存"
+    ' V21: 审计高危权限变更
+    Call LogAdminAction("修改角色操作权限", "system", "RolePermissions", CStr(permRoleID), "Module=" & permModule)
 End If
 
 ' 模块列表

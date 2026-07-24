@@ -1,0 +1,22 @@
+﻿@page "/admin/finance/cost-breakdown"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>成本明细</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">成本明细</MudText>
+<MudTable Items="@_centers" Hover="true" Dense="true" Striped="true" Class="mb-4">
+    <HeaderContent><MudTh>中心代码</MudTh><MudTh>名称</MudTh><MudTh>类型</MudTh><MudTh>预算</MudTh><MudTh>状态</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.CenterCode</MudTd><MudTd>@context.CenterName</MudTd><MudTd>@context.CenterType</MudTd>
+        <MudTd>¥@context.BudgetAmount?.ToString("F2")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.IsActive == true ? Color.Success : Color.Default)">@(context.IsActive == true ? "启用" : "停用")</MudChip></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<CostCenter> _centers = new();
+    protected override async Task OnInitializedAsync() { _centers = await Db.CostCenters.AsNoTracking().ToListAsync(); }
+}

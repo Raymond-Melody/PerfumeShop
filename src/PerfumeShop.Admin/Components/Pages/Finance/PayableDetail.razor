@@ -1,0 +1,26 @@
+@page "/admin/finance/payable-detail/{PayableId:int}"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using PerfumeShop.Data.Models
+
+<PageTitle>应付详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">应付详情</MudText>
+@if (_item != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>应付ID:</b> @_item.PayableId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>单号:</b> @_item.PayableNo</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>供应商:</b> @_item.SupplierName</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>金额:</b> ¥@_item.Amount?.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>已付:</b> ¥@_item.PaidAmount?.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>状态:</b> @_item.Status</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>到期日:</b> @_item.DueDate?.ToString("yyyy-MM-dd")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>创建时间:</b> @_item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</MudText></MudItem>
+</MudGrid></MudCardContent></MudCard>}
+<MudButton Variant="Variant.Text" Href="/admin/finance/payables" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public int PayableId { get; set; }
+    private PerfumeShop.Data.Models.AccountsPayable? _item;
+    protected override async Task OnInitializedAsync() { _item = await Db.AccountsPayables.FindAsync(PayableId); }
+}

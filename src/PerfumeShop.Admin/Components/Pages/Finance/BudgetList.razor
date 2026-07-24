@@ -1,0 +1,24 @@
+﻿@page "/admin/finance/budgets"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>预算管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">预算管理</MudText>
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/admin/finance/budget-create" StartIcon="@Icons.Material.Filled.Add" Class="mb-4">新建预算</MudButton>
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>ID</MudTh><MudTh>预算名</MudTh><MudTh>分类</MudTh><MudTh>预算额</MudTh><MudTh>实际额</MudTh><MudTh>执行率</MudTh><MudTh>状态</MudTh><MudTh>操作</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.BudgetId</MudTd><MudTd>@context.BudgetName</MudTd><MudTd>@context.Category</MudTd><MudTd>¥@context.BudgetAmount?.ToString("F2")</MudTd><MudTd>¥@context.ActualAmount?.ToString("F2")</MudTd>
+        <MudTd>@(context.BudgetAmount > 0 ? (context.ActualAmount / context.BudgetAmount * 100)?.ToString("F1") + "%" : "-")</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "approved" ? Color.Success : Color.Warning)">@context.Status</MudChip></MudTd>
+        <MudTd><MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/admin/finance/budget-detail/{context.BudgetId}")" /></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<BudgetPlan> _items = new();
+    protected override async Task OnInitializedAsync() { _items = await Db.BudgetPlans.AsNoTracking().OrderByDescending(b => b.BudgetId).ToListAsync(); }
+}

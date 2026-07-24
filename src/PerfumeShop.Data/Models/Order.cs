@@ -64,4 +64,7 @@ public partial class Order
     public string? CouponCode { get; set; }
 
     public decimal? CouponDiscount { get; set; }
+
+    // V21: 费用分摊金额（运费/平台/推广分摊后回写，纳入利润计算）
+    public decimal? ExpenseAmount { get; set; }
 }

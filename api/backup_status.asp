@@ -10,6 +10,13 @@ Response.ContentType = "application/json"
 <!--#include file="../includes/config.asp"-->
 <!--#include file="../includes/connection.asp"-->
 <%
+' V21: 鉴权——备份元数据仅限登录管理员访问（之前无任何鉴权）
+If Session("AdminID") = "" Or IsNull(Session("AdminID")) Then
+    Response.Status = "401 Unauthorized"
+    Response.Write "{""status"":""error"",""message"":""unauthorized""}"
+    Response.End
+End If
+
 On Error Resume Next
 
 Call OpenConnection()

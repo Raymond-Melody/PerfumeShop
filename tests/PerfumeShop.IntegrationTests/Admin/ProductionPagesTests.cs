@@ -28,7 +28,7 @@ public class ProductionPagesTests : IDisposable
             .Options;
         _db = new ProductionTestContext(options);
 
-        _repo = new ProductionRepository(_db);
+        _repo = new ProductionRepository(_db, new PerfumeShop.Data.Services.InventoryLedger(_db));
         _ctrl = new ProductionController(_repo);
         _ctrl.ControllerContext = new ControllerContext
         {

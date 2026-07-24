@@ -67,7 +67,7 @@
                                     </div>
                                 }
                                 <div class="product-overlay">
-                                    <a href="/product?id=@item.ProductId" class="btn btn-white">查看详情</a>
+                                    <a href="/product/@item.ProductId" class="btn btn-white">查看详情</a>
                                     <button class="btn btn-icon" title="取消收藏" onclick="removeFromFavorites(@item.ProductId)">
                                         <i class="fas fa-heart"></i>
                                     </button>
@@ -75,14 +75,14 @@
                             </div>
                             <div class="product-info">
                                 <span class="product-category">@item.Category</span>
-                                <h3><a href="/product?id=@item.ProductId">@item.Name</a></h3>
+                                <h3><a href="/product/@item.ProductId">@item.Name</a></h3>
                                 <p class="product-desc">@((item.Description?.Length > 60 ? item.Description.Substring(0, 60) + "..." : item.Description) ?? "")</p>
                                 <div class="product-footer">
                                     <div class="product-price">
                                         <span class="price">¥@item.Price.ToString("F2")</span>
                                         <span class="price-label">起</span>
                                     </div>
-                                    <a href="/product?id=@item.ProductId" class="btn btn-sm btn-outline">定制</a>
+                                    <a href="/product/@item.ProductId" class="btn btn-sm btn-outline">定制</a>
                                 </div>
                             </div>
                         </div>

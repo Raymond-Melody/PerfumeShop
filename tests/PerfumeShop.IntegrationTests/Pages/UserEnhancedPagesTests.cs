@@ -35,7 +35,7 @@ public class UserEnhancedPagesTests : IDisposable
             UserId = TestUserId,
             Username = "testuser",
             Email = "test@example.com",
-            Password = "hashedpwd123",
+            Password = PerfumeShop.Shared.Security.PasswordHasher.Hash("hashedpwd123"),
             FullName = "测试用户",
             Phone = "13800000001",
             Points = 300,

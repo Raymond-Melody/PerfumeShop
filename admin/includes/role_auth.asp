@@ -76,6 +76,48 @@ Function HasModulePermission(moduleCode, requiredLevel)
         Exit Function
     End If
     
+    ' ============================================
+    ' V21 P3: 权限表驱动——优先查 ModulePermissions.RequiredRole
+    ' 若该模块配置了 RequiredRole，则以表为准（精确或前缀匹配）；
+    ' 未配置则回退到下方基于角色代码前缀的判断（向后兼容）
+    ' ============================================
+    Dim mpFound, mpRole, mpRs, mpClose
+    mpFound = False : mpRole = "" : mpClose = False
+    On Error Resume Next
+    If Not IsObject(conn) Then
+        Call OpenConnection() : mpClose = True
+    ElseIf conn Is Nothing Then
+        Call OpenConnection() : mpClose = True
+    ElseIf conn.State <> 1 Then
+        Call OpenConnection() : mpClose = True
+    End If
+    Set mpRs = conn.Execute("SELECT TOP 1 RequiredRole FROM ModulePermissions WHERE ModuleCode='" & Replace(moduleCode, "'", "''") & "' AND ISNULL(IsActive,1)=1 AND RequiredRole IS NOT NULL AND LEN(RequiredRole)>0")
+    If Not mpRs Is Nothing Then
+        If Not mpRs.EOF Then
+            mpFound = True
+            mpRole = CStr(mpRs("RequiredRole") & "")
+        End If
+        mpRs.Close
+    End If
+    Set mpRs = Nothing
+    If mpClose Then Call CloseConnection()
+    Err.Clear
+    On Error GoTo 0
+
+    If mpFound Then
+        Dim curRoleCode : curRoleCode = Session("AdminRoleCode")
+        If UCase(mpRole) = "SUPER_ADMIN" Then
+            HasModulePermission = False   ' 仅超管可访问；非超管在上方已放行，此处即拒绝
+        ElseIf curRoleCode = mpRole Then
+            HasModulePermission = True
+        ElseIf Len(mpRole) > 0 And Left(curRoleCode, Len(mpRole)) = mpRole Then
+            HasModulePermission = True    ' 前缀匹配：RequiredRole='PROD' 命中 PROD_XXX
+        Else
+            HasModulePermission = False
+        End If
+        Exit Function
+    End If
+    
     ' 获取当前用户权限
     Dim permissions
     permissions = Session("AdminPermissions")
@@ -160,6 +202,81 @@ Sub VerifyModuleAccess(moduleCode, requiredLevel)
         Call LogAdminAction("越权访问尝试", moduleCode, "", "", "")
         
         ' 跳转到无权限页面
+        Response.Redirect "/admin/unauthorized.asp?module=" & moduleCode
+        Response.End
+    End If
+End Sub
+
+' ============================================
+' V21: 操作级权限校验（RolePermissions 驱动）
+' action: view/create/edit/delete/export/approve
+' 规则：SUPER_ADMIN 或 Permissions='all' 豁免；必先具备模块访问权；
+'       若 RolePermissions 未配置该(角色,模块)行，回退为"具模块访问权即允许"（向后兼容）
+' ============================================
+Function HasActionPermission(moduleCode, action)
+    HasActionPermission = False
+    Call CheckRoleAndLoad()
+
+    If UCase(Session("AdminRoleCode")) = "SUPER_ADMIN" Or Session("AdminPermissions") = "all" Then
+        HasActionPermission = True
+        Exit Function
+    End If
+
+    If Not HasModulePermission(moduleCode, 1) Then
+        HasActionPermission = False
+        Exit Function
+    End If
+
+    Dim roleId, colName, rs, hasRow, allowed, needClose
+    roleId = Session("AdminRoleID")
+    If roleId = "" Then Exit Function
+
+    Select Case LCase(action)
+        Case "view":    colName = "CanView"
+        Case "create":  colName = "CanCreate"
+        Case "edit":    colName = "CanEdit"
+        Case "delete":  colName = "CanDelete"
+        Case "export":  colName = "CanExport"
+        Case "approve": colName = "CanApprove"
+        Case Else:      colName = "CanView"
+    End Select
+
+    hasRow = False
+    allowed = False
+    needClose = False
+    On Error Resume Next
+    If Not IsObject(conn) Then
+        Call OpenConnection() : needClose = True
+    ElseIf conn Is Nothing Then
+        Call OpenConnection() : needClose = True
+    ElseIf conn.State <> 1 Then
+        Call OpenConnection() : needClose = True
+    End If
+    Set rs = conn.Execute("SELECT " & colName & " AS P FROM RolePermissions WHERE RoleID=" & CLng(roleId) & " AND ModuleCode='" & Replace(moduleCode, "'", "''") & "'")
+    If Not rs Is Nothing Then
+        If Not rs.EOF Then
+            hasRow = True
+            Dim pv : pv = rs("P")
+            allowed = (CStr(pv & "") = "True" Or CStr(pv & "") = "1")
+        End If
+        rs.Close
+    End If
+    Set rs = Nothing
+    If needClose Then Call CloseConnection()
+    Err.Clear
+    On Error GoTo 0
+
+    If Not hasRow Then
+        HasActionPermission = True   ' 未配置操作级权限时向后兼容
+    Else
+        HasActionPermission = allowed
+    End If
+End Function
+
+' V21: 无操作权限则拦截（用于关键写操作前）
+Sub RequirePermissionOrDie(moduleCode, action)
+    If Not HasActionPermission(moduleCode, action) Then
+        Call LogAdminAction("越权操作拦截", moduleCode, "", "", "action=" & action)
         Response.Redirect "/admin/unauthorized.asp?module=" & moduleCode
         Response.End
     End If

@@ -1,0 +1,23 @@
+@page "/admin/finance/payable-create"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using PerfumeShop.Data.Models
+
+<PageTitle>新建应付</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">新建应付</MudText>
+<MudGrid><MudItem xs="12" md="6"><MudForm>
+    <MudTextField @bind-Value="_item.PayableNo" Label="应付单号" Required="true" />
+    <MudTextField @bind-Value="_item.SupplierName" Label="供应商" />
+    <MudNumericField @bind-Value="_amount" Label="金额" />
+    <MudDatePicker @bind-Value="_dueDate" Label="到期日" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="Save">保存</MudButton>
+    <MudButton Variant="Variant.Text" Href="/admin/finance/payables" Class="mt-4 ml-2">返回</MudButton>
+</MudForm></MudItem></MudGrid>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    private PerfumeShop.Data.Models.AccountsPayable _item = new(); private decimal _amount; private DateTime? _dueDate;
+    private async Task Save() { _item.Amount = _amount; _item.DueDate = _dueDate; _item.Status = "pending"; _item.CreatedAt = DateTime.Now; Db.AccountsPayables.Add(_item); await Db.SaveChangesAsync(); Snackbar.Add("创建成功", Severity.Success); Nav.NavigateTo("/admin/finance/payables"); }
+}

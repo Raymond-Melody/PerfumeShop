@@ -7,9 +7,11 @@
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
 @using PerfumeShop.Data.Repositories
+@using PerfumeShop.Core.Interfaces
 @using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
 @inject IAdminAuditor Auditor
+@inject ICostEngine CostEngine
 @inject AuthenticationStateProvider AuthState
 
 <PageTitle>基香管理</PageTitle>
@@ -93,6 +95,9 @@
             var lines=ing.Split('\n').Select(s=>s.Trim()).Where(s=>!string.IsNullOrEmpty(s));
             _edit.Ingredients=string.Join(",",lines);
         }else _edit.Ingredients=null;
-        try{if(!_editing){_edit.CreatedAt=DateTime.Now;Db.BaseNotes.Add(_edit);}else Db.BaseNotes.Update(_edit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_editing?"编辑基香":"新建基香","BaseNote",_edit.BaseNoteId,_edit.BaseNoteName);_msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{if(!_editing){_edit.CreatedAt=DateTime.Now;Db.BaseNotes.Add(_edit);}else Db.BaseNotes.Update(_edit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_editing?"编辑基香":"新建基香","BaseNote",_edit.BaseNoteId,_edit.BaseNoteName);
+        // V21: 基香单价变更会影响香调与产品成本，触发全量产品成本重算
+        if(_editing){try{await CostEngine.PreloadAllCostDataAsync();await CostEngine.UpdateAllProductCostsAsync();CostEngine.ClearCache();}catch{}}
+        _msg=_editing?"已更新，产品成本已同步刷新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
 }

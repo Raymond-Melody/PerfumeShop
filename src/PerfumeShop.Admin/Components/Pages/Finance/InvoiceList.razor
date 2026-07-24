@@ -1,0 +1,25 @@
+﻿@page "/admin/finance/invoices"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>发票管理</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">发票管理</MudText>
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/admin/finance/invoice-create" StartIcon="@Icons.Material.Filled.Add" Class="mb-4">新建发票</MudButton>
+<MudTable Items="@_items" Hover="true" Dense="true" Striped="true">
+    <HeaderContent><MudTh>ID</MudTh><MudTh>支付单号</MudTh><MudTh>订单ID</MudTh><MudTh>金额</MudTh><MudTh>方式</MudTh><MudTh>状态</MudTh><MudTh>时间</MudTh><MudTh>操作</MudTh></HeaderContent>
+    <RowTemplate>
+        <MudTd>@context.RecordId</MudTd><MudTd>@context.TransactionNo</MudTd><MudTd>@context.OrderId</MudTd><MudTd>¥@context.Amount?.ToString("F2")</MudTd>
+        <MudTd>@context.PaymentMethod</MudTd>
+        <MudTd><MudChip T="string" Size="Size.Small" Color="@(context.Status == "success" ? Color.Success : Color.Warning)">@context.Status</MudChip></MudTd>
+        <MudTd>@context.CreatedAt?.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd><MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Href="@($"/admin/finance/invoice-detail/{context.RecordId}")" /></MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private List<PaymentRecord> _items = new();
+    protected override async Task OnInitializedAsync() { _items = await Db.PaymentRecords.AsNoTracking().OrderByDescending(p => p.RecordId).ToListAsync(); }
+}

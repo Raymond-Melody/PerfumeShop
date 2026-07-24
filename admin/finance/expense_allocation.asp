@@ -59,6 +59,20 @@ Function GetConfigWithDefault(key, defaultValue)
     GetConfigWithDefault = val
 End Function
 
+' ========== V21: 分摊后回写订单费用金额并重算利润（集合式，幂等）==========
+' 将 ExpenseRecords 按订单汇总写入 Orders.ExpenseAmount，并令
+' ProfitAmount = TotalAmount - CostAmount - ShippingFee - ExpenseAmount（下限0），与成本引擎口径一致
+Sub SyncAllOrderExpenseProfit()
+    On Error Resume Next
+    ' 回写各订单费用合计
+    ExecuteNonQuery "UPDATE o SET o.ExpenseAmount = ISNULL(e.ExpSum,0) FROM Orders o " & _
+        "INNER JOIN (SELECT OrderID, SUM(Amount) AS ExpSum FROM ExpenseRecords WHERE OrderID IS NOT NULL GROUP BY OrderID) e ON o.OrderID = e.OrderID"
+    ' 重算利润（已含费用）
+    ExecuteNonQuery "UPDATE Orders SET ProfitAmount = CASE WHEN (ISNULL(TotalAmount,0) - ISNULL(CostAmount,0) - ISNULL(ShippingFee,0) - ISNULL(ExpenseAmount,0)) < 0 " & _
+        "THEN 0 ELSE (ISNULL(TotalAmount,0) - ISNULL(CostAmount,0) - ISNULL(ShippingFee,0) - ISNULL(ExpenseAmount,0)) END WHERE ISNULL(ExpenseAmount,0) > 0"
+    On Error GoTo 0
+End Sub
+
 ' ========== 处理表单提交 ==========
 Dim action, msg, errMsg, activeTab
 action = Request.Form("action")
@@ -105,6 +119,7 @@ If action = "allocate_shipping" AND canEdit Then
         
         ' 按运费规则自动计算并分摊
         Call AllocateShipping(orderId, startDate, endDate, shippingMethod)
+        Call SyncAllOrderExpenseProfit()   ' V21: 回写费用并重算利润
         msg = "运费分摊完成"
         activeTab = "shipping"
     End If
@@ -120,6 +135,7 @@ If action = "allocate_platform_fee" AND canEdit Then
         pfEndDate = Request.Form("endDate")
         
         Call AllocatePlatformFee(pfStartDate, pfEndDate)
+        Call SyncAllOrderExpenseProfit()   ' V21: 回写费用并重算利润
         msg = "平台费用分摊完成"
         activeTab = "platform"
     End If
@@ -142,6 +158,7 @@ If action = "allocate_promotion" AND canEdit Then
             errMsg = "有效成交额必须大于0"
         Else
             Call AllocatePromotion(promoStartDate, promoEndDate, promoTotalAmount, promoGMV)
+            Call SyncAllOrderExpenseProfit()   ' V21: 回写费用并重算利润
             msg = "推广费分摊完成"
             activeTab = "promotion"
         End If

@@ -1,0 +1,29 @@
+﻿@page "/admin/finance/revenue-report"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using Microsoft.EntityFrameworkCore
+@using PerfumeShop.Data.Models
+
+<PageTitle>营收报表</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">营收报表</MudText>
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2" Color="Color.Primary">总营收</MudText><MudText Typo="Typo.h5">¥@_total.ToString("F2")</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2" Color="Color.Success">本月营收</MudText><MudText Typo="Typo.h5">¥@_month.ToString("F2")</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="4"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">订单总数</MudText><MudText Typo="Typo.h5">@_orderCount</MudText></MudCardContent></MudCard></MudItem>
+</MudGrid>
+<MudChart ChartType="ChartType.Bar" InputData="@_chartData" InputLabels="@_chartLabels" Height="300px" />
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    private decimal _total, _month; private int _orderCount;
+    private double[] _chartData = Array.Empty<double>(); private string[] _chartLabels = Array.Empty<string>();
+    protected override async Task OnInitializedAsync()
+    {
+        _total = await Db.Orders.Where(o => o.Status != "cancelled").SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
+        var ms = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        _month = await Db.Orders.Where(o => o.CreatedAt >= ms && o.Status != "cancelled").SumAsync(o => (decimal?)o.TotalAmount) ?? 0;
+        _orderCount = await Db.Orders.CountAsync();
+        var stats = await Db.DailyStatistics.Where(s => s.StatDate >= DateTime.Today.AddDays(-30)).OrderBy(s => s.StatDate).ToListAsync();
+        _chartLabels = stats.Select(s => s.StatDate.ToString("MM-dd")).ToArray(); _chartData = stats.Select(s => (double)(s.TotalRevenue ?? 0)).ToArray();
+    }
+}

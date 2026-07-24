@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PerfumeShop.Data.Models;
+using PerfumeShop.Shared.Security;
 
 namespace PerfumeShop.Api.Controllers;
 
@@ -215,12 +216,10 @@ public class UserExtendedController : ControllerBase
             return BadRequest(new { success = false, message = "新密码至少6位" });
         var user = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound(new { success = false, message = "用户不存在" });
-        if (!string.IsNullOrEmpty(user.Password) && user.Password != req.CurrentPassword)
-        {
-            if (!user.Password.StartsWith("V3$") && !user.Password.StartsWith("V2_"))
-                return BadRequest(new { success = false, message = "当前密码错误" });
-        }
-        user.Password = req.NewPassword;
+        // V19 统一口令校验：验证当前密码（PasswordHasher），再以统一散列存储新密码
+        if (!string.IsNullOrEmpty(user.Password) && !PasswordHasher.Verify(req.CurrentPassword, user.Password).Success)
+            return BadRequest(new { success = false, message = "当前密码错误" });
+        user.Password = PasswordHasher.Hash(req.NewPassword);
         await _db.SaveChangesAsync();
         return Ok(new { success = true, message = "密码已修改" });
     }
@@ -348,11 +347,9 @@ public class UserExtendedController : ControllerBase
     {
         var user = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound(new { success = false, message = "用户不存在" });
-        if (!string.IsNullOrEmpty(user.Password) && user.Password != req.Password)
-        {
-            if (!user.Password.StartsWith("V3$") && !user.Password.StartsWith("V2_"))
-                return BadRequest(new { success = false, message = "密码错误" });
-        }
+        // V19 统一口令校验
+        if (!string.IsNullOrEmpty(user.Password) && !PasswordHasher.Verify(req.Password, user.Password).Success)
+            return BadRequest(new { success = false, message = "密码错误" });
         user.IsActive = false;
         await _db.SaveChangesAsync();
         return Ok(new { success = true, message = "账户已标记为待删除，30天后将实际清理", coolingDays = 30 });

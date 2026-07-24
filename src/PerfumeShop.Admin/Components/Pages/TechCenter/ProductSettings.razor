@@ -6,9 +6,11 @@
 @using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Core.Interfaces
 @using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
 @inject IAdminAuditor Auditor
+@inject ICostEngine CostEngine
 @inject AuthenticationStateProvider AuthState
 
 <PageTitle>产品设置</PageTitle>
@@ -145,7 +147,10 @@
     void OpenProductEdit(Product p){_productEdit=new(){ProductId=p.ProductId,ProductName=p.ProductName,Category=p.Category,ProductType=p.ProductType,Description=p.Description,ImageUrl=p.ImageUrl,BasePrice=p.BasePrice,IsActive=p.IsActive};_productEditing=true;_showProductModal=true;}
     void CloseProductModal(){_showProductModal=false;}
     async Task SaveProduct(){
-        try{if(_productEditing)Db.Products.Update(_productEdit);else Db.Products.Add(_productEdit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_productEditing?"编辑产品":"新建产品","Product",_productEdit.ProductId,_productEdit.ProductName);_msg="已保存";_msgType="ok";_showProductModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{if(_productEditing)Db.Products.Update(_productEdit);else Db.Products.Add(_productEdit);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_productEditing?"编辑产品":"新建产品","Product",_productEdit.ProductId,_productEdit.ProductName);
+        // V21: 产品保存后刷新该产品 BOM/单位成本
+        try{await CostEngine.UpdateProductCostAsync(_productEdit.ProductId);CostEngine.ClearCache();}catch{}
+        _msg="已保存";_msgType="ok";_showProductModal=false;await LoadAll();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
     async Task ToggleProductActive(Product p){try{p.IsActive=!(p.IsActive??true);Db.Products.Update(p);await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,p.IsActive==true?"上架产品":"下架产品","Product",p.ProductId,p.ProductName);_activeCount=_items.Count(x=>x.IsActive==true);_msg="状态已更新";_msgType="ok";}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}}
 

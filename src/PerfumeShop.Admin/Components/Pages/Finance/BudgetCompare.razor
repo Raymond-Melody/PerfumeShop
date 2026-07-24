@@ -1,0 +1,23 @@
+﻿@page "/admin/finance/budget-compare/{BudgetId:int}"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using PerfumeShop.Data.Models
+
+<PageTitle>预算对比</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">预算对比</MudText>
+@if (_b != null) {
+<MudGrid>
+    <MudItem xs="12" sm="6"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">预算金额</MudText><MudText Typo="Typo.h4" Color="Color.Primary">¥@_b.BudgetAmount?.ToString("F2")</MudText></MudCardContent></MudCard></MudItem>
+    <MudItem xs="12" sm="6"><MudCard><MudCardContent><MudText Typo="Typo.subtitle2">实际金额</MudText><MudText Typo="Typo.h4" Color="@((_b.ActualAmount ?? 0) > (_b.BudgetAmount ?? 0) ? Color.Error : Color.Success)">¥@_b.ActualAmount?.ToString("F2")</MudText></MudCardContent></MudCard></MudItem>
+</MudGrid>
+<MudAlert Severity="@((_b.ActualAmount ?? 0) <= (_b.BudgetAmount ?? 0) ? Severity.Success : Severity.Warning)" Class="mt-4">
+    差异: ¥@((_b.ActualAmount - _b.BudgetAmount)?.ToString("F2")) (@((_b.BudgetAmount > 0 ? (_b.ActualAmount - _b.BudgetAmount) / _b.BudgetAmount * 100 : 0)?.ToString("F1"))%)
+</MudAlert>}
+<MudButton Variant="Variant.Text" Href="/admin/finance/budgets" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public int BudgetId { get; set; }
+    private BudgetPlan? _b;
+    protected override async Task OnInitializedAsync() { _b = await Db.BudgetPlans.FindAsync(BudgetId); }
+}

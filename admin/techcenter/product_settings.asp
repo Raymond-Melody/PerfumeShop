@@ -15,6 +15,7 @@ Response.AddHeader "Pragma", "no-cache"
 <!--#include file="../../includes/connection.asp"-->
 <!--#include file="../../includes/common_utils.asp"-->
 <!--#include file="../../includes/product_type_utils.asp"-->
+<!--#include file="../../includes/cost_engine.asp"-->
 <%
 Call OpenConnection()
 

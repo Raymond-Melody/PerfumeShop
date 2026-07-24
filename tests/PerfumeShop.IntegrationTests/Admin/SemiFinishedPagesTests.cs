@@ -21,7 +21,7 @@ public class SemiFinishedPagesTests : IDisposable
             .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _db = new ProductionTestContext(options);
-        _repo = new SemiFinishedRepository(_db);
+        _repo = new SemiFinishedRepository(_db, new PerfumeShop.Data.Services.InventoryLedger(_db));
     }
 
     public void Dispose() => _db.Dispose();

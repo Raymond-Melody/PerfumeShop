@@ -900,12 +900,13 @@ public class CostEngine : ICostEngine
         var orderData = await _db.Orders
             .AsNoTracking()
             .Where(o => o.OrderId == orderId)
-            .Select(o => new { o.TotalAmount, o.ShippingFee })
+            .Select(o => new { o.TotalAmount, o.ShippingFee, o.ExpenseAmount })
             .FirstOrDefaultAsync(ct);
 
         if (orderData == null) return;
 
-        var profitAmount = orderData.TotalAmount - orderCost - (orderData.ShippingFee ?? 0);
+        // V21: 利润纳入费用分摊：Profit = Total - Cost - ShippingFee - ExpenseAmount（下限 0）
+        var profitAmount = orderData.TotalAmount - orderCost - (orderData.ShippingFee ?? 0) - (orderData.ExpenseAmount ?? 0);
         if (profitAmount < 0) profitAmount = 0;
 
         await _db.Orders

@@ -167,6 +167,36 @@ If Request.Form("fix_action") = "create_sp" Then
     On Error GoTo 0
 End If
 
+' =====================================
+' V21 P3: 保留清理——删除超过保留期的 .bak 文件
+' =====================================
+If Request.Form("action") = "cleanup_old" Then
+    On Error Resume Next
+    Dim retDays : retDays = BACKUP_RETENTION_DAYS
+    If Not IsNumeric(retDays) Then retDays = 30
+    Dim delCount : delCount = 0
+    If fso.FolderExists(backupPath) Then
+        ' 先缓冲待删路径，避免遍历集合时删除导致枚举异常
+        Dim fDel, delList : Set delList = Server.CreateObject("Scripting.Dictionary")
+        For Each fDel In fso.GetFolder(backupPath).Files
+            If LCase(fso.GetExtensionName(fDel.Name)) = "bak" Then
+                If DateDiff("d", fDel.DateLastModified, Now()) > CLng(retDays) Then
+                    If Not delList.Exists(fDel.Path) Then delList.Add fDel.Path, fDel.Name
+                End If
+            End If
+        Next
+        Dim dk
+        For Each dk In delList.Keys
+            fso.DeleteFile dk, True
+            If Err.Number = 0 Then delCount = delCount + 1 Else Err.Clear
+        Next
+        Set delList = Nothing
+    End If
+    Call LogAdminAction("清理过期备份", "system", "backup", "", "保留" & retDays & "天，删除" & delCount & "个")
+    msg = "已清理 " & delCount & " 个超过 " & retDays & " 天的备份文件"
+    On Error GoTo 0
+End If
+
 ' 列出备份文件
 Dim bakFiles(), bakCount : bakCount = 0
 If fso.FolderExists(backupPath) Then
@@ -323,6 +353,10 @@ nextBackupTime = DateAdd("d", 1, Date()) & " 02:00 AM"
             <input type="hidden" name="action" value="ps_backup">
             <button type="submit" class="btn btn-warning" style="background:#FF9800;border-color:#FF9800;"><i class="fas fa-terminal"></i> PowerShell 备份</button>
         </form>
+        <form method="post" style="display:inline;" onsubmit="return confirm('将删除超过保留期的旧备份文件，确认继续？');">
+            <input type="hidden" name="action" value="cleanup_old">
+            <button type="submit" class="btn" style="background:#607d8b;border-color:#607d8b;color:#fff;"><i class="fas fa-broom"></i> 清理过期备份</button>
+        </form>
         <button class="btn btn-primary" onclick="document.getElementById('diagPanel').style.display=document.getElementById('diagPanel').style.display=='none'?'':'none'"><i class="fas fa-stethoscope"></i> 检测修复</button>
     </div>
     
@@ -443,6 +477,26 @@ nextBackupTime = DateAdd("d", 1, Date()) & " 02:00 AM"
                     <% End If %>
                 </tbody>
             </table>
+        </div>
+    </div>
+    
+    <!-- V21 P3: 数据库还原说明 -->
+    <div class="card">
+        <div class="card-header"><i class="fas fa-undo"></i> 数据库还原说明</div>
+        <div class="card-body" style="font-size:13px;color:#ccc;line-height:1.9;">
+            <p style="color:#FFB74D;"><i class="fas fa-exclamation-triangle"></i> <strong>还原为高风险操作，会覆盖现有数据，且需要独占（单用户）连接，故不在 Web 端直接执行。</strong>请由 DBA 按下述步骤在 SSMS 或 sqlcmd 中操作：</p>
+            <ol style="padding-left:20px;">
+                <li>在「备份文件列表」中下载或定位目标 .bak 文件（路径：<code style="color:#00bcd4;"><%= backupPath %></code>）。</li>
+                <li>停止应用池或让站点进入维护页，避免新连接占用数据库。</li>
+                <li>在 SSMS 执行（或用 sqlcmd）：
+                    <pre style="background:rgba(0,0,0,0.35);padding:10px;border-radius:6px;overflow:auto;color:#9fe3ef;">USE [master];
+ALTER DATABASE [PerfumeShop] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+RESTORE DATABASE [PerfumeShop] FROM DISK = N'<%= backupPath %>\备份文件名.bak' WITH REPLACE, RECOVERY;
+ALTER DATABASE [PerfumeShop] SET MULTI_USER;</pre>
+                </li>
+                <li>还原完成后重启应用池，并在本页「检测修复」确认连接正常。</li>
+            </ol>
+            <p style="color:#888;">保留策略：系统按 <strong><%= BACKUP_RETENTION_DAYS %></strong> 天保留；可用上方「清理过期备份」手动清理，或由计划任务脚本 <code style="color:#00bcd4;">database/setup_scheduled_backup.ps1</code> 自动备份与按期清理。</p>
         </div>
     </div>
     

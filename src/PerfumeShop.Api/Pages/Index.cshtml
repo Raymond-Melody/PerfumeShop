@@ -35,12 +35,12 @@
                             <span class="badge badge-premium"><i class="fas fa-bolt"></i> 秒杀</span>
                         </div>
                         <div class="product-overlay">
-                            <a href="/product?id=@fs.ProductId" class="btn-brand"><i class="fas fa-eye"></i> 立即抢购</a>
+                            <a href="/product/@fs.ProductId" class="btn-brand"><i class="fas fa-eye"></i> 立即抢购</a>
                         </div>
                     </div>
                     <div class="product-info">
                         <span class="product-category">限时秒杀</span>
-                        <h3><a href="/product?id=@fs.ProductId">@(prod?.ProductName ?? "商品")</a></h3>
+                        <h3><a href="/product/@fs.ProductId">@(prod?.ProductName ?? "商品")</a></h3>
                         <div class="product-price">
                             <span class="price">¥@fs.FlashPrice.ToString("F2")</span>
                             <span class="price-label" style="text-decoration:line-through">¥@(prod?.BasePrice.ToString("F2") ?? "")</span>
@@ -74,12 +74,12 @@
                     <div class="product-image">
                         <img src="@(p.ImageUrl ?? "/images/default-product.svg")" alt="@p.ProductName" loading="lazy" />
                         <div class="product-overlay">
-                            <a href="/product?id=@p.ProductId" class="btn-brand"><i class="fas fa-eye"></i> 查看详情</a>
+                            <a href="/product/@p.ProductId" class="btn-brand"><i class="fas fa-eye"></i> 查看详情</a>
                         </div>
                     </div>
                     <div class="product-info">
                         <span class="product-category">@(p.Category ?? "香水")</span>
-                        <h3><a href="/product?id=@p.ProductId">@p.ProductName</a></h3>
+                        <h3><a href="/product/@p.ProductId">@p.ProductName</a></h3>
                         <p class="product-desc">@(p.Category ?? "")</p>
                         <div class="product-price">
                             <span class="price">¥@p.BasePrice.ToString("F2")</span>

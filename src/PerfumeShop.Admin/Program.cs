@@ -76,6 +76,7 @@ builder.Services.AddSingleton<IAuthorizationHandler, ModuleAccessHandler>();
 
 // Business Services
 builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IInventoryLedger, InventoryLedger>(); // V21: 库存流水统一写入
 builder.Services.AddScoped<ExpenseAllocationService>(); // V20: 费用分摊引擎
 builder.Services.AddScoped<ICostEngine, CostEngine>();
 builder.Services.AddScoped<IPromotionEngine, PromotionEngine>();

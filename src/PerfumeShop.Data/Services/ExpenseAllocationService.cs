@@ -160,6 +160,7 @@ public class ExpenseAllocationService
         }
 
         await _db.SaveChangesAsync();
+        await SyncOrderExpenseProfitAsync(); // V21: 回写费用并重算利润
         return new(true, $"运费分摊完成：处理 {ordersProcessed} 笔订单，生成 {recordsCreated} 条记录", ordersProcessed, recordsCreated);
     }
 
@@ -222,6 +223,7 @@ public class ExpenseAllocationService
         }
 
         await _db.SaveChangesAsync();
+        await SyncOrderExpenseProfitAsync(); // V21: 回写费用并重算利润
         return new(true, $"平台费用分摊完成：处理 {ordersProcessed} 笔订单，生成 {recordsCreated} 条记录", ordersProcessed, recordsCreated);
     }
 
@@ -312,7 +314,33 @@ public class ExpenseAllocationService
         }
 
         await _db.SaveChangesAsync();
+        await SyncOrderExpenseProfitAsync(); // V21: 回写费用并重算利润
         return new(true, $"推广费分摊完成：处理 {ordersProcessed} 笔订单，生成 {recordsCreated} 条记录", ordersProcessed, recordsCreated);
+    }
+
+    // ==================== V21: 分摊后回写订单费用并重算利润 ====================
+
+    /// <summary>
+    /// 将 ExpenseRecords 按订单汇总写入 Orders.ExpenseAmount，并令
+    /// ProfitAmount = TotalAmount - CostAmount - ShippingFee - ExpenseAmount（下限 0）。
+    /// 集合式、幂等，与成本引擎口径一致 — 对标 V18 expense_allocation.asp SyncAllOrderExpenseProfit。
+    /// </summary>
+    public async Task SyncOrderExpenseProfitAsync()
+    {
+        // 回写各订单费用合计
+        await _db.Database.ExecuteSqlRawAsync(@"
+UPDATE o SET o.ExpenseAmount = COALESCE(e.ExpSum,0)
+FROM Orders o
+INNER JOIN (SELECT OrderID, SUM(Amount) AS ExpSum FROM ExpenseRecords WHERE OrderID IS NOT NULL GROUP BY OrderID) e
+    ON o.OrderID = e.OrderID");
+
+        // 重算利润（已含费用）
+        await _db.Database.ExecuteSqlRawAsync(@"
+UPDATE Orders SET ProfitAmount =
+    CASE WHEN (COALESCE(TotalAmount,0) - COALESCE(CostAmount,0) - COALESCE(ShippingFee,0) - COALESCE(ExpenseAmount,0)) < 0
+         THEN 0
+         ELSE (COALESCE(TotalAmount,0) - COALESCE(CostAmount,0) - COALESCE(ShippingFee,0) - COALESCE(ExpenseAmount,0)) END
+WHERE COALESCE(ExpenseAmount,0) > 0");
     }
 
     // ==================== 配置保存 ====================

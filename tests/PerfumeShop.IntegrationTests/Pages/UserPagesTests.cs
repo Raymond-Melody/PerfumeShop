@@ -71,7 +71,7 @@ public class UserPagesTests : IDisposable
             UserId = TestUserId,
             Username = "testuser",
             Email = "test@example.com",
-            Password = "V3$salt$hash",
+            Password = PerfumeShop.Shared.Security.PasswordHasher.Hash("correctpassword"),
             FullName = "Test User",
             Phone = "13800138000",
             IsActive = true,

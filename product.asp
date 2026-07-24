@@ -2,6 +2,10 @@
 <%
 Response.Charset = "UTF-8"
 Response.ContentType = "text/html"
+' V21: 关闭响应缓冲——本页内容较大且包含社交分享/AI推荐等下半屏区块，
+' 在默认缓冲模式下会触发 ASP 响应缓冲区限制(0251)导致 500；改为流式输出。
+' 本页所有 Response.Redirect 均在输出任何 HTML 之前(登录校验/无效ID)，故关闭缓冲安全。
+Response.Buffer = False
 %>
 <!--#include file="includes/config.asp"-->
 <!--#include file="includes/connection.asp"-->
@@ -1267,20 +1271,20 @@ If FEATURE_COMMUNITY Then
 		ElseIf Len(reviewContent) < 10 Then
 			reviewErr = "评价内容至少10个字符"
 		Else
-			hasReviewed = DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE ProductID=@PID AND UserID=@UID AND IsActive=1", _
+			hasReviewed = DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE ProductID=@PID AND UserID=@UID AND [Status]<>'Rejected'", _
 				Array(Array("@PID", DAL_adInteger, 0, productId), Array("@UID", DAL_adInteger, 0, Session("UserID"))), 0)
 			If CLng(hasReviewed) > 0 Then
 				reviewErr = "您已评价过该产品"
 			Else
-				hasPurchased = DAL_GetScalar("SELECT COUNT(*) FROM Orders o JOIN OrderItems oi ON o.OrderID=oi.OrderID WHERE o.UserID=@UID AND oi.ProductID=@PID AND o.Status IN ('delivered','completed')", _
+				hasPurchased = DAL_GetScalar("SELECT ISNULL(MAX(o.OrderID),0) FROM Orders o JOIN OrderDetails oi ON o.OrderID=oi.OrderID WHERE o.UserID=@UID AND oi.ProductID=@PID AND o.Status IN ('Paid','Shipped','Completed','delivered','completed')", _
 					Array(Array("@UID", DAL_adInteger, 0, Session("UserID")), Array("@PID", DAL_adInteger, 0, productId)), 0)
 				newReviewID = DAL_Insert("ProductReviews", _
-					Array("ProductID","UserID","Rating","Title","Content","IsVerifiedPurchase"), _
-					Array(Array("@ProductID", DAL_adInteger, 0, productId), _
+					Array("OrderID","ProductID","UserID","Rating","Title","Comment","Status","IsVerifiedPurchase"), _
+					Array(Array("@OrderID", DAL_adInteger, 0, CLng("0" & hasPurchased)), Array("@ProductID", DAL_adInteger, 0, productId), _
 					      Array("@UserID", DAL_adInteger, 0, Session("UserID")), _
 					      Array("@Rating", DAL_adInteger, 0, reviewRating), _
 					      Array("@Title", DAL_adVarChar, 100, reviewTitle), _
-					      Array("@Content", DAL_adVarChar, 2000, reviewContent), _
+					      Array("@Comment", DAL_adVarChar, 2000, reviewContent), Array("@Status", DAL_adVarChar, 20, "Pending"), _
 					      Array("@IsVerifiedPurchase", DAL_adBoolean, 0, IIf(CLng(hasPurchased) > 0, 1, 0))))
 				If newReviewID > 0 Then
 					reviewMsg = "评价发布成功！感谢您的分享。"
@@ -1318,19 +1322,19 @@ If FEATURE_COMMUNITY Then
 	For iRD = 1 To 5 : ratingDist(iRD) = 0 : Next
 
 	Dim rsStats
-	Set rsStats = DAL_GetRow("SELECT COUNT(*) AS TotalReviews, ISNULL(AVG(CAST(Rating AS DECIMAL(3,2))), 0) AS AvgRating FROM ProductReviews WHERE ProductID=@PID AND IsActive=1", _
+	Set rsStats = DAL_GetRow("SELECT COUNT(*) AS TotalReviews, ISNULL(AVG(CAST(Rating AS DECIMAL(3,2))), 0) AS AvgRating FROM ProductReviews WHERE ProductID=@PID AND [Status]='Approved'", _
 		Array(Array("@PID", DAL_adInteger, 0, productId)))
 	If Not rsStats Is Nothing Then
 		totalReviews = CLng(rsStats("TotalReviews"))
 		avgRating = CDbl(rsStats("AvgRating"))
-		rsStats.Close : Set rsStats = Nothing
+		Set rsStats = Nothing
 	Else
 		totalReviews = 0 : avgRating = 0
 	End If
 
 	If totalReviews > 0 Then
 		Dim rsDist
-		Set rsDist = DAL_GetList("SELECT Rating, COUNT(*) AS Cnt FROM ProductReviews WHERE ProductID=@PID AND IsActive=1 GROUP BY Rating", _
+		Set rsDist = DAL_GetList("SELECT Rating, COUNT(*) AS Cnt FROM ProductReviews WHERE ProductID=@PID AND [Status]='Approved' GROUP BY Rating", _
 			Array(Array("@PID", DAL_adInteger, 0, productId)))
 		If Not rsDist Is Nothing Then
 			Do While Not rsDist.EOF
@@ -1347,13 +1351,13 @@ If FEATURE_COMMUNITY Then
 	If reviewPage < 1 Then reviewPage = 1
 	reviewPageSize = 5
 
-	reviewSQL = "SELECT pr.*, u.Username, u.FullName FROM ProductReviews pr LEFT JOIN Users u ON pr.UserID=u.UserID WHERE pr.ProductID=@PID AND pr.IsActive=1 ORDER BY pr.CreatedAt DESC"
+	reviewSQL = "SELECT pr.*, u.Username, u.FullName FROM ProductReviews pr LEFT JOIN Users u ON pr.UserID=u.UserID WHERE pr.ProductID=@PID AND pr.[Status]='Approved' ORDER BY pr.CreatedAt DESC"
 	Set rsReviews = DAL_GetListPaged(reviewSQL, _
 		Array(Array("@PID", DAL_adInteger, 0, productId)), reviewPage, reviewPageSize, reviewPageInfo)
 
 	' ---- 当前用户是否已评价 ----
 	Dim userHasReviewed
-	userHasReviewed = (CLng(DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE ProductID=@PID AND UserID=@UID AND IsActive=1", _
+	userHasReviewed = (CLng(DAL_GetScalar("SELECT COUNT(*) FROM ProductReviews WHERE ProductID=@PID AND UserID=@UID AND [Status]<>'Rejected'", _
 		Array(Array("@PID", DAL_adInteger, 0, productId), Array("@UID", DAL_adInteger, 0, Session("UserID"))), 0)) > 0)
 %>
 <section class="product-reviews-section">
@@ -1460,7 +1464,7 @@ If FEATURE_COMMUNITY Then
 					<% If Not IsNull(rsReviews("Title")) And rsReviews("Title") <> "" Then %>
 					<h5 class="review-title"><%= Server.HTMLEncode(rsReviews("Title")) %></h5>
 					<% End If %>
-					<p class="review-content"><%= Server.HTMLEncode(rsReviews("Content")) %></p>
+					<p class="review-content"><%= Server.HTMLEncode(rsReviews("Comment")) %></p>
 					<div class="review-footer">
 						<button class="btn-like <%= IIf(revLiked, "liked", "") %>" onclick="toggleReviewLike(<%= rsReviews("ReviewID") %>, <%= IIf(revLiked, "true", "false") %>)">
 							<i class="<%= IIf(revLiked, "fas", "far") %> fa-heart"></i>

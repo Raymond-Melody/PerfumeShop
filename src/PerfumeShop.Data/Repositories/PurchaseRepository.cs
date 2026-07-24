@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PerfumeShop.Data.Models;
+using PerfumeShop.Data.Services;
 
 namespace PerfumeShop.Data.Repositories;
 
@@ -9,10 +10,12 @@ namespace PerfumeShop.Data.Repositories;
 public class PurchaseRepository
 {
     private readonly PerfumeShopContext _db;
+    private readonly IInventoryLedger _ledger;
 
-    public PurchaseRepository(PerfumeShopContext db)
+    public PurchaseRepository(PerfumeShopContext db, IInventoryLedger ledger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _ledger = ledger;
     }
 
     // ==================== 采购订单 ====================
@@ -123,20 +126,129 @@ public class PurchaseRepository
         return (items, total);
     }
 
-    /// <summary>创建收货单并更新库存</summary>
-    public async Task<PurchaseReceipt> ReceivePurchaseAsync(PurchaseReceipt receipt, List<PurchaseReceiptDetail>? details = null, CancellationToken ct = default)
+    /// <summary>
+    /// 创建收货单并更新库存 — 对标 V18 admin/purchase/receiving.asp
+    /// 事务内：建收货单+明细 → 按 OrderType 更新对应库存 StockQty + 移动加权 WeightedUnitCost
+    ///            → 写批次 + IN 流水 → 回写采购明细 ReceivedQty + 订单状态
+    /// orderType: RawMaterial | Packaging | Bottle | Printing | SprayHead
+    /// </summary>
+    public async Task<PurchaseReceipt> ReceivePurchaseAsync(
+        PurchaseReceipt receipt, List<PurchaseReceiptDetail>? details = null,
+        string orderType = "RawMaterial", string? operatorName = null, CancellationToken ct = default)
     {
-        receipt.CreatedAt = DateTime.Now;
-        receipt.Status = "received";
-        receipt.ReceiptNo = $"RCV-{DateTime.Now:yyyyMMddHHmmss}";
-        var entry = await _db.PurchaseReceipts.AddAsync(receipt, ct);
-        if (details?.Count > 0)
+        using var tx = await _db.Database.BeginTransactionAsync(ct);
+        try
         {
-            foreach (var d in details) d.ReceiptId = receipt.ReceiptId;
-            await _db.PurchaseReceiptDetails.AddRangeAsync(details, ct);
+            receipt.CreatedAt = DateTime.Now;
+            if (string.IsNullOrWhiteSpace(receipt.Status)) receipt.Status = "Complete";
+            if (string.IsNullOrWhiteSpace(receipt.ReceiptNo))
+                receipt.ReceiptNo = $"RCV-{DateTime.Now:yyyyMMddHHmmss}";
+            var entry = await _db.PurchaseReceipts.AddAsync(receipt, ct);
+            await _db.SaveChangesAsync(ct);
+
+            if (details?.Count > 0)
+            {
+                foreach (var d in details) d.ReceiptId = receipt.ReceiptId;
+                await _db.PurchaseReceiptDetails.AddRangeAsync(details, ct);
+                await _db.SaveChangesAsync(ct);
+
+                foreach (var d in details)
+                {
+                    var matId = d.MaterialId ?? 0;
+                    var accepted = (decimal)(d.AcceptedQty ?? d.ReceivedQty ?? 0);
+                    var unitPrice = d.UnitPrice ?? 0;
+                    if (matId <= 0 || accepted <= 0) continue;
+
+                    await ApplyStockInAsync(orderType, matId, accepted, unitPrice, receipt.ReceiptNo!, operatorName, ct);
+
+                    // 回写采购明细已收数量
+                    if (d.PurchaseDetailId.HasValue)
+                        await _db.Database.ExecuteSqlInterpolatedAsync(
+                            $"UPDATE PurchaseOrderDetails SET ReceivedQty = COALESCE(ReceivedQty,0) + {accepted} WHERE DetailID = {d.PurchaseDetailId.Value}", ct);
+                }
+            }
+
+            // 更新采购订单状态
+            if (receipt.PurchaseId.HasValue)
+            {
+                var poStatus = receipt.Status == "Partial" ? "PartialReceived" : "Received";
+                var now = DateTime.Now;
+                await _db.Database.ExecuteSqlInterpolatedAsync(
+                    $"UPDATE PurchaseOrders SET Status = {poStatus}, UpdatedAt = {now} WHERE PurchaseID = {receipt.PurchaseId.Value}", ct);
+            }
+
+            await tx.CommitAsync(ct);
+            return entry.Entity;
         }
-        await _db.SaveChangesAsync(ct);
-        return entry.Entity;
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
+    }
+
+    /// <summary>OrderType → 库存表/主键列映射 (对标 V18 receiving.asp L326-393)</summary>
+    private static (string Table, string IdCol, string ItemType) StockTableOf(string orderType) => orderType switch
+    {
+        "Packaging" => ("PackagingInventory", "PackagingID", "Packaging"),
+        "Bottle" => ("BottleStyles", "BottleID", "Bottle"),
+        "Printing" => ("PrintingInventory", "PrintingID", "Printing"),
+        "SprayHead" => ("SprayHeadInventory", "SprayHeadID", "SprayHead"),
+        _ => ("RawMaterialInventory", "MaterialID", "RawMaterial"),
+    };
+
+    /// <summary>入库单条：移动加权成本重算 + 更新库存 + 批次 + IN 流水</summary>
+    private async Task ApplyStockInAsync(string orderType, int matId, decimal accepted, decimal unitPrice,
+        string receiptNo, string? operatorName, CancellationToken ct)
+    {
+        var (table, idCol, itemType) = StockTableOf(orderType);
+
+        // 读旧库存量与旧加权成本（表名/列名受控枚举，非用户输入）
+        var rows = await _db.Database.SqlQueryRaw<StockCostRow>(
+            $"SELECT COALESCE(StockQty,0) AS OldStock, COALESCE(WeightedUnitCost,0) AS OldCost, COALESCE(ItemName,'') AS ItemName, COALESCE(ItemCode,'') AS ItemCode FROM [{table}] WHERE [{idCol}] = {{0}}",
+            matId).ToListAsync(ct);
+        var old = rows.FirstOrDefault() ?? new StockCostRow();
+        var oldStock = old.OldStock < 0 ? 0 : old.OldStock;
+
+        // 移动加权：(旧量*旧价 + 收货量*单价) / (旧量+收货量)
+        var newCost = (oldStock + accepted) > 0
+            ? (oldStock * old.OldCost + accepted * unitPrice) / (oldStock + accepted)
+            : unitPrice;
+
+        var nowTs = DateTime.Now;
+        // 更新库存量 + 加权成本
+        await _db.Database.ExecuteSqlRawAsync(
+            $"UPDATE [{table}] SET StockQty = COALESCE(StockQty,0) + {{0}}, WeightedUnitCost = {{1}}, UpdatedAt = {{2}} WHERE [{idCol}] = {{3}}",
+            new object[] { accepted, newCost, nowTs, matId }, ct);
+
+        // 批次记录（实际采购单价，保留批次差异化成本）
+        try
+        {
+            await _db.Database.ExecuteSqlInterpolatedAsync($@"
+INSERT INTO InventoryBatches (ItemType, ItemID, ItemCode, ItemName, BatchNo, UnitCost, StockQty, UpdatedAt, CreatedAt)
+VALUES ({itemType}, {matId}, {old.ItemCode}, {old.ItemName}, {receiptNo}, {unitPrice}, {accepted}, {nowTs}, {nowTs})", ct);
+        }
+        catch { /* InventoryBatches 可能列不齐，不阻断 */ }
+
+        // IN 流水（NoteID 非香调交易传 0，MaterialID 存品类主键）
+        await _ledger.WriteTransactionAsync(new InvTxn(
+            NoteId: 0, MaterialId: matId, ProductId: null, Quantity: accepted,
+            TransactionType: "采购入库", Direction: "IN", ReferenceType: "PurchaseReceipt",
+            ReferenceOrderId: null, UnitCost: unitPrice,
+            Notes: $"收货单{receiptNo}", CreatedBy: operatorName ?? "SYSTEM"), ct);
+
+        await _ledger.WriteMovementAsync(new StockMove(
+            ItemType: itemType, ItemId: matId, ItemName: old.ItemName, ItemCode: old.ItemCode,
+            MovementType: "IN", Quantity: accepted, BeforeQty: oldStock, AfterQty: oldStock + accepted,
+            Unit: null, ReferenceNo: receiptNo, Notes: "采购入库", CreatedBy: operatorName ?? "SYSTEM"), ct);
+    }
+
+    private sealed class StockCostRow
+    {
+        public decimal OldStock { get; set; }
+        public decimal OldCost { get; set; }
+        public string ItemName { get; set; } = "";
+        public string ItemCode { get; set; } = "";
     }
 
     /// <summary>获取收货单明细</summary>

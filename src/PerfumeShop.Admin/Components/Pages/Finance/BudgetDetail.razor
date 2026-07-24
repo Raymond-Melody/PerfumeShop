@@ -1,0 +1,27 @@
+﻿@page "/admin/finance/budget-detail/{BudgetId:int}"
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "Module.finance")]
+@using PerfumeShop.Data.Models
+
+<PageTitle>预算详情</PageTitle>
+<MudText Typo="Typo.h4" Class="mb-4">预算详情</MudText>
+@if (_b != null) {
+<MudCard><MudCardContent><MudGrid>
+    <MudItem xs="6"><MudText><b>预算ID:</b> @_b.BudgetId</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>预算名:</b> @_b.BudgetName</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>分类:</b> @_b.Category</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>预算额:</b> ¥@_b.BudgetAmount?.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>实际额:</b> ¥@_b.ActualAmount?.ToString("F2")</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>ROI:</b> @_b.Roi?.ToString("F2")%</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>期间:</b> @_b.Period</MudText></MudItem>
+    <MudItem xs="6"><MudText><b>状态:</b> @_b.Status</MudText></MudItem>
+</MudGrid></MudCardContent></MudCard>
+<MudButton Variant="Variant.Outlined" Color="Color.Info" Href="@($"/admin/finance/budget-compare/{_b.BudgetId}")" Class="mt-4">对比分析</MudButton>}
+<MudButton Variant="Variant.Text" Href="/admin/finance/budgets" Class="mt-4">返回列表</MudButton>
+
+@code {
+    [Inject] private PerfumeShopContext Db { get; set; } = default!;
+    [Parameter] public int BudgetId { get; set; }
+    private BudgetPlan? _b;
+    protected override async Task OnInitializedAsync() { _b = await Db.BudgetPlans.FindAsync(BudgetId); }
+}

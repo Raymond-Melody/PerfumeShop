@@ -624,7 +624,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<BudgetPlan>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.BudgetId);
 
             entity.HasIndex(e => new { e.Category, e.Period }, "IX_BudgetPlans_Category_Period");
 
@@ -1413,6 +1413,9 @@ public partial class PerfumeShopContext : DbContext
                 .ValueGeneratedOnAdd()
                 .HasColumnName("InventoryID");
             entity.Property(e => e.NoteId).HasColumnName("NoteID");
+            entity.Property(e => e.WeightedUnitCost)
+                .HasDefaultValue(0m)
+                .HasColumnType("decimal(19, 4)");
         });
 
         modelBuilder.Entity<Order>(entity =>
@@ -1435,6 +1438,9 @@ public partial class PerfumeShopContext : DbContext
 
             entity.Property(e => e.ChannelSource).HasMaxLength(50);
             entity.Property(e => e.CostAmount).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.ExpenseAmount)
+                .HasDefaultValue(0m)
+                .HasColumnType("decimal(19, 4)");
             entity.Property(e => e.OrderId)
                 .ValueGeneratedOnAdd()
                 .HasColumnName("OrderID");
@@ -1598,7 +1604,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<PaymentRecord>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.RecordId);
 
             entity.HasIndex(e => e.CreatedAt, "IX_PaymentRecords_CreatedAt");
 
@@ -2442,7 +2448,7 @@ public partial class PerfumeShopContext : DbContext
 
         modelBuilder.Entity<RefundRecord>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.RefundId);
 
             entity.Property(e => e.ApprovedBy).HasMaxLength(50);
             entity.Property(e => e.OrderId).HasColumnName("OrderID");

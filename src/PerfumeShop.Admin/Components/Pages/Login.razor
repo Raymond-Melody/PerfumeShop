@@ -341,14 +341,10 @@
 
     private static VerifyResult VerifyPasswordWithUpgrade(string password, string storedHash)
     {
-        var normalized = NormalizePasswordInput(password);
-        var expanded = ExpandToFullwidth(password);
-
-        if (storedHash.StartsWith("V3$"))
-            return VerifyV3Multi(password, normalized, expanded, storedHash);
-        if (storedHash.StartsWith("V2_"))
-            return VerifyV2Multi(password, normalized, expanded, storedHash);
-        return VerifyV1Multi(password, normalized, expanded, storedHash);
+        // V19 统一口令校验 — 委托共享 PasswordHasher（单一真源：迭代SHA-256+pepper，全角/半角+V1/V2/V3+自动升级）
+        var outcome = global::PerfumeShop.Shared.Security.PasswordHasher.Verify(password, storedHash);
+        if (!outcome.Success) return VerifyResult.Fail();
+        return outcome.UpgradedHash != null ? VerifyResult.OkUpgrade(outcome.UpgradedHash) : VerifyResult.Ok();
     }
 
     private static VerifyResult VerifyV3Multi(string orig, string norm, string exp, string storedHash)

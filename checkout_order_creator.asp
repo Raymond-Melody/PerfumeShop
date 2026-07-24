@@ -237,16 +237,13 @@ Sub SyncOrderDetailsAndIngredients(orderId, userId, whereClause)
             Err.Clear
         End If
         
-        ' ==================== 库存扣减 ====================
-        Dim enableInventoryCheck
-        enableInventoryCheck = GetScalar("SELECT SettingValue FROM SiteSettings WHERE SettingKey = 'EnableInventoryCheck'")
-        If IsNull(enableInventoryCheck) Then enableInventoryCheck = "1"
-        
-        If enableInventoryCheck = "1" Then
-            Call DeductNoteInventory(topNoteId, quantity, orderId, productName)
-            Call DeductNoteInventory(middleNoteId, quantity, orderId, productName)
-            Call DeductNoteInventory(baseNoteId, quantity, orderId, productName)
-        End If
+        ' ==================== 库存扣减（V21：按产品类型分流，下单不再物理扣香调）====================
+        ' V21 变更：香调(半成品)与成品库存的消耗时机统一为
+        '   - custom/kol：由生产工单"入库"时按 RecipeProductNotes 配比扣 NoteInventory + 包材/瓶身
+        '     （见 admin/prodcenter/prod_warehouse.asp），避免下单与生产双重扣减
+        '   - standard(品牌定香)：采购已入 ProductInventory，发货时扣成品库存
+        '     （见 admin/logistics/shipping_orders.asp）
+        ' 故此处不再调用 DeductNoteInventory；成分固化(OrderIngredients/OrderDetailNoteSelections)已在上方完成。
         ' ==================== 库存扣减结束 ====================
         
         rsCart.MoveNext

@@ -6,6 +6,7 @@ Response.ContentType = "text/html"
 <!--#include file="includes/auth.asp"-->
 <!--#include file="../../includes/config.asp"-->
 <!--#include file="../../includes/connection.asp"-->
+<!--#include file="../../includes/cost_engine.asp"-->
 <%
 Call OpenConnection()
 
@@ -99,6 +100,27 @@ ElseIf action = "edit" Then
                   "WHERE BottleID = " & CLng(editId)
         
         If ExecuteNonQuery(editSql) Then
+            ' V21: 瓶身附加费(PriceAddition)变更后，刷新引用该瓶身的产品成本
+            On Error Resume Next
+            Dim rsBP, bpBuf : bpBuf = ""
+            Set rsBP = ExecuteQuery("SELECT ProductID FROM ProductBottleStyles WHERE BottleID = " & CLng(editId))
+            If Not rsBP Is Nothing Then
+                Do While Not rsBP.EOF
+                    bpBuf = bpBuf & CStr(rsBP("ProductID")) & ","
+                    rsBP.MoveNext
+                Loop
+                rsBP.Close
+            End If
+            Set rsBP = Nothing
+            If bpBuf <> "" Then
+                Dim bpArr, bpI
+                bpArr = Split(Left(bpBuf, Len(bpBuf)-1), ",")
+                For bpI = 0 To UBound(bpArr)
+                    If IsNumeric(bpArr(bpI)) Then Call CE_UpdateProductCost(CLng(bpArr(bpI)))
+                Next
+            End If
+            Err.Clear
+            On Error GoTo 0
             Response.Redirect "bottle_management.asp?msg=" & Server.URLEncode("瓶型更新成功")
         Else
             msg = "更新失败：" & Session("LastDBError")

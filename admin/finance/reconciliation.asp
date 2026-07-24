@@ -298,6 +298,41 @@ Sub ProcessRefundReconciliation(refundID)
         Dim updateRefundSQL
         updateRefundSQL = "UPDATE RefundRecords SET Status='Completed', CompletedAt= GETDATE() WHERE RefundID=" & CLng(refundID)
         ExecuteNonQuery updateRefundSQL
+
+        ' V21: 退款成本/库存回冲（仅处理一次，幂等）
+        Dim alreadyWB
+        alreadyWB = CInt("0" & GetScalar("SELECT ISNULL(CostWriteBack,0) FROM RefundRecords WHERE RefundID=" & CLng(refundID)))
+        If alreadyWB = 0 Then
+            ' 标准品(standard)退货回补成品库存（定制品个性化，不回补）
+            Dim rsWB, wbBuf : wbBuf = ""
+            Set rsWB = ExecuteQuery("SELECT od.ProductID, od.Quantity FROM OrderDetails od LEFT JOIN Products p ON od.ProductID=p.ProductID WHERE od.OrderID=" & orderID & " AND ISNULL(p.ProductType,'')='standard'")
+            If Not rsWB Is Nothing Then
+                Do While Not rsWB.EOF
+                    wbBuf = wbBuf & CStr(rsWB("ProductID")) & ":" & CStr(rsWB("Quantity")) & ","
+                    rsWB.MoveNext
+                Loop
+                rsWB.Close
+            End If
+            Set rsWB = Nothing
+            If wbBuf <> "" Then
+                Dim wbArr, wbI, wbP, wbPid, wbQty
+                wbArr = Split(Left(wbBuf, Len(wbBuf)-1), ",")
+                For wbI = 0 To UBound(wbArr)
+                    wbP = Split(wbArr(wbI), ":")
+                    If UBound(wbP) >= 1 Then
+                        wbPid = CLng("0" & wbP(0)) : wbQty = CLng("0" & wbP(1))
+                        If wbPid > 0 And wbQty > 0 Then
+                            ExecuteNonQuery "UPDATE ProductInventory SET StockQty = ISNULL(StockQty,0) + " & wbQty & ", UpdatedAt=GETDATE() WHERE ProductID=" & wbPid
+                            ExecuteNonQuery "INSERT INTO InventoryTransactions (NoteID, ProductID, Quantity, TransactionType, TransactionDirection, ReferenceType, ReferenceOrderID, Notes, CreatedBy, CreatedAt) VALUES (0, " & wbPid & ", " & wbQty & ", '退货入库', 'IN', 'Refund', " & orderID & ", '退款核销回补成品库存', '" & SafeSQL(Session("AdminName")) & "', GETDATE())"
+                        End If
+                    End If
+                Next
+            End If
+            ' 利润回冲：退款额从订单利润中扣减（下限0）
+            ExecuteNonQuery "UPDATE Orders SET ProfitAmount = CASE WHEN ISNULL(ProfitAmount,0) - " & refundAmount & " < 0 THEN 0 ELSE ISNULL(ProfitAmount,0) - " & refundAmount & " END WHERE OrderID=" & orderID
+            ' 标记已回冲，避免重复处理
+            ExecuteNonQuery "UPDATE RefundRecords SET CostWriteBack=1 WHERE RefundID=" & CLng(refundID)
+        End If
         
         ' 记录到对账日志
         Call SaveReconciliationLog(orderID, orderNo, 0, -refundAmount, -refundAmount, "Refund", "退款核销记录")

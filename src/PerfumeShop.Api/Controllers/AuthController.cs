@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PerfumeShop.Data.Interfaces;
 using PerfumeShop.Data.Models;
+using PerfumeShop.Shared.Security;
 using PerfumeShop.Shared.Services;
 
 namespace PerfumeShop.Api.Controllers;
@@ -34,8 +35,10 @@ public class AuthController : ControllerBase
         if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
             return BadRequest(new { message = "用户名和密码不能为空" });
 
-        var user = await _userRepo.AuthenticateAsync(request.Username, request.Password);
-        if (user == null)
+        // V19 统一口令校验：按用户名/邮箱查询后用 PasswordHasher 验证（不再明文比较）
+        var user = await _db.Users.FirstOrDefaultAsync(u =>
+            (u.Username == request.Username || u.Email == request.Username) && u.IsActive == true);
+        if (user == null || !PasswordHasher.Verify(request.Password, user.Password).Success)
             return Unauthorized(new { message = "用户名或密码错误" });
 
         return Ok(new
@@ -221,11 +224,8 @@ public class AuthController : ControllerBase
     /// <summary>V3 密码哈希 — 对齐 V18 HashPassword()</summary>
     private static string HashPasswordV3(string password)
     {
-        var saltBytes = RandomNumberGenerator.GetBytes(16);
-        var salt = Convert.ToBase64String(saltBytes);
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 10000, HashAlgorithmName.SHA256);
-        var hash = Convert.ToBase64String(pbkdf2.GetBytes(32));
-        return $"V3${salt}${hash}";
+        // V19 统一口令散列 — 委托共享 PasswordHasher（迭代SHA-256+pepper）
+        return PasswordHasher.Hash(password);
     }
 
     private static string ComputeSha256Hash(string input)

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -54,9 +55,10 @@ public class CheckoutModel : PageModel
 
     private int GetUserId()
     {
-        if (Request.Cookies.TryGetValue("UserId", out var val) && int.TryParse(val, out var id))
-            return id;
-        return 0;
+        // V21 修复：从 Cookie Authentication 的 Claims 读取（与 Login/Cart 一致）
+        // 原实现错误地读不存在的 "UserId" cookie，导致已登录用户被踢回登录页
+        var uidStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return int.TryParse(uidStr, out var id) ? id : 0;
     }
 }
 

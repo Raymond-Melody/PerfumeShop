@@ -6,9 +6,11 @@
 @using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using PerfumeShop.Data.Models
+@using PerfumeShop.Core.Interfaces
 @using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
 @inject IAdminAuditor Auditor
+@inject ICostEngine CostEngine
 @inject AuthenticationStateProvider AuthState
 
 <PageTitle>瓶型管理</PageTitle>
@@ -81,6 +83,9 @@
     void CloseModal(){_showModal=false;}
     async Task SaveItem(){
         if(string.IsNullOrWhiteSpace(_edit.BottleName)){_msg="名称不能为空";_msgType="err";return;}
-        try{if(!_editing)Db.BottleStyles.Add(_edit);else{_edit.UpdatedAt=DateTime.Now;Db.BottleStyles.Update(_edit);}await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_editing?"编辑瓶型":"新建瓶型","BottleStyle",_edit.BottleId,_edit.BottleName);_msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
+        try{if(!_editing)Db.BottleStyles.Add(_edit);else{_edit.UpdatedAt=DateTime.Now;Db.BottleStyles.Update(_edit);}await Db.SaveChangesAsync();await Auditor.LogAsync(_adminId,_adminName,_editing?"编辑瓶型":"新建瓶型","BottleStyle",_edit.BottleId,_edit.BottleName);
+        // V21: 瓶身价格变更影响产品 BOM 成本，刷新引用该瓶身的产品
+        if(_editing){try{var pids=await Db.ProductBottleStyles.AsNoTracking().Where(pb=>pb.BottleId==_edit.BottleId).Select(pb=>pb.ProductId).Distinct().ToListAsync();foreach(var pid in pids)await CostEngine.UpdateProductCostAsync(pid);CostEngine.ClearCache();}catch{}}
+        _msg=_editing?"已更新":"已创建";_msgType="ok";_showModal=false;await LoadItems();}catch(Exception ex){_msg="失败: "+ex.Message;_msgType="err";}
     }
 }

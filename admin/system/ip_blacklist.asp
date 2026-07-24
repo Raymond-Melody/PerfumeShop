@@ -45,43 +45,64 @@ On Error GoTo 0
 Dim msg : msg = ""
 Dim msgType : msgType = ""
 
+' V21: 过期管理——页面加载时自动失效已到期条目
+On Error Resume Next
+conn.Execute "UPDATE IPBlacklist SET IsActive=0 WHERE IsActive=1 AND ExpiresAt IS NOT NULL AND ExpiresAt <= GETDATE()"
+On Error GoTo 0
+
 ' 处理 POST
 If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
-    Dim action : action = Request.Form("action")
-    
-    If action = "add" Then
-        Dim ipAddr : ipAddr = Trim(Request.Form("ipAddress"))
-        Dim reason : reason = Trim(Request.Form("reason"))
-        Dim expiresDays : expiresDays = CInt("0" & Request.Form("expiresDays"))
+    ' V21: CSRF 校验 + 操作级权限（system/edit）
+    If Not ValidateCSRFToken() Then
+        msg = "安全验证失败，请刷新后重试"
+        msgType = "error"
+    Else
+        Call RequirePermissionOrDie("system", "edit")
+        Dim action : action = Request.Form("action")
         
-        If ipAddr <> "" Then
-            ' 检查是否已存在
-            Dim existCheck : existCheck = GetScalar("SELECT COUNT(*) FROM IPBlacklist WHERE IPAddress='" & Replace(ipAddr,"'","''") & "' AND IsActive=1")
-            If CDbl("0" & existCheck) > 0 Then
-                msg = "IP " & ipAddr & " 已在黑名单中"
-                msgType = "warning"
-            Else
-                Dim expireSQL : expireSQL = "NULL"
-                If expiresDays > 0 Then expireSQL = "DATEADD(DAY," & expiresDays & ",GETDATE())"
-                
-                conn.Execute "INSERT INTO IPBlacklist (IPAddress, Reason, BlockedBy, ExpiresAt) VALUES ('" & _
-                    Replace(ipAddr,"'","''") & "', '" & Replace(reason,"'","''") & "', " & Session("AdminID") & ", " & expireSQL & ")"
-                msg = "IP " & ipAddr & " 已加入黑名单"
-                msgType = "success"
+        If action = "add" Then
+            Dim ipAddr : ipAddr = Trim(Request.Form("ipAddress"))
+            Dim reason : reason = Trim(Request.Form("reason"))
+            Dim expiresDays : expiresDays = CInt("0" & Request.Form("expiresDays"))
+            
+            If ipAddr <> "" Then
+                ' 检查是否已存在
+                Dim existCheck : existCheck = GetScalar("SELECT COUNT(*) FROM IPBlacklist WHERE IPAddress='" & Replace(ipAddr,"'","''") & "' AND IsActive=1")
+                If CDbl("0" & existCheck) > 0 Then
+                    msg = "IP " & ipAddr & " 已在黑名单中"
+                    msgType = "warning"
+                Else
+                    Dim expireSQL : expireSQL = "NULL"
+                    If expiresDays > 0 Then expireSQL = "DATEADD(DAY," & expiresDays & ",GETDATE())"
+                    
+                    conn.Execute "INSERT INTO IPBlacklist (IPAddress, Reason, BlockedBy, ExpiresAt) VALUES ('" & _
+                        Replace(ipAddr,"'","''") & "', '" & Replace(reason,"'","''") & "', " & Session("AdminID") & ", " & expireSQL & ")"
+                    Call LogAdminAction("封禁IP", "system", "IPBlacklist", ipAddr, "原因=" & reason & "; 天数=" & expiresDays)
+                    msg = "IP " & ipAddr & " 已加入黑名单"
+                    msgType = "success"
+                End If
             End If
+        
+        ElseIf action = "remove" Then
+            Dim ipID : ipID = Request.Form("ipID")
+            conn.Execute "UPDATE IPBlacklist SET IsActive=0 WHERE IPID=" & CInt(ipID)
+            Call LogAdminAction("移除IP黑名单", "system", "IPBlacklist", CStr(ipID), "")
+            msg = "已移除黑名单记录"
+            msgType = "success"
+        
+        ElseIf action = "unblock" Then
+            Dim unblockID : unblockID = Request.Form("unblockID")
+            conn.Execute "UPDATE IPBlacklist SET IsActive=0 WHERE IPID=" & CInt(unblockID)
+            Call LogAdminAction("解除IP封锁", "system", "IPBlacklist", CStr(unblockID), "")
+            msg = "已解除封锁"
+            msgType = "success"
+        
+        ElseIf action = "cleanup_expired" Then
+            conn.Execute "UPDATE IPBlacklist SET IsActive=0 WHERE IsActive=1 AND ExpiresAt IS NOT NULL AND ExpiresAt <= GETDATE()"
+            Call LogAdminAction("清理过期IP黑名单", "system", "IPBlacklist", "", "")
+            msg = "已清理所有过期黑名单记录"
+            msgType = "success"
         End If
-    
-    ElseIf action = "remove" Then
-        Dim ipID : ipID = Request.Form("ipID")
-        conn.Execute "UPDATE IPBlacklist SET IsActive=0 WHERE IPID=" & CInt(ipID)
-        msg = "已移除黑名单记录"
-        msgType = "success"
-    
-    ElseIf action = "unblock" Then
-        Dim unblockID : unblockID = Request.Form("unblockID")
-        conn.Execute "UPDATE IPBlacklist SET IsActive=0 WHERE IPID=" & CInt(unblockID)
-        msg = "已解除封锁"
-        msgType = "success"
     End If
 End If
 
@@ -168,6 +189,7 @@ Dim expiredSoon : expiredSoon = CDbl("0" & GetScalar("SELECT COUNT(*) FROM IPBla
         <div class="card-header"><i class="fas fa-plus-circle"></i> 封禁IP</div>
         <div class="card-body">
             <form method="post" class="form-row">
+                <%= GetCSRFTokenField() %>
                 <input type="hidden" name="action" value="add">
                 <div class="form-group">
                     <label>IP地址 <span style="color:#f44336;">*</span></label>
@@ -197,7 +219,14 @@ Dim expiredSoon : expiredSoon = CDbl("0" & GetScalar("SELECT COUNT(*) FROM IPBla
 
     <!-- 黑名单列表 -->
     <div class="card">
-        <div class="card-header"><i class="fas fa-list"></i> 黑名单列表</div>
+        <div class="card-header">
+            <span><i class="fas fa-list"></i> 黑名单列表</span>
+            <form method="post" style="margin:0;" onsubmit="return confirm('确认清理所有已过期的黑名单记录？')">
+                <%= GetCSRFTokenField() %>
+                <input type="hidden" name="action" value="cleanup_expired">
+                <button type="submit" class="btn btn-sm" style="background:rgba(255,152,0,0.2);color:#FFB74D;border:1px solid rgba(255,152,0,0.3);padding:5px 12px;border-radius:6px;cursor:pointer;"><i class="fas fa-broom"></i> 清理过期</button>
+            </form>
+        </div>
         <div class="card-body">
             <table>
                 <thead>
@@ -241,6 +270,7 @@ Dim expiredSoon : expiredSoon = CDbl("0" & GetScalar("SELECT COUNT(*) FROM IPBla
                         <td>
                             <% If isActive Then %>
                             <form method="post" style="display:inline;" onsubmit="return confirm('确认解除对 <%= rsBlacklist("IPAddress") %> 的封锁？')">
+                                <%= GetCSRFTokenField() %>
                                 <input type="hidden" name="action" value="unblock">
                                 <input type="hidden" name="unblockID" value="<%= rsBlacklist("IPID") %>">
                                 <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> 解除</button>

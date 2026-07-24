@@ -66,6 +66,8 @@ errMsg = ""
 
 If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     If action = "approve" AND canReview Then
+        ' V21: 采购成本审核——操作级校验(approve)
+        Call RequirePermissionOrDie("finance", "approve")
         ' 审核通过
         Dim approvePurchaseID, reviewAmount, costAllocation, reviewComments
         approvePurchaseID = SafeNum(Request.Form("purchaseID"))

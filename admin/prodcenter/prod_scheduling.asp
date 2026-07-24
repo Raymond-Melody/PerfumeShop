@@ -92,18 +92,19 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                 If IsNumeric(currentOrderId) And CLng(currentOrderId) > 0 Then
                     On Error Resume Next
                     
-                    ' 获取订单的产品和配方信息
+                    ' 获取订单的产品和配方信息（V21: 增 ProductType 用于跳过 standard）
                     Dim rsOrderInfo
-                    Set rsOrderInfo = conn.Execute("SELECT TOP 1 o.OrderNo, oi.ProductID, p.RecipeID, p.ProductName, oi.Quantity FROM Orders o LEFT JOIN OrderItems oi ON o.OrderID=oi.OrderID LEFT JOIN Products p ON oi.ProductID=p.ProductID WHERE o.OrderID=" & currentOrderId)
+                    Set rsOrderInfo = conn.Execute("SELECT TOP 1 o.OrderNo, oi.ProductID, p.RecipeID, p.ProductName, p.ProductType, oi.Quantity FROM Orders o LEFT JOIN OrderItems oi ON o.OrderID=oi.OrderID LEFT JOIN Products p ON oi.ProductID=p.ProductID WHERE o.OrderID=" & currentOrderId)
                     
-                    Dim scProductName, scRecipeID, scQty, scOrderNo
-                    scProductName = "" : scRecipeID = 0 : scQty = 1 : scOrderNo = ""
+                    Dim scProductName, scRecipeID, scQty, scOrderNo, scProductType
+                    scProductName = "" : scRecipeID = 0 : scQty = 1 : scOrderNo = "" : scProductType = ""
                     If Not rsOrderInfo Is Nothing Then
                         If Not rsOrderInfo.EOF Then
                             scOrderNo = rsOrderInfo("OrderNo") & ""
                             scProductName = rsOrderInfo("ProductName") & ""
                             scRecipeID = SafeNum(rsOrderInfo("RecipeID"))
                             scQty = SafeNum(rsOrderInfo("Quantity"))
+                            scProductType = LCase(rsOrderInfo("ProductType") & "")
                             If scQty = 0 Then scQty = 1
                         End If
                         rsOrderInfo.Close
@@ -114,7 +115,8 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
                     Dim existingPO
                     existingPO = SafeNum(GetScalar("SELECT COUNT(*) FROM ProductionOrders WHERE OrderID=" & currentOrderId & " AND Status<>'Cancelled'"))
                     
-                    If existingPO = 0 Then
+                    ' V21: standard(品牌定香) 走采购成品库存，不排产
+                    If existingPO = 0 And scProductType <> "standard" Then
                         Dim scWorkNo
                         scWorkNo = "PO" & Year(Now) & Right("0"&Month(Now),2) & Right("0"&Day(Now),2) & Right("0"&Hour(Now),2) & Right("0"&Minute(Now),2) & Right("0"&Second(Now),2) & Right("00" & i, 2)
                         

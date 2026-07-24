@@ -42,6 +42,38 @@ If Err.Number <> 0 Then Err.Clear : conn.Execute "ALTER TABLE Orders ADD Shipped
 On Error GoTo 0
 
 ' POST: 发货
+' V21: 发货时对订单中 standard(品牌定香) 产品扣减成品库存 ProductInventory 并写流水
+Sub DeductProductInventoryForOrder(oid)
+    On Error Resume Next
+    Dim rsStd, buf : buf = ""
+    ' 先缓冲 standard 明细(ProductID:Quantity)，避免遍历中嵌套写导致连接繁忙
+    Set rsStd = conn.Execute("SELECT od.ProductID, od.Quantity FROM OrderDetails od LEFT JOIN Products p ON od.ProductID=p.ProductID WHERE od.OrderID=" & oid & " AND ISNULL(p.ProductType,'')='standard'")
+    If Not rsStd Is Nothing Then
+        Do While Not rsStd.EOF
+            buf = buf & CStr(SafeNum(rsStd("ProductID"))) & ":" & CStr(SafeNum(rsStd("Quantity"))) & ","
+            rsStd.MoveNext
+        Loop
+        rsStd.Close
+    End If
+    Set rsStd = Nothing
+    If buf <> "" Then
+        Dim arr, i, parts, pid, qty
+        arr = Split(Left(buf, Len(buf)-1), ",")
+        For i = 0 To UBound(arr)
+            parts = Split(arr(i), ":")
+            If UBound(parts) >= 1 Then
+                pid = SafeNum(parts(0)) : qty = SafeNum(parts(1))
+                If pid > 0 And qty > 0 Then
+                    conn.Execute "UPDATE ProductInventory SET StockQty = ISNULL(StockQty,0) - " & qty & ", UpdatedAt=GETDATE() WHERE ProductID=" & pid
+                    conn.Execute "INSERT INTO InventoryTransactions (NoteID, ProductID, Quantity, TransactionType, TransactionDirection, ReferenceType, ReferenceOrderID, Notes, CreatedBy, CreatedAt) VALUES (" & _
+                        "0, " & pid & ", -" & qty & ", '销售出库', 'OUT', 'Order', " & oid & ", '品牌定香发货扣成品库存', '" & SafeSQL(Session("AdminUsername")) & "', GETDATE())"
+                End If
+            End If
+        Next
+    End If
+    On Error GoTo 0
+End Sub
+
 Dim soAction : soAction = Request.Form("action")
 If soAction = "ship" Then
     Dim sId, soCompany, soTracking, soNotes
@@ -51,6 +83,7 @@ If soAction = "ship" Then
     soNotes = Replace(Request.Form("shippingNotes"),"'","''")
     If IsNumeric(sId) Then
         conn.Execute "UPDATE Orders SET ShippingStatus='Shipped', ShippingCompany='" & soCompany & "', TrackingNumber='" & soTracking & "', ShippingNotes='" & soNotes & "', ShippedAt=GETDATE(), UpdatedAt=GETDATE() WHERE OrderID=" & CLng(sId)
+        Call DeductProductInventoryForOrder(CLng(sId))
         Response.Redirect "shipping_orders.asp?msg=发货成功"
         Response.End
     End If
@@ -62,6 +95,7 @@ ElseIf soAction = "batch_ship" Then
         For bsI = 0 To UBound(bsIdsArr)
             If IsNumeric(Trim(bsIdsArr(bsI))) Then
                 conn.Execute "UPDATE Orders SET ShippingStatus='Shipped', ShippedAt=GETDATE(), UpdatedAt=GETDATE() WHERE OrderID=" & CLng(Trim(bsIdsArr(bsI))) & " AND (ShippingStatus='Pending' OR ShippingStatus IS NULL)"
+                Call DeductProductInventoryForOrder(CLng(Trim(bsIdsArr(bsI))))
                 bsCnt = bsCnt + 1
             End If
         Next

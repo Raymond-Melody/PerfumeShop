@@ -52,11 +52,123 @@ If Request.ServerVariables("REQUEST_METHOD") = "POST" Then
     If whAction = "warehouse_in" Then
         Dim whPoID : whPoID = SafeNum(Request.Form("production_id"))
         If whPoID > 0 Then
+            ' V21 P3: 生产成本归集表是否可用（存在性检查，避免未迁移时报错）
+            Dim whMfgOK
+            whMfgOK = (SafeNum(GetScalar("SELECT COUNT(*) FROM sys.tables WHERE name='ProductManufacturing'")) > 0)
+            ' V21: 入库时按已发布产品配方扣香调库存 + 扣绑定瓶身，写库存流水（事务保护）
+            On Error Resume Next
+            Err.Clear
+            Call BeginTransaction()
+
+            ' 1) 定位工单对应产品与单瓶容量
+            Dim whProductId, whVolumeML, whRsInfo
+            whProductId = 0 : whVolumeML = 0
+            Set whRsInfo = conn.Execute("SELECT od.ProductID, ISNULL(od.VolumeML,0) AS VolumeML " & _
+                "FROM ProductionOrders po LEFT JOIN OrderDetails od ON po.DetailID=od.DetailID " & _
+                "WHERE po.ProductionID=" & whPoID)
+            If Not whRsInfo Is Nothing Then
+                If Not whRsInfo.EOF Then
+                    whProductId = SafeNum(whRsInfo("ProductID"))
+                    whVolumeML = SafeNum(whRsInfo("VolumeML"))
+                End If
+                whRsInfo.Close
+            End If
+            Set whRsInfo = Nothing
+            If whVolumeML <= 0 Then whVolumeML = 50   ' 缺省单瓶容量(ml)
+
+            ' 2) 取该产品最新已发布产品配方的香调配比（先缓冲，避免遍历中嵌套写导致连接繁忙）
+            Dim whNoteBuf : whNoteBuf = ""
+            If whProductId > 0 Then
+                Dim whPRID, whRsPr
+                whPRID = 0
+                Set whRsPr = conn.Execute("SELECT TOP 1 ProductRecipeID FROM RecipeProducts WHERE ProductID=" & whProductId & " AND Status='Published' ORDER BY PublishedAt DESC")
+                If Not whRsPr Is Nothing Then
+                    If Not whRsPr.EOF Then whPRID = SafeNum(whRsPr("ProductRecipeID"))
+                    whRsPr.Close
+                End If
+                Set whRsPr = Nothing
+                If whPRID > 0 Then
+                    Dim whRsNotes
+                    Set whRsNotes = conn.Execute("SELECT rpn.NoteID, ISNULL(rpn.Percentage,0) AS Pct, ISNULL(ni.WeightedUnitCost,0) AS WUC FROM RecipeProductNotes rpn LEFT JOIN NoteInventory ni ON rpn.NoteID=ni.NoteID WHERE rpn.ProductRecipeID=" & whPRID)
+                    If Not whRsNotes Is Nothing Then
+                        Do While Not whRsNotes.EOF
+                            whNoteBuf = whNoteBuf & CStr(SafeNum(whRsNotes("NoteID"))) & ":" & CStr(SafeNum(whRsNotes("Pct"))) & ":" & CStr(SafeNum(whRsNotes("WUC"))) & ","
+                            whRsNotes.MoveNext
+                        Loop
+                        whRsNotes.Close
+                    End If
+                    Set whRsNotes = Nothing
+                End If
+            End If
+
+            ' 2.6) V21 P3: 生产成本归集——创建制造单头（供成品实际成本核算）
+            Dim whMfgId, whTotalCost, whProdName
+            whMfgId = 0 : whTotalCost = 0 : whProdName = ""
+            If whMfgOK And whProductId > 0 Then
+                whProdName = GetScalar("SELECT TOP 1 ProductName FROM Products WHERE ProductID=" & whProductId)
+                whMfgId = SafeNum(GetScalar("SET NOCOUNT ON; INSERT INTO ProductManufacturing (ProductID, ProductName, PlannedQty, ActualQty, BatchNo, Status, WorkCenter, StartedAt, CompletedAt, CreatedAt) VALUES (" & whProductId & ", '" & SafeSQL(whProdName) & "', 1, 1, 'PO" & whPoID & "', 'Completed', 'ProdWarehouse', GETDATE(), GETDATE(), GETDATE()); SELECT SCOPE_IDENTITY();"))
+            End If
+
+            ' 3) 按配比扣减香调库存（消耗ml =配比% × 单瓶容量），并写流水
+            If whNoteBuf <> "" Then
+                Dim whArr, whI, whParts, whNoteId, whPct, whConsume
+                whArr = Split(Left(whNoteBuf, Len(whNoteBuf)-1), ",")
+                For whI = 0 To UBound(whArr)
+                    whParts = Split(whArr(whI), ":")
+                    If UBound(whParts) >= 1 Then
+                        whNoteId = SafeNum(whParts(0))
+                        whPct = SafeNum(whParts(1))
+                        whConsume = (whPct / 100) * whVolumeML
+                        If whNoteId > 0 And whConsume > 0 Then
+                            conn.Execute "UPDATE NoteInventory SET StockQuantity = StockQuantity - " & whConsume & ", UpdatedAt=GETDATE() WHERE NoteID=" & whNoteId
+                            conn.Execute "INSERT INTO InventoryTransactions (NoteID, Quantity, TransactionType, TransactionDirection, ReferenceType, Notes, CreatedBy, CreatedAt) VALUES (" & _
+                                whNoteId & ", -" & whConsume & ", '生产领用', 'OUT', 'ProductionOrder', '工单入库消耗香调 PO#" & whPoID & "', '" & SafeSQL(Session("AdminUsername")) & "', GETDATE())"
+                            ' V21 P3: 记录制造明细与成本
+                            If whMfgOK And whMfgId > 0 Then
+                                Dim whWuc, whLineCost, whNoteName
+                                whWuc = 0
+                                If UBound(whParts) >= 2 Then whWuc = SafeNum(whParts(2))
+                                whLineCost = whConsume * whWuc
+                                whTotalCost = whTotalCost + whLineCost
+                                whNoteName = GetScalar("SELECT TOP 1 NoteName FROM RecipeProductNotes WHERE ProductRecipeID=" & whPRID & " AND NoteID=" & whNoteId)
+                                conn.Execute "INSERT INTO ProductManufacturingDetails (ManufacturingID, NoteID, NoteName, PlannedQty, ActualQty, UnitCost, TotalCost) VALUES (" & _
+                                    whMfgId & ", " & whNoteId & ", '" & SafeSQL(whNoteName) & "', " & whConsume & ", " & whConsume & ", " & whWuc & ", " & whLineCost & ")"
+                            End If
+                        End If
+                    End If
+                Next
+            End If
+
+            ' 4) 扣减绑定瓶身库存（每瓶1个）
+            If whProductId > 0 Then
+                conn.Execute "UPDATE BottleStyles SET StockQty = ISNULL(StockQty,0) - 1, UpdatedAt=GETDATE() " & _
+                    "WHERE BottleID IN (SELECT TOP 1 BottleID FROM ProductBottleStyles WHERE ProductID=" & whProductId & ")"
+            End If
+            ' 说明：包装物(PackagingInventory)当前无"产品→包装"绑定关系，暂不自动扣减；
+            '       待 P3 增加 ProductPackaging 绑定表后启用。
+
+            ' 5) 更新工单状态与日志
             conn.Execute "UPDATE ProductionOrders SET Status='WarehouseIn', WarehouseInAt=GETDATE(), UpdatedAt=GETDATE() WHERE ProductionID=" & whPoID
             conn.Execute "INSERT INTO ProductionLogs (ProductionID, Status, Notes, CreatedBy, CreatedAt) VALUES (" & _
-                whPoID & ",'WarehouseIn','成品入库','" & SafeSQL(Session("AdminUsername")) & "',GETDATE())"
-            Response.Redirect "prod_warehouse.asp?msg=入库成功"
-            Response.End
+                whPoID & ",'WarehouseIn','成品入库(已按配方扣香调/瓶身)','" & SafeSQL(Session("AdminUsername")) & "',GETDATE())"
+
+            ' 5.5) V21 P3: 回填制造单物料总成本
+            If whMfgOK And whMfgId > 0 Then
+                conn.Execute "UPDATE ProductManufacturing SET Notes='物料成本合计 ¥" & CStr(Round(whTotalCost,4)) & "', UpdatedAt=GETDATE() WHERE ManufacturingID=" & whMfgId
+            End If
+
+            If Err.Number <> 0 Then
+                Call RollbackTransaction()
+                Err.Clear
+                On Error GoTo 0
+                Response.Redirect "prod_warehouse.asp?msg=入库失败，数据已回滚"
+                Response.End
+            Else
+                Call CommitTransaction()
+                On Error GoTo 0
+                Response.Redirect "prod_warehouse.asp?msg=入库成功"
+                Response.End
+            End If
         End If
     End If
 End If

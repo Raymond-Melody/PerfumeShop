@@ -6,6 +6,7 @@ Response.ContentType = "text/html"
 <!--#include file="includes/auth.asp"-->
 <!--#include file="../../includes/config.asp"-->
 <!--#include file="../../includes/connection.asp"-->
+<!--#include file="../../includes/cost_engine.asp"-->
 <%
 Call OpenConnection()
 
@@ -84,12 +85,14 @@ If action = "add" Then
     ElseIf addIngredients = "" Then
         msg = "成分列表不能为空"
     Else
-        Dim addSql
-        addSql = "INSERT INTO BaseNotes (BaseNoteName, Description, Ingredients, IsActive, UnitPrice) VALUES (" & _
+        Dim addSql, addMaterialId, addMatSql
+        addMaterialId = SafeNum(Request.Form("materialId"))
+        If addMaterialId > 0 Then addMatSql = CStr(CLng(addMaterialId)) Else addMatSql = "NULL"
+        addSql = "INSERT INTO BaseNotes (BaseNoteName, Description, Ingredients, IsActive, UnitPrice, MaterialID) VALUES (" & _
                  "'" & SafeSQL(addName) & "', " & _
                  "'" & SafeSQL(addDesc) & "', " & _
                  "'" & SafeSQL(addIngredients) & "', " & _
-                 addActive & ", " & SafeNum(addUnitPrice) & ")"
+                 addActive & ", " & SafeNum(addUnitPrice) & ", " & addMatSql & ")"
         
         If ExecuteNonQuery(addSql) Then
             Response.Redirect "base_note_management.asp?msg=" & Server.URLEncode("基香添加成功")
@@ -132,17 +135,25 @@ ElseIf action = "edit" Then
     ElseIf editIngredients = "" Then
         msg = "成分列表不能为空"
     ElseIf IsNumeric(editId) Then
-        Dim editSql
+        Dim editSql, editMaterialId, editMatSql
+        editMaterialId = SafeNum(Request.Form("materialId"))
+        If editMaterialId > 0 Then editMatSql = CStr(CLng(editMaterialId)) Else editMatSql = "NULL"
         editSql = "UPDATE BaseNotes SET " & _
                   "BaseNoteName = '" & SafeSQL(editName) & "', " & _
                   "Description = '" & SafeSQL(editDesc) & "', " & _
                   "Ingredients = '" & SafeSQL(editIngredients) & "', " & _
                   "IsActive = " & editActive & ", " & _
-                  "UnitPrice = " & SafeNum(editUnitPrice) & " " & _
+                  "UnitPrice = " & SafeNum(editUnitPrice) & ", " & _
+                  "MaterialID = " & editMatSql & " " & _
                   "WHERE BaseNoteID = " & CLng(editId)
         
         If ExecuteNonQuery(editSql) Then
-            Response.Redirect "base_note_management.asp?msg=" & Server.URLEncode("基香更新成功")
+            ' V21: 基香单价变更会影响香调与产品成本，触发全量产品成本重算
+            On Error Resume Next
+            Call CE_UpdateAllProductCosts()
+            Err.Clear
+            On Error GoTo 0
+            Response.Redirect "base_note_management.asp?msg=" & Server.URLEncode("基香更新成功，产品成本已同步刷新")
         Else
             msg = "更新失败：" & Session("LastDBError")
         End If
@@ -175,6 +186,19 @@ Else
     sql = "SELECT * FROM BaseNotes ORDER BY BaseNoteID DESC"
 End If
 Set rsBaseNotes = ExecuteQuery(sql)
+
+' ========== V21 P3: 原料下拉（基香↔原料显式映射）==========
+Dim rsMaterials, materialOptions
+materialOptions = ""
+Set rsMaterials = ExecuteQuery("SELECT MaterialID, ItemName, ItemCode FROM RawMaterialInventory ORDER BY ItemName")
+If Not rsMaterials Is Nothing Then
+    Do While Not rsMaterials.EOF
+        materialOptions = materialOptions & "<option value=""" & rsMaterials("MaterialID") & """>" & HTMLEncode(rsMaterials("ItemName") & "") & " (" & HTMLEncode(rsMaterials("ItemCode") & "") & ")</option>"
+        rsMaterials.MoveNext
+    Loop
+    rsMaterials.Close
+End If
+Set rsMaterials = Nothing
 
 ' ========== 获取统计 ==========
 Dim totalCount, activeCount, inactiveCount
@@ -630,6 +654,10 @@ inactiveCount = totalCount - activeCount
                 On Error Resume Next
                 bnUnitPrice = CDbl(rsBaseNotes("UnitPrice"))
                 If Err.Number <> 0 Then bnUnitPrice = 0 : Err.Clear
+                Dim bnMaterialId
+                bnMaterialId = 0
+                bnMaterialId = CLng(rsBaseNotes("MaterialID"))
+                If Err.Number <> 0 Then bnMaterialId = 0 : Err.Clear
                 On Error GoTo 0
                 %>
                 <% If bnUnitPrice > 0 Then %>
@@ -679,7 +707,7 @@ inactiveCount = totalCount - activeCount
                         <%= IIf(rsBaseNotes("IsActive"), "启用", "禁用") %>
                     </span>
                     <div class="action-btns">
-                        <button class="action-btn edit" onclick="showEditModal(<%= rsBaseNotes("BaseNoteID") %>, '<%= SafeOutput(rsBaseNotes("BaseNoteName")) %>', '<%= SafeOutput(rsBaseNotes("Description")) %>', '<%= SafeOutput(rsBaseNotes("Ingredients")) %>', <%= IIf(rsBaseNotes("IsActive"), 1, 0) %>, <%= bnUnitPrice %>)">
+                        <button class="action-btn edit" onclick="showEditModal(<%= rsBaseNotes("BaseNoteID") %>, '<%= SafeOutput(rsBaseNotes("BaseNoteName")) %>', '<%= SafeOutput(rsBaseNotes("Description")) %>', '<%= SafeOutput(rsBaseNotes("Ingredients")) %>', <%= IIf(rsBaseNotes("IsActive"), 1, 0) %>, <%= bnUnitPrice %>, <%= bnMaterialId %>)">
                             <i class="fas fa-edit"></i> 编辑
                         </button>
                         <% If isManager Then %>
@@ -750,6 +778,17 @@ inactiveCount = totalCount - activeCount
                     </div>
                     
                     <div class="form-group">
+                        <label class="form-label">关联原料</label>
+                        <select name="materialId" id="materialId" class="form-control">
+                            <option value="">— 不关联（按名称匹配）—</option>
+                            <%= materialOptions %>
+                        </select>
+                        <div class="form-hint">
+                            <i class="fas fa-info-circle"></i> 显式绑定采购原料，替代按名称模糊匹配，成本传导更准确
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
                         <label class="form-label">状态</label>
                         <select name="isActive" id="isActive" class="form-control">
                             <option value="1">启用</option>
@@ -788,18 +827,20 @@ inactiveCount = totalCount - activeCount
             document.getElementById('description').value = '';
             document.getElementById('ingredients').value = '';
             document.getElementById('unitPrice').value = '';
+            document.getElementById('materialId').value = '';
             document.getElementById('isActive').value = '1';
             document.getElementById('baseNoteModal').style.display = 'block';
         }
         
         // 显示编辑模态框
-        function showEditModal(id, name, desc, ingredients, isActive, unitPrice) {
+        function showEditModal(id, name, desc, ingredients, isActive, unitPrice, materialId) {
             document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit"></i> 编辑基香';
             document.getElementById('formAction').value = 'edit';
             document.getElementById('baseNoteId').value = id;
             document.getElementById('baseNoteName').value = name;
             document.getElementById('description').value = desc;
             document.getElementById('unitPrice').value = unitPrice || '';
+            document.getElementById('materialId').value = (materialId && materialId > 0) ? materialId : '';
             
             // 将逗号分隔的成分转换为换行显示
             if (ingredients && ingredients.indexOf(',') !== -1) {

@@ -29,6 +29,45 @@ Dim pendingOrders, processingOrders, completedOrders
 pendingOrders = GetScalar("SELECT COUNT(*) FROM Orders WHERE Status = 'Pending'")
 processingOrders = GetScalar("SELECT COUNT(*) FROM Orders WHERE Status = 'Processing'")
 completedOrders = GetScalar("SELECT COUNT(*) FROM Orders WHERE Status = 'Paid'")
+
+' V21: 经营成本/利润指标（近30天已支付订单；数据源 Orders.CostAmount/ProfitAmount/ExpenseAmount）
+Dim mRevenue, mCost, mProfit, mExpense, mPaidCount, mTotalCount
+mRevenue = CDbl("0" & GetScalar("SELECT ISNULL(SUM(TotalAmount),0) FROM Orders WHERE Status='Paid' AND CreatedAt >= DATEADD(month,-1,CAST(GETDATE() AS DATE))"))
+mCost = CDbl("0" & GetScalar("SELECT ISNULL(SUM(CostAmount),0) FROM Orders WHERE Status='Paid' AND CreatedAt >= DATEADD(month,-1,CAST(GETDATE() AS DATE))"))
+mProfit = CDbl("0" & GetScalar("SELECT ISNULL(SUM(ProfitAmount),0) FROM Orders WHERE Status='Paid' AND CreatedAt >= DATEADD(month,-1,CAST(GETDATE() AS DATE))"))
+mExpense = CDbl("0" & GetScalar("SELECT ISNULL(SUM(ExpenseAmount),0) FROM Orders WHERE Status='Paid' AND CreatedAt >= DATEADD(month,-1,CAST(GETDATE() AS DATE))"))
+mPaidCount = CDbl("0" & GetScalar("SELECT COUNT(*) FROM Orders WHERE Status='Paid' AND CreatedAt >= DATEADD(month,-1,CAST(GETDATE() AS DATE))"))
+mTotalCount = CDbl("0" & GetScalar("SELECT COUNT(*) FROM Orders WHERE CreatedAt >= DATEADD(month,-1,CAST(GETDATE() AS DATE))"))
+
+Dim costRate, profitRate, avgOrderValue, payConvRate
+If mRevenue > 0 Then
+    costRate = Round(mCost / mRevenue * 100, 1)
+    profitRate = Round(mProfit / mRevenue * 100, 1)
+Else
+    costRate = 0 : profitRate = 0
+End If
+If mPaidCount > 0 Then avgOrderValue = Round(mRevenue / mPaidCount, 2) Else avgOrderValue = 0
+If mTotalCount > 0 Then payConvRate = Round(mPaidCount / mTotalCount * 100, 1) Else payConvRate = 0
+
+' V21: 全品类库存预警（原料/香调/成品/包装/瓶身），受 EnableLowStockAlert 控制（默认开启）
+Dim enableLowStockAlert : enableLowStockAlert = GetScalar("SELECT ISNULL((SELECT SettingValue FROM SiteSettings WHERE SettingKey='EnableLowStockAlert'),'1')")
+Dim showLowStock : showLowStock = (enableLowStockAlert = "1")
+Dim lowRaw, lowNote, lowProduct, lowPkg, lowBottle, lowTotal
+lowRaw = 0 : lowNote = 0 : lowProduct = 0 : lowPkg = 0 : lowBottle = 0
+If showLowStock Then
+    lowRaw = CDbl("0" & GetScalar("SELECT COUNT(*) FROM RawMaterialInventory WHERE SafetyStock > 0 AND StockQty <= SafetyStock"))
+    lowNote = CDbl("0" & GetScalar("SELECT COUNT(*) FROM NoteInventory WHERE MinStockLevel > 0 AND StockQuantity <= MinStockLevel"))
+    lowProduct = CDbl("0" & GetScalar("SELECT COUNT(*) FROM ProductInventory WHERE SafetyStock > 0 AND StockQty <= SafetyStock"))
+    lowPkg = CDbl("0" & GetScalar("SELECT COUNT(*) FROM PackagingInventory WHERE SafetyStock > 0 AND StockQty <= SafetyStock"))
+    lowBottle = CDbl("0" & GetScalar("SELECT COUNT(*) FROM BottleStyles WHERE SafetyStock > 0 AND StockQty <= SafetyStock"))
+End If
+lowTotal = lowRaw + lowNote + lowProduct + lowPkg + lowBottle
+Dim clsRaw, clsNote, clsProduct, clsPkg, clsBottle
+clsRaw = IIf(lowRaw>0, "stock-alert-num", "stock-ok-num")
+clsNote = IIf(lowNote>0, "stock-alert-num", "stock-ok-num")
+clsProduct = IIf(lowProduct>0, "stock-alert-num", "stock-ok-num")
+clsPkg = IIf(lowPkg>0, "stock-alert-num", "stock-ok-num")
+clsBottle = IIf(lowBottle>0, "stock-alert-num", "stock-ok-num")
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -189,6 +228,8 @@ completedOrders = GetScalar("SELECT COUNT(*) FROM Orders WHERE Status = 'Paid'")
             .quick-actions { grid-template-columns: 1fr; }
             .order-status-grid { grid-template-columns: 1fr; }
         }
+        .stock-alert-num { color:#f44336; }
+        .stock-ok-num { color:#4CAF50; }
     </style>
 </head>
 <body data-theme="operation-dark">
@@ -229,6 +270,51 @@ completedOrders = GetScalar("SELECT COUNT(*) FROM Orders WHERE Status = 'Paid'")
                 <div class="stat-label" style="margin-top: 5px; color: #888;">累计 <%= GetScalar("SELECT COUNT(*) FROM Products") %> 款</div>
             </div>
         </div>
+        
+        <!-- V21: 经营指标（近30天 · 已支付订单） -->
+        <div class="dashboard-card" style="margin-bottom:30px;">
+            <h3><i class="fas fa-chart-line"></i> 经营指标 <span style="font-size:12px;color:#888;font-weight:normal;">（近30天 · 已支付）</span></h3>
+            <div class="stats-grid" style="margin-bottom:0;">
+                <div class="stat-card">
+                    <div class="stat-value">¥<%= FormatNumber(mProfit, 0) %></div>
+                    <div class="stat-label">净利润</div>
+                    <div class="stat-change" style="color:#888;">营收 ¥<%= FormatNumber(mRevenue, 0) %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color:#4CAF50;"><%= profitRate %>%</div>
+                    <div class="stat-label">利润率</div>
+                    <div class="stat-change" style="color:#888;">成本率 <%= costRate %>%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">¥<%= FormatNumber(avgOrderValue, 2) %></div>
+                    <div class="stat-label">客单价</div>
+                    <div class="stat-change" style="color:#888;">成本 ¥<%= FormatNumber(mCost, 0) %> · 费用 ¥<%= FormatNumber(mExpense, 0) %></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color:#00bcd4;"><%= payConvRate %>%</div>
+                    <div class="stat-label">支付转化率</div>
+                    <div class="stat-change" style="color:#888;"><%= mPaidCount %>/<%= mTotalCount %> 单</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- V21: 全品类库存预警 -->
+        <% If showLowStock Then %>
+        <div class="dashboard-card" style="margin-bottom:30px;">
+            <h3><i class="fas fa-exclamation-triangle" style="color:#ff9800;"></i> 库存预警 <span style="font-size:12px;color:#888;font-weight:normal;">（全品类 · 达到/低于安全库存）</span></h3>
+            <% If lowTotal = 0 Then %>
+                <div style="padding:20px;text-align:center;color:#4CAF50;"><i class="fas fa-check-circle"></i> 全部品类库存充足，暂无预警</div>
+            <% Else %>
+            <div class="order-status-grid" style="grid-template-columns:repeat(5,1fr);">
+                <div class="status-item"><div class="status-number <%= clsRaw %>"><%= lowRaw %></div><div class="status-label">原料</div></div>
+                <div class="status-item"><div class="status-number <%= clsNote %>"><%= lowNote %></div><div class="status-label">香调</div></div>
+                <div class="status-item"><div class="status-number <%= clsProduct %>"><%= lowProduct %></div><div class="status-label">成品</div></div>
+                <div class="status-item"><div class="status-number <%= clsPkg %>"><%= lowPkg %></div><div class="status-label">包装</div></div>
+                <div class="status-item"><div class="status-number <%= clsBottle %>"><%= lowBottle %></div><div class="status-label">瓶身</div></div>
+            </div>
+            <% End If %>
+        </div>
+        <% End If %>
         
         <!-- 中部面板 -->
         <div class="dashboard-grid">

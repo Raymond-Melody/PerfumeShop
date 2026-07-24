@@ -39,6 +39,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // ========== Business Services DI 注册 ==========
 builder.Services.AddMemoryCache(o => o.SizeLimit = 1024);
+builder.Services.AddScoped<IInventoryLedger, InventoryLedger>(); // V21: 库存流水统一写入
 builder.Services.AddScoped<ICostEngine, CostEngine>();
 builder.Services.AddScoped<IPromotionEngine, PromotionEngine>();
 builder.Services.AddScoped<IPaymentHandler, PaymentHandler>();

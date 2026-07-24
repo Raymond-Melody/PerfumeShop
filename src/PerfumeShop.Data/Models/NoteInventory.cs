@@ -16,4 +16,7 @@ public partial class NoteInventory
     public int? StockQuantity { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+
+    // V21: 香调加权单位成本（Accord 生产完成时结转）
+    public decimal? WeightedUnitCost { get; set; }
 }

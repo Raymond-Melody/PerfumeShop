@@ -11,6 +11,7 @@
 @using PerfumeShop.Admin.Services
 @inject PerfumeShopContext Db
 @inject IAdminAuditor Auditor
+@inject PerfumeShop.Core.Interfaces.ICostEngine CostEngine
 @inject AuthenticationStateProvider AuthState
 
 <PageTitle>配方拆分发布</PageTitle>
@@ -224,6 +225,8 @@
             Db.RecipePublishLogs.Add(new RecipePublishLog{RecipeId=_prodPubRecipeId,PublishType="Product",TargetRecipeId=prod.ProductRecipeId,PublishedBy=_pubBy,PublishedAt=DateTime.Now});
             await Db.SaveChangesAsync();
             await Auditor.LogAsync(_adminId,_adminName,"发布产品配方","RecipeProduct",prod.ProductRecipeId,_prodPubName);
+            // V21: 发布产品配方且关联具体产品时，刷新该产品成本(BOM/单位)
+            if(_prodPubProductId>0){try{await CostEngine.PreloadAllCostDataAsync();await CostEngine.UpdateProductCostAsync(_prodPubProductId);CostEngine.ClearCache();}catch{}}
             _msg="产品配方发布成功";_msgType="ok";_showProductModal=false;
             await LoadAll();
         }catch(Exception ex){_msg="发布失败: "+ex.Message;_msgType="err";}
